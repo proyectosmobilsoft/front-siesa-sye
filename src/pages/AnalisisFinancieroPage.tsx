@@ -60,7 +60,7 @@ export const AnalisisFinancieroPage = () => {
 
         // Columnas a excluir (no mostrar "Compañía" y las que se combinan)
         const excludedKeys = ['Compañía', 'Código Cuenta', 'Nombre de la Cuenta']
-        
+
         // Ordenar columnas para que "Nombre Compañía" aparezca primero
         const orderedKeys = [
             'Nombre Compañía',
@@ -97,11 +97,11 @@ export const AnalisisFinancieroPage = () => {
                         cell: ({ row }) => {
                             const codigo = row.original['Código Cuenta']?.toString().trim() || ''
                             const nombre = row.original['Nombre de la Cuenta']?.toString().trim() || ''
-                            
+
                             if (!codigo && !nombre) {
                                 return <div className="text-sm text-muted-foreground italic">N/A</div>
                             }
-                            
+
                             return (
                                 <div className="text-sm">
                                     {codigo && (
@@ -137,17 +137,17 @@ export const AnalisisFinancieroPage = () => {
                         },
                         cell: ({ row }) => {
                             const value = row.getValue(key)
-                            
+
                             // Formateo especial para "Nombre Compañía"
                             if (key === 'Nombre Compañía') {
                                 return <div className="font-medium">{value ?? <span className="text-muted-foreground italic">N/A</span>}</div>
                             }
-                            
+
                             // Formateo especial para "Total Cuenta"
                             if (key === 'Total Cuenta' && typeof value === 'number') {
                                 return <div className="text-right font-semibold">{formatters.currency(value)}</div>
                             }
-                            
+
                             // Intentar formatear según el tipo de dato
                             if (typeof value === 'number') {
                                 // Si parece un valor monetario grande
@@ -405,7 +405,7 @@ export const AnalisisFinancieroPage = () => {
         // Preparar los datos para Excel
         const excelData = estadosFinancieros.map(row => {
             const excelRow: Record<string, any> = {}
-            
+
             columns.forEach(col => {
                 if (col.id === 'Cuenta') {
                     // Separar la columna combinada en dos columnas
@@ -414,7 +414,7 @@ export const AnalisisFinancieroPage = () => {
                 } else if (col.accessorKey) {
                     const key = col.accessorKey as string
                     const value = row[key]
-                    
+
                     if (value === null || value === undefined) {
                         excelRow[key] = 'N/A'
                     } else if (typeof value === 'number') {
@@ -425,16 +425,16 @@ export const AnalisisFinancieroPage = () => {
                     }
                 }
             })
-            
+
             return excelRow
         })
 
         // Crear el libro de trabajo
         const wb = XLSX.utils.book_new()
-        
+
         // Crear la hoja de trabajo con los datos
         const ws = XLSX.utils.json_to_sheet(excelData)
-        
+
         // Ajustar el ancho de las columnas
         const colWidths: { wch: number }[] = []
         columns.forEach(col => {
@@ -455,18 +455,18 @@ export const AnalisisFinancieroPage = () => {
                 }
             }
         })
-        
+
         ws['!cols'] = colWidths
-        
+
         // Agregar la hoja al libro
         XLSX.utils.book_append_sheet(wb, ws, 'Estados Financieros')
-        
+
         // Generar el nombre del archivo
         const fecha = new Date().toISOString().split('T')[0]
         const periodoInicial = filtros.periodoInicial || ''
         const periodoFinal = filtros.periodoFinal || ''
         const filename = `estados_financieros_${periodoInicial}_${periodoFinal}_${fecha}.xlsx`
-        
+
         // Escribir el archivo
         XLSX.writeFile(wb, filename)
     }
@@ -485,26 +485,26 @@ export const AnalisisFinancieroPage = () => {
 
         // Crear el libro de trabajo
         const wb = XLSX.utils.book_new()
-        
+
         // Crear la hoja de trabajo con los datos
         const ws = XLSX.utils.json_to_sheet(excelData)
-        
+
         // Ajustar el ancho de las columnas
         ws['!cols'] = [
             { wch: 20 }, // Tipo de Cuenta
             { wch: 40 }, // Cuenta
             { wch: 18 }, // Total
         ]
-        
+
         // Agregar la hoja al libro
         XLSX.utils.book_append_sheet(wb, ws, 'Pérdidas y Ganancias')
-        
+
         // Generar el nombre del archivo
         const fecha = new Date().toISOString().split('T')[0]
         const periodoInicial = filtros.periodoInicial || ''
         const periodoFinal = filtros.periodoFinal || ''
         const filename = `perdidas_ganancias_${periodoInicial}_${periodoFinal}_${fecha}.xlsx`
-        
+
         // Escribir el archivo
         XLSX.writeFile(wb, filename)
     }
@@ -525,10 +525,10 @@ export const AnalisisFinancieroPage = () => {
 
         // Crear el libro de trabajo
         const wb = XLSX.utils.book_new()
-        
+
         // Crear la hoja de trabajo con los datos
         const ws = XLSX.utils.json_to_sheet(excelData)
-        
+
         // Ajustar el ancho de las columnas
         ws['!cols'] = [
             { wch: 15 }, // Periodo
@@ -537,16 +537,16 @@ export const AnalisisFinancieroPage = () => {
             { wch: 18 }, // Gastos
             { wch: 18 }, // Utilidad
         ]
-        
+
         // Agregar la hoja al libro
         XLSX.utils.book_append_sheet(wb, ws, 'Tendencia Mensual')
-        
+
         // Generar el nombre del archivo
         const fecha = new Date().toISOString().split('T')[0]
         const periodoInicial = filtros.periodoInicial || ''
         const periodoFinal = filtros.periodoFinal || ''
         const filename = `tendencia_mensual_${periodoInicial}_${periodoFinal}_${fecha}.xlsx`
-        
+
         // Escribir el archivo
         XLSX.writeFile(wb, filename)
     }
@@ -603,7 +603,7 @@ export const AnalisisFinancieroPage = () => {
                         <TabsTrigger value="perdidas-ganancias">Estado de Resultados (Pérdidas y Ganancias)</TabsTrigger>
                         <TabsTrigger value="tendencia-mensual">Tendencia Mensual</TabsTrigger>
                     </TabsList>
-                    
+
                     <TabsContent value="estados-financieros" className="mt-6">
                         {isLoadingEstados ? (
                             <Card>
@@ -633,136 +633,136 @@ export const AnalisisFinancieroPage = () => {
                                 </CardContent>
                             </Card>
                         ) : (
-                        <motion.div
-                            initial={{ opacity: 0, y: 20 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ duration: 0.5, delay: 0.2 }}
-                        >
-                            <Card className="border-2 border-primary/20 bg-gradient-to-br from-background to-primary/5">
-                                <CardHeader>
-                                    <div className="flex items-start justify-between gap-4">
-                                        <div>
-                                            <CardTitle className="flex items-center gap-2">
-                                                <span className="text-primary">Estados Financieros</span>
-                                                {estadosFinancieros && (
-                                                    <span className="ml-2 text-sm font-normal text-muted-foreground">
-                                                        ({estadosFinancieros.length} {estadosFinancieros.length === 1 ? 'registro' : 'registros'})
-                                                    </span>
-                                                )}
-                                            </CardTitle>
+                            <motion.div
+                                initial={{ opacity: 0, y: 20 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                transition={{ duration: 0.5, delay: 0.2 }}
+                            >
+                                <Card className="border-2 border-primary/20 bg-gradient-to-br from-background to-primary/5">
+                                    <CardHeader>
+                                        <div className="flex items-start justify-between gap-4">
+                                            <div>
+                                                <CardTitle className="flex items-center gap-2">
+                                                    <span className="text-primary">Estados Financieros</span>
+                                                    {estadosFinancieros && (
+                                                        <span className="ml-2 text-sm font-normal text-muted-foreground">
+                                                            ({estadosFinancieros.length} {estadosFinancieros.length === 1 ? 'registro' : 'registros'})
+                                                        </span>
+                                                    )}
+                                                </CardTitle>
+                                            </div>
                                         </div>
-                                    </div>
-                                    <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 mt-4">
-                                        <div className="relative flex-1 max-w-sm">
-                                            <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-                                            <Input
-                                                placeholder="Buscar en estados financieros..."
-                                                value={globalFilter ?? ''}
-                                                onChange={(event) => setGlobalFilter(String(event.target.value))}
-                                                className="pl-8"
-                                            />
+                                        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 mt-4">
+                                            <div className="relative flex-1 max-w-sm">
+                                                <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                                                <Input
+                                                    placeholder="Buscar en estados financieros..."
+                                                    value={globalFilter ?? ''}
+                                                    onChange={(event) => setGlobalFilter(String(event.target.value))}
+                                                    className="pl-8"
+                                                />
+                                            </div>
+                                            <div className="flex items-center gap-2">
+                                                <Button
+                                                    variant="outline"
+                                                    size="sm"
+                                                    onClick={handleExportToExcel}
+                                                    className="h-9"
+                                                >
+                                                    <Download className="h-4 w-4 mr-2" />
+                                                    Exportar Excel
+                                                </Button>
+                                                <p className="text-xs text-muted-foreground/80 italic max-w-md hidden lg:block">
+                                                    Retorna el reporte de estados financieros agrupado por cuenta auxiliar, sumando los valores netos del periodo especificado, ordenados por el total de cuenta de forma descendente.
+                                                </p>
+                                            </div>
                                         </div>
-                                        <div className="flex items-center gap-2">
-                                            <Button
-                                                variant="outline"
-                                                size="sm"
-                                                onClick={handleExportToExcel}
-                                                className="h-9"
-                                            >
-                                                <Download className="h-4 w-4 mr-2" />
-                                                Exportar Excel
-                                            </Button>
-                                            <p className="text-xs text-muted-foreground/80 italic max-w-md hidden lg:block">
-                                                Retorna el reporte de estados financieros agrupado por cuenta auxiliar, sumando los valores netos del periodo especificado, ordenados por el total de cuenta de forma descendente.
-                                            </p>
-                                        </div>
-                                    </div>
-                                    <p className="text-xs text-muted-foreground/80 italic lg:hidden mt-2">
-                                        Retorna el reporte de estados financieros agrupado por cuenta auxiliar, sumando los valores netos del periodo especificado, ordenados por el total de cuenta de forma descendente.
-                                    </p>
-                                </CardHeader>
-                                <CardContent>
-                                    {!estadosFinancieros || estadosFinancieros.length === 0 ? (
-                                        <div className="text-center py-12">
-                                            <p className="text-muted-foreground">No se encontraron estados financieros con los filtros seleccionados.</p>
-                                        </div>
-                                    ) : (
-                                        <>
-                                            <div className="rounded-md border">
-                                                <div className="overflow-x-auto custom-scrollbar">
-                                                    <table className="w-full text-sm">
-                                                        <thead>
-                                                            {table.getHeaderGroups().map((headerGroup) => (
-                                                                <tr key={headerGroup.id} className="border-b">
-                                                                    {headerGroup.headers.map((header) => (
-                                                                        <th
-                                                                            key={header.id}
-                                                                            className="h-10 px-3 text-left align-middle font-medium text-muted-foreground"
-                                                                        >
-                                                                            {header.isPlaceholder
-                                                                                ? null
-                                                                                : flexRender(
-                                                                                      header.column.columnDef.header,
-                                                                                      header.getContext()
-                                                                                  )}
-                                                                        </th>
-                                                                    ))}
-                                                                </tr>
-                                                            ))}
-                                                        </thead>
-                                                        <tbody>
-                                                            {table.getRowModel().rows?.length ? (
-                                                                table.getRowModel().rows.map((row) => (
-                                                                    <motion.tr
-                                                                        key={row.id}
-                                                                        className="border-b transition-colors hover:bg-muted/50"
-                                                                        initial={{ opacity: 0 }}
-                                                                        animate={{ opacity: 1 }}
-                                                                        transition={{ duration: 0.2 }}
-                                                                    >
-                                                                        {row.getVisibleCells().map((cell) => (
-                                                                            <td key={cell.id} className="py-2 px-3 align-middle">
-                                                                                {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                                                                            </td>
+                                        <p className="text-xs text-muted-foreground/80 italic lg:hidden mt-2">
+                                            Retorna el reporte de estados financieros agrupado por cuenta auxiliar, sumando los valores netos del periodo especificado, ordenados por el total de cuenta de forma descendente.
+                                        </p>
+                                    </CardHeader>
+                                    <CardContent>
+                                        {!estadosFinancieros || estadosFinancieros.length === 0 ? (
+                                            <div className="text-center py-12">
+                                                <p className="text-muted-foreground">No se encontraron estados financieros con los filtros seleccionados.</p>
+                                            </div>
+                                        ) : (
+                                            <>
+                                                <div className="rounded-md border">
+                                                    <div className="overflow-x-auto custom-scrollbar">
+                                                        <table className="w-full text-sm">
+                                                            <thead>
+                                                                {table.getHeaderGroups().map((headerGroup) => (
+                                                                    <tr key={headerGroup.id} className="border-b">
+                                                                        {headerGroup.headers.map((header) => (
+                                                                            <th
+                                                                                key={header.id}
+                                                                                className="h-10 px-3 text-left align-middle font-medium text-muted-foreground"
+                                                                            >
+                                                                                {header.isPlaceholder
+                                                                                    ? null
+                                                                                    : flexRender(
+                                                                                        header.column.columnDef.header,
+                                                                                        header.getContext()
+                                                                                    )}
+                                                                            </th>
                                                                         ))}
-                                                                    </motion.tr>
-                                                                ))
-                                                            ) : (
-                                                                <tr>
-                                                                    <td colSpan={columns.length} className="h-24 text-center">
-                                                                        No hay resultados.
-                                                                    </td>
-                                                                </tr>
-                                                            )}
-                                                        </tbody>
-                                                    </table>
+                                                                    </tr>
+                                                                ))}
+                                                            </thead>
+                                                            <tbody>
+                                                                {table.getRowModel().rows?.length ? (
+                                                                    table.getRowModel().rows.map((row) => (
+                                                                        <motion.tr
+                                                                            key={row.id}
+                                                                            className="border-b transition-colors hover:bg-muted/50"
+                                                                            initial={{ opacity: 0 }}
+                                                                            animate={{ opacity: 1 }}
+                                                                            transition={{ duration: 0.2 }}
+                                                                        >
+                                                                            {row.getVisibleCells().map((cell) => (
+                                                                                <td key={cell.id} className="py-2 px-3 align-middle">
+                                                                                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                                                                                </td>
+                                                                            ))}
+                                                                        </motion.tr>
+                                                                    ))
+                                                                ) : (
+                                                                    <tr>
+                                                                        <td colSpan={columns.length} className="h-24 text-center">
+                                                                            No hay resultados.
+                                                                        </td>
+                                                                    </tr>
+                                                                )}
+                                                            </tbody>
+                                                        </table>
+                                                    </div>
                                                 </div>
-                                            </div>
-                                            <div className="flex items-center justify-between space-x-2 py-4">
-                                                <div className="flex-1 text-sm text-muted-foreground">
-                                                    {table.getFilteredRowModel().rows.length} de {table.getCoreRowModel().rows.length} filas.
+                                                <div className="flex items-center justify-between space-x-2 py-4">
+                                                    <div className="flex-1 text-sm text-muted-foreground">
+                                                        {table.getFilteredRowModel().rows.length} de {table.getCoreRowModel().rows.length} filas.
+                                                    </div>
+                                                    <div className="flex items-center space-x-2">
+                                                        <Button
+                                                            variant="outline"
+                                                            size="sm"
+                                                            onClick={() => table.previousPage()}
+                                                            disabled={!table.getCanPreviousPage()}
+                                                        >
+                                                            Anterior
+                                                        </Button>
+                                                        <Button
+                                                            variant="outline"
+                                                            size="sm"
+                                                            onClick={() => table.nextPage()}
+                                                            disabled={!table.getCanNextPage()}
+                                                        >
+                                                            Siguiente
+                                                        </Button>
+                                                    </div>
                                                 </div>
-                                                <div className="flex items-center space-x-2">
-                                                    <Button
-                                                        variant="outline"
-                                                        size="sm"
-                                                        onClick={() => table.previousPage()}
-                                                        disabled={!table.getCanPreviousPage()}
-                                                    >
-                                                        Anterior
-                                                    </Button>
-                                                    <Button
-                                                        variant="outline"
-                                                        size="sm"
-                                                        onClick={() => table.nextPage()}
-                                                        disabled={!table.getCanNextPage()}
-                                                    >
-                                                        Siguiente
-                                                    </Button>
-                                                </div>
-                                            </div>
-                                        </>
-                                    )}
+                                            </>
+                                        )}
                                     </CardContent>
                                 </Card>
                             </motion.div>
@@ -916,19 +916,19 @@ export const AnalisisFinancieroPage = () => {
                                                     theme={{
                                                         axis: {
                                                             ticks: {
-                                                                text: { 
-                                                                    fill: 'hsl(var(--foreground))', 
-                                                                    fontSize: 11, 
+                                                                text: {
+                                                                    fill: 'hsl(var(--foreground))',
+                                                                    fontSize: 11,
                                                                     fontFamily: 'Inter, Roboto, "Open Sans", system-ui, sans-serif',
                                                                     fontWeight: 500
                                                                 }
                                                             },
                                                             legend: {
-                                                                text: { 
-                                                                    fill: 'hsl(var(--foreground))', 
-                                                                    fontSize: 13, 
-                                                                    fontWeight: 700, 
-                                                                    fontFamily: 'Inter, Roboto, "Open Sans", system-ui, sans-serif' 
+                                                                text: {
+                                                                    fill: 'hsl(var(--foreground))',
+                                                                    fontSize: 13,
+                                                                    fontWeight: 700,
+                                                                    fontFamily: 'Inter, Roboto, "Open Sans", system-ui, sans-serif'
                                                                 }
                                                             },
                                                             grid: {
@@ -974,7 +974,7 @@ export const AnalisisFinancieroPage = () => {
                                                             // Filtrar solo las barras principales (sin duplicados por key)
                                                             const { bars } = props
                                                             const processedIndices = new Set<number>()
-                                                            
+
                                                             return (
                                                                 <g>
                                                                     {bars
@@ -1037,11 +1037,11 @@ export const AnalisisFinancieroPage = () => {
                                                                     Total: {item?.label || formatCurrencyColombian(value as number)}
                                                                 </div>
                                                                 <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 4, paddingTop: 6, borderTop: '1px solid hsl(var(--border))' }}>
-                                                                    <div 
-                                                                        style={{ 
-                                                                            width: 12, 
-                                                                            height: 12, 
-                                                                            borderRadius: 2, 
+                                                                    <div
+                                                                        style={{
+                                                                            width: 12,
+                                                                            height: 12,
+                                                                            borderRadius: 2,
                                                                             backgroundColor: '#1a365d'
                                                                         }}
                                                                     />
@@ -1059,7 +1059,6 @@ export const AnalisisFinancieroPage = () => {
                                                     }}
                                                     enableGridX={true}
                                                     enableGridY={false}
-                                                    enableLabel={true}
                                                     defs={[
                                                         {
                                                             id: 'gradient',
@@ -1191,9 +1190,9 @@ export const AnalisisFinancieroPage = () => {
                                                                                 {header.isPlaceholder
                                                                                     ? null
                                                                                     : flexRender(
-                                                                                          header.column.columnDef.header,
-                                                                                          header.getContext()
-                                                                                      )}
+                                                                                        header.column.columnDef.header,
+                                                                                        header.getContext()
+                                                                                    )}
                                                                             </th>
                                                                         ))}
                                                                     </tr>
@@ -1356,9 +1355,9 @@ export const AnalisisFinancieroPage = () => {
                                                                                 {header.isPlaceholder
                                                                                     ? null
                                                                                     : flexRender(
-                                                                                          header.column.columnDef.header,
-                                                                                          header.getContext()
-                                                                                      )}
+                                                                                        header.column.columnDef.header,
+                                                                                        header.getContext()
+                                                                                    )}
                                                                             </th>
                                                                         ))}
                                                                     </tr>

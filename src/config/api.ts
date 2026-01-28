@@ -12,14 +12,14 @@ const getApiBaseUrl = (): string => {
   if (import.meta.env.VITE_API_BASE_URL) {
     return import.meta.env.VITE_API_BASE_URL
   }
-  
+
   // En desarrollo, usar el proxy de Vite (/api)
   // El proxy de Vite redirige internamente las peticiones a http://localhost:3000
   // Esto evita problemas de CORS porque el navegador ve las peticiones como si fueran al mismo origen
   if (import.meta.env.DEV) {
     return '/api'
   }
-  
+
   // En producción, usar el proxy relativo o la URL configurada
   return '/api'
 }
@@ -41,8 +41,8 @@ if (import.meta.env.DEV) {
   console.log('🔧 API Config:', {
     BASE_URL: API_CONFIG.BASE_URL,
     MODE: import.meta.env.MODE,
-    PROXY_TARGET: 'http://localhost:3000 (via Vite proxy)',
-    NOTE: 'Las peticiones van a /api y Vite las redirige a localhost:3000 internamente',
+    PROXY_TARGET: 'http://179.33.214.87:3010 (via Vite proxy)',
+    NOTE: 'Las peticiones van a /api y Vite las redirige a 179.33.214.87:3010 internamente',
   })
 }
 
