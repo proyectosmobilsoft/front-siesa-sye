@@ -33,6 +33,30 @@ export const formatters = {
     }).format(date)
   },
 
+  dateOnly: (dateString: string | null | undefined): string => {
+    if (!dateString || dateString === '') {
+      return 'N/A'
+    }
+    // Extract just the date part (YYYY-MM-DD) to avoid timezone conversion issues
+    // This is important for dates like "2026-01-29T00:00:00.000Z" which would
+    // convert to the previous day in UTC-5 timezone
+    const dateMatch = dateString.match(/^(\d{4})-(\d{2})-(\d{2})/)
+    if (!dateMatch) {
+      return 'Fecha inválida'
+    }
+    const [, year, month, day] = dateMatch
+    const date = new Date(parseInt(year), parseInt(month) - 1, parseInt(day))
+    if (isNaN(date.getTime())) {
+      return 'Fecha inválida'
+    }
+    return new Intl.DateTimeFormat('es-CO', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+    }).format(date)
+  },
+
+
   dateTime: (dateString: string | null | undefined): string => {
     if (!dateString || dateString === '') {
       return 'N/A'

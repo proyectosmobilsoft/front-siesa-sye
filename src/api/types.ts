@@ -170,3 +170,17 @@ export interface TendenciaMensualParams {
   periodoInicial?: number // YYYYMM format
   periodoFinal?: number // YYYYMM format
 }
+
+export interface Pedido {
+  [key: string]: any // Flexible structure for pedidos
+}
+
+export interface PedidosResponse {
+  success: boolean
+  data: Pedido[]
+}
+
+export interface PedidosParams {
+  fechaInicial: string // ISO 8601 format (YYYY-MM-DD or YYYY-MM-DDTHH:mm:ss)
+  fechaFinal: string // ISO 8601 format (YYYY-MM-DD or YYYY-MM-DDTHH:mm:ss)
+}

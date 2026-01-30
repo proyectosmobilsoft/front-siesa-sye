@@ -17,6 +17,7 @@ import {
     UserCircle,
     Receipt,
     ShoppingCart,
+    ShoppingBag,
     TrendingDown
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -36,6 +37,7 @@ const navigation: NavItem[] = [
     { name: 'Clientes', href: '/clientes', icon: Users },
     { name: 'Compañías', href: '/companias', icon: Building2 },
     { name: 'Productos', href: '/productos', icon: Package },
+    { name: 'Pedidos', href: '/pedidos', icon: ShoppingBag },
     {
         name: 'Facturas',
         icon: Receipt,

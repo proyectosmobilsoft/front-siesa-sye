@@ -13,6 +13,7 @@ import { SettingsPage } from '@/pages/SettingsPage'
 import { HelpPage } from '@/pages/HelpPage'
 import { GestionVentasPage } from '@/pages/GestionVentasPage'
 import { AnalisisFinancieroPage } from '@/pages/AnalisisFinancieroPage'
+import { PedidosPage } from '@/pages/PedidosPage'
 import { useUIStore } from '@/store/uiStore'
 import { useEffect } from 'react'
 
@@ -57,6 +58,7 @@ function App() {
                                     <Route path="/facturas/gestion-ventas" element={<GestionVentasPage />} />
                                     <Route path="/facturas/analisis-financiero" element={<AnalisisFinancieroPage />} />
                                     <Route path="/reportes" element={<ReportsPage />} />
+                                    <Route path="/pedidos" element={<PedidosPage />} />
                                     <Route path="/reportes/ventas" element={<SalesSummaryPage />} />
                                     <Route path="/reportes/vendedores" element={<VendorsPage />} />
                                     <Route path="/configuracion" element={<SettingsPage />} />
