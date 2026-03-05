@@ -1,17 +1,17 @@
-{
-  "extends": [
+module.exports = {
+  extends: [
     "eslint:recommended",
-    "@typescript-eslint/recommended",
+    "plugin:@typescript-eslint/recommended",
     "plugin:react-hooks/recommended"
   ],
-  "parser": "@typescript-eslint/parser",
-  "plugins": ["react-refresh"],
-  "rules": {
+  parser: "@typescript-eslint/parser",
+  plugins: ["react-refresh"],
+  rules: {
     "react-refresh/only-export-components": [
       "warn",
-      { "allowConstantExport": true }
+      { allowConstantExport: true }
     ],
-    "@typescript-eslint/no-unused-vars": ["error", { "argsIgnorePattern": "^_" }],
+    "@typescript-eslint/no-unused-vars": ["error", { argsIgnorePattern: "^_" }],
     "@typescript-eslint/no-explicit-any": "warn"
   }
 }

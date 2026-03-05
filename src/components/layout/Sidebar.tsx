@@ -18,7 +18,9 @@ import {
     Receipt,
     ShoppingCart,
     ShoppingBag,
-    TrendingDown
+    TrendingDown,
+    Shield,
+    UserPlus
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useUIStore } from '@/store/uiStore'
@@ -53,6 +55,14 @@ const navigation: NavItem[] = [
             { name: 'Pedidos Diarios', href: '/reportes', icon: ClipboardList },
             { name: 'Resumen Ventas', href: '/reportes/ventas', icon: TrendingUp },
             { name: 'Vendedores', href: '/reportes/vendedores', icon: UserCircle }
+        ]
+    },
+    {
+        name: 'Maestro',
+        icon: Users,
+        subItems: [
+            { name: 'Maestro de Roles', href: '/maestro/roles', icon: Shield },
+            { name: 'Maestro de Usuarios', href: '/maestro/usuarios', icon: UserPlus }
         ]
     },
     { name: 'Configuración', href: '/configuracion', icon: Settings },

@@ -42,10 +42,23 @@ npm install
 
 3. **Configurar variables de entorno**
 
+Copia el archivo `.env.example` a `.env` y ajusta las variables según tu entorno:
+
 ```bash
-# Crear archivo .env.local (opcional)
-VITE_API_BASE_URL=http://localhost:3000/api
+# El archivo .env ya está creado con valores por defecto
+# Puedes modificarlo según tus necesidades
 ```
+
+**Variables disponibles:**
+
+- `VITE_API_BASE_URL_DEV`: URL del backend en desarrollo (por defecto: `http://localhost:3000`)
+- `VITE_API_BASE_URL_PROD`: URL del backend en producción (por defecto: `https://softwareqa.dev`)
+- `VITE_PORT`: Puerto del servidor de desarrollo de Vite (por defecto: `5173`)
+- `VITE_BACKEND_PORT`: Puerto del backend local (por defecto: `3000`)
+
+**Nota importante:**
+- En desarrollo (`npm run dev`): Las peticiones van a `/api` y Vite las redirige a `localhost` usando el proxy
+- En producción (`npm run build`): Las peticiones van directamente a `https://softwareqa.dev`
 
 4. **Ejecutar en modo desarrollo**
 

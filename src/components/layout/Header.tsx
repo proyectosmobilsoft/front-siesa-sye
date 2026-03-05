@@ -1,5 +1,6 @@
 import { motion } from 'framer-motion'
-import { Menu, Search, Bell } from 'lucide-react'
+import { Menu, Search, Bell, LogOut } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Select } from '@/components/ui/select'
@@ -10,6 +11,12 @@ import { useCompanies } from '@/hooks/useCompanies'
 export const Header = () => {
     const { sidebarOpen, setSidebarOpen, searchQuery, setSearchQuery, selectedCompany, setSelectedCompany } = useUIStore()
     const { data: companies, isLoading: companiesLoading } = useCompanies()
+    const navigate = useNavigate()
+
+    const handleLogout = () => {
+        localStorage.removeItem('auth_token')
+        navigate('/login')
+    }
 
     return (
         <header className="sticky top-0 z-40 w-full border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -75,8 +82,19 @@ export const Header = () => {
                             <p className="text-xs text-muted-foreground">admin@company.com</p>
                         </div>
                     </div>
+
+                    <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={handleLogout}
+                        title="Cerrar Sesión"
+                        className="text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                    >
+                        <LogOut className="h-4 w-4" />
+                    </Button>
                 </div>
             </div>
         </header>
     )
 }
+

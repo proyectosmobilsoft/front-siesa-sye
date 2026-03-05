@@ -24,6 +24,18 @@ export const apiClient = axios.create({
  */
 apiClient.interceptors.request.use(
   (config: InternalAxiosRequestConfig) => {
+    // Inyectar token de autenticación
+    const token = localStorage.getItem('auth_token')
+    if (token && config.headers) {
+      config.headers.Authorization = `Bearer ${token}`
+      // Log en desarrollo para verificar que el token se está enviando
+      if (import.meta.env.DEV) {
+        console.log(`🔑 Token agregado a la petición: ${token.substring(0, 20)}...`)
+      }
+    } else if (import.meta.env.DEV) {
+      console.warn('⚠️ No hay token disponible para esta petición')
+    }
+
     // Log de la petición en desarrollo
     if (import.meta.env.DEV) {
       const fullUrl = `${config.baseURL || ''}${config.url || ''}`
@@ -54,17 +66,21 @@ apiClient.interceptors.response.use(
       // El servidor respondió con un código de error
       const status = error.response.status
       const message = error.response.data || error.message
-      
+
       console.error(`❌ API Error [${status}]:`, {
         url: error.config?.url,
         method: error.config?.method,
         message,
       })
-      
+
       // Manejar errores específicos
       switch (status) {
         case 401:
-          console.error('🔒 No autorizado - Verificar autenticación')
+          console.error('🔒 No autorizado - Redirigiendo a login')
+          localStorage.removeItem('auth_token')
+          if (window.location.pathname !== '/login') {
+            window.location.href = '/login'
+          }
           break
         case 403:
           console.error('🚫 Acceso prohibido')
@@ -89,7 +105,7 @@ apiClient.interceptors.response.use(
       // Algo más causó el error
       console.error('❌ Error:', error.message)
     }
-    
+
     return Promise.reject(error)
   }
 )
