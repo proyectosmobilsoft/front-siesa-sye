@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion'
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import {
     ColumnDef,
     flexRender,
@@ -7,96 +7,118 @@ import {
     getPaginationRowModel,
     useReactTable,
 } from '@tanstack/react-table'
-import { ArrowLeft, UserPlus, Edit, Shield, Activity, Search } from 'lucide-react'
+import { ArrowLeft, UserPlus, Edit, Shield, Activity, Search, RefreshCw, Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { useNavigate } from 'react-router-dom'
 import { UserFormModal } from '@/components/security/UserFormModal'
-
-// Interface mockeada
-interface User {
-    id: string
-    name: string
-    email: string
-    role: string
-    status: 'Activo' | 'Inactivo'
-    lastLogin: string
-}
-
-// Datos mockeados
-const mockUsers: User[] = [
-    { id: '1', name: 'Juan Pérez', email: 'juan.perez@transporte.com', role: 'Conductor', status: 'Activo', lastLogin: '2023-10-01 08:30' },
-    { id: '2', name: 'María Gómez', email: 'maria.gomez@empresa.com', role: 'Administrador', status: 'Activo', lastLogin: '2023-10-02 09:15' },
-    { id: '3', name: 'Carlos López', email: 'carlos.lopez@transporte.com', role: 'Conductor', status: 'Inactivo', lastLogin: '2023-09-15 14:20' },
-    { id: '4', name: 'Ana Martínez', email: 'ana.martinez@empresa.com', role: 'Visualizador', status: 'Activo', lastLogin: '2023-10-02 11:10' },
-]
+import { seguridadApi, UsuarioMaster } from '@/api/seguridad'
 
 export const SecuritySettingsPage = () => {
     const navigate = useNavigate()
 
     // Estados modal
     const [isFormOpen, setIsFormOpen] = useState(false)
-    const [editingUser, setEditingUser] = useState<User | undefined>(undefined)
+    const [editingUser, setEditingUser] = useState<UsuarioMaster | undefined>(undefined)
 
     // Estado tabla
     const [globalFilter, setGlobalFilter] = useState('')
+    const [usuarios, setUsuarios] = useState<UsuarioMaster[]>([])
+    const [loading, setLoading] = useState(true)
+    const [total, setTotal] = useState(0)
+    const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+    const fetchUsuarios = async (searchTerm = globalFilter) => {
+        try {
+            setLoading(true)
+            const res = await seguridadApi.listarUsuarios(1, 100, searchTerm)
+            setUsuarios(res.data || [])
+            setTotal(res.total || 0)
+        } catch (err) {
+            console.error('Error cargando usuarios:', err)
+            setUsuarios([])
+            setTotal(0)
+        } finally {
+            setLoading(false)
+        }
+    }
+
+    // Fetch inicial
+    useEffect(() => {
+        fetchUsuarios('')
+    }, [])
+
+    // Debounce para búsqueda
+    useEffect(() => {
+        if (debounceRef.current) clearTimeout(debounceRef.current)
+        debounceRef.current = setTimeout(() => {
+            fetchUsuarios(globalFilter)
+        }, 400)
+        return () => {
+            if (debounceRef.current) clearTimeout(debounceRef.current)
+        }
+    }, [globalFilter])
 
     const handleNewUser = () => {
         setEditingUser(undefined)
         setIsFormOpen(true)
     }
 
-    const handleEditUser = (user: User) => {
+    const handleEditUser = (user: UsuarioMaster) => {
         setEditingUser(user)
         setIsFormOpen(true)
     }
 
-    const columns: ColumnDef<User>[] = [
+    const handleModalClose = () => {
+        setIsFormOpen(false)
+        // Recargar tabla después de cerrar el modal
+        fetchUsuarios(globalFilter)
+    }
+
+    const columns: ColumnDef<UsuarioMaster>[] = [
         {
-            accessorKey: 'name',
+            accessorKey: 'usuario',
+            header: 'Usuario',
+            cell: ({ row }) => <div className="font-semibold text-primary">{row.getValue('usuario')}</div>,
+        },
+        {
+            accessorKey: 'nombre_completo',
             header: 'Nombre Completo',
-            cell: ({ row }) => <div className="font-medium">{row.getValue('name')}</div>,
+            cell: ({ row }) => {
+                const nombre = row.getValue('nombre_completo') as string | null
+                return <div className="font-medium">{nombre || <span className="text-muted-foreground italic text-xs">Sin definir</span>}</div>
+            },
         },
         {
             accessorKey: 'email',
             header: 'Correo Electrónico',
-            cell: ({ row }) => <div className="text-muted-foreground">{row.getValue('email')}</div>,
-        },
-        {
-            accessorKey: 'role',
-            header: 'Rol / Módulo',
             cell: ({ row }) => {
-                const role = row.getValue('role') as string
-                return (
-                    <div className="flex items-center space-x-2">
-                        <Shield className="h-4 w-4 text-primary opacity-70" />
-                        <span>{role}</span>
-                    </div>
-                )
+                const email = row.getValue('email') as string | null
+                return <div className="text-muted-foreground">{email || <span className="text-muted-foreground italic text-xs">—</span>}</div>
             },
         },
         {
-            accessorKey: 'status',
+            accessorKey: 'activo',
             header: 'Estado',
             cell: ({ row }) => {
-                const status = row.getValue('status') as string
-                const isActive = status === 'Activo'
+                const activo = row.getValue('activo') as boolean
                 return (
-                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${isActive ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'}`}>
-                        {status}
+                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${activo ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'}`}>
+                        {activo ? 'Activo' : 'Inactivo'}
                     </span>
                 )
             },
         },
         {
-            accessorKey: 'lastLogin',
+            accessorKey: 'ultimo_acceso',
             header: 'Último Acceso',
             cell: ({ row }) => {
+                const ultimoAcceso = row.getValue('ultimo_acceso') as string | null
                 return (
                     <div className="flex items-center space-x-2 text-muted-foreground text-sm">
                         <Activity className="h-4 w-4 opacity-50" />
-                        <span>{row.getValue('lastLogin')}</span>
+                        <span>{ultimoAcceso ? new Date(ultimoAcceso).toLocaleString('es-ES') : <span className="italic text-xs">Nunca</span>}</span>
                     </div>
                 )
             },
@@ -123,15 +145,8 @@ export const SecuritySettingsPage = () => {
         },
     ]
 
-    // Filtro simple manual para el mockup
-    const filteredUsers = mockUsers.filter(user =>
-        user.name.toLowerCase().includes(globalFilter.toLowerCase()) ||
-        user.email.toLowerCase().includes(globalFilter.toLowerCase()) ||
-        user.role.toLowerCase().includes(globalFilter.toLowerCase())
-    )
-
     const table = useReactTable({
-        data: filteredUsers,
+        data: usuarios,
         columns,
         getCoreRowModel: getCoreRowModel(),
         getPaginationRowModel: getPaginationRowModel(),
@@ -168,12 +183,16 @@ export const SecuritySettingsPage = () => {
                         <div className="relative flex-1 sm:w-64">
                             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                             <Input
-                                placeholder="Buscar usuario, email o rol..."
+                                placeholder="Buscar usuario, email o nombre..."
                                 value={globalFilter}
                                 onChange={(e) => setGlobalFilter(e.target.value)}
                                 className="pl-9"
                             />
                         </div>
+                        <Button variant="outline" size="sm" onClick={() => fetchUsuarios(globalFilter)} disabled={loading} className="gap-2">
+                            <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+                            Actualizar
+                        </Button>
                         <Button onClick={handleNewUser} className="whitespace-nowrap">
                             <UserPlus className="mr-2 h-4 w-4" />
                             Nuevo Usuario
@@ -204,7 +223,16 @@ export const SecuritySettingsPage = () => {
                                     ))}
                                 </thead>
                                 <tbody>
-                                    {table.getRowModel().rows?.length ? (
+                                    {loading ? (
+                                        <tr>
+                                            <td colSpan={columns.length} className="h-32 text-center">
+                                                <div className="flex items-center justify-center gap-2 text-muted-foreground">
+                                                    <Loader2 className="h-5 w-5 animate-spin" />
+                                                    Cargando usuarios...
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    ) : table.getRowModel().rows?.length ? (
                                         table.getRowModel().rows.map((row) => (
                                             <motion.tr
                                                 key={row.id}
@@ -233,7 +261,7 @@ export const SecuritySettingsPage = () => {
                     </div>
                     <div className="flex items-center justify-between space-x-2 py-4">
                         <div className="flex-1 text-sm text-muted-foreground">
-                            Mostrando {table.getRowModel().rows.length} usuarios.
+                            Mostrando {table.getRowModel().rows.length} de {total} usuario{total !== 1 ? 's' : ''}.
                         </div>
                         <div className="flex items-center space-x-2">
                             <Button
@@ -259,7 +287,7 @@ export const SecuritySettingsPage = () => {
 
             <UserFormModal
                 isOpen={isFormOpen}
-                onClose={() => setIsFormOpen(false)}
+                onClose={handleModalClose}
                 user={editingUser}
             />
         </motion.div>

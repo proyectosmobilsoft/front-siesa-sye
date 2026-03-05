@@ -28,12 +28,26 @@ export interface ListarUsuariosResponse {
 
 export interface CreateUsuarioMasterDto {
     usuario: string
-    pin: string
+    rol_id: number
+    pin?: string
+    contraseña?: string
     email?: string | null
     telefono?: string | null
     nombre_completo?: string | null
     observaciones?: string | null
     activo: boolean
+}
+
+export interface AuthRole {
+    id: number
+    nombre: string
+    pin: boolean // true si usa PIN, false si usa contraseña
+    Estado: boolean // Estado del rol (activo/inactivo)
+}
+
+export interface ListarRolesResponse {
+    success: boolean
+    data: AuthRole[]
 }
 
 export const seguridadApi = {
@@ -44,8 +58,25 @@ export const seguridadApi = {
         return response.data
     },
 
+    verificarUsuario: async (usuario: string): Promise<{ exists: boolean; data?: UsuarioMaster }> => {
+        try {
+            const response = await apiClient.get(`/auth-secundario/usuarios/${usuario}`)
+            return { exists: true, data: response.data?.data || response.data }
+        } catch (err: any) {
+            if (err?.response?.status === 404) {
+                return { exists: false }
+            }
+            throw err
+        }
+    },
+
     crearUsuario: async (data: CreateUsuarioMasterDto) => {
         const response = await apiClient.post('/auth-secundario/usuarios', data)
+        return response.data
+    },
+
+    listarRoles: async (): Promise<ListarRolesResponse> => {
+        const response = await apiClient.get('/auth-secundario/roles')
         return response.data
     },
 }
