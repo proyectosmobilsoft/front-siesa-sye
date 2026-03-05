@@ -29,7 +29,7 @@ export interface ListarUsuariosResponse {
 export interface CreateUsuarioMasterDto {
     usuario: string
     rol_id: number
-    pin?: string
+    credencial?: string
     contraseña?: string
     email?: string | null
     telefono?: string | null

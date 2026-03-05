@@ -70,7 +70,7 @@ export const UserFormModal = ({ isOpen, onClose, user }: UserFormModalProps) => 
     const [codigoPais, setCodigoPais] = useState('+57')
     const [telefono, setTelefono] = useState('')
     const [roleId, setRoleId] = useState<number | null>(user?.rol_id || null)
-    const [pin, setPin] = useState('')
+    const [credencial, setCredencial] = useState('')
     const [password, setPassword] = useState('')
     const [usuario, setUsuario] = useState('')
     const [usuarioStatus, setUsuarioStatus] = useState<'idle' | 'checking' | 'available' | 'taken'>('idle')
@@ -100,7 +100,7 @@ export const UserFormModal = ({ isOpen, onClose, user }: UserFormModalProps) => 
                 setCodigoPais('+57')
                 setTelefono('')
                 setRoleId(null)
-                setPin('')
+                setCredencial('')
                 setPassword('')
                 setUsuario('')
                 setUsuarioStatus('idle')
@@ -119,7 +119,7 @@ export const UserFormModal = ({ isOpen, onClose, user }: UserFormModalProps) => 
                 }
                 
                 setRoleId(user?.rol_id || null)
-                setPin('')
+                setCredencial('')
                 setPassword('')
                 setUsuario(user?.usuario || '')
                 setUsuarioStatus('idle')
@@ -180,10 +180,10 @@ export const UserFormModal = ({ isOpen, onClose, user }: UserFormModalProps) => 
         return () => document.removeEventListener('mousedown', handleClickOutside)
     }, [])
 
-    // Limpiar PIN/contraseña si el rol cambia
+    // Limpiar credencial/contraseña si el rol cambia
     useEffect(() => {
         if (!requierePin) {
-            setPin('')
+            setCredencial('')
         } else {
             setPassword('')
         }
@@ -286,7 +286,7 @@ export const UserFormModal = ({ isOpen, onClose, user }: UserFormModalProps) => 
         const payload = {
             usuario,
             rol_id: roleId,
-            pin: requierePin ? pin : undefined,
+            credencial: requierePin ? credencial : undefined,
             contraseña: !requierePin ? password : undefined,
             email: email.trim() || null,
             telefono: telefonoCompleto,
@@ -473,10 +473,10 @@ export const UserFormModal = ({ isOpen, onClose, user }: UserFormModalProps) => 
                                     <Input
                                         type="text"
                                         placeholder="PIN 4 dígitos"
-                                        value={pin}
+                                        value={credencial}
                                         onChange={(e) => {
                                             const val = e.target.value.replace(/\D/g, '')
-                                            setPin(val)
+                                            setCredencial(val)
                                         }}
                                         maxLength={4}
                                         inputMode="numeric"
@@ -489,7 +489,7 @@ export const UserFormModal = ({ isOpen, onClose, user }: UserFormModalProps) => 
                                         className="h-10 px-3 shrink-0"
                                         onClick={() => {
                                             const pinRandom = Math.floor(1000 + Math.random() * 9000).toString()
-                                            setPin(pinRandom)
+                                            setCredencial(pinRandom)
                                         }}
                                     >
                                         Generar
@@ -499,9 +499,9 @@ export const UserFormModal = ({ isOpen, onClose, user }: UserFormModalProps) => 
                                         variant="outline"
                                         size="sm"
                                         className="h-10 px-2.5 shrink-0"
-                                        disabled={!pin}
+                                        disabled={!credencial}
                                         onClick={() => {
-                                            navigator.clipboard.writeText(pin)
+                                            navigator.clipboard.writeText(credencial)
                                         }}
                                         title="Copiar PIN"
                                     >
@@ -526,6 +526,7 @@ export const UserFormModal = ({ isOpen, onClose, user }: UserFormModalProps) => 
                                 <Input
                                     disabled
                                     placeholder="Seleccione un rol primero"
+                                    value=""
                                     className="h-10"
                                 />
                             </>
