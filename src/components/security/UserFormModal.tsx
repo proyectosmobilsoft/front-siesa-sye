@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import { Modal } from '@/components/ui/modal'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { seguridadApi, AuthRole } from '@/api/seguridad'
+import { seguridadApi, AuthRole, UsuarioMaster } from '@/api/seguridad'
 import { paisesApi, Pais } from '@/api/paises'
 import { ChevronDown, Loader2, CheckCircle2, XCircle, RefreshCw, Copy } from 'lucide-react'
 
@@ -58,14 +58,14 @@ function generarCombinacionesUsuario(nombreCompleto: string): string[] {
 interface UserFormModalProps {
     isOpen: boolean
     onClose: () => void
-    user?: any // If editing, pass the user object
+    user?: UsuarioMaster // If editing, pass the user object
 }
 
 export const UserFormModal = ({ isOpen, onClose, user }: UserFormModalProps) => {
     const isEditing = !!user
 
     // Form states
-    const [name, setName] = useState(user?.name || '')
+    const [name, setName] = useState(user?.nombre_completo || '')
     const [email, setEmail] = useState(user?.email || '')
     const [codigoPais, setCodigoPais] = useState('+57')
     const [telefono, setTelefono] = useState('')
@@ -83,6 +83,7 @@ export const UserFormModal = ({ isOpen, onClose, user }: UserFormModalProps) => 
     const [showCodigoDropdown, setShowCodigoDropdown] = useState(false)
     const [codigoSearch, setCodigoSearch] = useState('')
     const codigoRef = useRef<HTMLDivElement>(null)
+    const [loadingUser, setLoadingUser] = useState(false)
 
     // Determinar si el rol seleccionado usa PIN
     const rolSeleccionado = roles.find(r => r.id === roleId)
@@ -105,34 +106,59 @@ export const UserFormModal = ({ isOpen, onClose, user }: UserFormModalProps) => 
                 setUsuario('')
                 setUsuarioStatus('idle')
             } else {
-                setName(user?.name || '')
+                // Cargar datos básicos del objeto de la tabla
+                setName(user?.nombre_completo || '')
                 setEmail(user?.email || '')
+                setUsuario(user?.usuario || '')
+                setUsuarioStatus('idle')
+                setCredencial('')
+                setPassword('')
                 
                 // Separar código de país y teléfono
-                const telefonoCompleto = user?.phone || ''
-                if (telefonoCompleto.startsWith('+57')) {
-                    setCodigoPais('+57')
-                    setTelefono(telefonoCompleto.replace('+57', '').trim())
+                const telefonoCompleto = user?.telefono || ''
+                const matchCodigo = telefonoCompleto.match(/^(\+\d{1,3})/)
+                if (matchCodigo) {
+                    setCodigoPais(matchCodigo[1])
+                    setTelefono(telefonoCompleto.replace(matchCodigo[1], '').trim())
                 } else {
                     setCodigoPais('+57')
                     setTelefono(telefonoCompleto)
                 }
-                
-                setRoleId(user?.rol_id || null)
-                setCredencial('')
-                setPassword('')
-                setUsuario(user?.usuario || '')
-                setUsuarioStatus('idle')
+
+                // Si ya tiene rol_id en el objeto, usarlo directamente
+                if (user?.rol_id) {
+                    setRoleId(user.rol_id)
+                } else if (user?.usuario) {
+                    // Obtener detalles completos del usuario por username
+                    loadUserDetails(user.usuario)
+                }
             }
         }
     }, [isOpen, user?.id, isEditing, user])
+
+    const loadUserDetails = async (username: string) => {
+        try {
+            setLoadingUser(true)
+            const fullUser = await seguridadApi.obtenerUsuario(username)
+            console.log('👤 Detalles del usuario:', JSON.stringify(fullUser, null, 2))
+            if (fullUser?.rol_id) {
+                setRoleId(fullUser.rol_id)
+            }
+            if (fullUser?.nombre_completo && !name) setName(fullUser.nombre_completo)
+            if (fullUser?.email && !email) setEmail(fullUser.email)
+        } catch (err) {
+            console.error('Error cargando detalles del usuario:', err)
+        } finally {
+            setLoadingUser(false)
+        }
+    }
 
     const loadRoles = async () => {
         try {
             setLoadingRoles(true)
             const res = await seguridadApi.listarRoles()
             // Filtrar solo roles activos
-            const rolesActivos = (res.data || []).filter(rol => rol.Estado === true)
+            const rolesActivos = (res.data || []).filter(rol => !!rol.estado)
             setRoles(rolesActivos)
         } catch (err) {
             console.error('Error cargando roles:', err)
@@ -283,31 +309,82 @@ export const UserFormModal = ({ isOpen, onClose, user }: UserFormModalProps) => 
 
         if (!usuario || !roleId) return
 
-        const payload = {
-            usuario,
-            rol_id: roleId,
-            credencial: requierePin ? credencial : undefined,
-            contraseña: !requierePin ? password : undefined,
-            email: email.trim() || null,
-            telefono: telefonoCompleto,
-            nombre_completo: name.trim() || null,
-            observaciones: null,
-            activo: true,
-        }
+        if (isEditing && user?.id) {
+            // --- MODO EDICIÓN (PATCH) ---
+            const payload: Record<string, any> = {}
 
-        // Mostrar el JSON que se envía al endpoint
-        console.log('📤 JSON enviado a POST /auth-secundario/usuarios:')
-        console.log(JSON.stringify(payload, null, 2))
+            // Solo enviar campos que cambiaron
+            if (name.trim() !== (user.nombre_completo || '')) {
+                payload.nombre_completo = name.trim() || null
+            }
+            if (email.trim() !== (user.email || '')) {
+                payload.email = email.trim() || null
+            }
+            if (telefonoCompleto !== (user.telefono || null)) {
+                payload.telefono = telefonoCompleto
+            }
+            if (roleId !== user.rol_id) {
+                payload.rol_id = roleId
+            }
+            if (usuario !== user.usuario) {
+                payload.usuario = usuario
+            }
+            // Credencial/contraseña solo si se escribió algo nuevo
+            if (requierePin && credencial) {
+                payload.credencial = credencial
+            }
+            if (!requierePin && password) {
+                payload.contraseña = password
+            }
 
-        try {
-            const response = await seguridadApi.crearUsuario(payload)
-            console.log('✅ Respuesta del servidor:', JSON.stringify(response, null, 2))
-            onClose()
-        } catch (err: any) {
-            console.error('❌ Error creando usuario:', err)
-            if (err?.response) {
-                console.error('📋 Status:', err.response.status)
-                console.error('📋 Response data:', JSON.stringify(err.response.data, null, 2))
+            console.log('📤 JSON enviado a PATCH /auth-secundario/usuarios/' + user.id + ':')
+            console.log(JSON.stringify(payload, null, 2))
+
+            // Si no hay cambios, cerrar sin llamar al API
+            if (Object.keys(payload).length === 0) {
+                console.log('ℹ️ Sin cambios, cerrando modal')
+                onClose()
+                return
+            }
+
+            try {
+                const response = await seguridadApi.actualizarUsuario(user.id, payload)
+                console.log('✅ Respuesta del servidor:', JSON.stringify(response, null, 2))
+                onClose()
+            } catch (err: any) {
+                console.error('❌ Error actualizando usuario:', err)
+                if (err?.response) {
+                    console.error('📋 Status:', err.response.status)
+                    console.error('📋 Response data:', JSON.stringify(err.response.data, null, 2))
+                }
+            }
+        } else {
+            // --- MODO CREACIÓN (POST) ---
+            const payload = {
+                usuario,
+                rol_id: roleId,
+                credencial: requierePin ? credencial : undefined,
+                contraseña: !requierePin ? password : undefined,
+                email: email.trim() || null,
+                telefono: telefonoCompleto,
+                nombre_completo: name.trim() || null,
+                observaciones: null,
+                activo: true,
+            }
+
+            console.log('📤 JSON enviado a POST /auth-secundario/usuarios:')
+            console.log(JSON.stringify(payload, null, 2))
+
+            try {
+                const response = await seguridadApi.crearUsuario(payload)
+                console.log('✅ Respuesta del servidor:', JSON.stringify(response, null, 2))
+                onClose()
+            } catch (err: any) {
+                console.error('❌ Error creando usuario:', err)
+                if (err?.response) {
+                    console.error('📋 Status:', err.response.status)
+                    console.error('📋 Response data:', JSON.stringify(err.response.data, null, 2))
+                }
             }
         }
     }
@@ -414,11 +491,12 @@ export const UserFormModal = ({ isOpen, onClose, user }: UserFormModalProps) => 
                         <label className="text-sm font-medium">Usuario</label>
                         <div className="relative">
                             <Input
-                                placeholder={generandoUsuario ? 'Generando...' : 'Se genera automáticamente'}
+                                placeholder={generandoUsuario ? 'Generando...' : isEditing ? '' : 'Se genera automáticamente'}
                                 value={usuario}
                                 onChange={(e) => handleUsuarioChange(e.target.value)}
-                                disabled={generandoUsuario}
+                                disabled={generandoUsuario || isEditing}
                                 className={`h-10 pr-14 ${
+                                    isEditing ? 'bg-muted/50' :
                                     usuarioStatus === 'available' ? 'border-green-500 focus-visible:ring-green-500' :
                                     usuarioStatus === 'taken' ? 'border-red-500 focus-visible:ring-red-500' : ''
                                 }`}
@@ -455,9 +533,9 @@ export const UserFormModal = ({ isOpen, onClose, user }: UserFormModalProps) => 
                             className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                             value={roleId?.toString() || ''}
                             onChange={(e) => setRoleId(e.target.value ? parseInt(e.target.value, 10) : null)}
-                            disabled={loadingRoles}
+                            disabled={loadingRoles || loadingUser}
                         >
-                            <option value="">{loadingRoles ? "Cargando roles..." : "Seleccione un rol"}</option>
+                            <option value="">{loadingRoles || loadingUser ? "Cargando..." : "Seleccione un rol"}</option>
                             {roles.map((rol) => (
                                 <option key={rol.id} value={rol.id.toString()}>
                                     {rol.nombre} {rol.pin ? '(PIN)' : '(Contraseña)'}
@@ -472,7 +550,7 @@ export const UserFormModal = ({ isOpen, onClose, user }: UserFormModalProps) => 
                                 <div className="flex gap-1.5 items-center">
                                     <Input
                                         type="text"
-                                        placeholder="PIN 4 dígitos"
+                                        placeholder={isEditing ? 'Dejar vacío para no cambiar' : 'PIN 4 dígitos'}
                                         value={credencial}
                                         onChange={(e) => {
                                             const val = e.target.value.replace(/\D/g, '')
@@ -515,7 +593,7 @@ export const UserFormModal = ({ isOpen, onClose, user }: UserFormModalProps) => 
                                 <label className="text-sm font-medium">Contraseña</label>
                                 <Input
                                     type="password"
-                                    placeholder="Contraseña del usuario"
+                                    placeholder={isEditing ? 'Dejar vacío para no cambiar' : 'Contraseña del usuario'}
                                     value={password}
                                     onChange={(e) => setPassword(e.target.value)}
                                 />
@@ -536,7 +614,7 @@ export const UserFormModal = ({ isOpen, onClose, user }: UserFormModalProps) => 
 
                 <div className="flex justify-end space-x-2 pt-4 border-t">
                     <Button variant="outline" onClick={onClose}>Cancelar</Button>
-                    <Button onClick={handleSave}>Guardar Usuario</Button>
+                    <Button onClick={handleSave}>{isEditing ? 'Actualizar Usuario' : 'Guardar Usuario'}</Button>
                 </div>
             </div>
         </Modal>

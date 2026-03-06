@@ -7,13 +7,14 @@ import {
     getPaginationRowModel,
     useReactTable,
 } from '@tanstack/react-table'
-import { ArrowLeft, UserPlus, Edit, Shield, Activity, Search, RefreshCw, Loader2 } from 'lucide-react'
+import { ArrowLeft, UserPlus, Edit, Shield, Activity, Search, RefreshCw, Loader2, Trash2, AlertTriangle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { useNavigate } from 'react-router-dom'
 import { UserFormModal } from '@/components/security/UserFormModal'
 import { seguridadApi, UsuarioMaster } from '@/api/seguridad'
+import { Modal } from '@/components/ui/modal'
 
 export const SecuritySettingsPage = () => {
     const navigate = useNavigate()
@@ -21,6 +22,11 @@ export const SecuritySettingsPage = () => {
     // Estados modal
     const [isFormOpen, setIsFormOpen] = useState(false)
     const [editingUser, setEditingUser] = useState<UsuarioMaster | undefined>(undefined)
+
+    // Estados modal eliminar
+    const [isDeleteOpen, setIsDeleteOpen] = useState(false)
+    const [deletingUser, setDeletingUser] = useState<UsuarioMaster | null>(null)
+    const [deleting, setDeleting] = useState(false)
 
     // Estado tabla
     const [globalFilter, setGlobalFilter] = useState('')
@@ -76,6 +82,31 @@ export const SecuritySettingsPage = () => {
         fetchUsuarios(globalFilter)
     }
 
+    const handleDeleteUser = (user: UsuarioMaster) => {
+        setDeletingUser(user)
+        setIsDeleteOpen(true)
+    }
+
+    const confirmDelete = async () => {
+        if (!deletingUser) return
+        try {
+            setDeleting(true)
+            await seguridadApi.eliminarUsuario(deletingUser.id)
+            console.log(`✅ Usuario ${deletingUser.usuario} eliminado`)
+            setIsDeleteOpen(false)
+            setDeletingUser(null)
+            fetchUsuarios(globalFilter)
+        } catch (err: any) {
+            console.error('❌ Error eliminando usuario:', err)
+            if (err?.response) {
+                console.error('📋 Status:', err.response.status)
+                console.error('📋 Response:', JSON.stringify(err.response.data, null, 2))
+            }
+        } finally {
+            setDeleting(false)
+        }
+    }
+
     const columns: ColumnDef<UsuarioMaster>[] = [
         {
             accessorKey: 'usuario',
@@ -129,15 +160,24 @@ export const SecuritySettingsPage = () => {
             cell: ({ row }) => {
                 const user = row.original
                 return (
-                    <div className="flex justify-end pr-2">
+                    <div className="flex justify-end gap-1 pr-2">
                         <Button
                             variant="ghost"
                             size="sm"
                             onClick={() => handleEditUser(user)}
-                            title="Editar / Configurar Permisos"
+                            title="Editar usuario"
                             className="h-8 w-8 p-0 text-primary border border-primary/20 hover:bg-primary/10"
                         >
                             <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleDeleteUser(user)}
+                            title="Eliminar usuario"
+                            className="h-8 w-8 p-0 text-destructive border border-destructive/20 hover:bg-destructive/10"
+                        >
+                            <Trash2 className="h-4 w-4" />
                         </Button>
                     </div>
                 )
@@ -290,6 +330,84 @@ export const SecuritySettingsPage = () => {
                 onClose={handleModalClose}
                 user={editingUser}
             />
+
+            {/* Modal de confirmación de eliminación */}
+            <Modal
+                isOpen={isDeleteOpen}
+                onClose={() => { if (!deleting) { setIsDeleteOpen(false); setDeletingUser(null) } }}
+                title=""
+                className="max-w-lg"
+            >
+                <div className="flex flex-col items-center text-center py-4">
+                    {/* Icono grande animado */}
+                    <div className="relative mb-6">
+                        <div className="absolute inset-0 bg-red-500/20 rounded-full blur-xl animate-pulse" />
+                        <div className="relative h-20 w-20 rounded-full bg-gradient-to-br from-red-50 to-red-100 dark:from-red-950/50 dark:to-red-900/30 border-2 border-red-200 dark:border-red-800 flex items-center justify-center">
+                            <AlertTriangle className="h-10 w-10 text-red-500" />
+                        </div>
+                    </div>
+
+                    {/* Título */}
+                    <h3 className="text-xl font-bold text-foreground mb-2">
+                        ¿Eliminar este usuario?
+                    </h3>
+
+                    {/* Descripción */}
+                    <p className="text-muted-foreground mb-5 max-w-sm">
+                        Estás a punto de eliminar permanentemente al usuario:
+                    </p>
+
+                    {/* Card con info del usuario */}
+                    <div className="w-full max-w-sm bg-muted/50 border border-border rounded-xl px-5 py-4 mb-6">
+                        <p className="text-lg font-semibold text-foreground">
+                            {deletingUser?.nombre_completo || 'Sin nombre'}
+                        </p>
+                        <p className="text-sm text-muted-foreground mt-0.5">
+                            @{deletingUser?.usuario}
+                        </p>
+                        {deletingUser?.email && (
+                            <p className="text-xs text-muted-foreground mt-1">
+                                {deletingUser.email}
+                            </p>
+                        )}
+                    </div>
+
+                    {/* Advertencia */}
+                    <p className="text-xs text-red-500/80 dark:text-red-400/80 mb-6">
+                        Se eliminarán sus roles y permisos. Esta acción no se puede deshacer.
+                    </p>
+
+                    {/* Botones */}
+                    <div className="flex gap-3 w-full max-w-sm">
+                        <Button
+                            variant="outline"
+                            onClick={() => { setIsDeleteOpen(false); setDeletingUser(null) }}
+                            disabled={deleting}
+                            className="flex-1 h-11"
+                        >
+                            Cancelar
+                        </Button>
+                        <Button
+                            variant="destructive"
+                            onClick={confirmDelete}
+                            disabled={deleting}
+                            className="flex-1 h-11 gap-2"
+                        >
+                            {deleting ? (
+                                <>
+                                    <Loader2 className="h-4 w-4 animate-spin" />
+                                    Eliminando...
+                                </>
+                            ) : (
+                                <>
+                                    <Trash2 className="h-4 w-4" />
+                                    Sí, eliminar
+                                </>
+                            )}
+                        </Button>
+                    </div>
+                </div>
+            </Modal>
         </motion.div>
     )
 }
