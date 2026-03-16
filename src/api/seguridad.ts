@@ -1,9 +1,15 @@
 import { apiClient } from './client'
 
+export interface RolEnUsuario {
+    id: number
+    nombre?: string
+}
+
 export interface UsuarioMaster {
     id: number
     usuario: string
     rol_id?: number
+    roles?: RolEnUsuario[]
     email: string | null
     telefono: string | null
     nombre_completo: string | null
@@ -51,11 +57,19 @@ export interface UpdateUsuarioMasterDto {
     activo?: boolean
 }
 
+export interface PermisoEnRol {
+    id: number
+    codigo: string
+    descripcion?: string
+    estado?: boolean
+}
+
 export interface AuthRole {
     id: number
     nombre: string
     pin: boolean // true si usa PIN, false si usa contraseña
     estado: number | boolean // 1/true = activo, 0/false = inactivo
+    permisos?: PermisoEnRol[]
 }
 
 export interface ListarRolesResponse {
@@ -63,12 +77,32 @@ export interface ListarRolesResponse {
     data: AuthRole[]
 }
 
+export interface Permiso {
+    id?: number
+    codigo: string
+    nombre?: string
+}
+
+export interface ListarPermisosResponse {
+    success?: boolean
+    data: Permiso[]
+}
+
 export const seguridadApi = {
     listarUsuarios: async (page = 1, pageSize = 100, search = ''): Promise<ListarUsuariosResponse> => {
         const params: Record<string, any> = { page, pageSize }
         if (search.trim()) params.search = search.trim()
         const response = await apiClient.get('/auth-secundario/usuarios', { params })
-        return response.data
+        const raw = response.data
+        // Normalizar: asegurar rol_id desde roles[0] si viene en el JSON
+        if (raw?.data && Array.isArray(raw.data)) {
+            raw.data = raw.data.map((u: any) => ({
+                ...u,
+                rol_id: u.rol_id ?? u.roles?.[0]?.id ?? u.Roles?.[0]?.id,
+                roles: u.roles ?? u.Roles ?? [],
+            }))
+        }
+        return raw
     },
 
     verificarUsuario: async (usuario: string): Promise<{ exists: boolean; data?: UsuarioMaster }> => {
@@ -85,7 +119,12 @@ export const seguridadApi = {
 
     obtenerUsuario: async (usuario: string): Promise<UsuarioMaster> => {
         const response = await apiClient.get(`/auth-secundario/usuarios/${usuario}`)
-        return response.data?.data || response.data
+        const raw = response.data?.data || response.data
+        if (raw) {
+            raw.rol_id = raw.rol_id ?? raw.roles?.[0]?.id ?? raw.Roles?.[0]?.id
+            raw.roles = raw.roles ?? raw.Roles ?? []
+        }
+        return raw
     },
 
     crearUsuario: async (data: CreateUsuarioMasterDto) => {
@@ -113,17 +152,32 @@ export const seguridadApi = {
                 nombre: role.nombre,
                 pin: role.pin,
                 estado: role.estado ?? role.Estado ?? 1,
+                permisos: role.permisos ?? [],
             }))
         }
         return raw
     },
 
-    crearRol: async (data: { nombre: string; pin: boolean; estado?: boolean }) => {
+    listarPermisos: async (): Promise<ListarPermisosResponse> => {
+        const response = await apiClient.get('/auth-secundario/permisos')
+        const raw = response.data
+        if (raw?.data && Array.isArray(raw.data)) {
+            raw.data = raw.data.map((p: any) => ({
+                id: p.id ?? p.ID,
+                codigo: p.codigo ?? p.Codigo ?? '',
+                nombre: p.nombre ?? p.Nombre,
+            }))
+            return raw
+        }
+        return { data: raw?.data || [] }
+    },
+
+    crearRol: async (data: { nombre: string; pin: boolean; estado?: boolean; permisos?: number[] }) => {
         const response = await apiClient.post('/auth-secundario/roles', data)
         return response.data
     },
 
-    actualizarRol: async (id: number, data: { nombre?: string; pin?: boolean; estado?: boolean }) => {
+    actualizarRol: async (id: number, data: { nombre?: string; pin?: boolean; estado?: boolean; permisos?: number[] }) => {
         const response = await apiClient.put(`/auth-secundario/roles/${id}`, data)
         return response.data
     },

@@ -125,9 +125,10 @@ export const UserFormModal = ({ isOpen, onClose, user }: UserFormModalProps) => 
                     setTelefono(telefonoCompleto)
                 }
 
-                // Si ya tiene rol_id en el objeto, usarlo directamente
-                if (user?.rol_id) {
-                    setRoleId(user.rol_id)
+                // rol_id desde roles[0] (API devuelve roles del usuario) o rol_id directo
+                const userRolId = user?.roles?.[0]?.id ?? user?.rol_id
+                if (userRolId) {
+                    setRoleId(userRolId)
                 } else if (user?.usuario) {
                     // Obtener detalles completos del usuario por username
                     loadUserDetails(user.usuario)
@@ -329,12 +330,10 @@ export const UserFormModal = ({ isOpen, onClose, user }: UserFormModalProps) => 
             if (usuario !== user.usuario) {
                 payload.usuario = usuario
             }
-            // Credencial/contraseña solo si se escribió algo nuevo
-            if (requierePin && credencial) {
-                payload.credencial = credencial
-            }
-            if (!requierePin && password) {
-                payload.contraseña = password
+            // Credencial: PIN o contraseña según el rol
+            const credencialValor = requierePin ? credencial : password
+            if (credencialValor) {
+                payload.credencial = credencialValor
             }
 
             console.log('📤 JSON enviado a PATCH /auth-secundario/usuarios/' + user.id + ':')
@@ -360,11 +359,11 @@ export const UserFormModal = ({ isOpen, onClose, user }: UserFormModalProps) => 
             }
         } else {
             // --- MODO CREACIÓN (POST) ---
+            const credencialValor = requierePin ? credencial : password
             const payload = {
                 usuario,
                 rol_id: roleId,
-                credencial: requierePin ? credencial : undefined,
-                contraseña: !requierePin ? password : undefined,
+                credencial: credencialValor || undefined,
                 email: email.trim() || null,
                 telefono: telefonoCompleto,
                 nombre_completo: name.trim() || null,

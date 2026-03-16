@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { Modal } from '@/components/ui/modal'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Copy, RefreshCw, AlertCircle, User, Mail, Phone, KeyRound, FileText, CheckCircle2, Shield } from 'lucide-react'
+import { Copy, RefreshCw, AlertCircle, CheckCircle2 } from 'lucide-react'
 import { seguridadApi, AuthRole } from '@/api/seguridad'
 import { Select } from '@/components/ui/select'
 
@@ -42,15 +42,17 @@ export const UserMasterModal = ({ isOpen, onClose, user }: UserMasterModalProps)
             
             // Separar código de país y teléfono
             const telefonoCompleto = user?.telefono || ''
-            if (telefonoCompleto.startsWith('+57')) {
-                setCodigoPais('+57')
-                setTelefono(telefonoCompleto.replace('+57', '').trim())
+            const matchCodigo = telefonoCompleto.match(/^(\+\d{1,3})/)
+            if (matchCodigo) {
+                setCodigoPais(matchCodigo[1])
+                setTelefono(telefonoCompleto.replace(matchCodigo[1], '').trim())
             } else {
                 setCodigoPais('+57')
                 setTelefono(telefonoCompleto)
             }
             
-            const userRolId = user?.rol_id || null
+            // rol_id desde roles[0] (API devuelve roles del usuario) o rol_id directo
+            const userRolId = user?.roles?.[0]?.id ?? user?.rol_id ?? null
             setRolId(userRolId)
             setPin(user?.pin || '')
             setContraseña('') // No mostrar contraseña existente por seguridad
@@ -70,13 +72,13 @@ export const UserMasterModal = ({ isOpen, onClose, user }: UserMasterModalProps)
         try {
             setLoadingRoles(true)
             const res = await seguridadApi.listarRoles()
-            // Filtrar solo roles activos
-            const rolesActivos = (res.data || []).filter(rol => rol.Estado === true)
+            // Filtrar solo roles activos (API usa /auth-secundario/roles)
+            const rolesActivos = (res.data || []).filter(rol => !!rol.estado)
             setRoles(rolesActivos)
             
             // Si hay un rol_id para establecer, buscarlo en los roles cargados
             if (rolIdToSet && res.data) {
-                const rol = res.data.find(r => r.id === rolIdToSet && r.Estado === true)
+                const rol = res.data.find(r => r.id === rolIdToSet && !!r.estado)
                 if (rol) {
                     setRolSeleccionado(rol)
                 }
@@ -124,16 +126,18 @@ export const UserMasterModal = ({ isOpen, onClose, user }: UserMasterModalProps)
             return
         }
         
-        // Validar según el tipo de autenticación del rol
-        if (rolSeleccionado?.pin) {
-            if (!pin.trim()) {
-                setError('El PIN de acceso es obligatorio')
-                return
-            }
-        } else {
-            if (!contraseña.trim()) {
-                setError('La contraseña es obligatoria')
-                return
+        // Validar credencial solo al crear (al editar es opcional - si no se ingresa no se actualiza)
+        if (!isEditing) {
+            if (rolSeleccionado?.pin) {
+                if (!pin.trim()) {
+                    setError('El PIN de acceso es obligatorio')
+                    return
+                }
+            } else {
+                if (!contraseña.trim()) {
+                    setError('La contraseña es obligatoria')
+                    return
+                }
             }
         }
 
@@ -153,22 +157,27 @@ export const UserMasterModal = ({ isOpen, onClose, user }: UserMasterModalProps)
                 ? `${codigoPais}${telefono.trim()}` 
                 : null
 
+            const credencial = rolSeleccionado?.pin ? pin : contraseña
             const userData = {
                 usuario: usuario.trim(),
                 nombre_completo: nombreCompleto.trim() || null,
                 email: email.trim() || null,
                 telefono: telefonoCompleto,
                 rol_id: rolId,
-                pin: rolSeleccionado?.pin ? pin : undefined,
-                contraseña: rolSeleccionado?.pin ? undefined : contraseña,
+                credencial: credencial.trim() ? credencial : undefined,
                 observaciones: observaciones.trim() || null,
                 activo,
             }
 
-            console.log('📤 Enviando petición para crear usuario:', userData)
-            console.log('🔑 Token disponible:', token ? `${token.substring(0, 20)}...` : 'NO HAY TOKEN')
-            await seguridadApi.crearUsuario(userData)
-            console.log('✅ Usuario creado exitosamente')
+            if (isEditing && user?.id) {
+                console.log('📤 PUT /auth-secundario/usuarios/' + user.id + ':', JSON.stringify(userData, null, 2))
+                await seguridadApi.actualizarUsuario(user.id, userData)
+                console.log('✅ Usuario actualizado')
+            } else {
+                console.log('📤 POST /auth-secundario/usuarios:', JSON.stringify(userData, null, 2))
+                await seguridadApi.crearUsuario(userData)
+                console.log('✅ Usuario creado')
+            }
             onClose()
         } catch (err: any) {
             console.error('Error al crear usuario maestro:', err)
@@ -183,238 +192,110 @@ export const UserMasterModal = ({ isOpen, onClose, user }: UserMasterModalProps)
             isOpen={isOpen}
             onClose={onClose}
             title={isEditing ? 'Editar Usuario' : 'Nuevo Usuario'}
+            className="max-w-2xl"
         >
-            <div className="mt-2 space-y-5">
+            <div className="mt-3 space-y-4">
                 {error && (
-                    <div className="p-3 text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg flex items-center gap-2">
+                    <div className="p-2.5 text-sm text-red-600 bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 rounded-lg flex items-center gap-2">
                         <AlertCircle className="h-4 w-4 flex-shrink-0" />
                         <span>{error}</span>
                     </div>
                 )}
 
-                {/* Información de la Cuenta */}
-                <div className="space-y-3">
-                    <div className="flex items-center gap-2 pb-1 border-b border-primary/20">
-                        <User className="h-4 w-4 text-primary" />
-                        <h3 className="text-sm font-semibold text-primary tracking-wide uppercase">Información de la Cuenta</h3>
+                {/* Nombre Completo - campo más grande */}
+                <div className="space-y-1">
+                    <label className="text-xs font-medium text-muted-foreground">Nombre Completo</label>
+                    <Input placeholder="Ej. Juan Pérez García" value={nombreCompleto} onChange={(e) => setNombreCompleto(e.target.value)} className="h-10 text-base" autoComplete="off" />
+                </div>
+
+                {/* Fila: Rol | Email | Teléfono */}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div className="space-y-1">
+                        <label className="text-xs font-medium text-muted-foreground">Rol <span className="text-red-500">*</span></label>
+                        <Select
+                            value={rolId?.toString() || ''}
+                            onChange={(e) => handleRolChange(e.target.value)}
+                            disabled={loadingRoles}
+                            className="h-9"
+                            autoComplete="off"
+                        >
+                            <option value="">{loadingRoles ? "Cargando..." : "Seleccione un rol"}</option>
+                            {roles.map((rol) => (
+                                <option key={rol.id} value={rol.id.toString()}>
+                                    {rol.nombre} {rol.pin ? '(PIN)' : '(Contraseña)'}
+                                </option>
+                            ))}
+                        </Select>
                     </div>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        <div className="space-y-1.5">
-                            <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                                Usuario (Login) <span className="text-red-500">*</span>
-                            </label>
-                            <div className="relative">
-                                <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/50" />
-                                <Input
-                                    placeholder="Ej. conductor1"
-                                    value={usuario}
-                                    onChange={(e) => setUsuario(e.target.value)}
-                                    className="pl-9 h-10"
-                                />
-                            </div>
-                        </div>
-                        <div className="space-y-1.5">
-                            <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                                Nombre Completo
-                            </label>
-                            <Input
-                                placeholder="Ej. Juan Pérez"
-                                value={nombreCompleto}
-                                onChange={(e) => setNombreCompleto(e.target.value)}
-                                className="h-10"
-                            />
+                    <div className="space-y-1">
+                        <label className="text-xs font-medium text-muted-foreground">Correo Electrónico</label>
+                        <Input type="email" placeholder="usuario@email.com" value={email} onChange={(e) => setEmail(e.target.value)} className="h-9" autoComplete="off" />
+                    </div>
+                    <div className="space-y-1">
+                        <label className="text-xs font-medium text-muted-foreground">Teléfono</label>
+                        <div className="flex gap-1.5">
+                            <Input placeholder="+57" value={codigoPais} onChange={(e) => setCodigoPais(e.target.value)} className="h-9 w-16 text-center shrink-0" autoComplete="off" />
+                            <Input placeholder="300 000 0000" value={telefono} onChange={(e) => setTelefono(e.target.value)} className="h-9 flex-1" type="tel" autoComplete="off" />
                         </div>
                     </div>
                 </div>
 
-                {/* Contacto */}
-                <div className="space-y-3">
-                    <div className="flex items-center gap-2 pb-1 border-b border-primary/20">
-                        <Mail className="h-4 w-4 text-primary" />
-                        <h3 className="text-sm font-semibold text-primary tracking-wide uppercase">Contacto</h3>
-                    </div>
+                {/* Usuario + PIN/Contraseña en la misma fila */}
+                {rolSeleccionado ? (
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        <div className="space-y-1.5">
-                            <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                                Correo Electrónico
-                            </label>
-                            <div className="relative">
-                                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/50" />
-                                <Input
-                                    type="email"
-                                    placeholder="usuario@email.com"
-                                    value={email}
-                                    onChange={(e) => setEmail(e.target.value)}
-                                    className="pl-9 h-10"
-                                />
-                            </div>
+                        <div className="space-y-1">
+                            <label className="text-xs font-medium text-muted-foreground">Usuario <span className="text-red-500">*</span></label>
+                            <Input placeholder="Ej. conductor1" value={usuario} onChange={(e) => setUsuario(e.target.value)} className="h-9" autoComplete="off" />
                         </div>
-                        <div className="space-y-1.5">
-                            <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                                Teléfono (Opcional)
+                        <div className="space-y-1">
+                            <label className="text-xs font-medium text-muted-foreground">
+                                {rolSeleccionado.pin ? 'PIN de Acceso' : 'Contraseña'} <span className="text-red-500">*</span>
                             </label>
-                            <div className="flex gap-2 items-start">
-                                <div className="space-y-1.5 w-20">
-                                    <label className="text-xs text-muted-foreground">Código</label>
-                                    <Input
-                                        placeholder="+57"
-                                        value={codigoPais}
-                                        onChange={(e) => setCodigoPais(e.target.value)}
-                                        className="h-10 text-center font-semibold"
-                                    />
-                                </div>
-                                <div className="space-y-1.5 flex-1">
-                                    <label className="text-xs text-muted-foreground">Número</label>
-                                    <div className="relative">
-                                        <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/50" />
-                                        <Input
-                                            placeholder="300 000 0000"
-                                            value={telefono}
-                                            onChange={(e) => setTelefono(e.target.value)}
-                                            className="pl-9 h-10"
-                                            type="tel"
-                                        />
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                {/* Rol y Seguridad */}
-                <div className="space-y-3">
-                    <div className="flex items-center gap-2 pb-1 border-b border-primary/20">
-                        <Shield className="h-4 w-4 text-primary" />
-                        <h3 className="text-sm font-semibold text-primary tracking-wide uppercase">Rol y Seguridad</h3>
-                    </div>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <div className="space-y-1.5">
-                            <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                                Rol <span className="text-red-500">*</span>
-                            </label>
-                            <Select
-                                value={rolId?.toString() || ''}
-                                onChange={(e) => handleRolChange(e.target.value)}
-                                disabled={loadingRoles}
-                                className="h-10"
-                            >
-                                <option value="">{loadingRoles ? "Cargando roles..." : "Seleccione un rol"}</option>
-                                {roles.map((rol) => (
-                                    <option key={rol.id} value={rol.id.toString()}>
-                                        {rol.nombre} {rol.pin ? '(PIN)' : '(Contraseña)'}
-                                    </option>
-                                ))}
-                            </Select>
-                        </div>
-                        {rolSeleccionado && (
-                            <div className="space-y-1.5">
-                                <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                                    {rolSeleccionado.pin ? 'PIN de Acceso' : 'Contraseña'} <span className="text-red-500">*</span>
-                                </label>
+                            <div className="flex gap-2">
                                 {rolSeleccionado.pin ? (
-                                    <div className="flex gap-2">
-                                        <div className="relative flex-1">
-                                            <KeyRound className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/50" />
-                                            <Input
-                                                type="text"
-                                                placeholder="1234"
-                                                value={pin}
-                                                onChange={(e) => setPin(e.target.value)}
-                                                className="pl-9 h-10 font-mono text-lg tracking-[0.3em]"
-                                                maxLength={4}
-                                            />
-                                        </div>
-                                        <Button
-                                            type="button"
-                                            variant="outline"
-                                            size="icon"
-                                            onClick={copyPin}
-                                            title="Copiar PIN"
-                                            className={`h-10 w-10 shrink-0 transition-colors ${pinCopied ? 'border-green-500 text-green-500' : ''}`}
-                                        >
-                                            {pinCopied ? <CheckCircle2 className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
-                                        </Button>
-                                        <Button
-                                            type="button"
-                                            variant="secondary"
-                                            onClick={generateRandomPin}
-                                            title="Generar PIN Aleatorio"
-                                            className="h-10 shrink-0 gap-2"
-                                        >
-                                            <RefreshCw className="h-4 w-4" />
-                                            Generar
-                                        </Button>
-                                    </div>
+                                    <>
+                                        <Input type="text" placeholder="1234" value={pin} onChange={(e) => setPin(e.target.value)} maxLength={4} className="h-9 w-24 font-mono tracking-widest text-center" autoComplete="off" />
+                                        <Button type="button" variant="outline" size="sm" onClick={generateRandomPin} className="h-9">Generar</Button>
+                                        <Button type="button" variant="outline" size="sm" onClick={copyPin} className="h-9 px-2">{pinCopied ? <CheckCircle2 className="h-4 w-4" /> : <Copy className="h-4 w-4" />}</Button>
+                                    </>
                                 ) : (
-                                    <div className="flex gap-2">
-                                        <div className="relative flex-1">
-                                            <KeyRound className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/50" />
-                                            <Input
-                                                type="password"
-                                                placeholder="Ingrese la contraseña"
-                                                value={contraseña}
-                                                onChange={(e) => setContraseña(e.target.value)}
-                                                className="pl-9 h-10"
-                                            />
-                                        </div>
-                                        <Button
-                                            type="button"
-                                            variant="outline"
-                                            size="icon"
-                                            onClick={copyPin}
-                                            title="Copiar Contraseña"
-                                            className={`h-10 w-10 shrink-0 transition-colors ${pinCopied ? 'border-green-500 text-green-500' : ''}`}
-                                        >
-                                            {pinCopied ? <CheckCircle2 className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
-                                        </Button>
-                                    </div>
+                                    <Input type="password" placeholder="Contraseña" value={contraseña} onChange={(e) => setContraseña(e.target.value)} className="h-9 flex-1" autoComplete="off" />
                                 )}
                             </div>
-                        )}
+                        </div>
                     </div>
-                </div>
+                ) : (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div className="space-y-1">
+                            <label className="text-xs font-medium text-muted-foreground">Usuario <span className="text-red-500">*</span></label>
+                            <Input placeholder="Ej. conductor1" value={usuario} onChange={(e) => setUsuario(e.target.value)} className="h-9" autoComplete="off" />
+                        </div>
+                        <div className="space-y-1">
+                            <label className="text-xs font-medium text-muted-foreground">PIN / Contraseña</label>
+                            <Input placeholder="Seleccione un rol primero" className="h-9" disabled autoComplete="off" />
+                        </div>
+                    </div>
+                )}
 
                 {/* Observaciones */}
-                <div className="space-y-3">
-                    <div className="flex items-center gap-2 pb-1 border-b border-primary/20">
-                        <FileText className="h-4 w-4 text-primary" />
-                        <h3 className="text-sm font-semibold text-primary tracking-wide uppercase">Notas</h3>
-                    </div>
-                    <div className="space-y-1.5">
-                        <textarea
-                            className="flex min-h-[40px] h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 resize-none"
-                            placeholder="Notas opcionales..."
-                            value={observaciones}
-                            onChange={(e) => setObservaciones(e.target.value)}
-                        />
-                    </div>
+                <div className="space-y-1">
+                    <label className="text-xs font-medium text-muted-foreground">Observaciones</label>
+                    <Input placeholder="Notas opcionales..." value={observaciones} onChange={(e) => setObservaciones(e.target.value)} className="h-9" autoComplete="off" />
                 </div>
 
                 {/* Estado + Botones */}
-                <div className="flex items-center justify-between pt-3 border-t">
+                <div className="flex items-center justify-between pt-3 border-t gap-3">
                     <div
                         onClick={() => setActivo(!activo)}
-                        className={`flex items-center gap-3 px-4 py-2.5 rounded-lg border-2 cursor-pointer transition-all select-none ${activo
-                            ? 'border-green-500/50 bg-green-500/10 text-green-700 dark:text-green-400'
-                            : 'border-red-500/50 bg-red-500/10 text-red-700 dark:text-red-400'
-                            }`}
+                        className={`flex items-center gap-2 px-3 py-2 rounded-lg border-2 cursor-pointer transition-all select-none shrink-0 ${activo ? 'border-green-500/50 bg-green-500/10 text-green-700 dark:text-green-400' : 'border-red-500/50 bg-red-500/10 text-red-700 dark:text-red-400'}`}
                     >
-                        <div className={`w-3 h-3 rounded-full ${activo ? 'bg-green-500' : 'bg-red-500'}`} />
-                        <span className="text-sm font-semibold">{activo ? 'Activo' : 'Inactivo'}</span>
+                        <div className={`w-2.5 h-2.5 rounded-full ${activo ? 'bg-green-500' : 'bg-red-500'}`} />
+                        <span className="text-xs font-semibold">{activo ? 'Activo' : 'Inactivo'}</span>
                     </div>
-                    <div className="flex gap-3">
-                        <Button variant="outline" onClick={onClose} disabled={isSubmitting} className="px-6">
-                            Cancelar
-                        </Button>
-                        <Button onClick={handleSave} disabled={isSubmitting} className="px-6 gap-2">
-                            {isSubmitting ? (
-                                <>
-                                    <RefreshCw className="h-4 w-4 animate-spin" />
-                                    Guardando...
-                                </>
-                            ) : (
-                                'Guardar Usuario'
-                            )}
+                    <div className="flex gap-2">
+                        <Button variant="outline" onClick={onClose} disabled={isSubmitting} size="sm" className="px-4">Cancelar</Button>
+                        <Button onClick={handleSave} disabled={isSubmitting} size="sm" className="px-4 gap-2">
+                            {isSubmitting ? <><RefreshCw className="h-4 w-4 animate-spin" /> {isEditing ? 'Actualizando...' : 'Guardando...'}</> : isEditing ? 'Actualizar' : 'Guardar Usuario'}
                         </Button>
                     </div>
                 </div>

@@ -1,18 +1,23 @@
 import { motion } from 'framer-motion'
 import { useState, useEffect, useRef } from 'react'
-import { Users, Search, UserPlus, Edit, RefreshCw, Loader2 } from 'lucide-react'
+import { Users, Search, UserPlus, Edit, Trash2, RefreshCw, Loader2 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { UserMasterModal } from '@/components/security/UserMasterModal'
+import { Modal } from '@/components/ui/modal'
+import { AlertTriangle } from 'lucide-react'
 import { seguridadApi, UsuarioMaster } from '@/api/seguridad'
 
 export const MaestroUsuariosPage = () => {
     const [search, setSearch] = useState('')
     const [isModalOpen, setIsModalOpen] = useState(false)
     const [editingUser, setEditingUser] = useState<UsuarioMaster | null>(null)
+    const [deletingUser, setDeletingUser] = useState<UsuarioMaster | null>(null)
     const [usuarios, setUsuarios] = useState<UsuarioMaster[]>([])
     const [loading, setLoading] = useState(true)
+    const [deleting, setDeleting] = useState(false)
+    const [errorDelete, setErrorDelete] = useState<string | null>(null)
     const [total, setTotal] = useState(0)
     const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
@@ -57,8 +62,27 @@ export const MaestroUsuariosPage = () => {
 
     const handleModalClose = () => {
         setIsModalOpen(false)
-        // Recargar tabla
         fetchUsuarios(search)
+    }
+
+    const handleDeleteUser = (user: UsuarioMaster) => {
+        setDeletingUser(user)
+        setErrorDelete(null)
+    }
+
+    const confirmDeleteUser = async () => {
+        if (!deletingUser) return
+        try {
+            setDeleting(true)
+            await seguridadApi.eliminarUsuario(deletingUser.id)
+            setDeletingUser(null)
+            fetchUsuarios(search)
+        } catch (err: any) {
+            console.error('Error eliminando usuario:', err)
+            setErrorDelete(err?.response?.data?.message || 'Error al eliminar el usuario')
+        } finally {
+            setDeleting(false)
+        }
     }
 
     return (
@@ -95,6 +119,7 @@ export const MaestroUsuariosPage = () => {
                                 value={search}
                                 onChange={(e) => setSearch(e.target.value)}
                                 className="pl-9"
+                                autoComplete="off"
                             />
                         </div>
                         <Button onClick={handleNewUser} className="whitespace-nowrap gap-2">
@@ -148,14 +173,24 @@ export const MaestroUsuariosPage = () => {
                                                     {user.intentos_fallidos}
                                                 </td>
                                                 <td className="py-3 px-4">
-                                                    <div className="flex justify-end">
+                                                    <div className="flex justify-end gap-1">
                                                         <Button
                                                             variant="ghost"
                                                             size="sm"
                                                             onClick={() => handleEditUser(user)}
                                                             className="h-8 w-8 p-0 text-primary border border-primary/20 hover:bg-primary/10"
+                                                            title="Editar"
                                                         >
                                                             <Edit className="h-4 w-4" />
+                                                        </Button>
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="sm"
+                                                            onClick={() => handleDeleteUser(user)}
+                                                            className="h-8 w-8 p-0 text-destructive border border-destructive/20 hover:bg-destructive/10"
+                                                            title="Eliminar"
+                                                        >
+                                                            <Trash2 className="h-4 w-4" />
                                                         </Button>
                                                     </div>
                                                 </td>
@@ -182,6 +217,40 @@ export const MaestroUsuariosPage = () => {
                     user={editingUser}
                 />
             )}
+
+            {/* Modal confirmar eliminar usuario */}
+            <Modal
+                isOpen={!!deletingUser}
+                onClose={() => { if (!deleting) { setDeletingUser(null); setErrorDelete(null) } }}
+                title=""
+                className="max-w-md"
+            >
+                <div className="flex flex-col items-center text-center py-4">
+                    <div className="relative mb-4">
+                        <div className="absolute inset-0 bg-red-500/20 rounded-full blur-xl" />
+                        <div className="relative h-16 w-16 rounded-full bg-red-50 dark:bg-red-950/30 border-2 border-red-200 dark:border-red-800 flex items-center justify-center">
+                            <AlertTriangle className="h-8 w-8 text-red-500" />
+                        </div>
+                    </div>
+                    <h3 className="text-lg font-bold mb-2">¿Eliminar este usuario?</h3>
+                    <p className="text-muted-foreground text-sm mb-4">
+                        Se eliminará permanentemente: <strong>{deletingUser?.usuario}</strong>
+                    </p>
+                    {errorDelete && (
+                        <div className="w-full mb-4 p-3 text-sm text-red-600 bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 rounded-lg">
+                            {errorDelete}
+                        </div>
+                    )}
+                    <div className="flex gap-3 w-full">
+                        <Button variant="outline" onClick={() => { setDeletingUser(null); setErrorDelete(null) }} disabled={deleting} className="flex-1">
+                            Cancelar
+                        </Button>
+                        <Button variant="destructive" onClick={confirmDeleteUser} disabled={deleting} className="flex-1 gap-2">
+                            {deleting ? <><Loader2 className="h-4 w-4 animate-spin" /> Eliminando...</> : <><Trash2 className="h-4 w-4" /> Sí, eliminar</>}
+                        </Button>
+                    </div>
+                </div>
+            </Modal>
         </motion.div>
     )
 }

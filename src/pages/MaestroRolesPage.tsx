@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import {
     ColumnDef,
     flexRender,
@@ -7,13 +7,13 @@ import {
     getPaginationRowModel,
     useReactTable,
 } from '@tanstack/react-table'
-import { ArrowLeft, Plus, Edit, Shield, Loader2, Trash2, AlertTriangle, Key, Lock } from 'lucide-react'
+import { ArrowLeft, Plus, Edit, Shield, Loader2, Trash2, AlertTriangle, Key, Lock, Search, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Modal } from '@/components/ui/modal'
 import { useNavigate } from 'react-router-dom'
-import { seguridadApi, AuthRole } from '@/api/seguridad'
+import { seguridadApi, AuthRole, Permiso } from '@/api/seguridad'
 
 export const MaestroRolesPage = () => {
     const navigate = useNavigate()
@@ -29,6 +29,13 @@ export const MaestroRolesPage = () => {
     const [formPin, setFormPin] = useState(false)
     const [formEstado, setFormEstado] = useState(true)
     const [saving, setSaving] = useState(false)
+    // Permisos
+    const [permisos, setPermisos] = useState<Permiso[]>([])
+    const [permisosSeleccionados, setPermisosSeleccionados] = useState<Permiso[]>([])
+    const [loadingPermisos, setLoadingPermisos] = useState(false)
+    const [permisosDropdownOpen, setPermisosDropdownOpen] = useState(false)
+    const [permisosSearch, setPermisosSearch] = useState('')
+    const permisosDropdownRef = useRef<HTMLDivElement>(null)
 
     // Estado modal eliminar
     const [isDeleteOpen, setIsDeleteOpen] = useState(false)
@@ -53,12 +60,64 @@ export const MaestroRolesPage = () => {
         fetchRoles()
     }, [])
 
+    const loadPermisos = async () => {
+        try {
+            setLoadingPermisos(true)
+            const res = await seguridadApi.listarPermisos()
+            setPermisos(res.data || [])
+        } catch (err) {
+            console.error('Error cargando permisos:', err)
+            setPermisos([])
+        } finally {
+            setLoadingPermisos(false)
+        }
+    }
+
+    useEffect(() => {
+        if (isFormOpen) {
+            loadPermisos()
+        }
+    }, [isFormOpen])
+
+    useEffect(() => {
+        const handleClickOutside = (e: MouseEvent) => {
+            if (permisosDropdownRef.current && !permisosDropdownRef.current.contains(e.target as Node)) {
+                setPermisosDropdownOpen(false)
+            }
+        }
+        document.addEventListener('mousedown', handleClickOutside)
+        return () => document.removeEventListener('mousedown', handleClickOutside)
+    }, [])
+
+    const permisosFiltrados = permisos.filter(p => {
+        if (!permisosSearch.trim()) return true
+        const q = permisosSearch.toLowerCase()
+        return (p.codigo?.toLowerCase().includes(q)) || (p.nombre?.toLowerCase().includes(q))
+    })
+
+    const togglePermiso = (perm: Permiso) => {
+        const yaEsta = permisosSeleccionados.some(p => p.codigo === perm.codigo)
+        if (yaEsta) {
+            setPermisosSeleccionados(prev => prev.filter(p => p.codigo !== perm.codigo))
+        } else {
+            setPermisosSeleccionados(prev => [...prev, perm])
+        }
+    }
+
+    const quitarPermiso = (codigo: string) => {
+        setPermisosSeleccionados(prev => prev.filter(p => p.codigo !== codigo))
+    }
+
+    const estaSeleccionado = (codigo: string) => permisosSeleccionados.some(p => p.codigo === codigo)
+
     // --- Handlers CRUD ---
     const handleNewRole = () => {
         setEditingRole(null)
         setFormNombre('')
         setFormPin(false)
         setFormEstado(true)
+        setPermisosSeleccionados([])
+        setPermisosSearch('')
         setIsFormOpen(true)
     }
 
@@ -67,6 +126,14 @@ export const MaestroRolesPage = () => {
         setFormNombre(role.nombre)
         setFormPin(role.pin)
         setFormEstado(!!role.estado)
+        // Cargar permisos asociados al rol (vienen en role.permisos del API)
+        const permisosDelRol: Permiso[] = (role.permisos || []).map((p) => ({
+            id: p.id,
+            codigo: p.codigo,
+            nombre: p.descripcion,
+        }))
+        setPermisosSeleccionados(permisosDelRol)
+        setPermisosSearch('')
         setIsFormOpen(true)
     }
 
@@ -80,10 +147,12 @@ export const MaestroRolesPage = () => {
         if (!formNombre.trim()) return
         setSaving(true)
 
+        const idsPermisos = permisosSeleccionados.map(p => p.id).filter((id): id is number => id != null)
         const payload = {
             nombre: formNombre.trim().toUpperCase(),
             pin: formPin,
             estado: formEstado,
+            permisos: idsPermisos,
         }
 
         try {
@@ -327,7 +396,7 @@ export const MaestroRolesPage = () => {
                 isOpen={isFormOpen}
                 onClose={() => { if (!saving) setIsFormOpen(false) }}
                 title={editingRole ? 'Editar Rol' : 'Nuevo Rol'}
-                className="max-w-md"
+                className="max-w-lg"
             >
                 <div className="mt-4 space-y-5">
                     <div className="space-y-2">
@@ -340,69 +409,159 @@ export const MaestroRolesPage = () => {
                         />
                     </div>
 
-                    <div className="space-y-2">
-                        <label className="text-sm font-medium">Tipo de Autenticación</label>
-                        <div className="grid grid-cols-2 gap-3">
-                            <button
-                                type="button"
-                                onClick={() => setFormPin(false)}
-                                className={`flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all ${
-                                    !formPin
-                                        ? 'border-blue-500 bg-blue-50 dark:bg-blue-950/30'
-                                        : 'border-border hover:border-muted-foreground/30'
-                                }`}
-                            >
-                                <Lock className={`h-6 w-6 ${!formPin ? 'text-blue-500' : 'text-muted-foreground'}`} />
-                                <span className={`text-sm font-medium ${!formPin ? 'text-blue-600 dark:text-blue-400' : 'text-muted-foreground'}`}>
-                                    Contraseña
-                                </span>
-                            </button>
-                            <button
-                                type="button"
-                                onClick={() => setFormPin(true)}
-                                className={`flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all ${
-                                    formPin
-                                        ? 'border-amber-500 bg-amber-50 dark:bg-amber-950/30'
-                                        : 'border-border hover:border-muted-foreground/30'
-                                }`}
-                            >
-                                <Key className={`h-6 w-6 ${formPin ? 'text-amber-500' : 'text-muted-foreground'}`} />
-                                <span className={`text-sm font-medium ${formPin ? 'text-amber-600 dark:text-amber-400' : 'text-muted-foreground'}`}>
-                                    PIN
-                                </span>
-                            </button>
-                        </div>
-                    </div>
-
-                    {editingRole && (
-                        <div className="space-y-2">
-                            <label className="text-sm font-medium">Estado</label>
-                            <div className="grid grid-cols-2 gap-3">
+                    {/* Tipo de Autenticación + Estado en una sola fila compacta */}
+                    <div className="flex flex-wrap items-end gap-4">
+                        <div className="flex-1 min-w-[140px] space-y-1">
+                            <label className="text-xs font-medium text-muted-foreground">Autenticación</label>
+                            <div className="flex gap-1.5">
                                 <button
                                     type="button"
-                                    onClick={() => setFormEstado(true)}
-                                    className={`flex items-center justify-center gap-2 py-2.5 rounded-lg border-2 transition-all text-sm font-medium ${
-                                        formEstado
-                                            ? 'border-green-500 bg-green-50 text-green-700 dark:bg-green-950/30 dark:text-green-400'
-                                            : 'border-border text-muted-foreground hover:border-muted-foreground/30'
+                                    onClick={() => setFormPin(false)}
+                                    className={`flex items-center gap-1.5 px-3 py-2 rounded-lg border transition-all text-sm font-medium shrink-0 ${
+                                        !formPin
+                                            ? 'border-blue-500 bg-blue-50 dark:bg-blue-950/30 text-blue-600 dark:text-blue-400'
+                                            : 'border-border text-muted-foreground hover:border-muted-foreground/50'
                                     }`}
                                 >
-                                    Activo
+                                    <Lock className="h-4 w-4" />
+                                    Contraseña
                                 </button>
                                 <button
                                     type="button"
-                                    onClick={() => setFormEstado(false)}
-                                    className={`flex items-center justify-center gap-2 py-2.5 rounded-lg border-2 transition-all text-sm font-medium ${
-                                        !formEstado
-                                            ? 'border-red-500 bg-red-50 text-red-700 dark:bg-red-950/30 dark:text-red-400'
-                                            : 'border-border text-muted-foreground hover:border-muted-foreground/30'
+                                    onClick={() => setFormPin(true)}
+                                    className={`flex items-center gap-1.5 px-3 py-2 rounded-lg border transition-all text-sm font-medium shrink-0 ${
+                                        formPin
+                                            ? 'border-amber-500 bg-amber-50 dark:bg-amber-950/30 text-amber-600 dark:text-amber-400'
+                                            : 'border-border text-muted-foreground hover:border-muted-foreground/50'
                                     }`}
                                 >
-                                    Inactivo
+                                    <Key className="h-4 w-4" />
+                                    PIN
                                 </button>
                             </div>
                         </div>
-                    )}
+                        {editingRole && (
+                            <div className="flex-1 min-w-[120px] space-y-1">
+                                <label className="text-xs font-medium text-muted-foreground">Estado</label>
+                                <div className="flex gap-1.5">
+                                    <button
+                                        type="button"
+                                        onClick={() => setFormEstado(true)}
+                                        className={`flex items-center gap-1.5 px-3 py-2 rounded-lg border transition-all text-sm font-medium shrink-0 ${
+                                            formEstado
+                                                ? 'border-green-500 bg-green-50 dark:bg-green-950/30 text-green-600 dark:text-green-400'
+                                                : 'border-border text-muted-foreground hover:border-muted-foreground/50'
+                                        }`}
+                                    >
+                                        <span className={`w-2 h-2 rounded-full ${formEstado ? 'bg-green-500' : 'bg-muted-foreground/30'}`} />
+                                        Activo
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => setFormEstado(false)}
+                                        className={`flex items-center gap-1.5 px-3 py-2 rounded-lg border transition-all text-sm font-medium shrink-0 ${
+                                            !formEstado
+                                                ? 'border-red-500 bg-red-50 dark:bg-red-950/30 text-red-600 dark:text-red-400'
+                                                : 'border-border text-muted-foreground hover:border-muted-foreground/50'
+                                        }`}
+                                    >
+                                        <span className={`w-2 h-2 rounded-full ${!formEstado ? 'bg-red-500' : 'bg-muted-foreground/30'}`} />
+                                        Inactivo
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Permisos: multiselect con search + tabla */}
+                    <div className="space-y-2">
+                        <label className="text-sm font-medium">Permisos del Rol</label>
+                        <div ref={permisosDropdownRef} className="relative">
+                            <div
+                                onClick={() => setPermisosDropdownOpen(!permisosDropdownOpen)}
+                                className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm cursor-pointer hover:bg-muted/50"
+                            >
+                                <span className="text-muted-foreground truncate">
+                                    {loadingPermisos ? 'Cargando permisos...' : 'Seleccionar permisos para agregar'}
+                                </span>
+                                <Search className="h-4 w-4 text-muted-foreground shrink-0" />
+                            </div>
+                            {permisosDropdownOpen && (
+                                <div className="absolute z-50 mt-1 w-full rounded-md border bg-popover shadow-lg max-h-64 overflow-hidden">
+                                    <div className="p-2 border-b bg-muted/30">
+                                        <div className="relative">
+                                            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                                            <Input
+                                                placeholder="Buscar permiso..."
+                                                value={permisosSearch}
+                                                onChange={(e) => setPermisosSearch(e.target.value)}
+                                                className="h-9 pl-8"
+                                                autoFocus
+                                            />
+                                        </div>
+                                    </div>
+                                    <div className="max-h-48 overflow-y-auto p-1">
+                                        {permisosFiltrados.length === 0 ? (
+                                            <div className="py-4 text-center text-sm text-muted-foreground">
+                                                {loadingPermisos ? 'Cargando...' : 'No hay permisos'}
+                                            </div>
+                                        ) : (
+                                            permisosFiltrados.map((perm) => (
+                                                <label
+                                                    key={perm.codigo}
+                                                    className={`flex items-center gap-2 px-2 py-2 rounded cursor-pointer hover:bg-muted/50 ${estaSeleccionado(perm.codigo) ? 'bg-primary/10' : ''}`}
+                                                >
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={estaSeleccionado(perm.codigo)}
+                                                        onChange={() => togglePermiso(perm)}
+                                                        className="rounded border-input"
+                                                    />
+                                                    <span className="text-sm truncate">{perm.codigo}</span>
+                                                    {perm.nombre && <span className="text-xs text-muted-foreground truncate">— {perm.nombre}</span>}
+                                                </label>
+                                            ))
+                                        )}
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Tabla de permisos seleccionados */}
+                        {permisosSeleccionados.length > 0 && (
+                            <div className="rounded-md border overflow-hidden">
+                                <table className="w-full text-sm">
+                                    <thead>
+                                        <tr className="bg-muted/50 border-b">
+                                            <th className="h-9 px-3 text-left font-medium text-muted-foreground">Código</th>
+                                            <th className="h-9 px-3 text-left font-medium text-muted-foreground">Nombre</th>
+                                            <th className="h-9 px-3 w-12 text-right"></th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {permisosSeleccionados.map((perm) => (
+                                            <tr key={perm.codigo} className="border-b last:border-0 hover:bg-muted/30">
+                                                <td className="py-2 px-3 font-medium">{perm.codigo}</td>
+                                                <td className="py-2 px-3 text-muted-foreground">{perm.nombre || '—'}</td>
+                                                <td className="py-2 px-3 text-right">
+                                                    <Button
+                                                        type="button"
+                                                        variant="ghost"
+                                                        size="sm"
+                                                        className="h-8 w-8 p-0 text-destructive hover:bg-destructive/10"
+                                                        onClick={() => quitarPermiso(perm.codigo)}
+                                                        title="Quitar permiso"
+                                                    >
+                                                        <X className="h-4 w-4" />
+                                                    </Button>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        )}
+                    </div>
 
                     <div className="flex justify-end gap-3 pt-4 border-t">
                         <Button variant="outline" onClick={() => setIsFormOpen(false)} disabled={saving}>

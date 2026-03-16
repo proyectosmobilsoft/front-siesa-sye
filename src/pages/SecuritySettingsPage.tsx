@@ -227,6 +227,7 @@ export const SecuritySettingsPage = () => {
                                 value={globalFilter}
                                 onChange={(e) => setGlobalFilter(e.target.value)}
                                 className="pl-9"
+                                autoComplete="off"
                             />
                         </div>
                         <Button variant="outline" size="sm" onClick={() => fetchUsuarios(globalFilter)} disabled={loading} className="gap-2">
