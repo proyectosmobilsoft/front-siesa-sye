@@ -20,7 +20,8 @@ import {
     ShoppingBag,
     TrendingDown,
     Shield,
-    UserPlus
+    UserPlus,
+    Percent
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useUIStore } from '@/store/uiStore'
@@ -62,7 +63,8 @@ const navigation: NavItem[] = [
         icon: Users,
         subItems: [
             { name: 'Maestro de Roles', href: '/maestro/roles', icon: Shield },
-            { name: 'Maestro de Usuarios', href: '/maestro/usuarios', icon: UserPlus }
+            { name: 'Maestro de Usuarios', href: '/maestro/usuarios', icon: UserPlus },
+            { name: 'Descuentos Financieros', href: '/maestro/descuentos-financieros', icon: Percent }
         ]
     },
     { name: 'Configuración', href: '/configuracion', icon: Settings },
