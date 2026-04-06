@@ -240,3 +240,22 @@ export interface DistribucionResponse {
   success: boolean
   data: DistribucionItem[]
 }
+
+export interface Soporte {
+  id: number
+  anticipo_id: number
+  usuario_id: number
+  usuario_nombre: string
+  valor: number
+  concepto?: string
+  ruta_foto: string
+  created_at: string
+  valor_distribuido: number
+  total_justificado: number
+  saldo_pendiente: number
+}
+
+export interface SoportesResponse {
+  success: boolean
+  data: Soporte[]
+}

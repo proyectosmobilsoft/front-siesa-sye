@@ -1,5 +1,5 @@
 import { apiClient } from './client'
-import { AnticipoOperativo, AnticiposOperativosResponse, AnticipoOperativoUpdatePayload, DistribucionItem, DistribucionResponse } from './types'
+import { AnticipoOperativo, AnticiposOperativosResponse, AnticipoOperativoUpdatePayload, DistribucionItem, DistribucionResponse, Soporte, SoportesResponse } from './types'
 import { withRetry } from '@/utils/retry'
 
 export const anticiposOperativosApi = {
@@ -17,6 +17,15 @@ export const anticiposOperativosApi = {
       const response = await apiClient.get<DistribucionResponse>(
         '/anticipos-operativos/distribucion',
         { params: { anticipoId } }
+      )
+      return response.data.data
+    })
+  },
+
+  getSoportes: async (anticipoId: number): Promise<Soporte[]> => {
+    return withRetry(async () => {
+      const response = await apiClient.get<SoportesResponse>(
+        `/anticipos-operativos/solicitudes/${anticipoId}/soportes`
       )
       return response.data.data
     })
