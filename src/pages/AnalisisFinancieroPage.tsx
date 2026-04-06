@@ -560,12 +560,6 @@ export const AnalisisFinancieroPage = () => {
         >
             {/* Header con título y filtros */}
             <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-                <div>
-                    <h1 className="text-3xl font-bold tracking-tight">Análisis Financiero</h1>
-                    <p className="text-muted-foreground">
-                        Estados financieros y análisis de facturas
-                    </p>
-                </div>
 
                 {/* Filtros al lado del título */}
                 <div className="flex flex-col sm:flex-row gap-3 items-end">

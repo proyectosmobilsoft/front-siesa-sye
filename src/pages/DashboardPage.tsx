@@ -15,12 +15,6 @@ export const DashboardPage = () => {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.5 }}
             >
-                <div>
-                    <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
-                    <p className="text-muted-foreground">
-                        Resumen general de clientes, compañías y productos
-                    </p>
-                </div>
             </motion.div>
 
             {/* Stats Cards */}

@@ -8,7 +8,6 @@ import {
     Package,
     FileText,
     Settings,
-    HelpCircle,
     X,
     ChevronDown,
     ChevronRight,
@@ -21,7 +20,9 @@ import {
     TrendingDown,
     Shield,
     UserPlus,
-    Percent
+    Percent,
+    Wallet,
+    User,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useUIStore } from '@/store/uiStore'
@@ -37,9 +38,9 @@ interface NavItem {
 
 const navigation: NavItem[] = [
     { name: 'Dashboard', href: '/', icon: BarChart3 },
-    { name: 'Clientes', href: '/clientes', icon: Users },
-    { name: 'Compañías', href: '/companias', icon: Building2 },
+    { name: 'Clientes', href: '/clientes', icon: User },
     { name: 'Productos', href: '/productos', icon: Package },
+    { name: 'Egreso', href: '/egreso', icon: Wallet },
     { name: 'Pedidos', href: '/pedidos', icon: ShoppingBag },
     {
         name: 'Facturas',
@@ -68,7 +69,6 @@ const navigation: NavItem[] = [
         ]
     },
     { name: 'Configuración', href: '/configuracion', icon: Settings },
-    { name: 'Ayuda', href: '/ayuda', icon: HelpCircle },
 ]
 
 export const Sidebar = () => {
@@ -97,6 +97,20 @@ export const Sidebar = () => {
             }
         })
     }, [location.pathname])
+
+    const getCurrentPageInfo = () => {
+        for (const item of navigation) {
+            if (item.subItems) {
+                const sub = item.subItems.find((s) => s.href === location.pathname)
+                if (sub) return { name: sub.name, icon: sub.icon }
+            } else if (item.href === location.pathname) {
+                return { name: item.name, icon: item.icon }
+            }
+        }
+        return { name: 'Dashboard', icon: BarChart3 }
+    }
+
+    const currentPage = getCurrentPageInfo()
 
     const toggleExpanded = (itemName: string) => {
         setExpandedItems((prev) => {
@@ -138,9 +152,17 @@ export const Sidebar = () => {
                     <div className="flex h-16 items-center justify-between px-6 border-b border-border">
                         <div className="flex items-center space-x-2">
                             <div className="h-8 w-8 rounded-lg bg-primary flex items-center justify-center">
-                                <BarChart3 className="h-5 w-5 text-primary-foreground" />
+                                <currentPage.icon className="h-5 w-5 text-primary-foreground" />
                             </div>
-                            <span className="text-lg font-semibold">Dashboard</span>
+                            <motion.span
+                                key={currentPage.name}
+                                initial={{ opacity: 0, y: -6 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
+                                className="text-lg font-semibold"
+                            >
+                                {currentPage.name}
+                            </motion.span>
                         </div>
                         <Button
                             variant="ghost"
@@ -268,12 +290,6 @@ export const Sidebar = () => {
                         })}
                     </nav>
 
-                    {/* Footer */}
-                    <div className="p-4 border-t border-border">
-                        <div className="text-xs text-muted-foreground text-center">
-                            Dashboard v1.0.0
-                        </div>
-                    </div>
                 </div>
             </motion.div>
         </>

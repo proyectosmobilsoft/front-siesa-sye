@@ -89,12 +89,6 @@ export const ReportsPage = () => {
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.5 }}
                 >
-                    <div>
-                        <h1 className="text-3xl font-bold tracking-tight">Reportes de Pedidos</h1>
-                        <p className="text-muted-foreground">
-                            Análisis de pedidos diarios
-                        </p>
-                    </div>
                 </motion.div>
                 <div className="grid gap-6 md:grid-cols-2">
                     <Card>
@@ -142,12 +136,6 @@ export const ReportsPage = () => {
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.5 }}
                 >
-                    <div>
-                        <h1 className="text-3xl font-bold tracking-tight">Reportes de Pedidos</h1>
-                        <p className="text-muted-foreground">
-                            Análisis de pedidos diarios
-                        </p>
-                    </div>
                 </motion.div>
                 <Card className="border-red-200 bg-red-50">
                     <CardHeader>
@@ -173,12 +161,6 @@ export const ReportsPage = () => {
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.5 }}
                 >
-                    <div>
-                        <h1 className="text-3xl font-bold tracking-tight">Reportes de Pedidos</h1>
-                        <p className="text-muted-foreground">
-                            Análisis de pedidos diarios - Total: {orders?.length || 0} pedidos
-                        </p>
-                    </div>
                 </motion.div>
 
                 {/* Gráficas */}

@@ -3,301 +3,194 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/lib/skeleton'
 import { ErrorBoundary } from '@/components/ui/error-boundary'
 import { useProducts } from '@/hooks/useProducts'
-import { useCompanies } from '@/hooks/useCompanies'
+import { useClients } from '@/hooks/useClients'
 import { ResponsivePie } from '@nivo/pie'
-import { ResponsiveLine } from '@nivo/line'
 
 export const ChartsSection = () => {
-    const { data: products, isLoading: productsLoading, error: productsError } = useProducts()
-    const { data: companies, isLoading: companiesLoading, error: companiesError } = useCompanies()
+    const { data: products, isLoading: productsLoading } = useProducts()
+    const { data: clients, isLoading: clientsLoading } = useClients()
 
-    // Datos para el gráfico de productos por indicadores
+    // Productos por indicadores
     const productIndicatorsData = products && Array.isArray(products) ? [
         {
             id: 'Compra',
-            label: 'Indicador Compra',
-            value: products.filter(p => p.f120_ind_compra === 1).length,
+            label: 'Compra',
+            value: products.filter(p => (p as any).f120_ind_compra === 1 || p.ind_compra).length,
             color: '#3b82f6'
         },
         {
             id: 'Venta',
-            label: 'Indicador Venta',
-            value: products.filter(p => p.f120_ind_venta === 1).length,
+            label: 'Venta',
+            value: products.filter(p => (p as any).f120_ind_venta === 1 || p.ind_venta).length,
             color: '#10b981'
         },
         {
             id: 'Manufactura',
-            label: 'Indicador Manufactura',
-            value: products.filter(p => p.f120_ind_manufactura === 1).length,
+            label: 'Manufactura',
+            value: products.filter(p => (p as any).f120_ind_manufactura === 1 || p.ind_manufactura).length,
             color: '#f59e0b'
         }
-    ] : []
+    ].filter(d => d.value > 0) : []
 
-    // Datos para el gráfico de compañías por año
-    const companiesByYearData = companies && Array.isArray(companies) ?
-        companies.reduce((acc, company) => {
-            const year = company.f010_ult_ano_cerrado
-            if (year && year > 0) {
-                const existing = acc.find(item => item.x === year)
-                if (existing) {
-                    existing.y += 1
-                } else {
-                    acc.push({ x: year, y: 1 })
-                }
-            }
-            return acc
-        }, [] as { x: number; y: number }[])
-            .sort((a, b) => a.x - b.x)
-        : []
-
-    const lineData = [
+    // Clientes por estado
+    const clientsByEstadoData = clients && Array.isArray(clients) ? [
         {
-            id: 'Compañías por Año',
-            data: companiesByYearData
+            id: 'Activos',
+            label: 'Activos',
+            value: clients.filter(c => c.estado === 'activo').length,
+            color: '#10b981'
+        },
+        {
+            id: 'Inactivos',
+            label: 'Inactivos',
+            value: clients.filter(c => c.estado === 'inactivo').length,
+            color: '#f59e0b'
+        },
+        {
+            id: 'Suspendidos',
+            label: 'Suspendidos',
+            value: clients.filter(c => c.estado === 'suspendido').length,
+            color: '#ef4444'
         }
-    ]
+    ].filter(d => d.value > 0) : []
 
-    if (productsLoading || companiesLoading) {
+    if (productsLoading || clientsLoading) {
         return (
             <div className="grid gap-6 md:grid-cols-2">
-                <Card>
-                    <CardHeader>
-                        <CardTitle>Productos por Indicadores</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                        <Skeleton className="h-64 w-full" />
-                    </CardContent>
-                </Card>
-                <Card>
-                    <CardHeader>
-                        <CardTitle>Compañías por Año</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                        <Skeleton className="h-64 w-full" />
-                    </CardContent>
-                </Card>
+                {['Productos por Indicadores', 'Clientes por Estado'].map(title => (
+                    <Card key={title}>
+                        <CardHeader><CardTitle>{title}</CardTitle></CardHeader>
+                        <CardContent><Skeleton className="h-64 w-full" /></CardContent>
+                    </Card>
+                ))}
             </div>
         )
     }
 
-    if (productsError || companiesError) {
-        return (
-            <div className="grid gap-6 md:grid-cols-2">
-                <Card className="border-red-200 bg-red-50">
-                    <CardHeader>
-                        <CardTitle className="text-red-800">Productos por Indicadores</CardTitle>
-                    </CardHeader>
-                    <CardContent className="flex items-center justify-center h-64">
-                        <div className="text-center text-red-600">
-                            <p className="text-lg font-medium">Error al cargar datos</p>
-                            <p className="text-sm">No se pudieron obtener los productos</p>
-                        </div>
-                    </CardContent>
-                </Card>
-                <Card className="border-red-200 bg-red-50">
-                    <CardHeader>
-                        <CardTitle className="text-red-800">Compañías por Año</CardTitle>
-                    </CardHeader>
-                    <CardContent className="flex items-center justify-center h-64">
-                        <div className="text-center text-red-600">
-                            <p className="text-lg font-medium">Error al cargar datos</p>
-                            <p className="text-sm">No se pudieron obtener las compañías</p>
-                        </div>
-                    </CardContent>
-                </Card>
-            </div>
-        )
+    const pieTheme = {
+        tooltip: {
+            container: {
+                background: 'hsl(var(--card))',
+                color: 'hsl(var(--foreground))',
+                fontSize: 13,
+                borderRadius: 8,
+                boxShadow: '0 4px 16px rgba(0,0,0,0.15)',
+            }
+        },
+        labels: { text: { fontSize: 13, fontWeight: 600 } },
+        legends: { text: { fontSize: 12, fill: 'hsl(var(--foreground))' } },
     }
 
     return (
         <ErrorBoundary>
             <motion.div
                 className="grid gap-6 md:grid-cols-2"
-                initial={{ opacity: 0, y: 20 }}
+                initial={{ opacity: 0, y: 16 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5, delay: 0.3 }}
+                transition={{ duration: 0.4, delay: 0.2, ease: [0.22, 1, 0.36, 1] }}
             >
-                {/* Gráfico de productos por indicadores */}
+                {/* Productos por indicadores */}
                 <Card>
                     <CardHeader>
                         <CardTitle>Productos por Indicadores</CardTitle>
+                        <p className="text-sm text-muted-foreground">
+                            Distribución según tipo de uso
+                        </p>
                     </CardHeader>
                     <CardContent>
-                        <div className="h-[500px]">
-                            <ResponsivePie
-                                data={productIndicatorsData}
-                                margin={{ top: 40, right: 80, bottom: 100, left: 80 }}
-                                innerRadius={0.5}
-                                padAngle={0.7}
-                                cornerRadius={3}
-                                activeOuterRadiusOffset={8}
-                                borderWidth={1}
-                                borderColor={{ from: 'color', modifiers: [['darker', 0.2]] }}
-                                arcLinkLabelsSkipAngle={10}
-                                arcLinkLabelsTextColor="#ffffff"
-                                arcLinkLabelsThickness={2}
-                                arcLinkLabelsColor={{ from: 'color' }}
-                                arcLabelsSkipAngle={10}
-                                arcLabelsTextColor="#ffffff"
-                                defs={[
-                                    {
-                                        id: 'dots',
-                                        type: 'patternDots',
-                                        background: 'inherit',
-                                        color: 'rgba(255, 255, 255, 0.3)',
-                                        size: 4,
-                                        padding: 1,
-                                        stagger: true
-                                    },
-                                    {
-                                        id: 'lines',
-                                        type: 'patternLines',
-                                        background: 'inherit',
-                                        color: 'rgba(255, 255, 255, 0.3)',
-                                        rotation: -45,
-                                        lineWidth: 6,
-                                        spacing: 10
-                                    }
-                                ]}
-                                fill={[
-                                    { match: { id: 'Compra' }, id: 'dots' },
-                                    { match: { id: 'Venta' }, id: 'lines' },
-                                    { match: { id: 'Manufactura' }, id: 'dots' }
-                                ]}
-                                legends={[
-                                    {
-                                        anchor: 'bottom',
-                                        direction: 'row',
-                                        justify: false,
-                                        translateX: 0,
-                                        translateY: 70,
-                                        itemsSpacing: 0,
-                                        itemWidth: 100,
-                                        itemHeight: 18,
-                                        itemTextColor: '#ffffff',
-                                        itemDirection: 'left-to-right',
-                                        itemOpacity: 1,
-                                        symbolSize: 18,
-                                        symbolShape: 'circle'
-                                    }
-                                ]}
-                            />
+                        <div className="h-72">
+                            {productIndicatorsData.length > 0 ? (
+                                <ResponsivePie
+                                    data={productIndicatorsData}
+                                    margin={{ top: 24, right: 80, bottom: 80, left: 80 }}
+                                    innerRadius={0.55}
+                                    padAngle={0.5}
+                                    cornerRadius={4}
+                                    activeOuterRadiusOffset={6}
+                                    borderWidth={1}
+                                    borderColor={{ from: 'color', modifiers: [['darker', 0.15]] }}
+                                    arcLinkLabelsSkipAngle={10}
+                                    arcLinkLabelsTextColor="hsl(var(--foreground))"
+                                    arcLinkLabelsThickness={2}
+                                    arcLinkLabelsColor={{ from: 'color' }}
+                                    arcLabelsSkipAngle={10}
+                                    arcLabelsTextColor="#ffffff"
+                                    colors={{ datum: 'data.color' }}
+                                    theme={pieTheme}
+                                    legends={[
+                                        {
+                                            anchor: 'bottom',
+                                            direction: 'row',
+                                            translateX: 0,
+                                            translateY: 64,
+                                            itemsSpacing: 12,
+                                            itemWidth: 90,
+                                            itemHeight: 18,
+                                            itemDirection: 'left-to-right',
+                                            itemOpacity: 1,
+                                            symbolSize: 12,
+                                            symbolShape: 'circle',
+                                        }
+                                    ]}
+                                />
+                            ) : (
+                                <div className="flex items-center justify-center h-full text-muted-foreground text-sm">
+                                    Sin datos disponibles
+                                </div>
+                            )}
                         </div>
                     </CardContent>
                 </Card>
 
-                {/* Gráfico de compañías por año */}
+                {/* Clientes por estado */}
                 <Card>
                     <CardHeader>
-                        <CardTitle>Compañías por Año Cerrado</CardTitle>
+                        <CardTitle>Clientes por Estado</CardTitle>
+                        <p className="text-sm text-muted-foreground">
+                            {clients ? `${clients.length} clientes en total` : 'Cargando...'}
+                        </p>
                     </CardHeader>
                     <CardContent>
-                        <div className="h-[500px]">
-                            <ResponsiveLine
-                                data={lineData}
-                                margin={{ top: 50, right: 110, bottom: 50, left: 60 }}
-                                xScale={{ type: 'point' }}
-                                yScale={{
-                                    type: 'linear',
-                                    min: 'auto',
-                                    max: 'auto',
-                                    stacked: true,
-                                    reverse: false
-                                }}
-                                yFormat=" >-.2f"
-                                axisTop={null}
-                                axisRight={null}
-                                axisBottom={{
-                                    tickSize: 5,
-                                    tickPadding: 5,
-                                    tickRotation: 0,
-                                    legend: 'Año',
-                                    legendOffset: 36,
-                                    legendPosition: 'middle',
-                                    tickColor: '#ffffff',
-                                    legendColor: '#ffffff'
-                                }}
-                                axisLeft={{
-                                    tickSize: 5,
-                                    tickPadding: 5,
-                                    tickRotation: 0,
-                                    legend: 'Cantidad',
-                                    legendOffset: -40,
-                                    legendPosition: 'middle',
-                                    tickColor: '#ffffff',
-                                    legendColor: '#ffffff'
-                                }}
-                                theme={{
-                                    axis: {
-                                        ticks: {
-                                            text: { fill: '#ffffff' }
-                                        },
-                                        legend: {
-                                            text: { fill: '#ffffff' }
-                                        },
-                                        grid: {
-                                            line: {
-                                                stroke: 'rgba(255, 255, 255, 0.2)'
-                                            }
+                        <div className="h-72">
+                            {clientsByEstadoData.length > 0 ? (
+                                <ResponsivePie
+                                    data={clientsByEstadoData}
+                                    margin={{ top: 24, right: 80, bottom: 80, left: 80 }}
+                                    innerRadius={0.55}
+                                    padAngle={0.5}
+                                    cornerRadius={4}
+                                    activeOuterRadiusOffset={6}
+                                    borderWidth={1}
+                                    borderColor={{ from: 'color', modifiers: [['darker', 0.15]] }}
+                                    arcLinkLabelsSkipAngle={10}
+                                    arcLinkLabelsTextColor="hsl(var(--foreground))"
+                                    arcLinkLabelsThickness={2}
+                                    arcLinkLabelsColor={{ from: 'color' }}
+                                    arcLabelsSkipAngle={10}
+                                    arcLabelsTextColor="#ffffff"
+                                    colors={{ datum: 'data.color' }}
+                                    theme={pieTheme}
+                                    legends={[
+                                        {
+                                            anchor: 'bottom',
+                                            direction: 'row',
+                                            translateX: 0,
+                                            translateY: 64,
+                                            itemsSpacing: 12,
+                                            itemWidth: 100,
+                                            itemHeight: 18,
+                                            itemDirection: 'left-to-right',
+                                            itemOpacity: 1,
+                                            symbolSize: 12,
+                                            symbolShape: 'circle',
                                         }
-                                    }
-                                }}
-                                pointSize={10}
-                                pointColor={{ theme: 'background' }}
-                                pointBorderWidth={2}
-                                pointBorderColor={{ from: 'serieColor' }}
-                                pointLabelYOffset={-12}
-                                useMesh={true}
-                                colors={{ scheme: 'category10' }}
-                                lineWidth={3}
-                                layers={['grid', 'markers', 'axes', 'areas', 'crosshair', 'lines', 'points', 'slices', 'mesh', 'legends']}
-                                curve="linear"
-                                enableGridX={true}
-                                enableGridY={true}
-                                enablePoints={true}
-                                enablePointLabel={false}
-                                pointLabel={(point) => `${point.data.yFormatted}`}
-                                enableArea={false}
-                                areaOpacity={0.1}
-                                areaBlendMode="normal"
-                                areaBaselineValue={0}
-                                legends={[]}
-                                isInteractive={true}
-                                debugMesh={false}
-                                tooltip={({ point }) => (
-                                    <div style={{
-                                        padding: 12,
-                                        color: 'hsl(var(--foreground))',
-                                        background: 'hsl(var(--background))',
-                                        borderRadius: 4,
-                                        boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
-                                    }}>
-                                        <strong>Año:</strong> {point.data.xFormatted}
-                                        <br />
-                                        <strong>Compañías:</strong> {point.data.yFormatted}
-                                    </div>
-                                )}
-                                enableSlices={false}
-                                debugSlices={false}
-                                sliceTooltip={({ slice }) => (
-                                    <div style={{
-                                        padding: 12,
-                                        color: 'hsl(var(--foreground))',
-                                        background: 'hsl(var(--background))',
-                                        borderRadius: 4,
-                                        boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
-                                    }}>
-                                        <strong>{slice.id}:</strong> {slice.value}
-                                    </div>
-                                )}
-                                enableCrosshair={true}
-                                crosshairType="x"
-                                role="application"
-                                defs={[]}
-                                fill={[]}
-                                animate={true}
-                                motionConfig="gentle"
-                            />
+                                    ]}
+                                />
+                            ) : (
+                                <div className="flex items-center justify-center h-full text-muted-foreground text-sm">
+                                    Sin datos disponibles
+                                </div>
+                            )}
                         </div>
                     </CardContent>
                 </Card>

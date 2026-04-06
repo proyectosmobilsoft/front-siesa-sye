@@ -1,5 +1,4 @@
 import { motion } from 'framer-motion'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { ProductsTable } from '@/components/dashboard/ProductsTable'
 
 export const ProductsPage = () => {
@@ -10,12 +9,6 @@ export const ProductsPage = () => {
             transition={{ duration: 0.5 }}
             className="flex-1 space-y-8 p-6"
         >
-            <div>
-                <h1 className="text-3xl font-bold tracking-tight">Productos</h1>
-                <p className="text-muted-foreground">
-                    Gestión y visualización de productos
-                </p>
-            </div>
             <ProductsTable />
         </motion.div>
     )

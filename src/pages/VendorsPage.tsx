@@ -186,12 +186,6 @@ export const VendorsPage = () => {
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.5 }}
                 >
-                    <div>
-                        <h1 className="text-3xl font-bold tracking-tight">Dashboard de Vendedores</h1>
-                        <p className="text-muted-foreground">
-                            Análisis de rendimiento y comportamiento de ventas
-                        </p>
-                    </div>
                 </motion.div>
                 <div className="grid gap-4 md:grid-cols-3">
                     {[1, 2, 3].map((i) => (
@@ -217,12 +211,6 @@ export const VendorsPage = () => {
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.5 }}
                 >
-                    <div>
-                        <h1 className="text-3xl font-bold tracking-tight">Dashboard de Vendedores</h1>
-                        <p className="text-muted-foreground">
-                            Análisis de rendimiento y comportamiento de ventas
-                        </p>
-                    </div>
                 </motion.div>
                 <Card className="border-red-200 bg-red-50 dark:bg-red-950/20 dark:border-red-800">
                     <CardHeader>
@@ -249,12 +237,6 @@ export const VendorsPage = () => {
                     transition={{ duration: 0.5 }}
                     className="flex flex-col md:flex-row md:items-center md:justify-between gap-4"
                 >
-                    <div>
-                        <h1 className="text-3xl font-bold tracking-tight">Dashboard de Vendedores</h1>
-                        <p className="text-muted-foreground">
-                            Análisis de rendimiento y comportamiento de ventas con insights visuales
-                        </p>
-                    </div>
 
                     {/* Filtros */}
                     <motion.div

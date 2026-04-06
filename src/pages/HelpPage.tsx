@@ -37,12 +37,6 @@ export const HelpPage = () => {
             transition={{ duration: 0.5 }}
             className="flex-1 space-y-6 p-6"
         >
-            <div>
-                <h1 className="text-3xl font-bold tracking-tight">Ayuda</h1>
-                <p className="text-muted-foreground">
-                    Centro de ayuda y soporte
-                </p>
-            </div>
 
             <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
                 {helpSections.map((section, index) => (

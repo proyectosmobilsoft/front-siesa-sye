@@ -302,12 +302,6 @@ export const MaestroRolesPage = () => {
                 <Button variant="outline" size="icon" onClick={() => navigate('/configuracion')}>
                     <ArrowLeft className="h-4 w-4" />
                 </Button>
-                <div>
-                    <h1 className="text-3xl font-bold tracking-tight">Maestro de Roles</h1>
-                    <p className="text-muted-foreground">
-                        Gestión de roles y tipo de autenticación del sistema.
-                    </p>
-                </div>
             </div>
 
             <Card className="border-2 border-primary/20 bg-gradient-to-br from-background to-primary/5">

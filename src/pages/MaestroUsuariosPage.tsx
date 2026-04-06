@@ -93,12 +93,6 @@ export const MaestroUsuariosPage = () => {
             className="flex-1 space-y-6 p-6"
         >
             <div className="flex items-center justify-between">
-                <div>
-                    <h1 className="text-3xl font-bold tracking-tight">Maestro de Usuarios</h1>
-                    <p className="text-muted-foreground">
-                        {total} usuario{total !== 1 ? 's' : ''} registrado{total !== 1 ? 's' : ''}
-                    </p>
-                </div>
                 <Button variant="outline" size="sm" onClick={() => fetchUsuarios(search)} disabled={loading} className="gap-2">
                     <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
                     Actualizar

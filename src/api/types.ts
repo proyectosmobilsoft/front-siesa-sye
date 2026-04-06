@@ -184,3 +184,59 @@ export interface PedidosParams {
   fechaInicial: string // ISO 8601 format (YYYY-MM-DD or YYYY-MM-DDTHH:mm:ss)
   fechaFinal: string // ISO 8601 format (YYYY-MM-DD or YYYY-MM-DDTHH:mm:ss)
 }
+
+export interface AnticipoOperativo {
+  id: number
+  usuario_id: number
+  usuario_nombre: string
+  valor_distribuido: number
+  numero_anticipo: string
+  fecha_solicitud: string
+  area_departamento: string
+  motivo_general: string
+  fecha_inicio_operacion: string
+  fecha_fin_estimada: string
+  prioridad: string
+  forma_entrega: string
+  fecha_requerida_dinero: string
+  observaciones_financieras: string
+  responsable_aprobacion: string
+  valor_solicitado: number
+  estado: string
+  created_at: string
+  updated_at: string
+}
+
+export interface AnticiposOperativosResponse {
+  success: boolean
+  data: AnticipoOperativo[]
+}
+
+export interface AnticipoOperativoUpdatePayload {
+  estado?: string
+  observaciones_financieras?: string
+  responsable_aprobacion?: string
+  valor_distribuido?: number
+}
+
+export interface DistribucionItem {
+  id: number
+  anticipo_id: number
+  usuario_id?: number
+  conductor_id?: number
+  nombre?: string
+  usuario_nombre?: string
+  conductor_nombre?: string
+  valor_asignado?: number
+  valor?: number
+  concepto?: string
+  estado?: string
+  fecha_asignacion?: string
+  observaciones?: string
+  [key: string]: unknown
+}
+
+export interface DistribucionResponse {
+  success: boolean
+  data: DistribucionItem[]
+}

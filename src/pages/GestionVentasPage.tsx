@@ -144,12 +144,6 @@ export const GestionVentasPage = () => {
             transition={{ duration: 0.5 }}
             className="flex-1 space-y-8 p-6"
         >
-            <div>
-                <h1 className="text-3xl font-bold tracking-tight">Gestión de Ventas</h1>
-                <p className="text-muted-foreground">
-                    Consulta y gestión de facturas de ventas
-                </p>
-            </div>
 
             {/* Filtros */}
             <Card>

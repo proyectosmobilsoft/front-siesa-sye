@@ -102,12 +102,6 @@ export const MaestroDescuentosFinancierosPage = () => {
             className="flex-1 space-y-6 p-6"
         >
             <div className="flex items-center justify-between">
-                <div>
-                    <h1 className="text-3xl font-bold tracking-tight">Descuentos Financieros</h1>
-                    <p className="text-muted-foreground">
-                        {total} condición{total !== 1 ? 'es' : ''} de pago registrada{total !== 1 ? 's' : ''}
-                    </p>
-                </div>
                 <Button variant="outline" size="sm" onClick={() => fetchCondiciones(search)} disabled={loading} className="gap-2">
                     <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
                     Actualizar

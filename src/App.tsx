@@ -18,6 +18,7 @@ import { SecuritySettingsPage } from '@/pages/SecuritySettingsPage'
 import { MaestroRolesPage } from '@/pages/MaestroRolesPage'
 import { MaestroUsuariosPage } from '@/pages/MaestroUsuariosPage'
 import { MaestroDescuentosFinancierosPage } from '@/pages/MaestroDescuentosFinancierosPage'
+import { EgresoPage } from '@/pages/EgresoPage'
 import { LoginPage } from '@/pages/LoginPage'
 import { useUIStore } from '@/store/uiStore'
 import { useEffect, useState } from 'react'
@@ -48,6 +49,7 @@ function AppLayout() {
                             <Route path="/clientes" element={<ClientsPage />} />
                             <Route path="/companias" element={<CompaniesPage />} />
                             <Route path="/productos" element={<ProductsPage />} />
+                            <Route path="/egreso" element={<EgresoPage />} />
                             <Route path="/facturas/gestion-ventas" element={<GestionVentasPage />} />
                             <Route path="/facturas/analisis-financiero" element={<AnalisisFinancieroPage />} />
                             <Route path="/reportes" element={<ReportsPage />} />

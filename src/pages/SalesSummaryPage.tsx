@@ -199,12 +199,6 @@ export const SalesSummaryPage = () => {
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.5 }}
                 >
-                    <div>
-                        <h1 className="text-3xl font-bold tracking-tight">Resumen de Ventas</h1>
-                        <p className="text-muted-foreground">
-                            Análisis detallado de ventas, productos y vendedores
-                        </p>
-                    </div>
                 </motion.div>
                 <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-5">
                     {[1, 2, 3, 4, 5].map((i) => (
@@ -242,12 +236,6 @@ export const SalesSummaryPage = () => {
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.5 }}
                 >
-                    <div>
-                        <h1 className="text-3xl font-bold tracking-tight">Resumen de Ventas</h1>
-                        <p className="text-muted-foreground">
-                            Análisis detallado de ventas
-                        </p>
-                    </div>
                 </motion.div>
                 <Card className="border-red-200 bg-red-50 dark:bg-red-950/20 dark:border-red-800">
                     <CardHeader>
@@ -273,12 +261,6 @@ export const SalesSummaryPage = () => {
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.5 }}
                 >
-                    <div>
-                        <h1 className="text-3xl font-bold tracking-tight">Resumen de Ventas</h1>
-                        <p className="text-muted-foreground">
-                            Análisis detallado de ventas, productos y vendedores con visualizaciones interactivas
-                        </p>
-                    </div>
                 </motion.div>
 
                 {/* Cards de Estadísticas */}
