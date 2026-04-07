@@ -23,7 +23,7 @@ export const Modal = ({ isOpen, onClose, title, children, className }: ModalProp
 
             {/* Modal */}
             <div className={cn(
-                "relative bg-card rounded-lg shadow-xl max-w-4xl w-full min-h-[50vh] max-h-[95vh] overflow-hidden m-4",
+                "relative bg-card rounded-lg shadow-xl max-w-4xl w-full max-h-[95vh] overflow-hidden m-4",
                 className
             )}>
                 {/* Header */}

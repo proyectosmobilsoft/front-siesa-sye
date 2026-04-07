@@ -15,7 +15,6 @@ export const CondicionPagoModal = ({ isOpen, onClose, condicion }: CondicionPago
     const isEditing = !!condicion
 
     const [code, setCode] = useState('')
-    const [name, setName] = useState('')
     const [descripcion, setDescripcion] = useState('')
     const [status, setStatus] = useState(1)
     const [diasVcto, setDiasVcto] = useState(0)
@@ -26,7 +25,6 @@ export const CondicionPagoModal = ({ isOpen, onClose, condicion }: CondicionPago
         if (!isOpen) return
 
         setCode(condicion?.code ?? '')
-        setName(condicion?.name ?? '')
         setDescripcion(condicion?.descripcion ?? '')
         setStatus(condicion?.status === true || condicion?.status === 1 ? 1 : 0)
         setDiasVcto(condicion?.dias_vcto ?? 0)
@@ -34,8 +32,8 @@ export const CondicionPagoModal = ({ isOpen, onClose, condicion }: CondicionPago
     }, [isOpen, condicion?.code])
 
     const handleSave = async () => {
-        if (!code.trim() || !name.trim()) {
-            setError('Código y nombre son obligatorios')
+        if (!code.trim() || !descripcion.trim()) {
+            setError('Código y descripción son obligatorios')
             return
         }
 
@@ -44,7 +42,6 @@ export const CondicionPagoModal = ({ isOpen, onClose, condicion }: CondicionPago
             setError(null)
 
             if (isEditing && condicion?.code) {
-                // Actualizar condición existente
                 await financieroApi.actualizarCondicionPago(condicion.code, {
                     cia: 1,
                     descripcion: descripcion.trim(),
@@ -58,7 +55,6 @@ export const CondicionPagoModal = ({ isOpen, onClose, condicion }: CondicionPago
                     ind_estado: status,
                 })
             } else {
-                // Crear nueva condición
                 await financieroApi.crearCondicionPago({
                     cia: 1,
                     codigo: code.trim(),
@@ -88,7 +84,7 @@ export const CondicionPagoModal = ({ isOpen, onClose, condicion }: CondicionPago
             isOpen={isOpen}
             onClose={onClose}
             title={isEditing ? 'Editar Condición de Pago' : 'Nueva Condición de Pago'}
-            className="max-w-2xl"
+            className="max-w-lg"
         >
             <div className="mt-3 space-y-4">
                 {error && (
@@ -98,8 +94,8 @@ export const CondicionPagoModal = ({ isOpen, onClose, condicion }: CondicionPago
                     </div>
                 )}
 
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                    <div className="space-y-1">
+                <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-1.5">
                         <label className="text-xs font-medium text-muted-foreground">Código <span className="text-red-500">*</span></label>
                         <Input
                             placeholder="Ej. 30D"
@@ -110,32 +106,22 @@ export const CondicionPagoModal = ({ isOpen, onClose, condicion }: CondicionPago
                             disabled={isEditing}
                         />
                     </div>
-                    <div className="space-y-1">
-                        <label className="text-xs font-medium text-muted-foreground">Nombre <span className="text-red-500">*</span></label>
-                        <Input
-                            placeholder="Ej. CREDITO 30 DIAS"
-                            value={name}
-                            onChange={(e) => setName(e.target.value)}
-                            className="h-10"
-                            autoComplete="off"
-                        />
-                    </div>
-                    <div className="space-y-1">
+                    <div className="space-y-1.5">
                         <label className="text-xs font-medium text-muted-foreground">Estado</label>
                         <div
                             onClick={() => setStatus((s) => (s === 1 ? 0 : 1))}
-                            className={`flex items-center gap-2 px-3 py-2 rounded-lg border-2 cursor-pointer transition-all select-none h-10 ${status === 1 ? 'border-green-500/50 bg-green-500/10 text-green-700 dark:text-green-400' : 'border-red-500/50 bg-red-500/10 text-red-700 dark:text-red-400'}`}
+                            className={`flex items-center justify-center gap-2 px-3 py-2 rounded-lg border-2 cursor-pointer transition-all select-none h-10 ${status === 1 ? 'border-green-500/50 bg-green-500/10 text-green-700 dark:text-green-400' : 'border-red-500/50 bg-red-500/10 text-red-700 dark:text-red-400'}`}
                         >
                             <div className={`w-2.5 h-2.5 rounded-full ${status === 1 ? 'bg-green-500' : 'bg-red-500'}`} />
-                            <span className="text-xs font-semibold">{status === 1 ? 'Activo' : 'Inactivo'}</span>
+                            <span className="text-sm font-semibold">{status === 1 ? 'Activo' : 'Inactivo'}</span>
                         </div>
                     </div>
                 </div>
 
-                <div className="space-y-1">
-                    <label className="text-xs font-medium text-muted-foreground">Descripción</label>
+                <div className="space-y-1.5">
+                    <label className="text-xs font-medium text-muted-foreground">Descripción <span className="text-red-500">*</span></label>
                     <Input
-                        placeholder="Descripción adicional de la condición de pago"
+                        placeholder="Ej. CREDITO 30 DIAS"
                         value={descripcion}
                         onChange={(e) => setDescripcion(e.target.value)}
                         className="h-10"
@@ -143,8 +129,8 @@ export const CondicionPagoModal = ({ isOpen, onClose, condicion }: CondicionPago
                     />
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                    <div className="space-y-1">
+                <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-1.5">
                         <label className="text-xs font-medium text-muted-foreground">Días Límite</label>
                         <Input
                             type="number"
@@ -157,7 +143,7 @@ export const CondicionPagoModal = ({ isOpen, onClose, condicion }: CondicionPago
                     </div>
                 </div>
 
-                <div className="flex justify-end gap-2 pt-4 border-t">
+                <div className="flex justify-end gap-3 pt-4 border-t">
                     <Button
                         type="button"
                         variant="outline"
