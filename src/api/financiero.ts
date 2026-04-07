@@ -12,12 +12,37 @@ export interface ConfigDescuento {
     name: string
 }
 
-/** Condición de pago (maestro) */
+/** Estructura que viene del backend (nueva API maestros) */
+export interface CondicionPagoBackend {
+    codigo: string
+    descripcion: string
+    dias_vcto: number
+    dias_pronto_pago: number
+    tasa_descto_pp: number
+    tasa_mora: number
+    monto_min_mora: number
+    numero_cuotas: number
+    ind_estado: number
+    ind_credito: number
+    id_medio_pago: string | null
+    id_grupo: string | null
+}
+
+/** Condición de pago (maestro) - Adaptada para el frontend */
 export interface CondicionPago {
-    id: number
     code: string
     name: string
     status: number | boolean
+    descripcion?: string
+    dias_vcto?: number
+    dias_pronto_pago?: number
+    tasa_descto_pp?: number
+    tasa_mora?: number
+    monto_min_mora?: number
+    numero_cuotas?: number
+    ind_credito?: number
+    id_medio_pago?: string | null
+    id_grupo?: string | null
     detalles?: ConfigDescuento[]
 }
 
@@ -27,27 +52,53 @@ export interface ListarCondicionesPagoResponse {
     data: CondicionPago[]
 }
 
-/** Body crear condición de pago */
-export interface CrearCondicionPagoDto {
-    code: string
-    name: string
-    status: number
-    detalles?: {
-        porcentaje_descuento: number
-        dias_limite: number
-        mostrar_aviso: boolean
-        activo: boolean
-        descripcion: string | null
-        name: string
-    }[]
+/** Adaptador: convierte del formato backend al formato frontend */
+const adaptarCondicionPago = (backend: CondicionPagoBackend): CondicionPago => {
+    return {
+        code: backend.codigo,
+        name: backend.descripcion,
+        descripcion: backend.descripcion,
+        status: backend.ind_estado,
+        dias_vcto: backend.dias_vcto,
+        dias_pronto_pago: backend.dias_pronto_pago,
+        tasa_descto_pp: backend.tasa_descto_pp,
+        tasa_mora: backend.tasa_mora,
+        monto_min_mora: backend.monto_min_mora,
+        numero_cuotas: backend.numero_cuotas,
+        ind_credito: backend.ind_credito,
+        id_medio_pago: backend.id_medio_pago,
+        id_grupo: backend.id_grupo,
+    }
 }
 
-/** Body actualizar condición de pago */
+/** Body crear condición de pago (formato backend) */
+export interface CrearCondicionPagoDto {
+    cia: number
+    codigo: string
+    descripcion: string
+    dias_vcto: number
+    dias_pronto_pago: number
+    tasa_descto_pp: number
+    tasa_mora: number
+    monto_min_mora: number
+    notas?: string | null
+    numero_cuotas: number
+    modo_periodicidad: number
+    ind_estado: number
+}
+
+/** Body actualizar condición de pago (formato backend) */
 export interface ActualizarCondicionPagoDto {
-    code?: string
-    name?: string
-    status?: number
-    detalles?: ConfigDescuento[]
+    cia: number
+    descripcion?: string
+    dias_vcto?: number
+    dias_pronto_pago?: number
+    tasa_descto_pp?: number
+    tasa_mora?: number
+    monto_min_mora?: number
+    notas?: string | null
+    numero_cuotas?: number
+    ind_estado?: number
 }
 
 /** Body crear config descuento (sin condicion_pago_id si se usa ruta anidada) */
@@ -64,28 +115,62 @@ export interface CrearConfigDescuentoDto {
 export const financieroApi = {
     // --- Condiciones de pago
     listarCondicionesPago: async (includeDetalles = false): Promise<ListarCondicionesPagoResponse> => {
-        const params = includeDetalles ? { include: 'detalles' } : {}
-        const response = await apiClient.get('/financiero/condiciones-pago', { params })
-        return response.data
+        const params: Record<string, string | number> = { cia: 1 }
+        if (includeDetalles) {
+            params.include = 'detalles'
+        }
+        const response = await apiClient.get('/maestros/condiciones-pago', { params })
+        
+        // Debug: ver la estructura exacta de la respuesta
+        console.log('📦 Estructura de respuesta completa:', response)
+        console.log('📦 response.data:', response.data)
+        console.log('📦 Tipo de response.data:', typeof response.data, Array.isArray(response.data))
+        
+        // El backend puede devolver los datos en diferentes estructuras:
+        // 1. Directamente como array: [...]
+        // 2. Envuelto en objeto: { data: [...] }
+        // 3. Envuelto en objeto con success: { success: true, data: [...] }
+        let backendData: CondicionPagoBackend[] = []
+        
+        if (Array.isArray(response.data)) {
+            // Caso 1: response.data es directamente el array
+            backendData = response.data
+        } else if (response.data?.data && Array.isArray(response.data.data)) {
+            // Caso 2 y 3: response.data.data es el array
+            backendData = response.data.data
+        } else {
+            console.error('Estructura de respuesta inesperada:', response.data)
+            backendData = []
+        }
+        
+        console.log('📦 backendData después de procesar:', backendData)
+        
+        // Adaptar la respuesta del backend al formato esperado por el frontend
+        const adaptedData = backendData.map((item) => adaptarCondicionPago(item))
+        
+        return {
+            success: true,
+            data: adaptedData
+        }
     },
 
-    obtenerCondicionPago: async (id: number): Promise<{ success: boolean; data: CondicionPago }> => {
-        const response = await apiClient.get(`/financiero/condiciones-pago/${id}`)
+    obtenerCondicionPago: async (code: string): Promise<{ success: boolean; data: CondicionPago }> => {
+        const response = await apiClient.get(`/maestros/condiciones-pago/${code}`, { params: { cia: 1 } })
         return response.data
     },
 
     crearCondicionPago: async (data: CrearCondicionPagoDto) => {
-        const response = await apiClient.post('/financiero/condiciones-pago', data)
+        const response = await apiClient.post('/maestros/condiciones-pago', data)
         return response.data
     },
 
-    actualizarCondicionPago: async (id: number, data: ActualizarCondicionPagoDto) => {
-        const response = await apiClient.put(`/financiero/condiciones-pago/${id}`, data)
+    actualizarCondicionPago: async (code: string, data: ActualizarCondicionPagoDto) => {
+        const response = await apiClient.put(`/maestros/condiciones-pago/${code}`, data)
         return response.data
     },
 
-    eliminarCondicionPago: async (id: number) => {
-        const response = await apiClient.delete(`/financiero/condiciones-pago/${id}`)
+    eliminarCondicionPago: async (code: string) => {
+        const response = await apiClient.delete(`/maestros/condiciones-pago/${code}`, { params: { cia: 1 } })
         return response.data
     },
 

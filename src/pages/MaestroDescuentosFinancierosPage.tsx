@@ -83,7 +83,7 @@ export const MaestroDescuentosFinancierosPage = () => {
         if (!deletingCondicion) return
         try {
             setDeleting(true)
-            await financieroApi.eliminarCondicionPago(deletingCondicion.id)
+            await financieroApi.eliminarCondicionPago(deletingCondicion.code)
             setDeletingCondicion(null)
             fetchCondiciones(search)
         } catch (err: any) {
@@ -137,7 +137,6 @@ export const MaestroDescuentosFinancierosPage = () => {
                             <table className="w-full text-sm">
                                 <thead>
                                     <tr className="border-b bg-muted/50">
-                                        <th className="h-11 px-4 text-left font-medium text-muted-foreground">ID</th>
                                         <th className="h-11 px-4 text-left font-medium text-muted-foreground">Código</th>
                                         <th className="h-11 px-4 text-left font-medium text-muted-foreground">Nombre</th>
                                         <th className="h-11 px-4 text-left font-medium text-muted-foreground">Estado</th>
@@ -147,7 +146,7 @@ export const MaestroDescuentosFinancierosPage = () => {
                                 <tbody>
                                     {loading ? (
                                         <tr>
-                                            <td colSpan={5} className="h-32 text-center">
+                                            <td colSpan={4} className="h-32 text-center">
                                                 <div className="flex items-center justify-center gap-2 text-muted-foreground">
                                                     <Loader2 className="h-5 w-5 animate-spin" />
                                                     Cargando condiciones de pago...
@@ -156,9 +155,8 @@ export const MaestroDescuentosFinancierosPage = () => {
                                         </tr>
                                     ) : condiciones.length > 0 ? (
                                         condiciones.map((c) => (
-                                            <tr key={c.id} className="border-b transition-colors hover:bg-muted/30">
-                                                <td className="py-3 px-4 font-mono text-xs text-muted-foreground">{c.id}</td>
-                                                <td className="py-3 px-4 font-semibold text-primary">{c.code}</td>
+                                            <tr key={c.code} className="border-b transition-colors hover:bg-muted/30">
+                                                <td className="py-3 px-4 font-mono text-sm font-semibold text-primary">{c.code}</td>
                                                 <td className="py-3 px-4">{c.name}</td>
                                                 <td className="py-3 px-4">
                                                     <span
@@ -193,7 +191,7 @@ export const MaestroDescuentosFinancierosPage = () => {
                                         ))
                                     ) : (
                                         <tr>
-                                            <td colSpan={5} className="h-24 text-center text-muted-foreground">
+                                            <td colSpan={4} className="h-24 text-center text-muted-foreground">
                                                 No se encontraron condiciones de pago.
                                             </td>
                                         </tr>
