@@ -10,7 +10,7 @@ export default defineConfig(({ mode }) => {
   // Obtener la URL del backend según el modo
   const backendUrl =
     mode === 'production'
-      ? env.VITE_API_BASE_URL_PROD || 'https://softwareqa.dev'
+      ? env.VITE_API_BASE_URL_PROD || 'https://apisye.mobilsoft.co'
       : env.VITE_API_BASE_URL_DEV || 'http://localhost:3010'
 
   const port = parseInt(env.VITE_PORT || '5173', 10)

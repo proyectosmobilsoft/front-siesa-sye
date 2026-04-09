@@ -4,7 +4,7 @@
  * 
  * IMPORTANTE: 
  * - En desarrollo (npm run dev): usa el proxy de Vite (/api) que redirige a localhost
- * - En producción (npm run build): usa directamente la URL de producción (softwareqa.dev)
+ * - En producción (npm run build): usa directamente la URL de producción (apisye.mobilsoft.co)
  */
 
 // Obtener la URL base de la API desde variables de entorno o usar valores por defecto
@@ -22,8 +22,8 @@ const getApiBaseUrl = (): string => {
   }
 
   // En producción, usar la URL completa del backend de producción
-  // Si está configurada en .env, usarla; si no, usar softwareqa.dev por defecto
-  const prodUrl = import.meta.env.VITE_API_BASE_URL_PROD || 'https://softwareqa.dev'
+  // Si está configurada en .env, usarla; si no, usar apisye.mobilsoft.co por defecto
+  const prodUrl = import.meta.env.VITE_API_BASE_URL_PROD || 'https://apisye.mobilsoft.co'
   return prodUrl
 }
 
