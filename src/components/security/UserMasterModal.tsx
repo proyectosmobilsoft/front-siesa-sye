@@ -3,7 +3,7 @@ import { Modal } from '@/components/ui/modal'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Copy, RefreshCw, AlertCircle, CheckCircle2 } from 'lucide-react'
-import { seguridadApi, AuthRole } from '@/api/seguridad'
+import { seguridadApi, AuthRole, rolTieneModuloConductor } from '@/api/seguridad'
 import { Select } from '@/components/ui/select'
 
 interface UserMasterModalProps {
@@ -24,6 +24,7 @@ export const UserMasterModal = ({ isOpen, onClose, user }: UserMasterModalProps)
     const [pin, setPin] = useState('')
     const [contraseña, setContraseña] = useState('')
     const [observaciones, setObservaciones] = useState('')
+    const [formaPago, setFormaPago] = useState('')
     const [activo, setActivo] = useState(true)
     const [isSubmitting, setIsSubmitting] = useState(false)
     const [error, setError] = useState<string | null>(null)
@@ -57,6 +58,7 @@ export const UserMasterModal = ({ isOpen, onClose, user }: UserMasterModalProps)
             setPin(user?.pin || '')
             setContraseña('') // No mostrar contraseña existente por seguridad
             setObservaciones(user?.observaciones || '')
+            setFormaPago(user?.forma_pago || '')
             setActivo(user?.activo !== false)
             setError(null)
             setIsSubmitting(false)
@@ -99,6 +101,9 @@ export const UserMasterModal = ({ isOpen, onClose, user }: UserMasterModalProps)
         // Limpiar campos de autenticación al cambiar de rol
         setPin('')
         setContraseña('')
+        if (!rolTieneModuloConductor(rol)) {
+            setFormaPago('')
+        }
     }
 
     const generateRandomPin = () => {
@@ -166,6 +171,9 @@ export const UserMasterModal = ({ isOpen, onClose, user }: UserMasterModalProps)
                 rol_id: rolId,
                 credencial: credencial.trim() ? credencial : undefined,
                 observaciones: observaciones.trim() || null,
+                forma_pago: rolTieneModuloConductor(rolSeleccionado)
+                    ? formaPago.trim() || null
+                    : null,
                 activo,
             }
 
@@ -277,10 +285,32 @@ export const UserMasterModal = ({ isOpen, onClose, user }: UserMasterModalProps)
                     </div>
                 )}
 
-                {/* Observaciones */}
-                <div className="space-y-1">
-                    <label className="text-xs font-medium text-muted-foreground">Observaciones</label>
-                    <Input placeholder="Notas opcionales..." value={observaciones} onChange={(e) => setObservaciones(e.target.value)} className="h-9" autoComplete="off" />
+                {/* Observaciones | Forma de pago (solo rol con MODULO_CONDUCTOR) */}
+                <div
+                    className={`grid grid-cols-1 gap-3 ${rolTieneModuloConductor(rolSeleccionado) ? 'sm:grid-cols-2' : ''}`}
+                >
+                    <div className="space-y-1">
+                        <label className="text-xs font-medium text-muted-foreground">Observaciones</label>
+                        <Input
+                            placeholder="Notas opcionales..."
+                            value={observaciones}
+                            onChange={(e) => setObservaciones(e.target.value)}
+                            className="h-9"
+                            autoComplete="off"
+                        />
+                    </div>
+                    {rolTieneModuloConductor(rolSeleccionado) && (
+                        <div className="space-y-1">
+                            <label className="text-xs font-medium text-muted-foreground">Forma de pago</label>
+                            <Input
+                                placeholder="Opcional — ej. transferencia, efectivo..."
+                                value={formaPago}
+                                onChange={(e) => setFormaPago(e.target.value)}
+                                className="h-9"
+                                autoComplete="off"
+                            />
+                        </div>
+                    )}
                 </div>
 
                 {/* Estado + Botones */}

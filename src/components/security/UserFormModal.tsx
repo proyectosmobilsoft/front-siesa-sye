@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import { Modal } from '@/components/ui/modal'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { seguridadApi, AuthRole, UsuarioMaster } from '@/api/seguridad'
+import { seguridadApi, AuthRole, UsuarioMaster, rolTieneModuloConductor } from '@/api/seguridad'
 import { paisesApi, Pais } from '@/api/paises'
 import { ChevronDown, Loader2, CheckCircle2, XCircle, RefreshCw, Copy } from 'lucide-react'
 
@@ -84,6 +84,8 @@ export const UserFormModal = ({ isOpen, onClose, user }: UserFormModalProps) => 
     const [codigoSearch, setCodigoSearch] = useState('')
     const codigoRef = useRef<HTMLDivElement>(null)
     const [loadingUser, setLoadingUser] = useState(false)
+    const [observaciones, setObservaciones] = useState('')
+    const [formaPago, setFormaPago] = useState('')
 
     // Determinar si el rol seleccionado usa PIN
     const rolSeleccionado = roles.find(r => r.id === roleId)
@@ -105,6 +107,8 @@ export const UserFormModal = ({ isOpen, onClose, user }: UserFormModalProps) => 
                 setPassword('')
                 setUsuario('')
                 setUsuarioStatus('idle')
+                setObservaciones('')
+                setFormaPago('')
             } else {
                 // Cargar datos básicos del objeto de la tabla
                 setName(user?.nombre_completo || '')
@@ -113,6 +117,8 @@ export const UserFormModal = ({ isOpen, onClose, user }: UserFormModalProps) => 
                 setUsuarioStatus('idle')
                 setCredencial('')
                 setPassword('')
+                setObservaciones(user?.observaciones || '')
+                setFormaPago(user?.forma_pago || '')
                 
                 // Separar código de país y teléfono
                 const telefonoCompleto = user?.telefono || ''
@@ -147,6 +153,8 @@ export const UserFormModal = ({ isOpen, onClose, user }: UserFormModalProps) => 
             }
             if (fullUser?.nombre_completo && !name) setName(fullUser.nombre_completo)
             if (fullUser?.email && !email) setEmail(fullUser.email)
+            if (fullUser?.observaciones !== undefined) setObservaciones(fullUser.observaciones || '')
+            if (fullUser?.forma_pago !== undefined) setFormaPago(fullUser.forma_pago || '')
         } catch (err) {
             console.error('Error cargando detalles del usuario:', err)
         } finally {
@@ -330,6 +338,16 @@ export const UserFormModal = ({ isOpen, onClose, user }: UserFormModalProps) => 
             if (usuario !== user.usuario) {
                 payload.usuario = usuario
             }
+            if (observaciones.trim() !== (user.observaciones || '')) {
+                payload.observaciones = observaciones.trim() || null
+            }
+            const valorFormaPago = rolTieneModuloConductor(rolSeleccionado)
+                ? formaPago.trim() || null
+                : null
+            const formaAnterior = user.forma_pago ?? null
+            if (valorFormaPago !== formaAnterior) {
+                payload.forma_pago = valorFormaPago
+            }
             // Credencial: PIN o contraseña según el rol
             const credencialValor = requierePin ? credencial : password
             if (credencialValor) {
@@ -367,7 +385,10 @@ export const UserFormModal = ({ isOpen, onClose, user }: UserFormModalProps) => 
                 email: email.trim() || null,
                 telefono: telefonoCompleto,
                 nombre_completo: name.trim() || null,
-                observaciones: null,
+                observaciones: observaciones.trim() || null,
+                forma_pago: rolTieneModuloConductor(rolSeleccionado)
+                    ? formaPago.trim() || null
+                    : null,
                 activo: true,
             }
 
@@ -531,7 +552,14 @@ export const UserFormModal = ({ isOpen, onClose, user }: UserFormModalProps) => 
                         <select
                             className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                             value={roleId?.toString() || ''}
-                            onChange={(e) => setRoleId(e.target.value ? parseInt(e.target.value, 10) : null)}
+                            onChange={(e) => {
+                                const nextId = e.target.value ? parseInt(e.target.value, 10) : null
+                                setRoleId(nextId)
+                                const rol = roles.find(r => r.id === nextId)
+                                if (!rolTieneModuloConductor(rol)) {
+                                    setFormaPago('')
+                                }
+                            }}
                             disabled={loadingRoles || loadingUser}
                         >
                             <option value="">{loadingRoles || loadingUser ? "Cargando..." : "Seleccione un rol"}</option>
@@ -609,6 +637,29 @@ export const UserFormModal = ({ isOpen, onClose, user }: UserFormModalProps) => 
                             </>
                         )}
                     </div>
+                </div>
+
+                <div
+                    className={`grid grid-cols-1 gap-5 ${rolTieneModuloConductor(rolSeleccionado) ? 'md:grid-cols-2' : ''}`}
+                >
+                    <div className="space-y-2">
+                        <label className="text-sm font-medium">Observaciones</label>
+                        <Input
+                            placeholder="Notas opcionales..."
+                            value={observaciones}
+                            onChange={(e) => setObservaciones(e.target.value)}
+                        />
+                    </div>
+                    {rolTieneModuloConductor(rolSeleccionado) && (
+                        <div className="space-y-2">
+                            <label className="text-sm font-medium">Forma de pago</label>
+                            <Input
+                                placeholder="Opcional — ej. transferencia, efectivo..."
+                                value={formaPago}
+                                onChange={(e) => setFormaPago(e.target.value)}
+                            />
+                        </div>
+                    )}
                 </div>
 
                 <div className="flex justify-end space-x-2 pt-4 border-t">

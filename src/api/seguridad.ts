@@ -13,6 +13,8 @@ export interface UsuarioMaster {
     email: string | null
     telefono: string | null
     nombre_completo: string | null
+    observaciones?: string | null
+    forma_pago?: string | null
     activo: boolean
     intentos_fallidos: number
     bloqueado_hasta: string | null
@@ -42,6 +44,7 @@ export interface CreateUsuarioMasterDto {
     telefono?: string | null
     nombre_completo?: string | null
     observaciones?: string | null
+    forma_pago?: string | null
     activo: boolean
 }
 
@@ -54,6 +57,7 @@ export interface UpdateUsuarioMasterDto {
     telefono?: string | null
     nombre_completo?: string | null
     observaciones?: string | null
+    forma_pago?: string | null
     activo?: boolean
 }
 
@@ -70,6 +74,13 @@ export interface AuthRole {
     pin: boolean // true si usa PIN, false si usa contraseña
     estado: number | boolean // 1/true = activo, 0/false = inactivo
     permisos?: PermisoEnRol[]
+}
+
+/** Código de permiso: mostrar datos de conductor (ej. forma de pago en usuario). */
+export const PERMISO_MODULO_CONDUCTOR = 'MODULO_CONDUCTOR'
+
+export function rolTieneModuloConductor(rol: AuthRole | null | undefined): boolean {
+    return !!rol?.permisos?.some((p) => p.codigo === PERMISO_MODULO_CONDUCTOR)
 }
 
 export interface ListarRolesResponse {
