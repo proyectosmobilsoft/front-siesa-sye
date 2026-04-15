@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { User, Eye, EyeOff, AlertCircle, Loader2 } from 'lucide-react'
 import { apiClient } from '@/api/client'
+import { seguridadApi } from '@/api/seguridad'
+import { useAuthStore } from '@/store/authStore'
 
 export const LoginPage = () => {
     const navigate = useNavigate()
@@ -22,20 +24,73 @@ export const LoginPage = () => {
         try {
             setLoading(true)
             setError('')
-            const loginData = {
-                usuario: usuario.trim().toLowerCase(),
-                credencial: contraseña,
-            }
+            const usuarioNormalizado = usuario.trim().toLowerCase()
+            const loginData = { usuario: usuarioNormalizado, credencial: contraseña }
+
             console.log('📤 Enviando datos de login:', loginData)
             const res = await apiClient.post('/auth/login', loginData)
-            if (res.data?.token) {
-                localStorage.setItem('auth_token', res.data.token)
-                // Guardar la última actividad al hacer login
-                localStorage.setItem('last_activity', Date.now().toString())
-                console.log('✅ Token guardado correctamente en localStorage')
-            } else {
+
+            if (!res.data?.token) {
                 console.warn('⚠️ El login fue exitoso pero no se recibió token')
+                navigate('/')
+                return
             }
+
+            // Guardar token primero para que el interceptor lo use en las siguientes llamadas
+            localStorage.setItem('auth_token', res.data.token)
+            localStorage.setItem('last_activity', Date.now().toString())
+            console.log('✅ Token guardado en localStorage')
+
+            // Cargar datos del usuario y sus permisos usando seguridadApi (con normalización)
+            try {
+                const [userData, rolesRes] = await Promise.all([
+                    seguridadApi.obtenerUsuario(usuarioNormalizado),
+                    seguridadApi.listarRoles(),
+                ])
+
+                const rolId = userData.rol_id
+                const roles = rolesRes.data || []
+                const rolUsuario = roles.find((r) => r.id === rolId)
+                const permisos: string[] = (rolUsuario?.permisos || [])
+                    .map((p) => p.codigo || '')
+                    .filter(Boolean)
+
+                console.log('🔑 Datos de sesión:', {
+                    usuario: userData.usuario,
+                    rol_id: rolId,
+                    rol_nombre: rolUsuario?.nombre,
+                    permisos_count: permisos.length,
+                    permisos,
+                })
+
+                useAuthStore.getState().setSession(
+                    {
+                        id: userData.id,
+                        usuario: userData.usuario,
+                        nombre_completo: userData.nombre_completo ?? null,
+                        rol_id: rolId ?? null,
+                        rol_nombre: rolUsuario?.nombre ?? '',
+                    },
+                    permisos
+                )
+
+                console.log(`✅ Sesión cargada — rol: ${rolUsuario?.nombre ?? 'desconocido'}, permisos: ${permisos.length}`)
+            } catch (permError) {
+                // Si falla la carga de permisos, guardar sesión mínima sin permisos
+                // para evitar el bucle de re-login. El usuario verá solo el dashboard.
+                console.warn('⚠️ No se pudieron cargar los permisos del usuario:', permError)
+                useAuthStore.getState().setSession(
+                    {
+                        id: 0,
+                        usuario: usuarioNormalizado,
+                        nombre_completo: null,
+                        rol_id: null,
+                        rol_nombre: '',
+                    },
+                    []
+                )
+            }
+
             navigate('/')
         } catch (err: any) {
             // Manejar diferentes tipos de errores del backend

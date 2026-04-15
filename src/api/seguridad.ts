@@ -145,15 +145,30 @@ export const seguridadApi = {
     listarRoles: async (): Promise<ListarRolesResponse> => {
         const response = await apiClient.get('/auth-secundario/roles')
         const raw = response.data
-        // Normalizar: el backend puede devolver "Estado" (mayúscula) o "estado" (minúscula)
+        // Normalizar campos que el backend puede devolver en mayúscula o minúscula
         if (raw?.data && Array.isArray(raw.data)) {
-            raw.data = raw.data.map((role: any) => ({
-                id: role.id,
-                nombre: role.nombre,
-                pin: role.pin,
-                estado: role.estado ?? role.Estado ?? 1,
-                permisos: role.permisos ?? [],
-            }))
+            raw.data = raw.data.map((role: any) => {
+                // Permisos: el backend puede devolver "permisos", "Permisos"
+                // o en tabla intermedia como { Permiso: { codigo: ... } }
+                const permisosRaw: any[] = role.permisos ?? role.Permisos ?? []
+                const permisos: PermisoEnRol[] = permisosRaw.map((p: any) => {
+                    // Soporte para ORM con relación intermedia: { Permiso: { id, codigo } }
+                    const fuente = p.Permiso ?? p.permiso ?? p
+                    return {
+                        id: fuente.id ?? fuente.ID,
+                        codigo: fuente.codigo ?? fuente.Codigo ?? '',
+                        descripcion: fuente.descripcion ?? fuente.Descripcion,
+                        estado: fuente.estado ?? fuente.Estado,
+                    }
+                })
+                return {
+                    id: role.id,
+                    nombre: role.nombre,
+                    pin: role.pin,
+                    estado: role.estado ?? role.Estado ?? 1,
+                    permisos,
+                }
+            })
         }
         return raw
     },
