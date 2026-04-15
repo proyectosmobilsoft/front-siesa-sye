@@ -20,6 +20,8 @@ import { MaestroUsuariosPage } from '@/pages/MaestroUsuariosPage'
 import { MaestroDescuentosFinancierosPage } from '@/pages/MaestroDescuentosFinancierosPage'
 import { EgresoPage } from '@/pages/EgresoPage'
 import { LoginPage } from '@/pages/LoginPage'
+import { ProtectedRoute } from '@/components/auth/ProtectedRoute'
+import { PERMISOS } from '@/config/permisos'
 import { useUIStore } from '@/store/uiStore'
 import { useEffect, useState } from 'react'
 import { useAuth } from '@/hooks/useAuth'
@@ -45,23 +47,34 @@ function AppLayout() {
                     <Header />
                     <main className="flex-1 overflow-auto custom-scrollbar">
                         <Routes>
+                            {/* Dashboard: accesible a todos los autenticados */}
                             <Route path="/" element={<DashboardPage />} />
-                            <Route path="/clientes" element={<ClientsPage />} />
-                            <Route path="/companias" element={<CompaniesPage />} />
-                            <Route path="/productos" element={<ProductsPage />} />
-                            <Route path="/egreso" element={<EgresoPage />} />
-                            <Route path="/facturas/gestion-ventas" element={<GestionVentasPage />} />
-                            <Route path="/facturas/analisis-financiero" element={<AnalisisFinancieroPage />} />
-                            <Route path="/reportes" element={<ReportsPage />} />
-                            <Route path="/pedidos" element={<PedidosPage />} />
-                            <Route path="/reportes/ventas" element={<SalesSummaryPage />} />
-                            <Route path="/reportes/vendedores" element={<VendorsPage />} />
-                            <Route path="/maestro/roles" element={<MaestroRolesPage />} />
-                            <Route path="/maestro/usuarios" element={<MaestroUsuariosPage />} />
-                            <Route path="/maestro/descuentos-financieros" element={<MaestroDescuentosFinancierosPage />} />
-                            <Route path="/configuracion" element={<SettingsPage />} />
-                            <Route path="/configuracion/seguridad" element={<SecuritySettingsPage />} />
-                            <Route path="/ayuda" element={<HelpPage />} />
+
+                            {/* Egreso/Anticipos: protegido por VER_ANTICIPO */}
+                            <Route path="/egreso" element={
+                                <ProtectedRoute permiso={PERMISOS.EGRESO}><EgresoPage /></ProtectedRoute>
+                            } />
+
+                            {/* Gestión de Ventas: protegido por VER_RECIBO */}
+                            <Route path="/facturas/gestion-ventas" element={
+                                <ProtectedRoute permiso={PERMISOS.GESTION_VENTAS}><GestionVentasPage /></ProtectedRoute>
+                            } />
+
+                            {/* Rutas sin permiso aún en backend — accesibles a cualquier usuario autenticado */}
+                            <Route path="/clientes"                          element={<ClientsPage />} />
+                            <Route path="/companias"                         element={<CompaniesPage />} />
+                            <Route path="/productos"                         element={<ProductsPage />} />
+                            <Route path="/pedidos"                           element={<PedidosPage />} />
+                            <Route path="/facturas/analisis-financiero"      element={<AnalisisFinancieroPage />} />
+                            <Route path="/reportes"                          element={<ReportsPage />} />
+                            <Route path="/reportes/ventas"                   element={<SalesSummaryPage />} />
+                            <Route path="/reportes/vendedores"               element={<VendorsPage />} />
+                            <Route path="/maestro/roles"                     element={<MaestroRolesPage />} />
+                            <Route path="/maestro/usuarios"                  element={<MaestroUsuariosPage />} />
+                            <Route path="/maestro/descuentos-financieros"    element={<MaestroDescuentosFinancierosPage />} />
+                            <Route path="/configuracion"                     element={<SettingsPage />} />
+                            <Route path="/configuracion/seguridad"           element={<SecuritySettingsPage />} />
+                            <Route path="/ayuda"                             element={<HelpPage />} />
                         </Routes>
                     </main>
                 </div>

@@ -4,7 +4,6 @@ import { useEffect, useState } from 'react'
 import {
     BarChart3,
     Users,
-    Building2,
     Package,
     FileText,
     Settings,
@@ -26,46 +25,64 @@ import {
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useUIStore } from '@/store/uiStore'
+import { useAuthStore } from '@/store/authStore'
 import { useMediaQuery } from '@/hooks/useMediaQuery'
 import { cn } from '@/lib/utils'
+import { PERMISOS } from '@/config/permisos'
+
+interface SubNavItem {
+    name: string
+    href: string
+    icon: React.ComponentType<{ className?: string }>
+    permiso?: string
+}
 
 interface NavItem {
     name: string
     href?: string
     icon: React.ComponentType<{ className?: string }>
-    subItems?: Array<{ name: string; href: string; icon: React.ComponentType<{ className?: string }> }>
+    permiso?: string
+    subItems?: SubNavItem[]
 }
 
 const navigation: NavItem[] = [
+    // Dashboard: siempre visible para usuarios autenticados
     { name: 'Dashboard', href: '/', icon: BarChart3 },
-    { name: 'Clientes', href: '/clientes', icon: User },
+
+    // Módulos sin permiso aún en backend → visibles para todos los autenticados
+    { name: 'Clientes',  href: '/clientes',  icon: User },
     { name: 'Productos', href: '/productos', icon: Package },
-    { name: 'Egreso', href: '/egreso', icon: Wallet },
-    { name: 'Pedidos', href: '/pedidos', icon: ShoppingBag },
+    { name: 'Pedidos',   href: '/pedidos',   icon: ShoppingBag },
+
+    // Egreso/Anticipos: requiere VER_ANTICIPO
+    { name: 'Egreso', href: '/egreso', icon: Wallet, permiso: PERMISOS.EGRESO },
+
     {
         name: 'Facturas',
         icon: Receipt,
         subItems: [
-            { name: 'Gestión de Ventas', href: '/facturas/gestion-ventas', icon: ShoppingCart },
-            { name: 'Análisis Financiero', href: '/facturas/analisis-financiero', icon: TrendingDown }
+            // Gestión de Ventas (recibos): requiere VER_RECIBO
+            { name: 'Gestión de Ventas',   href: '/facturas/gestion-ventas',    icon: ShoppingCart, permiso: PERMISOS.GESTION_VENTAS },
+            // Análisis Financiero: sin permiso aún en backend
+            { name: 'Análisis Financiero', href: '/facturas/analisis-financiero', icon: TrendingDown },
         ]
     },
     {
         name: 'Reportes',
         icon: FileText,
         subItems: [
-            { name: 'Pedidos Diarios', href: '/reportes', icon: ClipboardList },
-            { name: 'Resumen Ventas', href: '/reportes/ventas', icon: TrendingUp },
-            { name: 'Vendedores', href: '/reportes/vendedores', icon: UserCircle }
+            { name: 'Pedidos Diarios', href: '/reportes',           icon: ClipboardList },
+            { name: 'Resumen Ventas',  href: '/reportes/ventas',    icon: TrendingUp },
+            { name: 'Vendedores',      href: '/reportes/vendedores', icon: UserCircle },
         ]
     },
     {
         name: 'Maestro',
         icon: Users,
         subItems: [
-            { name: 'Maestro de Roles', href: '/maestro/roles', icon: Shield },
-            { name: 'Maestro de Usuarios', href: '/maestro/usuarios', icon: UserPlus },
-            { name: 'Descuentos Financieros', href: '/maestro/descuentos-financieros', icon: Percent }
+            { name: 'Maestro de Roles',        href: '/maestro/roles',                    icon: Shield },
+            { name: 'Maestro de Usuarios',     href: '/maestro/usuarios',                 icon: UserPlus },
+            { name: 'Descuentos Financieros',  href: '/maestro/descuentos-financieros',   icon: Percent },
         ]
     },
     { name: 'Configuración', href: '/configuracion', icon: Settings },
@@ -73,9 +90,30 @@ const navigation: NavItem[] = [
 
 export const Sidebar = () => {
     const { sidebarOpen, setSidebarOpen } = useUIStore()
+    const { hasPermiso, sesion } = useAuthStore()
     const location = useLocation()
     const isMobile = useMediaQuery('(max-width: 1023px)')
     const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set())
+
+    // Filtrar items de navegación según permisos del usuario
+    const navFiltrado: NavItem[] = navigation.reduce<NavItem[]>((acc, item) => {
+        if (item.subItems) {
+            // Filtrar sub-items por permiso
+            const subsFiltrados = item.subItems.filter(
+                (sub) => !sub.permiso || hasPermiso(sub.permiso)
+            )
+            // Solo incluir el grupo padre si tiene al menos un sub-item visible
+            if (subsFiltrados.length > 0) {
+                acc.push({ ...item, subItems: subsFiltrados })
+            }
+        } else {
+            // Item simple: mostrar si no tiene permiso requerido o si el usuario lo tiene
+            if (!item.permiso || hasPermiso(item.permiso)) {
+                acc.push(item)
+            }
+        }
+        return acc
+    }, [])
 
     // Asegurar que el sidebar esté abierto en desktop
     useEffect(() => {
@@ -86,7 +124,7 @@ export const Sidebar = () => {
 
     // Auto-expandir items si la ruta actual está en sus sub-items
     useEffect(() => {
-        navigation.forEach((item) => {
+        navFiltrado.forEach((item) => {
             if (item.subItems) {
                 const hasActiveSubItem = item.subItems.some(
                     (subItem) => subItem.href === location.pathname
@@ -96,10 +134,10 @@ export const Sidebar = () => {
                 }
             }
         })
-    }, [location.pathname])
+    }, [location.pathname]) // eslint-disable-line react-hooks/exhaustive-deps
 
     const getCurrentPageInfo = () => {
-        for (const item of navigation) {
+        for (const item of navFiltrado) {
             if (item.subItems) {
                 const sub = item.subItems.find((s) => s.href === location.pathname)
                 if (sub) return { name: sub.name, icon: sub.icon }
@@ -176,7 +214,7 @@ export const Sidebar = () => {
 
                     {/* Navigation */}
                     <nav className="flex-1 px-4 py-6 space-y-2 overflow-y-auto custom-scrollbar">
-                        {navigation.map((item) => {
+                        {navFiltrado.map((item) => {
                             const hasSubItems = item.subItems && item.subItems.length > 0
                             const isExpanded = isItemExpanded(item.name)
 
@@ -289,6 +327,18 @@ export const Sidebar = () => {
                             )
                         })}
                     </nav>
+
+                    {/* Footer: info del usuario y rol */}
+                    {sesion && (
+                        <div className="px-4 py-3 border-t border-border">
+                            <p className="text-xs font-medium text-foreground truncate">
+                                {sesion.nombre_completo || sesion.usuario}
+                            </p>
+                            <p className="text-xs text-muted-foreground truncate">
+                                {sesion.rol_nombre || 'Sin rol'}
+                            </p>
+                        </div>
+                    )}
 
                 </div>
             </motion.div>

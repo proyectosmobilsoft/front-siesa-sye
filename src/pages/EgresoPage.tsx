@@ -36,6 +36,7 @@ import { anticiposOperativosApi } from '@/api/anticiposOperativos'
 import { AnticipoOperativo, AnticipoOperativoUpdatePayload, DistribucionItem, Soporte } from '@/api/types'
 import { formatters } from '@/utils/formatters'
 import { useQueryClient } from '@tanstack/react-query'
+import { usePermiso } from '@/hooks/usePermiso'
 
 // ─── Utilidades de UI ────────────────────────────────────────────────────────
 
@@ -675,6 +676,7 @@ const EditModal = ({ anticipo, onClose, onSaved }: EditModalProps) => {
 
 export const EgresoPage = () => {
     const queryClient = useQueryClient()
+    const { puede, P } = usePermiso()
     const { data: solicitudes, isLoading, error } = useAnticiposOperativos()
     const [globalFilter, setGlobalFilter] = useState('')
     const [sorting, setSorting] = useState<SortingState>([])
@@ -810,15 +812,17 @@ export const EgresoPage = () => {
                     >
                         <Eye className="h-4 w-4" />
                     </Button>
-                    <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={(e) => { e.stopPropagation(); setEditingAnticipo(row.original) }}
-                        className="h-8 w-8 p-0 border border-muted-foreground/20 text-muted-foreground hover:bg-muted/50"
-                        title="Editar"
-                    >
-                        <Edit className="h-4 w-4" />
-                    </Button>
+                    {puede(P.EDITAR_ANTICIPO) && (
+                        <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={(e) => { e.stopPropagation(); setEditingAnticipo(row.original) }}
+                            className="h-8 w-8 p-0 border border-muted-foreground/20 text-muted-foreground hover:bg-muted/50"
+                            title="Editar"
+                        >
+                            <Edit className="h-4 w-4" />
+                        </Button>
+                    )}
                 </div>
             ),
         },
