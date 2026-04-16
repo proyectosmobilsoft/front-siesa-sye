@@ -23,7 +23,7 @@ const getApiBaseUrl = (): string => {
 
   // En producción, usar la URL completa del backend de producción
   // Si está configurada en .env, usarla; si no, usar apisye.mobilsoft.co por defecto
-  const prodUrl = import.meta.env.VITE_API_BASE_URL_PROD || 'https://apisye.mobilsoft.co'
+  const prodUrl = import.meta.env.VITE_API_BASE_URL_PROD || 'https://apisye.mobilsoft.co/api'
   return prodUrl
 }
 
