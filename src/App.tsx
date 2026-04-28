@@ -19,6 +19,7 @@ import { MaestroRolesPage } from '@/pages/MaestroRolesPage'
 import { MaestroUsuariosPage } from '@/pages/MaestroUsuariosPage'
 import { MaestroDescuentosFinancierosPage } from '@/pages/MaestroDescuentosFinancierosPage'
 import { EgresoPage } from '@/pages/EgresoPage'
+import FerregangaPage from '@/pages/FerregangaPage'
 import { LoginPage } from '@/pages/LoginPage'
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute'
 import { PERMISOS } from '@/config/permisos'
@@ -65,6 +66,7 @@ function AppLayout() {
                             <Route path="/companias"                         element={<CompaniesPage />} />
                             <Route path="/productos"                         element={<ProductsPage />} />
                             <Route path="/pedidos"                           element={<PedidosPage />} />
+                            <Route path="/ferreganga"                        element={<FerregangaPage />} />
                             <Route path="/facturas/analisis-financiero"      element={<AnalisisFinancieroPage />} />
                             <Route path="/reportes"                          element={<ReportsPage />} />
                             <Route path="/reportes/ventas"                   element={<SalesSummaryPage />} />

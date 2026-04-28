@@ -16,6 +16,7 @@ import {
     Receipt,
     ShoppingCart,
     ShoppingBag,
+    Ticket,
     TrendingDown,
     Shield,
     UserPlus,
@@ -53,6 +54,7 @@ const navigation: NavItem[] = [
     { name: 'Clientes',  href: '/clientes',  icon: User },
     { name: 'Productos', href: '/productos', icon: Package },
     { name: 'Pedidos',   href: '/pedidos',   icon: ShoppingBag },
+    { name: 'Ferreganga', href: '/ferreganga', icon: Ticket },
 
     // Egreso/Anticipos: requiere VER_ANTICIPO
     { name: 'Egreso', href: '/egreso', icon: Wallet, permiso: PERMISOS.EGRESO },
