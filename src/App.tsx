@@ -20,6 +20,7 @@ import { MaestroUsuariosPage } from '@/pages/MaestroUsuariosPage'
 import { MaestroDescuentosFinancierosPage } from '@/pages/MaestroDescuentosFinancierosPage'
 import { EgresoPage } from '@/pages/EgresoPage'
 import FerregangaPage from '@/pages/FerregangaPage'
+import { ReciboCajaPage } from '@/pages/ReciboCajaPage'
 import { LoginPage } from '@/pages/LoginPage'
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute'
 import { PERMISOS } from '@/config/permisos'
@@ -74,6 +75,7 @@ function AppLayout() {
                             <Route path="/maestro/roles"                     element={<MaestroRolesPage />} />
                             <Route path="/maestro/usuarios"                  element={<MaestroUsuariosPage />} />
                             <Route path="/maestro/descuentos-financieros"    element={<MaestroDescuentosFinancierosPage />} />
+                            <Route path="/tesoreria/recibo-caja"             element={<ReciboCajaPage />} />
                             <Route path="/configuracion"                     element={<SettingsPage />} />
                             <Route path="/configuracion/seguridad"           element={<SecuritySettingsPage />} />
                             <Route path="/ayuda"                             element={<HelpPage />} />

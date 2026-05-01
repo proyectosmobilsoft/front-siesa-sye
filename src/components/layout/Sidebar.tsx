@@ -23,6 +23,7 @@ import {
     Percent,
     Wallet,
     User,
+    Landmark,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useUIStore } from '@/store/uiStore'
@@ -85,6 +86,13 @@ const navigation: NavItem[] = [
             { name: 'Maestro de Roles',        href: '/maestro/roles',                    icon: Shield },
             { name: 'Maestro de Usuarios',     href: '/maestro/usuarios',                 icon: UserPlus },
             { name: 'Descuentos Financieros',  href: '/maestro/descuentos-financieros',   icon: Percent },
+        ]
+    },
+    {
+        name: 'Tesorería',
+        icon: Landmark,
+        subItems: [
+            { name: 'Recibo de Caja', href: '/tesoreria/recibo-caja', icon: Receipt },
         ]
     },
     { name: 'Configuración', href: '/configuracion', icon: Settings },
