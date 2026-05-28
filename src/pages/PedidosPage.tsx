@@ -11,7 +11,7 @@ import {
     SortingState,
     ColumnFiltersState,
 } from '@tanstack/react-table'
-import { ArrowUpDown, Search, Send } from 'lucide-react'
+import { ArrowUpDown, Search, Send, AlertCircle, Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -335,189 +335,185 @@ export const PedidosPage = () => {
             transition={{ duration: 0.5 }}
             className="flex-1 space-y-6 p-6"
         >
-            {/* Header with title and filters */}
-            <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-
-                {/* Date filters */}
-                <div className="flex flex-col sm:flex-row gap-3 items-end">
-                    <div className="min-w-[180px]">
-                        <label className="text-xs font-medium text-muted-foreground mb-1.5 block">Fecha Inicial</label>
-                        <DatePicker
-                            value={filtros.fechaInicial}
-                            onChange={(value) => setFiltros({ ...filtros, fechaInicial: value })}
-                            placeholder="Fecha inicial"
-                            max={filtros.fechaFinal}
-                        />
-                    </div>
-                    <div className="min-w-[180px]">
-                        <label className="text-xs font-medium text-muted-foreground mb-1.5 block">Fecha Final</label>
-                        <DatePicker
-                            value={filtros.fechaFinal}
-                            onChange={(value) => setFiltros({ ...filtros, fechaFinal: value })}
-                            placeholder="Fecha final"
-                            min={filtros.fechaInicial}
-                        />
-                    </div>
-                    <div className="min-w-[140px]">
-                        <label className="text-xs font-medium text-muted-foreground mb-1.5 block opacity-0">Buscar</label>
-                        <Button onClick={handleBuscar} size="sm" className="w-full h-10 text-xs">
-                            <Search className="mr-1.5 h-3.5 w-3.5" />
-                            Buscar Pedidos
-                        </Button>
-                    </div>
-                </div>
-            </div>
-
-            {/* Table */}
-            {searchParams && (
-                <>
-                    {isLoading ? (
-                        <Card>
-                            <CardHeader>
-                                <CardTitle>Pedidos</CardTitle>
-                            </CardHeader>
-                            <CardContent>
-                                <div className="space-y-4">
-                                    <Skeleton className="h-10 w-full" />
-                                    <Skeleton className="h-64 w-full" />
-                                </div>
-                            </CardContent>
-                        </Card>
-                    ) : error ? (
-                        <Card className="border-red-200 bg-red-50">
-                            <CardHeader>
-                                <CardTitle className="text-red-800">Error al cargar pedidos</CardTitle>
-                            </CardHeader>
-                            <CardContent className="flex items-center justify-center h-64">
-                                <div className="text-center text-red-600">
-                                    <p className="text-lg font-medium">No se pudieron obtener los datos</p>
-                                    <p className="text-sm mt-2">Error: {error instanceof Error ? error.message : 'Error desconocido'}</p>
-                                    <Button onClick={() => refetch()} className="mt-4" variant="outline">
-                                        Reintentar
-                                    </Button>
-                                </div>
-                            </CardContent>
-                        </Card>
-                    ) : (
-                        <motion.div
-                            initial={{ opacity: 0, y: 20 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ duration: 0.5, delay: 0.2 }}
-                        >
-                            <Card className="border-2 border-primary/20 bg-gradient-to-br from-background to-primary/5">
-                                <CardHeader>
-                                    <div className="flex items-start justify-between gap-4">
-                                        <div>
-                                            <CardTitle className="flex items-center gap-2">
-                                                <span className="text-primary">Pedidos</span>
-                                                {pedidos && (
-                                                    <span className="ml-2 text-sm font-normal text-muted-foreground">
-                                                        ({pedidos.length} {pedidos.length === 1 ? 'registro' : 'registros'})
-                                                    </span>
-                                                )}
-                                            </CardTitle>
-                                        </div>
-                                    </div>
-                                    <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 mt-4">
-                                        <div className="relative flex-1 max-w-sm">
-                                            <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-                                            <Input
-                                                placeholder="Buscar en pedidos..."
-                                                value={globalFilter ?? ''}
-                                                onChange={(event) => setGlobalFilter(String(event.target.value))}
-                                                className="pl-8"
-                                            />
-                                        </div>
-                                    </div>
-                                </CardHeader>
-                                <CardContent>
-                                    {!pedidos || pedidos.length === 0 ? (
-                                        <div className="text-center py-12">
-                                            <p className="text-muted-foreground">No se encontraron pedidos con los filtros seleccionados.</p>
-                                        </div>
-                                    ) : (
-                                        <>
-                                            <div className="rounded-md border">
-                                                <div className="overflow-x-auto custom-scrollbar">
-                                                    <table className="w-full text-sm">
-                                                        <thead>
-                                                            {table.getHeaderGroups().map((headerGroup) => (
-                                                                <tr key={headerGroup.id} className="border-b">
-                                                                    {headerGroup.headers.map((header) => (
-                                                                        <th
-                                                                            key={header.id}
-                                                                            className="h-10 px-3 text-left align-middle font-medium text-muted-foreground"
-                                                                        >
-                                                                            {header.isPlaceholder
-                                                                                ? null
-                                                                                : flexRender(
-                                                                                    header.column.columnDef.header,
-                                                                                    header.getContext()
-                                                                                )}
-                                                                        </th>
-                                                                    ))}
-                                                                </tr>
-                                                            ))}
-                                                        </thead>
-                                                        <tbody>
-                                                            {table.getRowModel().rows?.length ? (
-                                                                table.getRowModel().rows.map((row) => (
-                                                                    <motion.tr
-                                                                        key={row.id}
-                                                                        className="border-b transition-colors hover:bg-muted/50"
-                                                                        initial={{ opacity: 0 }}
-                                                                        animate={{ opacity: 1 }}
-                                                                        transition={{ duration: 0.2 }}
-                                                                    >
-                                                                        {row.getVisibleCells().map((cell) => (
-                                                                            <td key={cell.id} className="py-2 px-3 align-middle">
-                                                                                {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                                                                            </td>
-                                                                        ))}
-                                                                    </motion.tr>
-                                                                ))
-                                                            ) : (
-                                                                <tr>
-                                                                    <td colSpan={columns.length} className="h-24 text-center">
-                                                                        No hay resultados.
-                                                                    </td>
-                                                                </tr>
-                                                            )}
-                                                        </tbody>
-                                                    </table>
-                                                </div>
-                                            </div>
-                                            <div className="flex items-center justify-between space-x-2 py-4">
-                                                <div className="flex-1 text-sm text-muted-foreground">
-                                                    {table.getFilteredRowModel().rows.length} de {table.getCoreRowModel().rows.length} filas.
-                                                </div>
-                                                <div className="flex items-center space-x-2">
-                                                    <Button
-                                                        variant="outline"
-                                                        size="sm"
-                                                        onClick={() => table.previousPage()}
-                                                        disabled={!table.getCanPreviousPage()}
-                                                    >
-                                                        Anterior
-                                                    </Button>
-                                                    <Button
-                                                        variant="outline"
-                                                        size="sm"
-                                                        onClick={() => table.nextPage()}
-                                                        disabled={!table.getCanNextPage()}
-                                                    >
-                                                        Siguiente
-                                                    </Button>
-                                                </div>
-                                            </div>
-                                        </>
+            {/* Main Table Card - Always Visible */}
+            <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5, delay: 0.2 }}
+            >
+                <Card className="border-2 border-primary/20 bg-gradient-to-br from-background to-primary/5">
+                    <CardHeader className="space-y-4">
+                        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                            <div>
+                                <CardTitle className="flex items-center gap-2">
+                                    <span className="text-primary">Pedidos</span>
+                                    {pedidos && (
+                                        <span className="ml-2 text-sm font-normal text-muted-foreground">
+                                            ({pedidos.length} {pedidos.length === 1 ? 'registro' : 'registros'})
+                                        </span>
                                     )}
-                                </CardContent>
-                            </Card>
-                        </motion.div>
-                    )}
-                </>
-            )}
+                                </CardTitle>
+                                <p className="text-xs text-muted-foreground mt-1">Gestión y seguimiento de órdenes de venta</p>
+                            </div>
+
+                            {/* Integrated Filters inside Header */}
+                            <div className="flex flex-col sm:flex-row items-end gap-3">
+                                <div className="min-w-[150px]">
+                                    <label className="text-[10px] font-bold text-muted-foreground uppercase mb-1 block">Desde</label>
+                                    <DatePicker
+                                        value={filtros.fechaInicial}
+                                        onChange={(value) => setFiltros({ ...filtros, fechaInicial: value })}
+                                        placeholder="Fecha inicial"
+                                        max={filtros.fechaFinal}
+                                    />
+                                </div>
+                                <div className="min-w-[150px]">
+                                    <label className="text-[10px] font-bold text-muted-foreground uppercase mb-1 block">Hasta</label>
+                                    <DatePicker
+                                        value={filtros.fechaFinal}
+                                        onChange={(value) => setFiltros({ ...filtros, fechaFinal: value })}
+                                        placeholder="Fecha final"
+                                        min={filtros.fechaInicial}
+                                    />
+                                </div>
+                                <Button 
+                                    onClick={handleBuscar} 
+                                    size="sm" 
+                                    className="h-10 px-4 text-xs bg-primary hover:bg-primary/90"
+                                    disabled={isLoading}
+                                >
+                                    {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="mr-1.5 h-3.5 w-3.5" />}
+                                    Buscar
+                                </Button>
+                            </div>
+                        </div>
+
+                        {/* Search Input below filters */}
+                        <div className="flex flex-col sm:flex-row items-center gap-3 border-t pt-4 border-primary/10">
+                            <div className="relative flex-1 max-w-sm">
+                                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                                <Input
+                                    placeholder="Buscar en pedidos..."
+                                    value={globalFilter ?? ''}
+                                    onChange={(event) => setGlobalFilter(String(event.target.value))}
+                                    className="pl-9 h-9"
+                                />
+                            </div>
+                        </div>
+                    </CardHeader>
+
+                    <CardContent>
+                        {isLoading ? (
+                            <div className="space-y-4">
+                                <Skeleton className="h-10 w-full" />
+                                <Skeleton className="h-64 w-full" />
+                            </div>
+                        ) : error ? (
+                            <div className="flex flex-col items-center justify-center py-12 text-center">
+                                <div className="bg-red-100 p-3 rounded-full mb-4">
+                                    <AlertCircle className="h-6 w-6 text-red-600" />
+                                </div>
+                                <p className="text-lg font-medium text-red-800">Error al cargar pedidos</p>
+                                <p className="text-sm text-red-600 mt-1">{error instanceof Error ? error.message : 'Error desconocido'}</p>
+                                <Button onClick={() => refetch()} className="mt-4" variant="outline">
+                                    Reintentar
+                                </Button>
+                            </div>
+                        ) : !searchParams ? (
+                            <div className="text-center py-20 border-2 border-dashed rounded-xl border-muted-foreground/10 bg-muted/5">
+                                <Search className="h-12 w-12 mx-auto text-muted-foreground/20 mb-4" />
+                                <p className="text-muted-foreground font-medium">Selecciona un rango de fechas y haz clic en Buscar</p>
+                                <p className="text-xs text-muted-foreground/60 mt-1">Para ver los pedidos registrados en el sistema</p>
+                            </div>
+                        ) : !pedidos || pedidos.length === 0 ? (
+                            <div className="text-center py-12">
+                                <p className="text-muted-foreground">No se encontraron pedidos con los filtros seleccionados.</p>
+                            </div>
+                        ) : (
+                            <>
+                                <div className="rounded-md border bg-card">
+                                    <div className="overflow-x-auto custom-scrollbar">
+                                        <table className="w-full text-sm">
+                                            <thead>
+                                                {table.getHeaderGroups().map((headerGroup) => (
+                                                    <tr key={headerGroup.id} className="border-b bg-muted/30">
+                                                        {headerGroup.headers.map((header) => (
+                                                            <th
+                                                                key={header.id}
+                                                                className="h-10 px-3 text-left align-middle font-semibold text-muted-foreground"
+                                                            >
+                                                                {header.isPlaceholder
+                                                                    ? null
+                                                                    : flexRender(
+                                                                        header.column.columnDef.header,
+                                                                        header.getContext()
+                                                                    )}
+                                                            </th>
+                                                        ))}
+                                                    </tr>
+                                                ))}
+                                            </thead>
+                                            <tbody>
+                                                {table.getRowModel().rows?.length ? (
+                                                    table.getRowModel().rows.map((row) => (
+                                                        <motion.tr
+                                                            key={row.id}
+                                                            className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted"
+                                                            initial={{ opacity: 0 }}
+                                                            animate={{ opacity: 1 }}
+                                                            transition={{ duration: 0.2 }}
+                                                        >
+                                                            {row.getVisibleCells().map((cell) => (
+                                                                <td key={cell.id} className="py-2.5 px-3 align-middle">
+                                                                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                                                                </td>
+                                                            ))}
+                                                        </motion.tr>
+                                                    ))
+                                                ) : (
+                                                    <tr>
+                                                        <td colSpan={columns.length} className="h-24 text-center">
+                                                            No hay resultados.
+                                                        </td>
+                                                    </tr>
+                                                )}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                                <div className="flex items-center justify-between space-x-2 py-4">
+                                    <div className="flex-1 text-xs text-muted-foreground font-medium">
+                                        Mostrando {table.getFilteredRowModel().rows.length} de {table.getCoreRowModel().rows.length} pedidos.
+                                    </div>
+                                    <div className="flex items-center space-x-2">
+                                        <Button
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={() => table.previousPage()}
+                                            disabled={!table.getCanPreviousPage()}
+                                            className="h-8 text-xs"
+                                        >
+                                            Anterior
+                                        </Button>
+                                        <div className="text-xs font-medium text-muted-foreground px-2">
+                                            Página {table.getState().pagination.pageIndex + 1}
+                                        </div>
+                                        <Button
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={() => table.nextPage()}
+                                            disabled={!table.getCanNextPage()}
+                                            className="h-8 text-xs"
+                                        >
+                                            Siguiente
+                                        </Button>
+                                    </div>
+                                </div>
+                            </>
+                        )}
+                    </CardContent>
+                </Card>
+            </motion.div>
 
             {/* Preview Modal */}
             <Modal

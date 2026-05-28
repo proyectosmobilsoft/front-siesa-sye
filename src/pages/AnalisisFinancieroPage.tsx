@@ -772,16 +772,10 @@ export const AnalisisFinancieroPage = () => {
                                 return null
                             }
 
-                            // Formatear número en formato colombiano (1.000.000.000)
+                            // Formatear número en formato compacto (k, M)
                             const formatCurrencyColombian = (value: number): string => {
-                                return new Intl.NumberFormat('es-CO', {
-                                    style: 'currency',
-                                    currency: 'COP',
-                                    minimumFractionDigits: 0,
-                                    maximumFractionDigits: 0,
-                                }).format(value)
+                                return formatters.compactCurrency(value)
                             }
-
                             // Preparar datos para el gráfico
                             const chartData = cuentasDeudoras.map((item) => ({
                                 id: item.cuenta.length > 50 ? item.cuenta.substring(0, 50) + '...' : item.cuenta,

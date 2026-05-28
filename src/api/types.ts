@@ -46,6 +46,14 @@ export interface ClientsResponse {
   data: Client[]
 }
 
+export interface ClientsActivosResponse {
+  success: boolean
+  data: {
+    activos_anio: number
+    clientes?: Client[]
+  }
+}
+
 export interface CompaniesResponse {
   success: boolean
   data: Company[]

@@ -1,5 +1,5 @@
 import { apiClient } from './client'
-import { Client, ClientsResponse } from './types'
+import { Client, ClientsResponse, ClientsActivosResponse } from './types'
 import { withRetry } from '@/utils/retry'
 
 export const clientsApi = {
@@ -24,6 +24,13 @@ export const clientsApi = {
       const response = await apiClient.get<ClientsResponse>(
         `/clients/search?q=${query}`
       )
+      return response.data.data
+    })
+  },
+
+  getActivos: async (): Promise<ClientsActivosResponse['data']> => {
+    return withRetry(async () => {
+      const response = await apiClient.get<ClientsActivosResponse>('/clients/activos')
       return response.data.data
     })
   },

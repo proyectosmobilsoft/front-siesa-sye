@@ -11,7 +11,7 @@ export default defineConfig(({ mode }) => {
   const backendUrl =
     mode === 'production'
       ? env.VITE_API_BASE_URL_PROD || 'https://apisye.mobilsoft.co'
-      : env.VITE_API_BASE_URL_DEV || 'http://localhost:3010'
+      : env.VITE_API_BASE_URL_DEV || 'https://apisye.mobilsoft.co'
 
   const port = parseInt(env.VITE_PORT || '5173', 10)
 

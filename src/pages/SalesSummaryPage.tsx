@@ -443,7 +443,7 @@ export const SalesSummaryPage = () => {
                                                 legend: 'Valor Total Vendido',
                                                 legendPosition: 'middle',
                                                 legendOffset: -60,
-                                                format: (value) => formatters.currency(value),
+                                                format: (value) => formatters.compactCurrency(value),
                                                 tickColor: 'hsl(var(--muted-foreground))',
                                                 legendColor: 'hsl(var(--foreground))',
                                             }}
@@ -475,7 +475,7 @@ export const SalesSummaryPage = () => {
                                             labelSkipWidth={12}
                                             labelSkipHeight={12}
                                             labelTextColor={{ from: 'color', modifiers: [['darker', 1.6]] }}
-                                            label={(d) => formatters.currency(d.value)}
+                                            label={(d) => formatters.compactCurrency(d.value)}
                                             animate={true}
                                             motionConfig="gentle"
                                             tooltip={(tooltip) => (
@@ -547,7 +547,7 @@ export const SalesSummaryPage = () => {
                                         arcLinkLabelsColor={{ from: 'color' }}
                                         arcLabelsSkipAngle={10}
                                         arcLabelsTextColor="hsl(var(--background))"
-                                        valueFormat={(value) => formatters.currency(value)}
+                                        valueFormat={(value) => formatters.compactCurrency(value)}
                                         colors={(d) => d.data.color}
                                         legends={[
                                             {
@@ -795,7 +795,7 @@ export const SalesSummaryPage = () => {
                                             stacked: false,
                                             reverse: false,
                                         }}
-                                        yFormat={(value) => formatters.currency(Number(value))}
+                                        yFormat={(value) => formatters.compactCurrency(Number(value))}
                                         axisTop={null}
                                         axisRight={null}
                                         axisBottom={{
@@ -921,7 +921,7 @@ export const SalesSummaryPage = () => {
                                         xScale={{ type: 'linear', min: 'auto', max: 'auto' }}
                                         xFormat={(value) => `${value} unidades`}
                                         yScale={{ type: 'linear', min: 'auto', max: 'auto' }}
-                                        yFormat={(value) => formatters.currency(Number(value))}
+                                        yFormat={(value) => formatters.compactCurrency(Number(value))}
                                         colors={(d) => d.color}
                                         blendMode="normal"
                                         nodeSize={14}
@@ -948,7 +948,7 @@ export const SalesSummaryPage = () => {
                                             legend: 'Valor Neto del Documento',
                                             legendPosition: 'middle',
                                             legendOffset: -70,
-                                            format: (value) => formatters.currency(value),
+                                            format: (value) => formatters.compactCurrency(value),
                                             tickColor: 'hsl(var(--muted-foreground))',
                                             legendColor: 'hsl(var(--foreground))',
                                         }}

@@ -438,7 +438,7 @@ export const VendorsPage = () => {
                                                 legend: 'Valor Neto',
                                                 legendPosition: 'middle',
                                                 legendOffset: -70,
-                                                format: (value) => formatters.currency(value),
+                                                format: (value) => formatters.compactCurrency(value),
                                                 tickColor: 'hsl(var(--muted-foreground))',
                                                 legendColor: 'hsl(var(--foreground))',
                                             }}
@@ -472,8 +472,7 @@ export const VendorsPage = () => {
                                             labelSkipHeight={12}
                                             labelTextColor={{ from: 'color', modifiers: [['darker', 2]] }}
                                             label={(d) => {
-                                                const value = formatters.currency(d.value)
-                                                return value.length > 12 ? value.substring(0, 12) + '...' : value
+                                                return formatters.compactCurrency(d.value)
                                             }}
                                             animate={true}
                                             motionConfig={{
@@ -582,7 +581,7 @@ export const VendorsPage = () => {
                                                 const percentage = ((d.value / totalDeliverySales) * 100).toFixed(1)
                                                 return `${percentage}%`
                                             }}
-                                            valueFormat={(value) => formatters.currency(value)}
+                                            valueFormat={(value) => formatters.compactCurrency(value)}
                                             colors={(d) => d.data.color}
                                             legends={[
                                                 {
@@ -727,7 +726,7 @@ export const VendorsPage = () => {
                                                 legend: 'Valor',
                                                 legendPosition: 'middle',
                                                 legendOffset: -60,
-                                                format: (value) => formatters.currency(value),
+                                                format: (value) => formatters.compactCurrency(value),
                                                 tickColor: 'hsl(var(--muted-foreground))',
                                                 legendColor: 'hsl(var(--foreground))',
                                             }}

@@ -103,6 +103,28 @@ export const formatters = {
     return text.charAt(0).toUpperCase() + text.slice(1).toLowerCase()
   },
 
+  abbreviate: (value: number | null | undefined): string => {
+    if (value === null || value === undefined || isNaN(value)) {
+      return '0'
+    }
+    
+    const absValue = Math.abs(value)
+    if (absValue >= 1000000) {
+      return (value / 1000000).toFixed(1).replace(/\.0$/, '') + 'M'
+    }
+    if (absValue >= 1000) {
+      return (value / 1000).toFixed(1).replace(/\.0$/, '') + 'k'
+    }
+    return value.toString()
+  },
+
+  compactCurrency: (value: number | null | undefined): string => {
+    if (value === null || value === undefined || isNaN(value)) {
+      return '$0'
+    }
+    return '$' + formatters.abbreviate(value)
+  },
+
   statusBadge: (
     status: string
   ): { text: string; variant: 'default' | 'secondary' | 'destructive' } => {
