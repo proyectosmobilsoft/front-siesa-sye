@@ -23,7 +23,8 @@ import { usePerdidasGanancias } from '@/hooks/usePerdidasGanancias'
 import { useTendenciaMensual } from '@/hooks/useTendenciaMensual'
 import { EstadoFinanciero, EstadosFinancierosParams, PerdidasGanancias, TendenciaMensual } from '@/api/types'
 import { formatters } from '@/utils/formatters'
-import * as XLSX from 'xlsx'
+import ExcelJS from 'exceljs'
+import { saveAs } from 'file-saver'
 import { ResponsiveBar } from '@nivo/bar'
 
 export const AnalisisFinancieroPage = () => {
@@ -397,20 +398,42 @@ export const AnalisisFinancieroPage = () => {
         setSearchParams({ ...filtros })
     }
 
-    const handleExportToExcel = () => {
+    const handleExportToExcel = async () => {
         if (!estadosFinancieros || estadosFinancieros.length === 0) {
             return
         }
 
-        // Preparar los datos para Excel
-        const excelData = estadosFinancieros.map(row => {
+        const workbook = new ExcelJS.Workbook()
+        const worksheet = workbook.addWorksheet('Estados Financieros')
+
+        // Definir columnas
+        const excelColumns: { header: string; key: string; width: number }[] = []
+        
+        columns.forEach(col => {
+            if (col.id === 'Cuenta') {
+                excelColumns.push({ header: 'Código Cuenta', key: 'CodigoCuenta', width: 20 })
+                excelColumns.push({ header: 'Nombre de la Cuenta', key: 'NombreCuenta', width: 40 })
+            } else if (col.accessorKey) {
+                const key = col.accessorKey as string
+                let width = 15
+                if (key === 'Total Cuenta') width = 18
+                else if (key === 'Nombre Compañía') width = 35
+                else if (key === 'Tipo de Saldo') width = 15
+                
+                excelColumns.push({ header: key, key: key, width: width })
+            }
+        })
+
+        worksheet.columns = excelColumns
+
+        // Agregar filas
+        estadosFinancieros.forEach(row => {
             const excelRow: Record<string, any> = {}
 
             columns.forEach(col => {
                 if (col.id === 'Cuenta') {
-                    // Separar la columna combinada en dos columnas
-                    excelRow['Código Cuenta'] = row['Código Cuenta']?.toString().trim() || ''
-                    excelRow['Nombre de la Cuenta'] = row['Nombre de la Cuenta']?.toString().trim() || ''
+                    excelRow['CodigoCuenta'] = row['Código Cuenta']?.toString().trim() || ''
+                    excelRow['NombreCuenta'] = row['Nombre de la Cuenta']?.toString().trim() || ''
                 } else if (col.accessorKey) {
                     const key = col.accessorKey as string
                     const value = row[key]
@@ -418,7 +441,6 @@ export const AnalisisFinancieroPage = () => {
                     if (value === null || value === undefined) {
                         excelRow[key] = 'N/A'
                     } else if (typeof value === 'number') {
-                        // Mantener números como números para Excel
                         excelRow[key] = value
                     } else {
                         excelRow[key] = String(value).trim()
@@ -426,40 +448,11 @@ export const AnalisisFinancieroPage = () => {
                 }
             })
 
-            return excelRow
+            worksheet.addRow(excelRow)
         })
 
-        // Crear el libro de trabajo
-        const wb = XLSX.utils.book_new()
-
-        // Crear la hoja de trabajo con los datos
-        const ws = XLSX.utils.json_to_sheet(excelData)
-
-        // Ajustar el ancho de las columnas
-        const colWidths: { wch: number }[] = []
-        columns.forEach(col => {
-            if (col.id === 'Cuenta') {
-                // Separar la columna combinada en dos columnas
-                colWidths.push({ wch: 20 }) // Código Cuenta
-                colWidths.push({ wch: 40 }) // Nombre de la Cuenta
-            } else if (col.accessorKey) {
-                const key = col.accessorKey as string
-                if (key === 'Total Cuenta') {
-                    colWidths.push({ wch: 18 })
-                } else if (key === 'Nombre Compañía') {
-                    colWidths.push({ wch: 35 })
-                } else if (key === 'Tipo de Saldo') {
-                    colWidths.push({ wch: 15 })
-                } else {
-                    colWidths.push({ wch: 15 })
-                }
-            }
-        })
-
-        ws['!cols'] = colWidths
-
-        // Agregar la hoja al libro
-        XLSX.utils.book_append_sheet(wb, ws, 'Estados Financieros')
+        // Estilo opcional para el encabezado
+        worksheet.getRow(1).font = { bold: true }
 
         // Generar el nombre del archivo
         const fecha = new Date().toISOString().split('T')[0]
@@ -468,36 +461,33 @@ export const AnalisisFinancieroPage = () => {
         const filename = `estados_financieros_${periodoInicial}_${periodoFinal}_${fecha}.xlsx`
 
         // Escribir el archivo
-        XLSX.writeFile(wb, filename)
+        const buffer = await workbook.xlsx.writeBuffer()
+        saveAs(new Blob([buffer]), filename)
     }
 
-    const handleExportToExcelPG = () => {
+    const handleExportToExcelPG = async () => {
         if (!perdidasGanancias || perdidasGanancias.length === 0) {
             return
         }
 
-        // Preparar los datos para Excel
-        const excelData = perdidasGanancias.map(row => ({
-            'Tipo de Cuenta': row.TipoCuenta,
-            'Cuenta': row.Cuenta,
-            'Total': row.Total,
-        }))
+        const workbook = new ExcelJS.Workbook()
+        const worksheet = workbook.addWorksheet('Pérdidas y Ganancias')
 
-        // Crear el libro de trabajo
-        const wb = XLSX.utils.book_new()
-
-        // Crear la hoja de trabajo con los datos
-        const ws = XLSX.utils.json_to_sheet(excelData)
-
-        // Ajustar el ancho de las columnas
-        ws['!cols'] = [
-            { wch: 20 }, // Tipo de Cuenta
-            { wch: 40 }, // Cuenta
-            { wch: 18 }, // Total
+        worksheet.columns = [
+            { header: 'Tipo de Cuenta', key: 'TipoCuenta', width: 20 },
+            { header: 'Cuenta', key: 'Cuenta', width: 40 },
+            { header: 'Total', key: 'Total', width: 18 },
         ]
 
-        // Agregar la hoja al libro
-        XLSX.utils.book_append_sheet(wb, ws, 'Pérdidas y Ganancias')
+        perdidasGanancias.forEach(row => {
+            worksheet.addRow({
+                TipoCuenta: row.TipoCuenta,
+                Cuenta: row.Cuenta,
+                Total: row.Total,
+            })
+        })
+
+        worksheet.getRow(1).font = { bold: true }
 
         // Generar el nombre del archivo
         const fecha = new Date().toISOString().split('T')[0]
@@ -506,40 +496,37 @@ export const AnalisisFinancieroPage = () => {
         const filename = `perdidas_ganancias_${periodoInicial}_${periodoFinal}_${fecha}.xlsx`
 
         // Escribir el archivo
-        XLSX.writeFile(wb, filename)
+        const buffer = await workbook.xlsx.writeBuffer()
+        saveAs(new Blob([buffer]), filename)
     }
 
-    const handleExportToExcelTM = () => {
+    const handleExportToExcelTM = async () => {
         if (!tendenciaMensual || tendenciaMensual.length === 0) {
             return
         }
 
-        // Preparar los datos para Excel
-        const excelData = tendenciaMensual.map(row => ({
-            'Periodo': row.Periodo,
-            'Ingresos': row.Ingresos,
-            'Costos': row.Costos,
-            'Gastos': row.Gastos,
-            'Utilidad': row.Utilidad,
-        }))
+        const workbook = new ExcelJS.Workbook()
+        const worksheet = workbook.addWorksheet('Tendencia Mensual')
 
-        // Crear el libro de trabajo
-        const wb = XLSX.utils.book_new()
-
-        // Crear la hoja de trabajo con los datos
-        const ws = XLSX.utils.json_to_sheet(excelData)
-
-        // Ajustar el ancho de las columnas
-        ws['!cols'] = [
-            { wch: 15 }, // Periodo
-            { wch: 18 }, // Ingresos
-            { wch: 18 }, // Costos
-            { wch: 18 }, // Gastos
-            { wch: 18 }, // Utilidad
+        worksheet.columns = [
+            { header: 'Periodo', key: 'Periodo', width: 15 },
+            { header: 'Ingresos', key: 'Ingresos', width: 18 },
+            { header: 'Costos', key: 'Costos', width: 18 },
+            { header: 'Gastos', key: 'Gastos', width: 18 },
+            { header: 'Utilidad', key: 'Utilidad', width: 18 },
         ]
 
-        // Agregar la hoja al libro
-        XLSX.utils.book_append_sheet(wb, ws, 'Tendencia Mensual')
+        tendenciaMensual.forEach(row => {
+            worksheet.addRow({
+                Periodo: row.Periodo,
+                Ingresos: row.Ingresos,
+                Costos: row.Costos,
+                Gastos: row.Gastos,
+                Utilidad: row.Utilidad,
+            })
+        })
+
+        worksheet.getRow(1).font = { bold: true }
 
         // Generar el nombre del archivo
         const fecha = new Date().toISOString().split('T')[0]
@@ -548,7 +535,8 @@ export const AnalisisFinancieroPage = () => {
         const filename = `tendencia_mensual_${periodoInicial}_${periodoFinal}_${fecha}.xlsx`
 
         // Escribir el archivo
-        XLSX.writeFile(wb, filename)
+        const buffer = await workbook.xlsx.writeBuffer()
+        saveAs(new Blob([buffer]), filename)
     }
 
     return (
