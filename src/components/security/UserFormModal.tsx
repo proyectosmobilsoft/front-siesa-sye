@@ -131,7 +131,22 @@ export const UserFormModal = ({ isOpen, onClose, user }: UserFormModalProps) => 
                 setPassword('')
                 setObservaciones(user?.observaciones || '')
                 setFormaPago(user?.forma_pago || '')
-                
+
+                // Inicializar vinculación SIESA
+                if (user?.siesa_rowid && user?.siesa_nombre) {
+                    setSiesaSelected({
+                        f552_rowid: user.siesa_rowid,
+                        f552_nombre: user.siesa_nombre,
+                        f552_descripcion: '',
+                        f552_correo_electronico: null,
+                        f552_esactivo: 1,
+                        f552_ind_estado: 1,
+                    })
+                } else {
+                    setSiesaSelected(null)
+                    setSiesaSearch('')
+                }
+
                 // Separar código de país y teléfono
                 const telefonoCompleto = user?.telefono || ''
                 const matchCodigo = telefonoCompleto.match(/^(\+\d{1,3})/)
@@ -167,6 +182,16 @@ export const UserFormModal = ({ isOpen, onClose, user }: UserFormModalProps) => 
             if (fullUser?.email && !email) setEmail(fullUser.email)
             if (fullUser?.observaciones !== undefined) setObservaciones(fullUser.observaciones || '')
             if (fullUser?.forma_pago !== undefined) setFormaPago(fullUser.forma_pago || '')
+            if (fullUser?.siesa_rowid && fullUser?.siesa_nombre) {
+                setSiesaSelected({
+                    f552_rowid: fullUser.siesa_rowid,
+                    f552_nombre: fullUser.siesa_nombre,
+                    f552_descripcion: '',
+                    f552_correo_electronico: null,
+                    f552_esactivo: 1,
+                    f552_ind_estado: 1,
+                })
+            }
         } catch (err) {
             console.error('Error cargando detalles del usuario:', err)
         } finally {
@@ -395,6 +420,14 @@ export const UserFormModal = ({ isOpen, onClose, user }: UserFormModalProps) => 
             const credencialValor = requierePin ? credencial : password
             if (credencialValor) {
                 payload.credencial = credencialValor
+            }
+
+            // SIESA: enviar si cambió
+            const siesaRowidActual = siesaSelected?.f552_rowid ?? null
+            const siesaNombreActual = siesaSelected?.f552_nombre ?? null
+            if (siesaRowidActual !== (user.siesa_rowid ?? null)) {
+                payload.siesa_rowid = siesaRowidActual
+                payload.siesa_nombre = siesaNombreActual
             }
 
             console.log('📤 JSON enviado a PATCH /auth-secundario/usuarios/' + user.id + ':')

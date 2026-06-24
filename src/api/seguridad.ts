@@ -20,6 +20,8 @@ export interface UsuarioMaster {
     created_at: string
     updated_at: string
     ultimo_acceso: string | null
+    siesa_rowid?: number | null
+    siesa_nombre?: string | null
 }
 
 export interface ListarUsuariosResponse {
@@ -69,6 +71,8 @@ export interface UpdateUsuarioMasterDto {
     observaciones?: string | null
     forma_pago?: string | null
     activo?: boolean
+    siesa_rowid?: number | null
+    siesa_nombre?: string | null
 }
 
 export interface PermisoEnRol {
