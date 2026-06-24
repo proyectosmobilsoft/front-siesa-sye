@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { clientsApi } from '@/api/clients'
-import { Client } from '@/api/types'
+import { Client, ClientsActivosResponse } from '@/api/types'
 
 export const useClients = () => {
   return useQuery<Client[]>({
@@ -26,5 +26,14 @@ export const useClientsSearch = (query: string) => {
     queryFn: () => clientsApi.search(query),
     enabled: query.length > 2,
     staleTime: 2 * 60 * 1000,
+  })
+}
+
+export const useClientsActivos = () => {
+  return useQuery<ClientsActivosResponse['data']>({
+    queryKey: ['clients', 'activos'],
+    queryFn: clientsApi.getActivos,
+    staleTime: 5 * 60 * 1000,
+    retry: 3,
   })
 }

@@ -41,12 +41,12 @@ if (!API_CONFIG.BASE_URL) {
 
 // Log de configuración
 if (import.meta.env.DEV) {
-  const backendUrl = import.meta.env.VITE_API_BASE_URL_DEV
+  const backendUrl = import.meta.env.VITE_API_BASE_URL_DEV || 'https://apisye.mobilsoft.co'
   console.log('🔧 API Config (Desarrollo):', {
     BASE_URL: API_CONFIG.BASE_URL,
     MODE: import.meta.env.MODE,
     PROXY_TARGET: backendUrl,
-    NOTE: 'Las peticiones van a /api y Vite las redirige a localhost internamente',
+    NOTE: `Las peticiones van a /api y Vite las redirige a ${backendUrl} internamente`,
   })
 } else {
   const prodUrl = import.meta.env.VITE_API_BASE_URL_PROD 

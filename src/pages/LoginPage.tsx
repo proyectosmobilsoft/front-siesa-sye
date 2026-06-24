@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { User, Eye, EyeOff, AlertCircle, Loader2 } from 'lucide-react'
+import { User, Eye, EyeOff, AlertCircle, Loader2, Wrench, Hammer, Cog, Ruler, HardHat } from 'lucide-react'
 import { apiClient } from '@/api/client'
 import { seguridadApi } from '@/api/seguridad'
 import { useAuthStore } from '@/store/authStore'
@@ -116,14 +116,67 @@ export const LoginPage = () => {
     }
 
     return (
-        <div className="min-h-screen flex items-center justify-center bg-gray-100">
+        <div className="min-h-screen flex items-center justify-center relative overflow-hidden bg-[#F1F5F9]">
+            {/* Background Decorative Elements - Technical Blueprint Theme (Light) */}
+            <div className="absolute inset-0 overflow-hidden pointer-events-none">
+                {/* Architectural Grid */}
+                <div className="absolute inset-0 opacity-[0.03]" 
+                     style={{ 
+                         backgroundImage: `linear-gradient(#B71C1C 1px, transparent 1px), linear-gradient(90deg, #B71C1C 1px, transparent 1px)`,
+                         backgroundSize: '40px 40px' 
+                     }} />
+                
+                {/* Thin technical circles */}
+                <div className="absolute -top-[5%] -left-[5%] w-[30%] h-[30%] rounded-full border border-[#B71C1C]/10 border-dashed" />
+                <div className="absolute -bottom-[10%] -right-[10%] w-[40%] h-[40%] rounded-full border border-[#B71C1C]/5" />
+                
+                {/* High-Precision Tool Outlines - Detailed & Thin */}
+                <div className="absolute top-[12%] left-[8%] rotate-[15deg] opacity-[0.08]">
+                    <Wrench size={180} strokeWidth={0.5} className="text-[#B71C1C]" />
+                    {/* Measurement lines */}
+                    <div className="absolute -bottom-4 left-0 w-full h-[1px] bg-[#B71C1C]/20" />
+                    <div className="absolute -bottom-6 left-0 w-full flex justify-between text-[10px] font-mono text-[#B71C1C]/40 uppercase tracking-widest">
+                        <span>0mm</span>
+                        <span>250mm</span>
+                    </div>
+                </div>
+
+                <div className="absolute bottom-[15%] left-[4%] -rotate-[20deg] opacity-[0.06]">
+                    <Hammer size={220} strokeWidth={0.5} className="text-[#B71C1C]" />
+                    <div className="absolute top-1/2 -left-8 w-[120%] h-[1px] bg-[#B71C1C]/10 origin-left rotate-45" />
+                </div>
+
+                <div className="absolute top-[18%] right-[6%] rotate-[-30deg] opacity-[0.08]">
+                    <Cog size={160} strokeWidth={0.5} className="text-[#B71C1C] animate-spin-[60s_linear_infinite]" />
+                    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[140%] h-[140%] rounded-full border border-[#B71C1C]/10 border-dotted" />
+                </div>
+
+                <div className="absolute bottom-[8%] right-[12%] rotate-[10deg] opacity-[0.07]">
+                    <Ruler size={190} strokeWidth={0.5} className="text-[#B71C1C]" />
+                    <div className="absolute -top-4 right-0 text-[10px] font-mono text-[#B71C1C]/30">PRECISION: 0.01mm</div>
+                </div>
+
+                <div className="absolute top-[55%] right-[2%] rotate-[-15deg] opacity-[0.05]">
+                    <HardHat size={140} strokeWidth={0.5} className="text-[#B71C1C]" />
+                </div>
+
+                {/* Subtle depth glows (light) */}
+                <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-tr from-white/40 via-transparent to-[#B71C1C]/5" />
+                
+                {/* Technical "Blueprint" Annotations */}
+                <div className="absolute top-10 left-10 flex flex-col gap-1 opacity-20">
+                    <div className="h-[2px] w-20 bg-[#B71C1C]" />
+                    <div className="text-[10px] font-mono text-[#B71C1C] font-bold tracking-tighter">SPEC-SYE-2026</div>
+                </div>
+            </div>
+
             <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.5, ease: 'easeOut' }}
-                className="w-full max-w-md mx-4"
+                className="w-full max-w-md mx-4 z-10"
             >
-                <div className="bg-white rounded-3xl shadow-xl shadow-black/10 px-8 py-10">
+                <div className="bg-white/90 backdrop-blur-md rounded-3xl shadow-2xl shadow-slate-200 px-8 py-10 border border-white">
                     {/* Logo */}
                     <div className="flex justify-center mb-4">
                         <img src="/icon.png" alt="SYE Distribuciones" className="h-16 object-contain" />
@@ -200,7 +253,7 @@ export const LoginPage = () => {
                 </div>
 
                 {/* Footer */}
-                <p className="text-center text-gray-400 text-xs mt-6">
+                <p className="text-center text-gray-400/80 text-xs mt-6">
                     © 2026 SYE Distribuciones S.A.S · Todos los derechos reservados
                 </p>
             </motion.div>

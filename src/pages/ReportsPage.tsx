@@ -193,6 +193,7 @@ export const ReportsPage = () => {
                                         arcLinkLabelsColor={{ from: 'color' }}
                                         arcLabelsSkipAngle={10}
                                         arcLabelsTextColor="#ffffff"
+                                        valueFormat={(v) => formatters.abbreviate(Number(v))}
                                         defs={[
                                             {
                                                 id: 'dots',
@@ -265,7 +266,7 @@ export const ReportsPage = () => {
                                         title="Datos base: Distribución de Estados"
                                         columns={[
                                             { header: 'Estado', accessor: 'label', align: 'left' },
-                                            { header: 'Cantidad', accessor: 'value', align: 'right', format: (v) => formatters.number(v) },
+                                            { header: 'Cantidad', accessor: 'value', align: 'right', format: (v) => formatters.abbreviate(Number(v)) },
                                         ]}
                                         data={ordersByStatusData}
                                         showTotalRow={true}
@@ -380,7 +381,7 @@ export const ReportsPage = () => {
                                                 return fullCompanyName?.['ID. CO'] || 'N/A'
                                             }, align: 'left' },
                                             { header: 'Compañía', accessor: 'compañía', align: 'left' },
-                                            { header: 'Cantidad Pedidos', accessor: 'pedidos', align: 'right', format: (v) => formatters.number(v) },
+                                            { header: 'Cantidad Pedidos', accessor: 'pedidos', align: 'right', format: (v) => formatters.abbreviate(Number(v)) },
                                         ]}
                                         data={ordersByCompanyData}
                                         showTotalRow={true}
@@ -423,6 +424,7 @@ export const ReportsPage = () => {
                                         legendOffset: 40,
                                         tickColor: '#ffffff',
                                         legendColor: '#ffffff',
+                                        format: (v) => formatters.abbreviate(Number(v))
                                     }}
                                     axisLeft={{
                                         tickSize: 5,
@@ -505,7 +507,7 @@ export const ReportsPage = () => {
                                                 const order = orders?.find(o => o['Hora creacion'] === row.hora)
                                                 return order?.Estado || 'N/A'
                                             }, align: 'left' },
-                                            { header: 'Cantidad Pedidos', accessor: 'pedidos', align: 'right', format: (v) => formatters.number(v) },
+                                            { header: 'Cantidad Pedidos', accessor: 'pedidos', align: 'right', format: (v) => formatters.abbreviate(Number(v)) },
                                         ]}
                                         data={ordersByHourData}
                                         showTotalRow={true}
@@ -558,7 +560,8 @@ export const ReportsPage = () => {
                                         legendOffset: -40,
                                         legendPosition: 'middle',
                                         tickColor: '#ffffff',
-                                        legendColor: '#ffffff',
+                                        format: (v) => formatters.abbreviate(Number(v))
+                                        }}
                                     }}
                                     theme={{
                                         axis: {
@@ -658,7 +661,7 @@ export const ReportsPage = () => {
                                                 const order = orders?.find(o => o['Hora creacion'] === row.hora)
                                                 return order?.Estado || 'N/A'
                                             }, align: 'left' },
-                                            { header: 'Cantidad Pedidos', accessor: 'pedidos', align: 'right', format: (v) => formatters.number(v) },
+                                            { header: 'Cantidad Pedidos', accessor: 'pedidos', align: 'right', format: (v) => formatters.abbreviate(Number(v)) },
                                         ]}
                                         data={ordersByHourData}
                                         showTotalRow={true}

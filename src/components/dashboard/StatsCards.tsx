@@ -3,7 +3,7 @@ import { Users, Building2, Package, AlertTriangle } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/lib/skeleton'
 import { ErrorBoundary } from '@/components/ui/error-boundary'
-import { useClients } from '@/hooks/useClients'
+import { useClients, useClientsActivos } from '@/hooks/useClients'
 import { useCompanies } from '@/hooks/useCompanies'
 import { useProducts } from '@/hooks/useProducts'
 import { formatters } from '@/utils/formatters'
@@ -65,11 +65,12 @@ const StatCard = ({ title, value, subtitle, icon: Icon, accent = 'text-muted-for
 
 export const StatsCards = () => {
     const { data: clients, isLoading: clientsLoading, error: clientsError } = useClients()
+    const { data: clientsActivos, isLoading: clientsActivosLoading, error: clientsActivosError } = useClientsActivos()
     const { data: companies, isLoading: companiesLoading, error: companiesError } = useCompanies()
     const { data: products, isLoading: productsLoading, error: productsError } = useProducts()
 
     const totalClients = clients && Array.isArray(clients) ? clients.length : 0
-    const activeClients = clients && Array.isArray(clients) ? clients.filter(c => c.estado === 'activo').length : 0
+    const countClientsActivos = clientsActivos?.activos_anio ?? 0
 
     const activeCompanies = companies && Array.isArray(companies) ? companies.filter(c => c.f010_ind_estado === 1).length : 0
     const totalCompanies = companies && Array.isArray(companies) ? companies.length : 0
@@ -83,18 +84,10 @@ export const StatsCards = () => {
         {
             title: 'Total Clientes',
             value: formatters.number(totalClients),
-            subtitle: `${activeClients} activos`,
+            subtitle: `${countClientsActivos} activos en el último año`,
             icon: Users,
-            isLoading: clientsLoading,
-            hasError: !!clientsError,
-        },
-        {
-            title: 'Compañías',
-            value: formatters.number(totalCompanies),
-            subtitle: `${activeCompanies} activa${activeCompanies !== 1 ? 's' : ''}`,
-            icon: Building2,
-            isLoading: companiesLoading,
-            hasError: !!companiesError,
+            isLoading: clientsLoading || clientsActivosLoading,
+            hasError: !!clientsError || !!clientsActivosError,
         },
         {
             title: 'Total Productos',
@@ -117,7 +110,7 @@ export const StatsCards = () => {
 
     return (
         <ErrorBoundary>
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+            <div className="grid gap-4 md:grid-cols-1 lg:grid-cols-3">
                 {stats.map((stat, index) => (
                     <motion.div
                         key={stat.title}
