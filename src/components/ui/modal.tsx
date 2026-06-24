@@ -1,3 +1,4 @@
+import { createPortal } from 'react-dom'
 import { X } from 'lucide-react'
 import { Button } from './button'
 import { cn } from '@/lib/utils'
@@ -13,8 +14,8 @@ interface ModalProps {
 export const Modal = ({ isOpen, onClose, title, children, className }: ModalProps) => {
     if (!isOpen) return null
 
-    return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center">
+    return createPortal(
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center">
             {/* Backdrop */}
             <div
                 className="absolute inset-0 bg-black/50 backdrop-blur-sm"
@@ -44,6 +45,7 @@ export const Modal = ({ isOpen, onClose, title, children, className }: ModalProp
                     {children}
                 </div>
             </div>
-        </div>
+        </div>,
+        document.body
     )
 }

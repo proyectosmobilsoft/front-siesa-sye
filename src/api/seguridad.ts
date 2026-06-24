@@ -34,6 +34,15 @@ export interface ListarUsuariosResponse {
     }
 }
 
+export interface SiesaUsuario {
+    f552_rowid: number
+    f552_nombre: string
+    f552_descripcion: string
+    f552_correo_electronico: string | null
+    f552_esactivo: number
+    f552_ind_estado: number
+}
+
 export interface CreateUsuarioMasterDto {
     usuario: string
     rol_id: number
@@ -45,6 +54,8 @@ export interface CreateUsuarioMasterDto {
     observaciones?: string | null
     forma_pago?: string | null
     activo: boolean
+    siesa_rowid?: number | null
+    siesa_nombre?: string | null
 }
 
 export interface UpdateUsuarioMasterDto {
@@ -209,6 +220,13 @@ export const seguridadApi = {
 
     eliminarRol: async (id: number) => {
         const response = await apiClient.delete(`/auth-secundario/roles/${id}`)
+        return response.data
+    },
+
+    listarSiesaUsuarios: async (search?: string, activos = true): Promise<{ success: boolean; total: number; data: SiesaUsuario[] }> => {
+        const params: Record<string, any> = { activos }
+        if (search?.trim()) params.search = search.trim()
+        const response = await apiClient.get('/siesa-usuarios', { params })
         return response.data
     },
 }

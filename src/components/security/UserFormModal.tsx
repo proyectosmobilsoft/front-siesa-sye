@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import { Modal } from '@/components/ui/modal'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { seguridadApi, AuthRole, UsuarioMaster, rolTieneModuloConductor } from '@/api/seguridad'
+import { seguridadApi, AuthRole, UsuarioMaster, SiesaUsuario, rolTieneModuloConductor } from '@/api/seguridad'
 import { paisesApi, Pais } from '@/api/paises'
 import { ChevronDown, Loader2, CheckCircle2, XCircle, RefreshCw, Copy } from 'lucide-react'
 
@@ -87,6 +87,15 @@ export const UserFormModal = ({ isOpen, onClose, user }: UserFormModalProps) => 
     const [observaciones, setObservaciones] = useState('')
     const [formaPago, setFormaPago] = useState('')
 
+    // Siesa usuario
+    const [siesaSearch, setSiesaSearch] = useState('')
+    const [siesaOptions, setSiesaOptions] = useState<SiesaUsuario[]>([])
+    const [siesaLoading, setSiesaLoading] = useState(false)
+    const [siesaSelected, setSiesaSelected] = useState<SiesaUsuario | null>(null)
+    const [showSiesaDropdown, setShowSiesaDropdown] = useState(false)
+    const siesaRef = useRef<HTMLDivElement>(null)
+    const siesaDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
     // Determinar si el rol seleccionado usa PIN
     const rolSeleccionado = roles.find(r => r.id === roleId)
     const requierePin = rolSeleccionado?.pin === true
@@ -109,6 +118,9 @@ export const UserFormModal = ({ isOpen, onClose, user }: UserFormModalProps) => 
                 setUsuarioStatus('idle')
                 setObservaciones('')
                 setFormaPago('')
+                setSiesaSearch('')
+                setSiesaOptions([])
+                setSiesaSelected(null)
             } else {
                 // Cargar datos básicos del objeto de la tabla
                 setName(user?.nombre_completo || '')
@@ -214,6 +226,37 @@ export const UserFormModal = ({ isOpen, onClose, user }: UserFormModalProps) => 
         document.addEventListener('mousedown', handleClickOutside)
         return () => document.removeEventListener('mousedown', handleClickOutside)
     }, [])
+
+    // Cerrar dropdown Siesa al hacer click fuera
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (siesaRef.current && !siesaRef.current.contains(event.target as Node)) {
+                setShowSiesaDropdown(false)
+            }
+        }
+        document.addEventListener('mousedown', handleClickOutside)
+        return () => document.removeEventListener('mousedown', handleClickOutside)
+    }, [])
+
+    // Buscar usuarios Siesa con debounce 300ms
+    useEffect(() => {
+        if (siesaDebounceRef.current) clearTimeout(siesaDebounceRef.current)
+        if (!showSiesaDropdown) return
+        siesaDebounceRef.current = setTimeout(async () => {
+            setSiesaLoading(true)
+            try {
+                const res = await seguridadApi.listarSiesaUsuarios(siesaSearch || undefined, true)
+                setSiesaOptions(res.data || [])
+            } catch {
+                setSiesaOptions([])
+            } finally {
+                setSiesaLoading(false)
+            }
+        }, 300)
+        return () => {
+            if (siesaDebounceRef.current) clearTimeout(siesaDebounceRef.current)
+        }
+    }, [siesaSearch, showSiesaDropdown])
 
     // Limpiar credencial/contraseña si el rol cambia
     useEffect(() => {
@@ -390,6 +433,8 @@ export const UserFormModal = ({ isOpen, onClose, user }: UserFormModalProps) => 
                     ? formaPago.trim() || null
                     : null,
                 activo: true,
+                siesa_rowid: siesaSelected?.f552_rowid ?? null,
+                siesa_nombre: siesaSelected?.f552_nombre ?? null,
             }
 
             console.log('📤 JSON enviado a POST /auth-secundario/usuarios:')
@@ -639,9 +684,77 @@ export const UserFormModal = ({ isOpen, onClose, user }: UserFormModalProps) => 
                     </div>
                 </div>
 
+                {/* Fila 3: Usuario Siesa / Observaciones / Forma de pago */}
                 <div
-                    className={`grid grid-cols-1 gap-5 ${rolTieneModuloConductor(rolSeleccionado) ? 'md:grid-cols-2' : ''}`}
+                    className={`grid grid-cols-1 gap-5 ${rolTieneModuloConductor(rolSeleccionado) ? 'md:grid-cols-3' : 'md:grid-cols-2'}`}
                 >
+                    <div className="space-y-2" ref={siesaRef}>
+                        <label className="text-sm font-medium">Usuario de Siesa</label>
+                        <div className="relative">
+                            <Input
+                                placeholder="Buscar usuario de Siesa..."
+                                value={siesaSelected
+                                    ? `${siesaSelected.f552_nombre} — ${siesaSelected.f552_descripcion}`
+                                    : siesaSearch}
+                                onChange={(e) => {
+                                    setSiesaSelected(null)
+                                    setSiesaSearch(e.target.value)
+                                    setShowSiesaDropdown(true)
+                                }}
+                                onFocus={() => setShowSiesaDropdown(true)}
+                                className="h-10 pr-8"
+                            />
+                            {siesaSelected && (
+                                <button
+                                    type="button"
+                                    className="absolute right-2 top-1/2 -translate-y-1/2 p-0.5 rounded hover:bg-muted"
+                                    title="Quitar vinculación"
+                                    onClick={() => {
+                                        setSiesaSelected(null)
+                                        setSiesaSearch('')
+                                        setSiesaOptions([])
+                                    }}
+                                >
+                                    <XCircle className="h-4 w-4 text-muted-foreground" />
+                                </button>
+                            )}
+                            {!siesaSelected && siesaLoading && (
+                                <Loader2 className="absolute right-2 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-muted-foreground" />
+                            )}
+                            {showSiesaDropdown && !siesaSelected && (
+                                <div className="absolute left-0 right-0 z-50 mt-1 bg-background border border-input rounded-md shadow-lg max-h-60 overflow-auto">
+                                    {siesaLoading ? (
+                                        <div className="px-3 py-2 text-sm text-muted-foreground">Buscando...</div>
+                                    ) : siesaOptions.length > 0 ? (
+                                        siesaOptions.map((u) => (
+                                            <div
+                                                key={u.f552_rowid}
+                                                className="px-3 py-2 hover:bg-muted cursor-pointer text-sm flex flex-col"
+                                                onClick={() => {
+                                                    setSiesaSelected(u)
+                                                    setSiesaSearch('')
+                                                    setShowSiesaDropdown(false)
+                                                }}
+                                            >
+                                                <span className="font-medium">{u.f552_nombre}</span>
+                                                <span className="text-xs text-muted-foreground">{u.f552_descripcion}</span>
+                                            </div>
+                                        ))
+                                    ) : (
+                                        <div className="px-3 py-2 text-sm text-muted-foreground">
+                                            {siesaSearch ? 'Sin resultados' : 'Escriba para buscar'}
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+                        </div>
+                        {siesaSelected && (
+                            <p className="text-xs text-green-600 flex items-center gap-1">
+                                <CheckCircle2 className="h-3.5 w-3.5" />
+                                Vinculado · ID {siesaSelected.f552_rowid}
+                            </p>
+                        )}
+                    </div>
                     <div className="space-y-2">
                         <label className="text-sm font-medium">Observaciones</label>
                         <Input
