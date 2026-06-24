@@ -17,7 +17,6 @@ export interface UsuarioMaster {
     forma_pago?: string | null
     activo: boolean
     intentos_fallidos: number
-    bloqueado_hasta: string | null
     created_at: string
     updated_at: string
     ultimo_acceso: string | null
