@@ -562,7 +562,7 @@ export const ReportsPage = () => {
                                         tickColor: '#ffffff',
                                         format: (v) => formatters.abbreviate(Number(v))
                                         }}
-                                    }}
+                                    
                                     theme={{
                                         axis: {
                                             ticks: {
