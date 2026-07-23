@@ -1,15 +1,15 @@
 import { motion, AnimatePresence } from 'framer-motion'
-import { Menu, LogOut } from 'lucide-react'
+import { LogOut, PanelLeftClose, PanelLeftOpen } from 'lucide-react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { ThemeToggle } from './ThemeToggle'
 import { useUIStore } from '@/store/uiStore'
 
 // Decodifica el payload del JWT sin librerías externas
-const decodeJwtPayload = (token: string): Record<string, any> | null => {
+const decodeJwtPayload = (token: string): Record<string, string> | null => {
     try {
         const payload = token.split('.')[1]
-        return JSON.parse(atob(payload.replace(/-/g, '+').replace(/_/g, '/')))
+        return JSON.parse(atob(payload.replace(/-/g, '+').replace(/_/g, '/'))) as Record<string, string>
     } catch {
         return null
     }
@@ -72,15 +72,17 @@ export const Header = () => {
     return (
         <header className="sticky top-0 z-40 w-full border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
             <div className="flex h-16 items-center justify-between px-4 lg:px-6">
-                {/* Left — botón menú mobile + subtítulo de página */}
+                {/* Left — control retráctil del menú + subtítulo de página */}
                 <div className="flex items-center gap-3 min-w-0">
                     <Button
                         variant="ghost"
                         size="icon"
-                        className="lg:hidden flex-shrink-0"
+                        className="flex-shrink-0 rounded-xl"
                         onClick={() => setSidebarOpen(!sidebarOpen)}
+                        title={sidebarOpen ? 'Contraer menú' : 'Expandir menú'}
+                        aria-label={sidebarOpen ? 'Contraer menú' : 'Expandir menú'}
                     >
-                        <Menu className="h-4 w-4" />
+                        {sidebarOpen ? <PanelLeftClose className="h-4 w-4" /> : <PanelLeftOpen className="h-4 w-4" />}
                     </Button>
 
                     <AnimatePresence mode="wait">

@@ -125,13 +125,6 @@ export const Sidebar = () => {
         return acc
     }, [])
 
-    // Asegurar que el sidebar esté abierto en desktop
-    useEffect(() => {
-        if (!isMobile) {
-            setSidebarOpen(true)
-        }
-    }, [isMobile, setSidebarOpen])
-
     // Auto-expandir items si la ruta actual está en sus sub-items
     useEffect(() => {
         navFiltrado.forEach((item) => {
@@ -187,43 +180,44 @@ export const Sidebar = () => {
             {/* Sidebar */}
             <motion.div
                 initial={false}
-                animate={{ x: sidebarOpen ? 0 : '-100%' }}
+                animate={{
+                    width: isMobile ? 256 : sidebarOpen ? 256 : 76,
+                    x: isMobile && !sidebarOpen ? '-100%' : 0,
+                }}
                 transition={{ type: 'spring', stiffness: 300, damping: 30 }}
                 className={cn(
-                    'fixed left-0 top-0 z-50 h-full w-64 bg-card border-r border-border',
-                    'lg:relative lg:z-auto lg:translate-x-0',
-                    sidebarOpen ? 'translate-x-0' : '-translate-x-full'
+                    'fixed left-0 top-0 z-50 h-full overflow-hidden bg-card border-r border-border shadow-xl shadow-black/5',
+                    'lg:relative lg:z-auto lg:shadow-none'
                 )}
             >
                 <div className="flex h-full flex-col">
                     {/* Header */}
-                    <div className="flex h-16 items-center justify-between px-6 border-b border-border">
-                        <div className="flex items-center space-x-2">
+                    <div className={cn('flex h-16 items-center border-b border-border', sidebarOpen ? 'justify-between px-6' : 'justify-center px-3')}>
+                        <div className={cn('flex min-w-0 items-center space-x-2', !sidebarOpen && 'justify-center')}>
                             <div className="h-8 w-8 rounded-lg bg-primary flex items-center justify-center">
                                 <currentPage.icon className="h-5 w-5 text-primary-foreground" />
                             </div>
-                            <motion.span
+                            {sidebarOpen && <motion.span
                                 key={currentPage.name}
                                 initial={{ opacity: 0, y: -6 }}
                                 animate={{ opacity: 1, y: 0 }}
                                 transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
-                                className="text-lg font-semibold"
-                            >
-                                {currentPage.name}
-                            </motion.span>
+                                className="truncate text-lg font-semibold"
+                            >{currentPage.name}</motion.span>}
                         </div>
                         <Button
                             variant="ghost"
                             size="icon"
-                            className="lg:hidden"
+                            className="shrink-0 lg:hidden"
                             onClick={() => setSidebarOpen(false)}
+                            aria-label="Cerrar menú"
                         >
                             <X className="h-4 w-4" />
                         </Button>
                     </div>
 
                     {/* Navigation */}
-                    <nav className="flex-1 px-4 py-6 space-y-2 overflow-y-auto custom-scrollbar">
+                    <nav className={cn('flex-1 space-y-2 overflow-y-auto py-6 custom-scrollbar', sidebarOpen ? 'px-4' : 'px-3')}>
                         {navFiltrado.map((item) => {
                             const hasSubItems = item.subItems && item.subItems.length > 0
                             const isExpanded = isItemExpanded(item.name)
@@ -244,28 +238,30 @@ export const Sidebar = () => {
                                                 whileTap={{ scale: 0.98 }}
                                             >
                                                 <button
-                                                    onClick={() => toggleExpanded(item.name)}
+                                                    onClick={() => sidebarOpen ? toggleExpanded(item.name) : setSidebarOpen(true)}
+                                                    title={!sidebarOpen ? item.name : undefined}
                                                     className={cn(
-                                                        'w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm font-medium transition-colors',
+                                                        'w-full flex items-center rounded-xl py-2 text-sm font-medium transition-colors',
+                                                        sidebarOpen ? 'justify-between px-3' : 'justify-center px-2',
                                                         'hover:bg-accent hover:text-accent-foreground',
                                                         isSubItemActive || isExpanded
                                                             ? 'bg-accent text-accent-foreground'
                                                             : 'text-muted-foreground'
                                                     )}
                                                 >
-                                                    <div className="flex items-center space-x-3">
+                                                    <div className={cn('flex items-center', sidebarOpen ? 'space-x-3' : 'justify-center')}>
                                                         <item.icon className="h-4 w-4" />
-                                                        <span>{item.name}</span>
+                                                        {sidebarOpen && <span>{item.name}</span>}
                                                     </div>
-                                                    {isExpanded ? (
+                                                    {sidebarOpen && (isExpanded ? (
                                                         <ChevronDown className="h-4 w-4" />
                                                     ) : (
                                                         <ChevronRight className="h-4 w-4" />
-                                                    )}
+                                                    ))}
                                                 </button>
                                             </motion.div>
                                             <AnimatePresence>
-                                                {isExpanded && (
+                                                {sidebarOpen && isExpanded && (
                                                     <motion.div
                                                         initial={{ height: 0, opacity: 0 }}
                                                         animate={{ height: 'auto', opacity: 1 }}
@@ -285,7 +281,7 @@ export const Sidebar = () => {
                                                                         <Link
                                                                             to={subItem.href}
                                                                             className={cn(
-                                                                                'flex items-center space-x-3 px-3 py-2 rounded-lg text-sm transition-colors',
+                                                                                'flex items-center rounded-xl px-3 py-2 text-sm transition-colors',
                                                                                 'hover:bg-accent hover:text-accent-foreground',
                                                                                 isSubActive
                                                                                     ? 'bg-accent text-accent-foreground font-medium'
@@ -296,9 +292,10 @@ export const Sidebar = () => {
                                                                                     setSidebarOpen(false)
                                                                                 }
                                                                             }}
+                                                                            title={!sidebarOpen ? subItem.name : undefined}
                                                                         >
                                                                             <subItem.icon className="h-4 w-4" />
-                                                                            <span>{subItem.name}</span>
+                                                                            {sidebarOpen && <span>{subItem.name}</span>}
                                                                         </Link>
                                                                     </motion.div>
                                                                 )
@@ -315,8 +312,10 @@ export const Sidebar = () => {
                                         >
                                             <Link
                                                 to={item.href!}
-                                                className={cn(
-                                                    'flex items-center space-x-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors',
+                                                    title={!sidebarOpen ? item.name : undefined}
+                                                    className={cn(
+                                                        'flex items-center rounded-xl py-2 text-sm font-medium transition-colors',
+                                                        sidebarOpen ? 'space-x-3 px-3' : 'justify-center px-2',
                                                     'hover:bg-accent hover:text-accent-foreground',
                                                     isActive
                                                         ? 'bg-accent text-accent-foreground'
@@ -329,7 +328,7 @@ export const Sidebar = () => {
                                                 }}
                                             >
                                                 <item.icon className="h-4 w-4" />
-                                                <span>{item.name}</span>
+                                                {sidebarOpen && <span>{item.name}</span>}
                                             </Link>
                                         </motion.div>
                                     )}
@@ -340,13 +339,11 @@ export const Sidebar = () => {
 
                     {/* Footer: info del usuario y rol */}
                     {sesion && (
-                        <div className="px-4 py-3 border-t border-border">
-                            <p className="text-xs font-medium text-foreground truncate">
-                                {sesion.nombre_completo || sesion.usuario}
-                            </p>
-                            <p className="text-xs text-muted-foreground truncate">
-                                {sesion.rol_nombre || 'Sin rol'}
-                            </p>
+                        <div className={cn('border-t border-border py-3', sidebarOpen ? 'px-4' : 'px-3')}>
+                            {sidebarOpen ? <>
+                                <p className="truncate text-xs font-medium text-foreground">{sesion.nombre_completo || sesion.usuario}</p>
+                                <p className="truncate text-xs text-muted-foreground">{sesion.rol_nombre || 'Sin rol'}</p>
+                            </> : <div className="mx-auto flex h-9 w-9 items-center justify-center rounded-full bg-primary/10 text-xs font-black text-primary" title={sesion.nombre_completo || sesion.usuario}>{(sesion.nombre_completo || sesion.usuario || 'U').charAt(0).toUpperCase()}</div>}
                         </div>
                     )}
 
