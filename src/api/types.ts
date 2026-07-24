@@ -267,3 +267,69 @@ export interface SoportesResponse {
   success: boolean
   data: Soporte[]
 }
+
+export type MovimientoEfectivoEstado = 'PENDIENTE' | 'CONFIRMADO'
+export type MovimientoEfectivoTipo = 'CREDITO' | 'DEBITO'
+
+export interface MovimientoEfectivo {
+  id: number
+  conductor_id: number
+  conductor_nombre?: string
+  conductor_siesa_nombre?: string
+  tipo: MovimientoEfectivoTipo
+  valor: number
+  valor_confirmado: number | null
+  diferencia: number | null
+  fecha: string
+  estado: MovimientoEfectivoEstado
+  referencia: string | null
+  usuario_registro: number | null
+  usuario_confirma: number | null
+  usuario_confirma_nombre?: string
+  fecha_confirma: string | null
+  created_at: string
+}
+
+export interface MovimientosEfectivoResponse {
+  success: boolean
+  total: number
+  data: MovimientoEfectivo[]
+}
+
+export interface FacturaAfectadaRC {
+  Rowid: number
+  Tipo: string
+  Numero: number
+  Valor_Aplicado: number
+}
+
+export interface ReciboCajaUsuario {
+  Rowid: number
+  Fecha: string
+  'C.O.': string
+  Tipo_Docto: string
+  Numero: number
+  Debitos: number
+  Creditos: number
+  Estado: number
+  Id_tercero: number
+  Tercero_Nit?: string
+  Tercero_Nombre?: string
+  Usuario_Creacion: string
+  Usuario_Anulacion?: string | null
+  Caja_Id?: string
+  Caja_Nombre?: string
+  Facturas: FacturaAfectadaRC[]
+  efectivo?: number
+  consignacion?: number
+  consignacion_cuenta?: string
+  consignacion_cuenta_nombre?: string
+  consignacion_cuenta_numero?: string
+  [key: string]: unknown
+}
+
+export interface RecibosCajaUsuarioResponse {
+  success: boolean
+  total: number
+  data: ReciboCajaUsuario[]
+}

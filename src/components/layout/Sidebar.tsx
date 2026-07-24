@@ -24,6 +24,7 @@ import {
     Wallet,
     User,
     Landmark,
+    Banknote,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useUIStore } from '@/store/uiStore'
@@ -93,6 +94,7 @@ const navigation: NavItem[] = [
         icon: Landmark,
         subItems: [
             { name: 'Recibo de Caja', href: '/tesoreria/recibo-caja', icon: Receipt },
+            { name: 'Entrega de Recaudo', href: '/tesoreria/entrega-recaudo', icon: Banknote },
         ]
     },
     { name: 'Configuración', href: '/configuracion', icon: Settings },
