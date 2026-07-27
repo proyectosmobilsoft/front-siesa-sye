@@ -280,6 +280,10 @@ export interface MovimientoEfectivo {
   valor: number
   valor_confirmado: number | null
   diferencia: number | null
+  diferencia_resuelta: boolean
+  usuario_resuelve: number | null
+  usuario_resuelve_nombre?: string
+  fecha_resolucion: string | null
   fecha: string
   estado: MovimientoEfectivoEstado
   referencia: string | null

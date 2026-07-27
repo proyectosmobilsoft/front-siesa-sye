@@ -12,6 +12,10 @@ import {
     Inbox,
     Hourglass,
     CalendarRange,
+    Scale,
+    ShieldCheck,
+    TriangleAlert,
+    Users,
 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -53,6 +57,242 @@ const agruparPorConductor = (movimientos: MovimientoEfectivo[]): GrupoConductor[
         }
     }
     return Array.from(mapa.values()).sort((a, b) => b.total - a.total)
+}
+
+// ─── Estado de conciliación por conductor ───────────────────────────────────
+
+interface ConciliacionConductor extends GrupoConductor {
+    diferencia: number
+    montoPendiente: number
+    movimientosConDiferencia: number
+}
+
+const ConciliarConductorModal = ({
+    conductor,
+    onClose,
+    onConciliar,
+    loading,
+    error,
+}: {
+    conductor: ConciliacionConductor | null
+    onClose: () => void
+    onConciliar: (conductor: ConciliacionConductor) => void
+    loading: boolean
+    error: string | null
+}) => {
+    if (!conductor) return null
+
+    const esFaltante = conductor.diferencia < 0
+
+    return (
+        <Modal isOpen onClose={onClose} title={`Conciliar a ${conductor.conductorNombre}`} className="max-w-md">
+            <div className="space-y-4">
+                <div className={cn(
+                    'rounded-xl border p-4',
+                    esFaltante
+                        ? 'border-red-200 bg-red-50 dark:border-red-900 dark:bg-red-950/30'
+                        : 'border-blue-200 bg-blue-50 dark:border-blue-900 dark:bg-blue-950/30'
+                )}>
+                    <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                        {conductor.diferencia === 0 ? 'Diferencias por resolver' : esFaltante ? 'Faltante por resolver' : 'Sobrante por resolver'}
+                    </p>
+                    <p className={cn('mt-1 text-3xl font-extrabold tabular-nums', esFaltante ? 'text-red-600' : 'text-blue-600')}>
+                        {formatters.currency(conductor.montoPendiente)}
+                    </p>
+                    <p className="mt-2 text-xs text-muted-foreground">
+                        Corresponde a {conductor.movimientosConDiferencia} entrega{conductor.movimientosConDiferencia !== 1 ? 's' : ''} con diferencia.
+                    </p>
+                </div>
+
+                <div className="flex gap-3 rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800 dark:border-amber-900 dark:bg-amber-950/30 dark:text-amber-300">
+                    <TriangleAlert className="mt-0.5 h-4 w-4 flex-shrink-0" />
+                    Confirma esta acción únicamente cuando el conductor haya pagado el faltante o la diferencia haya sido resuelta. Esto actualiza el registro en el servidor y se reflejará en el comprobante de la app.
+                </div>
+
+                {error && (
+                    <p className="rounded-lg border border-red-300 bg-red-50 p-3 text-xs font-bold text-red-700 dark:border-red-800 dark:bg-red-900/20 dark:text-red-400">
+                        {error}
+                    </p>
+                )}
+
+                <div className="flex justify-end gap-2 pt-1">
+                    <Button variant="outline" className="rounded-full" onClick={onClose} disabled={loading}>Cancelar</Button>
+                    <Button className="gap-2 rounded-full" onClick={() => onConciliar(conductor)} disabled={loading}>
+                        {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <ShieldCheck className="h-4 w-4" />}
+                        Confirmar conciliación
+                    </Button>
+                </div>
+            </div>
+        </Modal>
+    )
+}
+
+const TableroConciliacion = ({ movimientos, onResuelto }: { movimientos: MovimientoEfectivo[] | undefined; onResuelto: () => void }) => {
+    const [seleccionado, setSeleccionado] = useState<ConciliacionConductor | null>(null)
+    const [guardando, setGuardando] = useState(false)
+    const [error, setError] = useState<string | null>(null)
+
+    const conductores = useMemo<ConciliacionConductor[]>(() => {
+        return agruparPorConductor(movimientos ?? []).map((grupo) => {
+            const movimientosAbiertos = grupo.entregas.filter((mov) => !mov.diferencia_resuelta)
+
+            return {
+                ...grupo,
+                diferencia: movimientosAbiertos.reduce((total, mov) => total + (mov.diferencia ?? 0), 0),
+                montoPendiente: movimientosAbiertos.reduce((total, mov) => total + Math.abs(mov.diferencia ?? 0), 0),
+                movimientosConDiferencia: movimientosAbiertos.filter((mov) => (mov.diferencia ?? 0) !== 0).length,
+            }
+        }).sort((a, b) => b.montoPendiente - a.montoPendiente)
+    }, [movimientos])
+
+    const descuadrados = conductores.filter((conductor) => conductor.movimientosConDiferencia > 0)
+    const totalPorConciliar = descuadrados.reduce((total, conductor) => total + conductor.montoPendiente, 0)
+
+    const handleConciliar = async (conductor: ConciliacionConductor) => {
+        const ids = conductor.entregas
+            .filter((mov) => !mov.diferencia_resuelta && (mov.diferencia ?? 0) !== 0)
+            .map((mov) => mov.id)
+        if (ids.length === 0) {
+            setSeleccionado(null)
+            return
+        }
+        setGuardando(true)
+        setError(null)
+        try {
+            await conductorEfectivoApi.resolverDiferencia(ids)
+            setSeleccionado(null)
+            onResuelto()
+        } catch (err: unknown) {
+            const apiError = err as { response?: { data?: { message?: string } } }
+            setError(apiError.response?.data?.message ?? 'Error al conciliar la diferencia')
+        } finally {
+            setGuardando(false)
+        }
+    }
+
+    return (
+        <>
+            <Card className="overflow-hidden">
+                <CardHeader className="border-b border-border bg-muted/20">
+                    <div className="flex flex-wrap items-center justify-between gap-4">
+                        <div className="flex items-center gap-3">
+                            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10">
+                                <Scale className="h-5 w-5 text-primary" />
+                            </div>
+                            <div>
+                                <CardTitle className="text-base">Estado de cuenta de conductores</CardTitle>
+                                <p className="mt-0.5 text-xs text-muted-foreground">Seguimiento de diferencias y conciliaciones del periodo seleccionado</p>
+                            </div>
+                        </div>
+                        <div className="flex gap-2">
+                            <span className="rounded-full bg-muted px-3 py-1 text-xs font-bold text-muted-foreground">
+                                <Users className="mr-1 inline h-3.5 w-3.5" /> {conductores.length} conductores
+                            </span>
+                            <span className={cn(
+                                'rounded-full px-3 py-1 text-xs font-bold',
+                                descuadrados.length ? 'bg-red-100 text-red-700 dark:bg-red-950/40 dark:text-red-400' : 'bg-emerald-100 text-emerald-700'
+                            )}>
+                                {descuadrados.length} por conciliar
+                            </span>
+                        </div>
+                    </div>
+                </CardHeader>
+                <CardContent className="p-0">
+                    {conductores.length === 0 ? (
+                        <div className="flex flex-col items-center gap-2 py-12 text-muted-foreground">
+                            <Users className="h-6 w-6" />
+                            <p className="text-xs font-bold uppercase tracking-widest">No hay conductores en este periodo</p>
+                        </div>
+                    ) : (
+                        <div className="overflow-x-auto">
+                            <table className="w-full text-sm">
+                                <thead>
+                                    <tr className="border-b border-border bg-muted/30">
+                                        <th className="px-5 py-3 text-left text-[10px] font-black uppercase tracking-wider text-muted-foreground">Conductor</th>
+                                        <th className="px-5 py-3 text-center text-[10px] font-black uppercase tracking-wider text-muted-foreground">Estado</th>
+                                        <th className="px-5 py-3 text-right text-[10px] font-black uppercase tracking-wider text-muted-foreground">Diferencia</th>
+                                        <th className="px-5 py-3 text-right text-[10px] font-black uppercase tracking-wider text-muted-foreground">Acción</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {conductores.map((conductor) => {
+                                        const alDia = conductor.movimientosConDiferencia === 0
+                                        return (
+                                            <tr key={conductor.conductorId} className="border-b border-border/60 last:border-0 hover:bg-muted/20">
+                                                <td className="px-5 py-3">
+                                                    <div className="flex items-center gap-3">
+                                                        <div className={cn(
+                                                            'flex h-9 w-9 items-center justify-center rounded-full text-xs font-bold text-white',
+                                                            alDia ? 'bg-emerald-500' : 'bg-red-500'
+                                                        )}>
+                                                            {conductor.conductorNombre.charAt(0).toUpperCase()}
+                                                        </div>
+                                                        <div>
+                                                            <p className="font-semibold">{conductor.conductorNombre}</p>
+                                                            <p className="text-[11px] text-muted-foreground">{conductor.entregas.length} entregas revisadas</p>
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                                <td className="px-5 py-3 text-center">
+                                                    <span className={cn(
+                                                        'inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-bold',
+                                                        alDia
+                                                            ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400'
+                                                            : 'bg-red-100 text-red-700 dark:bg-red-950/40 dark:text-red-400'
+                                                    )}>
+                                                        {alDia ? <ShieldCheck className="h-3.5 w-3.5" /> : <TriangleAlert className="h-3.5 w-3.5" />}
+                                                        {alDia ? 'Al día' : 'Tiene un descuadre'}
+                                                    </span>
+                                                </td>
+                                                <td className="px-5 py-3 text-right">
+                                                    <p className={cn('font-bold tabular-nums', alDia ? 'text-emerald-600' : conductor.diferencia < 0 ? 'text-red-600' : 'text-blue-600')}>
+                                                        {alDia ? formatters.currency(0) : formatters.currency(conductor.montoPendiente)}
+                                                    </p>
+                                                    {!alDia && (
+                                                        <p className="text-[10px] text-muted-foreground">
+                                                            {conductor.diferencia === 0 ? 'Diferencias compensadas' : conductor.diferencia < 0 ? 'Faltante' : 'Sobrante'}
+                                                        </p>
+                                                    )}
+                                                </td>
+                                                <td className="px-5 py-3 text-right">
+                                                    <Button
+                                                        variant={alDia ? 'ghost' : 'default'}
+                                                        size="sm"
+                                                        disabled={alDia}
+                                                        className="gap-1.5 rounded-full text-xs"
+                                                        onClick={() => setSeleccionado(conductor)}
+                                                    >
+                                                        {alDia ? <CheckCircle2 className="h-3.5 w-3.5" /> : <Scale className="h-3.5 w-3.5" />}
+                                                        {alDia ? 'Sin pendientes' : 'Conciliar'}
+                                                    </Button>
+                                                </td>
+                                            </tr>
+                                        )
+                                    })}
+                                </tbody>
+                                {descuadrados.length > 0 && (
+                                    <tfoot>
+                                        <tr className="border-t border-border bg-red-50/60 dark:bg-red-950/10">
+                                            <td colSpan={2} className="px-5 py-3 text-xs font-bold uppercase tracking-wide text-muted-foreground">Total de diferencias por conciliar</td>
+                                            <td className="px-5 py-3 text-right font-extrabold tabular-nums text-red-600">{formatters.currency(totalPorConciliar)}</td>
+                                            <td />
+                                        </tr>
+                                    </tfoot>
+                                )}
+                            </table>
+                        </div>
+                    )}
+                </CardContent>
+            </Card>
+            <ConciliarConductorModal
+                conductor={seleccionado}
+                onClose={() => setSeleccionado(null)}
+                onConciliar={handleConciliar}
+                loading={guardando}
+                error={error}
+            />
+        </>
+    )
 }
 
 // ─── Modal de validación física ──────────────────────────────────────────────
@@ -316,9 +556,10 @@ const RecibosConductorModal = ({ grupo, onClose }: { grupo: GrupoConductor | nul
     const recibos = (data ?? []).filter((r) => r.Estado !== 2)
     const totalEfectivo = recibos.reduce((sum, r) => sum + (r.efectivo ?? 0), 0)
     const totalConsignacion = recibos.reduce((sum, r) => sum + (r.consignacion ?? 0), 0)
+    const totalGeneral = totalEfectivo + totalConsignacion
 
     return (
-        <Modal isOpen onClose={onClose} title={`Recibos de caja de hoy — ${grupo.conductorNombre}`} className="max-w-3xl">
+        <Modal isOpen onClose={onClose} title={`Recibos de caja de hoy — ${grupo.conductorNombre}`} className="max-w-5xl">
             {!siesaNombre ? (
                 <p className="rounded-lg border border-yellow-300 bg-yellow-50 p-3 text-sm font-semibold text-yellow-700 dark:border-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-400">
                     Este conductor no tiene usuario SIESA vinculado (siesa_nombre), no se puede consultar sus recibos.
@@ -335,7 +576,7 @@ const RecibosConductorModal = ({ grupo, onClose }: { grupo: GrupoConductor | nul
                 </p>
             ) : (
                 <div className="space-y-3">
-                    <div className="grid grid-cols-2 gap-3">
+                    <div className="grid gap-3 sm:grid-cols-3">
                         <div className="flex items-center gap-3 rounded-xl border border-border bg-muted/30 px-4 py-3">
                             <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-emerald-500/10">
                                 <Banknote className="h-4 w-4 text-emerald-600" />
@@ -354,6 +595,15 @@ const RecibosConductorModal = ({ grupo, onClose }: { grupo: GrupoConductor | nul
                                 <p className="text-base font-bold tabular-nums text-foreground">{formatters.currency(totalConsignacion)}</p>
                             </div>
                         </div>
+                        <div className="flex items-center gap-3 rounded-xl border border-primary/20 bg-primary/5 px-4 py-3">
+                            <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-primary/10">
+                                <Receipt className="h-4 w-4 text-primary" />
+                            </div>
+                            <div>
+                                <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Total recaudado</p>
+                                <p className="text-base font-extrabold tabular-nums text-primary">{formatters.currency(totalGeneral)}</p>
+                            </div>
+                        </div>
                     </div>
 
                     <div className="max-h-[50vh] overflow-y-auto rounded-lg border border-border">
@@ -365,6 +615,7 @@ const RecibosConductorModal = ({ grupo, onClose }: { grupo: GrupoConductor | nul
                                     <th className="px-3 py-2 text-left font-medium uppercase tracking-wide text-muted-foreground">Tercero</th>
                                     <th className="px-3 py-2 text-right font-medium uppercase tracking-wide text-muted-foreground">Efectivo</th>
                                     <th className="px-3 py-2 text-right font-medium uppercase tracking-wide text-muted-foreground">Transferencia</th>
+                                    <th className="px-3 py-2 text-right font-medium uppercase tracking-wide text-muted-foreground">Total</th>
                                     <th className="px-3 py-2 text-center font-medium uppercase tracking-wide text-muted-foreground">Estado</th>
                                 </tr>
                             </thead>
@@ -382,6 +633,9 @@ const RecibosConductorModal = ({ grupo, onClose }: { grupo: GrupoConductor | nul
                                                 <span title={r.consignacion_cuenta_nombre || undefined}>{formatters.currency(r.consignacion)}</span>
                                             ) : <span className="text-muted-foreground">—</span>}
                                         </td>
+                                        <td className="px-3 py-2 text-right font-mono font-bold text-foreground">
+                                            {formatters.currency((r.efectivo ?? 0) + (r.consignacion ?? 0))}
+                                        </td>
                                         <td className="px-3 py-2 text-center">
                                             <span className={cn('rounded-full px-2 py-0.5 text-[10px] font-black uppercase', estadoRCBadge(r.Estado))}>
                                                 {estadoRCLabel(r.Estado)}
@@ -390,6 +644,23 @@ const RecibosConductorModal = ({ grupo, onClose }: { grupo: GrupoConductor | nul
                                     </tr>
                                 ))}
                             </tbody>
+                            <tfoot className="sticky bottom-0 bg-card">
+                                <tr className="border-t-2 border-border bg-muted/60">
+                                    <td colSpan={3} className="px-3 py-3 text-right text-[10px] font-black uppercase tracking-wider text-muted-foreground">
+                                        Totales
+                                    </td>
+                                    <td className="whitespace-nowrap px-3 py-3 text-right font-mono text-xs font-extrabold text-emerald-600">
+                                        {formatters.currency(totalEfectivo)}
+                                    </td>
+                                    <td className="whitespace-nowrap px-3 py-3 text-right font-mono text-xs font-extrabold text-blue-600">
+                                        {formatters.currency(totalConsignacion)}
+                                    </td>
+                                    <td className="whitespace-nowrap px-3 py-3 text-right font-mono text-xs font-extrabold text-primary">
+                                        {formatters.currency(totalGeneral)}
+                                    </td>
+                                    <td />
+                                </tr>
+                            </tfoot>
                         </table>
                     </div>
                 </div>
@@ -590,6 +861,11 @@ export const TesoreriaEntregaRecaudoPage = () => {
                     onVerRC={setGrupoViendoRC}
                 />
             </div>
+
+            <TableroConciliacion
+                movimientos={confirmadasQuery.data}
+                onResuelto={() => queryClient.invalidateQueries({ queryKey: ['conductor-efectivo'] })}
+            />
 
             <ValidarEntregaModal entrega={movValidando} onClose={() => setMovValidando(null)} onConfirmado={handleConfirmado} />
             <RecibosConductorModal grupo={grupoViendoRC} onClose={() => setGrupoViendoRC(null)} />

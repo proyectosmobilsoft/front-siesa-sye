@@ -32,4 +32,12 @@ export const conductorEfectivoApi = {
     )
     return response.data.data
   },
+
+  resolverDiferencia: async (movimientoIds: number[]): Promise<MovimientoEfectivo[]> => {
+    const response = await apiClient.post<{ success: boolean; data: MovimientoEfectivo[] }>(
+      '/conductor-efectivo/entrega/resolver-diferencia',
+      { movimiento_ids: movimientoIds }
+    )
+    return response.data.data
+  },
 }
