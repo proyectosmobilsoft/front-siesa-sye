@@ -179,17 +179,20 @@ export const Sidebar = () => {
                 />
             )}
 
-            {/* Sidebar */}
-            <motion.div
-                initial={false}
-                animate={{
-                    width: isMobile ? 256 : sidebarOpen ? 256 : 76,
-                    x: isMobile && !sidebarOpen ? '-100%' : 0,
-                }}
-                transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+            {/* Sidebar
+                Transición por CSS (no JS/spring por-frame): animar 'width' con Framer Motion
+                fuerza un reflow completo del layout en cada frame y dispara el ResizeObserver
+                de las gráficas Nivo del Dashboard en cada tick, causando el freeze al
+                contraer/expandir. Con transición CSS el navegador la resuelve en el
+                compositor y solo hay un reflow por render, no uno por frame. */}
+            <div
                 className={cn(
                     'fixed left-0 top-0 z-50 h-full overflow-hidden bg-card',
-                    'lg:relative lg:z-auto'
+                    'transition-[width,transform] duration-200 ease-out',
+                    'lg:relative lg:z-auto',
+                    isMobile
+                        ? cn('w-64', sidebarOpen ? 'translate-x-0' : '-translate-x-full')
+                        : cn(sidebarOpen ? 'w-64' : 'w-[76px]', 'translate-x-0')
                 )}
             >
                 <div className="flex h-full flex-col">
@@ -350,7 +353,7 @@ export const Sidebar = () => {
                     )}
 
                 </div>
-            </motion.div>
+            </div>
         </>
     )
 }
