@@ -1,4 +1,4 @@
-import { motion, AnimatePresence } from 'framer-motion'
+import { motion } from 'framer-motion'
 import { Link, useLocation } from 'react-router-dom'
 import { useEffect, useState } from 'react'
 import {
@@ -241,104 +241,79 @@ export const Sidebar = () => {
                                 <div key={item.name} className="space-y-1">
                                     {hasSubItems ? (
                                         <>
-                                            <motion.div
-                                                whileHover={{ scale: 1.02 }}
-                                                whileTap={{ scale: 0.98 }}
-                                            >
-                                                <button
-                                                    onClick={() => sidebarOpen ? toggleExpanded(item.name) : setSidebarOpen(true)}
-                                                    title={!sidebarOpen ? item.name : undefined}
-                                                    className={cn(
-                                                        'w-full flex items-center rounded-xl py-2 text-sm font-medium transition-colors',
-                                                        sidebarOpen ? 'justify-between px-3' : 'justify-center px-2',
-                                                        'hover:bg-accent hover:text-accent-foreground',
-                                                        isSubItemActive || isExpanded
-                                                            ? 'bg-accent text-accent-foreground'
-                                                            : 'text-muted-foreground'
-                                                    )}
-                                                >
-                                                    <div className={cn('flex items-center', sidebarOpen ? 'space-x-3' : 'justify-center')}>
-                                                        <item.icon className="h-4 w-4" />
-                                                        {sidebarOpen && <span>{item.name}</span>}
-                                                    </div>
-                                                    {sidebarOpen && (isExpanded ? (
-                                                        <ChevronDown className="h-4 w-4" />
-                                                    ) : (
-                                                        <ChevronRight className="h-4 w-4" />
-                                                    ))}
-                                                </button>
-                                            </motion.div>
-                                            <AnimatePresence>
-                                                {sidebarOpen && isExpanded && (
-                                                    <motion.div
-                                                        initial={{ height: 0, opacity: 0 }}
-                                                        animate={{ height: 'auto', opacity: 1 }}
-                                                        exit={{ height: 0, opacity: 0 }}
-                                                        transition={{ duration: 0.2 }}
-                                                        className="overflow-hidden"
-                                                    >
-                                                        <div className="pl-4 space-y-1">
-                                                            {item.subItems!.map((subItem) => {
-                                                                const isSubActive = subItem.href === location.pathname
-                                                                return (
-                                                                    <motion.div
-                                                                        key={subItem.href}
-                                                                        whileHover={{ scale: 1.02 }}
-                                                                        whileTap={{ scale: 0.98 }}
-                                                                    >
-                                                                        <Link
-                                                                            to={subItem.href}
-                                                                            className={cn(
-                                                                                'flex items-center rounded-xl px-3 py-2 text-sm transition-colors',
-                                                                                'hover:bg-accent hover:text-accent-foreground',
-                                                                                isSubActive
-                                                                                    ? 'bg-accent text-accent-foreground font-medium'
-                                                                                    : 'text-muted-foreground'
-                                                                            )}
-                                                                            onClick={() => {
-                                                                                if (isMobile) {
-                                                                                    setSidebarOpen(false)
-                                                                                }
-                                                                            }}
-                                                                            title={!sidebarOpen ? subItem.name : undefined}
-                                                                        >
-                                                                            <subItem.icon className="h-4 w-4" />
-                                                                            {sidebarOpen && <span>{subItem.name}</span>}
-                                                                        </Link>
-                                                                    </motion.div>
-                                                                )
-                                                            })}
-                                                        </div>
-                                                    </motion.div>
-                                                )}
-                                            </AnimatePresence>
-                                        </>
-                                    ) : (
-                                        <motion.div
-                                            whileHover={{ scale: 1.02 }}
-                                            whileTap={{ scale: 0.98 }}
-                                        >
-                                            <Link
-                                                to={item.href!}
-                                                    title={!sidebarOpen ? item.name : undefined}
-                                                    className={cn(
-                                                        'flex items-center rounded-xl py-2 text-sm font-medium transition-colors',
-                                                        sidebarOpen ? 'space-x-3 px-3' : 'justify-center px-2',
+                                            <button
+                                                onClick={() => sidebarOpen ? toggleExpanded(item.name) : setSidebarOpen(true)}
+                                                title={!sidebarOpen ? item.name : undefined}
+                                                className={cn(
+                                                    'w-full flex items-center rounded-xl py-2 text-sm font-medium transition-colors active:scale-[0.98]',
+                                                    sidebarOpen ? 'justify-between px-3' : 'justify-center px-2',
                                                     'hover:bg-accent hover:text-accent-foreground',
-                                                    isActive
+                                                    isSubItemActive || isExpanded
                                                         ? 'bg-accent text-accent-foreground'
                                                         : 'text-muted-foreground'
                                                 )}
-                                                onClick={() => {
-                                                    if (isMobile) {
-                                                        setSidebarOpen(false)
-                                                    }
-                                                }}
                                             >
-                                                <item.icon className="h-4 w-4" />
-                                                {sidebarOpen && <span>{item.name}</span>}
-                                            </Link>
-                                        </motion.div>
+                                                <div className={cn('flex items-center', sidebarOpen ? 'space-x-3' : 'justify-center')}>
+                                                    <item.icon className="h-4 w-4" />
+                                                    {sidebarOpen && <span>{item.name}</span>}
+                                                </div>
+                                                {sidebarOpen && (isExpanded ? (
+                                                    <ChevronDown className="h-4 w-4" />
+                                                ) : (
+                                                    <ChevronRight className="h-4 w-4" />
+                                                ))}
+                                            </button>
+                                            {sidebarOpen && isExpanded && (
+                                                <div className="pl-4 space-y-1">
+                                                    {item.subItems!.map((subItem) => {
+                                                        const isSubActive = subItem.href === location.pathname
+                                                        return (
+                                                            <Link
+                                                                key={subItem.href}
+                                                                to={subItem.href}
+                                                                className={cn(
+                                                                    'flex items-center rounded-xl px-3 py-2 text-sm transition-colors active:scale-[0.98]',
+                                                                    'hover:bg-accent hover:text-accent-foreground',
+                                                                    isSubActive
+                                                                        ? 'bg-accent text-accent-foreground font-medium'
+                                                                        : 'text-muted-foreground'
+                                                                )}
+                                                                onClick={() => {
+                                                                    if (isMobile) {
+                                                                        setSidebarOpen(false)
+                                                                    }
+                                                                }}
+                                                                title={!sidebarOpen ? subItem.name : undefined}
+                                                            >
+                                                                <subItem.icon className="h-4 w-4" />
+                                                                {sidebarOpen && <span>{subItem.name}</span>}
+                                                            </Link>
+                                                        )
+                                                    })}
+                                                </div>
+                                            )}
+                                        </>
+                                    ) : (
+                                        <Link
+                                            to={item.href!}
+                                            title={!sidebarOpen ? item.name : undefined}
+                                            className={cn(
+                                                'flex items-center rounded-xl py-2 text-sm font-medium transition-colors active:scale-[0.98]',
+                                                sidebarOpen ? 'space-x-3 px-3' : 'justify-center px-2',
+                                                'hover:bg-accent hover:text-accent-foreground',
+                                                isActive
+                                                    ? 'bg-accent text-accent-foreground'
+                                                    : 'text-muted-foreground'
+                                            )}
+                                            onClick={() => {
+                                                if (isMobile) {
+                                                    setSidebarOpen(false)
+                                                }
+                                            }}
+                                        >
+                                            <item.icon className="h-4 w-4" />
+                                            {sidebarOpen && <span>{item.name}</span>}
+                                        </Link>
                                     )}
                                 </div>
                             )
