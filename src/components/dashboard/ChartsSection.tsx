@@ -5,9 +5,13 @@ import { ErrorBoundary } from '@/components/ui/error-boundary'
 import { useTendenciaMensual } from '@/hooks/useTendenciaMensual'
 import { useVendors } from '@/hooks/useReports'
 import { useDebouncedElementSize } from '@/hooks/useDebouncedElementSize'
-import { Line } from '@nivo/line'
-import { Bar } from '@nivo/bar'
+import {
+    AreaChart, Area, BarChart, Bar,
+    XAxis, YAxis, CartesianGrid, Tooltip
+} from 'recharts'
 import { formatters } from '@/utils/formatters'
+
+const AXIS_STYLE = { fontSize: 11, fill: 'hsl(var(--muted-foreground))' }
 
 export const ChartsSection = () => {
     // Definir periodo por defecto (últimos meses)
@@ -17,34 +21,31 @@ export const ChartsSection = () => {
     })
     const { data: vendors, isLoading: vendorsLoading } = useVendors()
 
-    // Se usan Line/Bar (no responsivas) + medición propia con debounce en vez
-    // de ResponsiveLine/ResponsiveBar: estas últimas traen su propio
-    // ResizeObserver sin debounce y redibujan el SVG completo en cada
-    // notificación, lo que en cascada con el resize del sidebar cuelga la
-    // pestaña. Ver src/hooks/useDebouncedElementSize.ts.
+    // Se cambió de Nivo (ResponsiveLine/ResponsiveBar) a Recharts: Nivo trae su
+    // propio ResizeObserver sin debounce y redibuja el SVG completo del chart
+    // en cada notificación de resize. Al contraer/expandir el sidebar eso
+    // encadenaba redibujados de ambas gráficas y colgaba la pestaña. Se
+    // mantiene además la medición con debounce propia (useDebouncedElementSize)
+    // como capa extra de seguridad para no depender de ningún resize interno
+    // de la librería de gráficas.
     const lineSize = useDebouncedElementSize()
     const barSize = useDebouncedElementSize()
 
-    // Preparar datos para Ventas Mensuales (Line Chart)
-    const lineData = tendencia ? [
-        {
-            id: 'Ventas',
-            color: 'hsl(var(--primary))',
-            data: tendencia.map(t => {
-                const str = t.Periodo.toString()
-                const label = `${str.substring(4, 6)}/${str.substring(0, 4)}`
-                return { x: label, y: t.Ingresos }
-            })
-        }
-    ] : []
+    // Preparar datos para Ventas Mensuales
+    const lineData = tendencia
+        ? tendencia.map(t => {
+            const str = t.Periodo.toString()
+            return { mes: `${str.substring(4, 6)}/${str.substring(0, 4)}`, ingresos: t.Ingresos }
+        })
+        : []
 
-    // Nivo por defecto rellena el área contra baseline=0; con Ingresos negativos
-    // eso deja el relleno por ENCIMA de la línea. Se fuerza el baseline al mínimo
-    // de los datos para que el área quede siempre por debajo de la línea.
-    const tendenciaValores = lineData[0]?.data.map(d => d.y as number) ?? []
-    const areaBaseline = tendenciaValores.length ? Math.min(...tendenciaValores) : 0
+    // Los Ingresos vienen negativos: se fuerza el dominio del eje Y para que
+    // el área rellena quede siempre por debajo de la línea, nunca por arriba.
+    const ingresosValores = lineData.map(d => d.ingresos)
+    const yMin = ingresosValores.length ? Math.min(...ingresosValores) : 0
+    const yMax = ingresosValores.length ? Math.max(...ingresosValores) : 0
 
-    // Preparar datos para Ventas por Vendedor (Bar Chart)
+    // Preparar datos para Ventas por Vendedor
     const barData = vendors ? vendors
         .map(v => ({
             vendedor: v['Nombre vendedor']?.split(' ')[0] || 'Vendedor',
@@ -67,24 +68,6 @@ export const ChartsSection = () => {
         )
     }
 
-    const chartTheme = {
-        tooltip: {
-            container: {
-                background: 'hsl(var(--card))',
-                color: 'hsl(var(--foreground))',
-                fontSize: 12,
-                borderRadius: 8,
-                boxShadow: '0 4px 16px rgba(0,0,0,0.15)',
-                border: '1px solid hsl(var(--border))'
-            }
-        },
-        axis: {
-            ticks: { text: { fontSize: 11, fill: 'hsl(var(--muted-foreground))' } },
-            legend: { text: { fontSize: 12, fontWeight: 600, fill: 'hsl(var(--foreground))' } }
-        },
-        grid: { line: { stroke: 'hsl(var(--border))', strokeWidth: 1, strokeDasharray: '4 4' } }
-    }
-
     return (
         <ErrorBoundary>
             <motion.div
@@ -101,57 +84,49 @@ export const ChartsSection = () => {
                     </CardHeader>
                     <CardContent>
                         <div ref={lineSize.ref} className="h-72">
-                            {lineData[0]?.data.length > 0 && lineSize.width > 0 ? (
-                                <Line
+                            {lineData.length > 0 && lineSize.width > 0 ? (
+                                <AreaChart
                                     width={lineSize.width}
                                     height={lineSize.height}
-                                    animate={false}
                                     data={lineData}
-                                    margin={{ top: 20, right: 20, bottom: 50, left: 80 }}
-                                    xScale={{ type: 'point' }}
-                                    yScale={{ type: 'linear', min: 'auto', max: 'auto', stacked: false, reverse: false }}
-                                    axisTop={null}
-                                    axisRight={null}
-                                    axisBottom={{
-                                        tickSize: 5,
-                                        tickPadding: 5,
-                                        tickRotation: -45,
-                                        legend: 'Mes',
-                                        legendOffset: 40,
-                                        legendPosition: 'middle'
-                                    }}
-                                    axisLeft={{
-                                        tickSize: 5,
-                                        tickPadding: 5,
-                                        tickRotation: 0,
-                                        legend: 'Monto ($)',
-                                        legendOffset: -70,
-                                        legendPosition: 'middle',
-                                        format: v => formatters.compactCurrency(v)
-                                    }}
-                                    pointSize={8}
-                                    pointColor={{ theme: 'background' }}
-                                    pointBorderWidth={2}
-                                    pointBorderColor={{ from: 'serieColor' }}
-                                    pointLabelYOffset={-12}
-                                    useMesh={true}
-                                    colors={['#B71C1C']}
-                                    theme={chartTheme}
-                                    enableArea={true}
-                                    areaBaselineValue={areaBaseline}
-                                    areaOpacity={1}
-                                    defs={[
-                                        {
-                                            id: 'tendenciaGradient',
-                                            type: 'linearGradient',
-                                            colors: [
-                                                { offset: 0, color: '#ffffff', opacity: 0 },
-                                                { offset: 100, color: '#B71C1C', opacity: 0.45 }
-                                            ]
-                                        }
-                                    ]}
-                                    fill={[{ match: '*', id: 'tendenciaGradient' }]}
-                                />
+                                    margin={{ top: 20, right: 20, bottom: 20, left: 10 }}
+                                >
+                                    <defs>
+                                        <linearGradient id="tendenciaGradient" x1="0" y1="0" x2="0" y2="1">
+                                            <stop offset="0%" stopColor="#B71C1C" stopOpacity={0} />
+                                            <stop offset="100%" stopColor="#B71C1C" stopOpacity={0.45} />
+                                        </linearGradient>
+                                    </defs>
+                                    <CartesianGrid strokeDasharray="4 4" stroke="hsl(var(--border))" vertical={false} />
+                                    <XAxis dataKey="mes" tick={AXIS_STYLE} axisLine={{ stroke: 'hsl(var(--border))' }} tickLine={false} />
+                                    <YAxis
+                                        tick={AXIS_STYLE}
+                                        axisLine={false}
+                                        tickLine={false}
+                                        domain={[yMin, yMax]}
+                                        tickFormatter={v => formatters.compactCurrency(v)}
+                                        width={70}
+                                    />
+                                    <Tooltip
+                                        formatter={(value: number) => formatters.currency(value)}
+                                        contentStyle={{
+                                            background: 'hsl(var(--card))',
+                                            border: '1px solid hsl(var(--border))',
+                                            borderRadius: 8,
+                                            fontSize: 12
+                                        }}
+                                    />
+                                    <Area
+                                        type="monotone"
+                                        dataKey="ingresos"
+                                        stroke="#B71C1C"
+                                        strokeWidth={2}
+                                        fill="url(#tendenciaGradient)"
+                                        dot={{ r: 4, fill: 'hsl(var(--card))', stroke: '#B71C1C', strokeWidth: 2 }}
+                                        activeDot={{ r: 6 }}
+                                        isAnimationActive={false}
+                                    />
+                                </AreaChart>
                             ) : (
                                 <div className="flex items-center justify-center h-full text-muted-foreground text-sm">Sin datos de tendencia</div>
                             )}
@@ -168,50 +143,35 @@ export const ChartsSection = () => {
                     <CardContent>
                         <div ref={barSize.ref} className="h-72">
                             {barData.length > 0 && barSize.width > 0 ? (
-                                <Bar
+                                <BarChart
                                     width={barSize.width}
                                     height={barSize.height}
-                                    animate={false}
                                     data={barData}
-                                    keys={['ventas']}
-                                    indexBy="vendedor"
-                                    margin={{ top: 20, right: 20, bottom: 50, left: 80 }}
-                                    padding={0.3}
-                                    valueScale={{ type: 'linear' }}
-                                    indexScale={{ type: 'band', round: true }}
-                                    colors={['#B71C1C']}
-                                    borderColor={{ from: 'color', modifiers: [['darker', 1.6]] }}
-                                    axisTop={null}
-                                    axisRight={null}
-                                    axisBottom={{
-                                        tickSize: 5,
-                                        tickPadding: 5,
-                                        tickRotation: 0,
-                                        legend: 'Asesor',
-                                        legendPosition: 'middle',
-                                        legendOffset: 32
-                                    }}
-                                    axisLeft={{
-                                        tickSize: 5,
-                                        tickPadding: 5,
-                                        tickRotation: 0,
-                                        legend: 'Ventas ($)',
-                                        legendPosition: 'middle',
-                                        legendOffset: -70,
-                                        format: v => formatters.compactCurrency(v)
-                                    }}
-                                    labelSkipWidth={12}
-                                    labelSkipHeight={12}
-                                    labelTextColor="#ffffff"
-                                    label={d => formatters.compactCurrency(d.value as number)}
-                                    theme={chartTheme}
-                                    tooltip={({ data }) => (
-                                        <div className="bg-white p-2 border rounded shadow-sm text-xs font-medium">
-                                            <span className="text-gray-500">{data.nombreCompleto}:</span>
-                                            <span className="ml-1 text-primary">{formatters.currency(data.ventas)}</span>
-                                        </div>
-                                    )}
-                                />
+                                    margin={{ top: 20, right: 20, bottom: 20, left: 10 }}
+                                >
+                                    <CartesianGrid strokeDasharray="4 4" stroke="hsl(var(--border))" vertical={false} />
+                                    <XAxis dataKey="vendedor" tick={AXIS_STYLE} axisLine={{ stroke: 'hsl(var(--border))' }} tickLine={false} />
+                                    <YAxis
+                                        tick={AXIS_STYLE}
+                                        axisLine={false}
+                                        tickLine={false}
+                                        tickFormatter={v => formatters.compactCurrency(v)}
+                                        width={70}
+                                    />
+                                    <Tooltip
+                                        formatter={(value: number, _name, item) => [
+                                            formatters.currency(value),
+                                            item.payload.nombreCompleto
+                                        ]}
+                                        contentStyle={{
+                                            background: 'hsl(var(--card))',
+                                            border: '1px solid hsl(var(--border))',
+                                            borderRadius: 8,
+                                            fontSize: 12
+                                        }}
+                                    />
+                                    <Bar dataKey="ventas" fill="#B71C1C" radius={[4, 4, 0, 0]} isAnimationActive={false} />
+                                </BarChart>
                             ) : (
                                 <div className="flex items-center justify-center h-full text-muted-foreground text-sm">Sin datos de vendedores</div>
                             )}
