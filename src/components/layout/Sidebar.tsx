@@ -190,14 +190,14 @@ export const Sidebar = () => {
                 animate={{ x: sidebarOpen ? 0 : '-100%' }}
                 transition={{ type: 'spring', stiffness: 300, damping: 30 }}
                 className={cn(
-                    'fixed left-0 top-0 z-50 h-full w-64 bg-card border-r border-border',
+                    'fixed left-0 top-0 z-50 h-full w-64 bg-card',
                     'lg:relative lg:z-auto lg:translate-x-0',
                     sidebarOpen ? 'translate-x-0' : '-translate-x-full'
                 )}
             >
                 <div className="flex h-full flex-col">
                     {/* Header */}
-                    <div className="flex h-16 items-center justify-between px-6 border-b border-border">
+                    <div className="flex h-16 items-center justify-between px-6">
                         <div className="flex items-center space-x-2">
                             <div className="h-8 w-8 rounded-lg bg-primary flex items-center justify-center">
                                 <currentPage.icon className="h-5 w-5 text-primary-foreground" />

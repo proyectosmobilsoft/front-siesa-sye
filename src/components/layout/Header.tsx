@@ -70,7 +70,15 @@ export const Header = () => {
     }
 
     return (
-        <header className="sticky top-0 z-40 w-full border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+        <header className="relative sticky top-0 z-40 w-full bg-card">
+            {/* Curvatura de unión con el sidebar (esquina cóncava, arco pegado a la esquina superior izquierda) */}
+            <div
+                className="hidden lg:block absolute left-0 top-full h-6 w-6 pointer-events-none"
+                style={{
+                    background:
+                        'radial-gradient(circle at 100% 100%, transparent 24px, hsl(var(--card)) 25px)'
+                }}
+            />
             <div className="flex h-16 items-center justify-between px-4 lg:px-6">
                 {/* Left — botón menú mobile + subtítulo de página */}
                 <div className="flex items-center gap-3 min-w-0">

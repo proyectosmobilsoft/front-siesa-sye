@@ -29,6 +29,12 @@ export const ChartsSection = () => {
         }
     ] : []
 
+    // Nivo por defecto rellena el área contra baseline=0; con Ingresos negativos
+    // eso deja el relleno por ENCIMA de la línea. Se fuerza el baseline al mínimo
+    // de los datos para que el área quede siempre por debajo de la línea.
+    const tendenciaValores = lineData[0]?.data.map(d => d.y as number) ?? []
+    const areaBaseline = tendenciaValores.length ? Math.min(...tendenciaValores) : 0
+
     // Preparar datos para Ventas por Vendedor (Bar Chart)
     const barData = vendors ? vendors
         .map(v => ({
@@ -120,7 +126,19 @@ export const ChartsSection = () => {
                                     colors={['#B71C1C']}
                                     theme={chartTheme}
                                     enableArea={true}
-                                    areaOpacity={0.1}
+                                    areaBaselineValue={areaBaseline}
+                                    areaOpacity={1}
+                                    defs={[
+                                        {
+                                            id: 'tendenciaGradient',
+                                            type: 'linearGradient',
+                                            colors: [
+                                                { offset: 0, color: '#ffffff', opacity: 0 },
+                                                { offset: 100, color: '#B71C1C', opacity: 0.45 }
+                                            ]
+                                        }
+                                    ]}
+                                    fill={[{ match: '*', id: 'tendenciaGradient' }]}
                                 />
                             ) : (
                                 <div className="flex items-center justify-center h-full text-muted-foreground text-sm">Sin datos de tendencia</div>
