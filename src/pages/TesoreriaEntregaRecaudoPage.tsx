@@ -899,7 +899,7 @@ export const TesoreriaEntregaRecaudoPage = () => {
 
     return (
         <div className="mx-auto max-w-7xl space-y-5 p-4 sm:p-6">
-            <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="sticky top-0 z-10 -mx-4 flex flex-wrap items-center justify-between gap-3 border-b border-transparent bg-background/80 px-4 py-2 backdrop-blur-sm sm:-mx-6 sm:px-6">
                 <div className="flex items-center gap-3">
                     <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br from-primary to-primary/70 shadow-sm">
                         <Landmark className="h-5 w-5 text-primary-foreground" />
@@ -916,38 +916,40 @@ export const TesoreriaEntregaRecaudoPage = () => {
 
             <ResumenPeriodo pendientes={pendientesQuery.data} confirmadas={confirmadasQuery.data} />
 
-            <div className="flex flex-wrap items-center gap-3 rounded-xl border border-border bg-muted/30 px-4 py-3">
+            <div className="flex flex-wrap items-center gap-x-5 gap-y-3 rounded-xl border border-border bg-muted/30 px-4 py-3">
                 <div className="flex items-center gap-2 text-sm font-semibold text-muted-foreground">
-                    <CalendarRange className="h-4 w-4" /> Rango de fechas
+                    <CalendarRange className="h-4 w-4" /> Periodo
                 </div>
-                <label className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
-                    Desde
-                    <Input
-                        type="date"
-                        value={fechaDesde}
-                        onChange={(e) => setFechaDesde(e.target.value)}
-                        className="h-8 w-auto text-xs"
-                    />
-                </label>
-                <label className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
-                    Hasta
-                    <Input
-                        type="date"
-                        value={fechaHasta}
-                        onChange={(e) => setFechaHasta(e.target.value)}
-                        min={fechaDesde}
-                        className="h-8 w-auto text-xs"
-                        placeholder="Hoy"
-                    />
-                </label>
+                <div className="flex flex-wrap items-center gap-3">
+                    <label className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
+                        Desde
+                        <Input
+                            type="date"
+                            value={fechaDesde}
+                            onChange={(e) => setFechaDesde(e.target.value)}
+                            className="h-8 w-auto text-xs"
+                        />
+                    </label>
+                    <label className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
+                        Hasta
+                        <Input
+                            type="date"
+                            value={fechaHasta}
+                            onChange={(e) => setFechaHasta(e.target.value)}
+                            min={fechaDesde}
+                            className="h-8 w-auto text-xs"
+                            placeholder="Hoy"
+                        />
+                    </label>
+                </div>
                 {filtroActivo && (
                     <Button
                         variant="ghost"
                         size="sm"
-                        className="h-8 text-xs text-muted-foreground"
+                        className="ml-auto h-8 gap-1.5 text-xs text-muted-foreground"
                         onClick={() => { setFechaDesde(hoyISO()); setFechaHasta('') }}
                     >
-                        Volver a hoy
+                        <RefreshCw className="h-3 w-3" /> Volver a hoy
                     </Button>
                 )}
             </div>
