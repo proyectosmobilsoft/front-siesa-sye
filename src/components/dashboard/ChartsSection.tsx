@@ -4,8 +4,9 @@ import { Skeleton } from '@/lib/skeleton'
 import { ErrorBoundary } from '@/components/ui/error-boundary'
 import { useTendenciaMensual } from '@/hooks/useTendenciaMensual'
 import { useVendors } from '@/hooks/useReports'
-import { ResponsiveLine } from '@nivo/line'
-import { ResponsiveBar } from '@nivo/bar'
+import { useDebouncedElementSize } from '@/hooks/useDebouncedElementSize'
+import { Line } from '@nivo/line'
+import { Bar } from '@nivo/bar'
 import { formatters } from '@/utils/formatters'
 
 export const ChartsSection = () => {
@@ -15,6 +16,14 @@ export const ChartsSection = () => {
         periodoFinal: 202412
     })
     const { data: vendors, isLoading: vendorsLoading } = useVendors()
+
+    // Se usan Line/Bar (no responsivas) + medición propia con debounce en vez
+    // de ResponsiveLine/ResponsiveBar: estas últimas traen su propio
+    // ResizeObserver sin debounce y redibujan el SVG completo en cada
+    // notificación, lo que en cascada con el resize del sidebar cuelga la
+    // pestaña. Ver src/hooks/useDebouncedElementSize.ts.
+    const lineSize = useDebouncedElementSize()
+    const barSize = useDebouncedElementSize()
 
     // Preparar datos para Ventas Mensuales (Line Chart)
     const lineData = tendencia ? [
@@ -91,9 +100,12 @@ export const ChartsSection = () => {
                         <p className="text-sm text-muted-foreground">Ingresos mensuales (2024)</p>
                     </CardHeader>
                     <CardContent>
-                        <div className="h-72">
-                            {lineData[0]?.data.length > 0 ? (
-                                <ResponsiveLine
+                        <div ref={lineSize.ref} className="h-72">
+                            {lineData[0]?.data.length > 0 && lineSize.width > 0 ? (
+                                <Line
+                                    width={lineSize.width}
+                                    height={lineSize.height}
+                                    animate={false}
                                     data={lineData}
                                     margin={{ top: 20, right: 20, bottom: 50, left: 80 }}
                                     xScale={{ type: 'point' }}
@@ -154,9 +166,12 @@ export const ChartsSection = () => {
                         <p className="text-sm text-muted-foreground">Ventas netas por asesor</p>
                     </CardHeader>
                     <CardContent>
-                        <div className="h-72">
-                            {barData.length > 0 ? (
-                                <ResponsiveBar
+                        <div ref={barSize.ref} className="h-72">
+                            {barData.length > 0 && barSize.width > 0 ? (
+                                <Bar
+                                    width={barSize.width}
+                                    height={barSize.height}
+                                    animate={false}
                                     data={barData}
                                     keys={['ventas']}
                                     indexBy="vendedor"
