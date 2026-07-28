@@ -1,11 +1,12 @@
 import { motion } from 'framer-motion'
-import { Users, Building2, Package, AlertTriangle } from 'lucide-react'
+import { Users, Package, AlertTriangle, ShoppingBag, TrendingUp } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/lib/skeleton'
 import { ErrorBoundary } from '@/components/ui/error-boundary'
 import { useClients, useClientsActivos } from '@/hooks/useClients'
-import { useCompanies } from '@/hooks/useCompanies'
 import { useProducts } from '@/hooks/useProducts'
+import { usePedidos } from '@/hooks/usePedidos'
+import { useTendenciaMensual } from '@/hooks/useTendenciaMensual'
 import { formatters } from '@/utils/formatters'
 
 interface StatCardProps {
@@ -66,19 +67,32 @@ const StatCard = ({ title, value, subtitle, icon: Icon, accent = 'text-muted-for
 export const StatsCards = () => {
     const { data: clients, isLoading: clientsLoading, error: clientsError } = useClients()
     const { data: clientsActivos, isLoading: clientsActivosLoading, error: clientsActivosError } = useClientsActivos()
-    const { data: companies, isLoading: companiesLoading, error: companiesError } = useCompanies()
     const { data: products, isLoading: productsLoading, error: productsError } = useProducts()
+
+    const today = new Date().toISOString().split('T')[0]
+    const lastWeek = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+    const { data: pedidos, isLoading: pedidosLoading, error: pedidosError } = usePedidos({
+        fechaInicial: lastWeek,
+        fechaFinal: today
+    })
+
+    const { data: tendencia, isLoading: tendenciaLoading, error: tendenciaError } = useTendenciaMensual({
+        periodoInicial: 202401,
+        periodoFinal: 202412
+    })
 
     const totalClients = clients && Array.isArray(clients) ? clients.length : 0
     const countClientsActivos = clientsActivos?.activos_anio ?? 0
-
-    const activeCompanies = companies && Array.isArray(companies) ? companies.filter(c => c.f010_ind_estado === 1).length : 0
-    const totalCompanies = companies && Array.isArray(companies) ? companies.length : 0
 
     const totalProducts = products && Array.isArray(products) ? products.length : 0
     const productsInStock = products && Array.isArray(products) ? products.filter(p => (p.stock ?? 0) > 0).length : 0
 
     const outOfStock = products && Array.isArray(products) ? products.filter(p => (p.stock ?? 0) === 0).length : 0
+
+    const totalPedidosSemana = pedidos && Array.isArray(pedidos) ? pedidos.length : 0
+
+    const ultimoPeriodo = tendencia && tendencia.length > 0 ? tendencia[tendencia.length - 1] : null
+    const utilidadUltimoPeriodo = ultimoPeriodo?.Utilidad ?? 0
 
     const stats: StatCardProps[] = [
         {
@@ -106,11 +120,28 @@ export const StatsCards = () => {
             isLoading: productsLoading,
             hasError: !!productsError,
         },
+        {
+            title: 'Pedidos (7 días)',
+            value: formatters.number(totalPedidosSemana),
+            subtitle: 'últimos 7 días registrados',
+            icon: ShoppingBag,
+            isLoading: pedidosLoading,
+            hasError: !!pedidosError,
+        },
+        {
+            title: 'Utilidad del periodo',
+            value: formatters.compactCurrency(utilidadUltimoPeriodo),
+            subtitle: ultimoPeriodo ? `último mes con datos (${ultimoPeriodo.Periodo})` : 'sin datos',
+            icon: TrendingUp,
+            accent: utilidadUltimoPeriodo >= 0 ? 'text-emerald-500' : 'text-red-500',
+            isLoading: tendenciaLoading,
+            hasError: !!tendenciaError,
+        },
     ]
 
     return (
         <ErrorBoundary>
-            <div className="grid gap-4 md:grid-cols-1 lg:grid-cols-3">
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
                 {stats.map((stat, index) => (
                     <motion.div
                         key={stat.title}
