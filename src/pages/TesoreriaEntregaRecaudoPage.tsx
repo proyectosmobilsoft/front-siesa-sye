@@ -16,6 +16,9 @@ import {
     ShieldCheck,
     TriangleAlert,
     Users,
+    Search,
+    Download,
+    Wallet,
 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -26,6 +29,7 @@ import { conductorEfectivoApi } from '@/api/conductorEfectivo'
 import { reciboCajaApi } from '@/api/reciboCaja'
 import { MovimientoEfectivo } from '@/api/types'
 import { formatters } from '@/utils/formatters'
+import { estadoRCBadge, estadoRCLabel } from '@/utils/badges'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { cn } from '@/lib/utils'
 
