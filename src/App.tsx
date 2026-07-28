@@ -21,6 +21,7 @@ import { MaestroDescuentosFinancierosPage } from '@/pages/MaestroDescuentosFinan
 import { EgresoPage } from '@/pages/EgresoPage'
 import FerregangaPage from '@/pages/FerregangaPage'
 import { ReciboCajaPage } from '@/pages/ReciboCajaPage'
+import { TesoreriaEntregaRecaudoPage } from '@/pages/TesoreriaEntregaRecaudoPage'
 import { LoginPage } from '@/pages/LoginPage'
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute'
 import { PERMISOS } from '@/config/permisos'
@@ -76,6 +77,7 @@ function AppLayout() {
                             <Route path="/maestro/usuarios"                  element={<MaestroUsuariosPage />} />
                             <Route path="/maestro/descuentos-financieros"    element={<MaestroDescuentosFinancierosPage />} />
                             <Route path="/tesoreria/recibo-caja"             element={<ReciboCajaPage />} />
+                            <Route path="/tesoreria/entrega-recaudo"         element={<TesoreriaEntregaRecaudoPage />} />
                             <Route path="/configuracion"                     element={<SettingsPage />} />
                             <Route path="/configuracion/seguridad"           element={<SecuritySettingsPage />} />
                             <Route path="/ayuda"                             element={<HelpPage />} />
