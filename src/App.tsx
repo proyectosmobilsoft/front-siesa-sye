@@ -26,7 +26,7 @@ import { LoginPage } from '@/pages/LoginPage'
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute'
 import { PERMISOS } from '@/config/permisos'
 import { useUIStore } from '@/store/uiStore'
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { useAuth } from '@/hooks/useAuth'
 import { useInactivityTimeout } from '@/hooks/useInactivityTimeout'
 import { InactivityModal } from '@/components/ui/InactivityModal'
@@ -95,21 +95,28 @@ function AppContent() {
     const [showInactivityModal, setShowInactivityModal] = useState(false)
     const { isAuthenticated, logout } = useAuth()
 
-    // Manejar timeout de inactividad solo si no está en login
-    const handleInactivityTimeout = () => {
+    // Manejar timeout de inactividad solo si no está en login.
+    // useCallback con deps [] es obligatorio: useInactivityTimeout registra 6
+    // listeners globales en window (mousemove, scroll, click, etc.) dentro de
+    // un useEffect que depende de esta función. Sin memoizar, cada render de
+    // AppContent le pasaba una función nueva y el efecto volvía a montar/
+    // desmontar los 6 listeners en cada render — y cada mousemove global
+    // termina llamando localStorage.setItem + clearTimeout + setTimeout de
+    // forma síncrona, lo que se vuelve muy costoso con el mouse en movimiento.
+    const handleInactivityTimeout = useCallback(() => {
         console.log('⏰ Tiempo de inactividad superado - cerrando sesión')
         localStorage.removeItem('auth_token')
         localStorage.removeItem('last_activity')
         setShowInactivityModal(true)
-    }
+    }, [])
 
     // El hook siempre se ejecuta, pero internamente solo funciona si hay token
     useInactivityTimeout(handleInactivityTimeout)
 
-    const handleCloseInactivityModal = () => {
+    const handleCloseInactivityModal = useCallback(() => {
         setShowInactivityModal(false)
         logout()
-    }
+    }, [logout])
 
     // Si no está autenticado y no está en login, mostrar nada (useAuth redirigirá)
     if (!isAuthenticated && !isLoginPage) {
