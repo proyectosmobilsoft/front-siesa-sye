@@ -6,8 +6,8 @@ import { useTendenciaMensual } from '@/hooks/useTendenciaMensual'
 import { useVendors } from '@/hooks/useReports'
 import { useDebouncedElementSize } from '@/hooks/useDebouncedElementSize'
 import {
-    AreaChart, Area, BarChart, Bar,
-    XAxis, YAxis, CartesianGrid, Tooltip
+    ComposedChart, Area, Line, BarChart, Bar,
+    XAxis, YAxis, CartesianGrid, Tooltip, Legend
 } from 'recharts'
 import { formatters } from '@/utils/formatters'
 
@@ -31,19 +31,24 @@ export const ChartsSection = () => {
     const lineSize = useDebouncedElementSize()
     const barSize = useDebouncedElementSize()
 
-    // Preparar datos para Ventas Mensuales
+    // Preparar datos para Tendencia financiera (Ingresos + Utilidad)
     const lineData = tendencia
         ? tendencia.map(t => {
             const str = t.Periodo.toString()
-            return { mes: `${str.substring(4, 6)}/${str.substring(0, 4)}`, ingresos: t.Ingresos }
+            return {
+                mes: `${str.substring(4, 6)}/${str.substring(0, 4)}`,
+                ingresos: t.Ingresos,
+                utilidad: t.Utilidad,
+            }
         })
         : []
 
-    // Los Ingresos vienen negativos: se fuerza el dominio del eje Y para que
-    // el área rellena quede siempre por debajo de la línea, nunca por arriba.
-    const ingresosValores = lineData.map(d => d.ingresos)
-    const yMin = ingresosValores.length ? Math.min(...ingresosValores) : 0
-    const yMax = ingresosValores.length ? Math.max(...ingresosValores) : 0
+    // Los valores vienen negativos: se fuerza el dominio del eje Y con el
+    // mínimo/máximo de AMBAS series para que el área de ingresos quede
+    // siempre por debajo de su línea y ambas series compartan escala.
+    const todosLosValores = lineData.flatMap(d => [d.ingresos, d.utilidad])
+    const yMin = todosLosValores.length ? Math.min(...todosLosValores) : 0
+    const yMax = todosLosValores.length ? Math.max(...todosLosValores) : 0
 
     // Preparar datos para Ventas por Vendedor
     const barData = vendors ? vendors
@@ -58,7 +63,7 @@ export const ChartsSection = () => {
     if (tendenciaLoading || vendorsLoading) {
         return (
             <div className="grid gap-6 md:grid-cols-2">
-                {['Tendencia de Ventas', 'Top Vendedores'].map(title => (
+                {['Tendencia Financiera', 'Top Vendedores'].map(title => (
                     <Card key={title}>
                         <CardHeader><CardTitle>{title}</CardTitle></CardHeader>
                         <CardContent><Skeleton className="h-72 w-full" /></CardContent>
@@ -76,16 +81,16 @@ export const ChartsSection = () => {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.4, delay: 0.2, ease: [0.22, 1, 0.36, 1] }}
             >
-                {/* Tendencia de Ventas Mensuales */}
+                {/* Tendencia financiera: Ingresos vs Utilidad */}
                 <Card>
                     <CardHeader>
-                        <CardTitle>Tendencia de Ventas</CardTitle>
-                        <p className="text-sm text-muted-foreground">Ingresos mensuales (2024)</p>
+                        <CardTitle>Tendencia Financiera</CardTitle>
+                        <p className="text-sm text-muted-foreground">Ingresos y utilidad mensual (2024)</p>
                     </CardHeader>
                     <CardContent>
                         <div ref={lineSize.ref} className="h-72">
                             {lineData.length > 0 && lineSize.width > 0 ? (
-                                <AreaChart
+                                <ComposedChart
                                     width={lineSize.width}
                                     height={lineSize.height}
                                     data={lineData}
@@ -116,9 +121,11 @@ export const ChartsSection = () => {
                                             fontSize: 12
                                         }}
                                     />
+                                    <Legend wrapperStyle={{ fontSize: 12 }} />
                                     <Area
                                         type="monotone"
                                         dataKey="ingresos"
+                                        name="Ingresos"
                                         stroke="#B71C1C"
                                         strokeWidth={2}
                                         fill="url(#tendenciaGradient)"
@@ -126,7 +133,17 @@ export const ChartsSection = () => {
                                         activeDot={{ r: 6 }}
                                         isAnimationActive={false}
                                     />
-                                </AreaChart>
+                                    <Line
+                                        type="monotone"
+                                        dataKey="utilidad"
+                                        name="Utilidad"
+                                        stroke="#1D4ED8"
+                                        strokeWidth={2}
+                                        dot={{ r: 3, fill: 'hsl(var(--card))', stroke: '#1D4ED8', strokeWidth: 2 }}
+                                        activeDot={{ r: 5 }}
+                                        isAnimationActive={false}
+                                    />
+                                </ComposedChart>
                             ) : (
                                 <div className="flex items-center justify-center h-full text-muted-foreground text-sm">Sin datos de tendencia</div>
                             )}
