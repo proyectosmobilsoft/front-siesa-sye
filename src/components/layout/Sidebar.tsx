@@ -180,15 +180,18 @@ export const Sidebar = () => {
             )}
 
             {/* Sidebar
-                Transición por CSS (no JS/spring por-frame): animar 'width' con Framer Motion
-                fuerza un reflow completo del layout en cada frame y dispara el ResizeObserver
-                de las gráficas Nivo del Dashboard en cada tick, causando el freeze al
-                contraer/expandir. Con transición CSS el navegador la resuelve en el
-                compositor y solo hay un reflow por render, no uno por frame. */}
+                'width' NO se anima: en escritorio el sidebar es hermano flex del contenido
+                principal, así que cada cambio de width redimensiona el <main> donde viven
+                las gráficas Nivo. Los componentes ResponsiveLine/ResponsiveBar de Nivo usan
+                un ResizeObserver interno sin debounce — si el ancho cambia en cada frame de
+                una transición, Nivo recalcula escalas y re-renderiza el SVG completo en cada
+                tick, saturando el hilo principal hasta colgar la pestaña. El colapso queda
+                instantáneo (sin transición de layout); solo se anima 'transform' para el
+                drawer mobile, que es compuesto por GPU y no dispara resize de contenido. */}
             <div
                 className={cn(
                     'fixed left-0 top-0 z-50 h-full overflow-hidden bg-card',
-                    'transition-[width,transform] duration-200 ease-out',
+                    'transition-transform duration-200 ease-out',
                     'lg:relative lg:z-auto',
                     isMobile
                         ? cn('w-64', sidebarOpen ? 'translate-x-0' : '-translate-x-full')
