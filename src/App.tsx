@@ -3,33 +3,40 @@ import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-route
 import { Sidebar } from '@/components/layout/Sidebar'
 import { Header } from '@/components/layout/Header'
 import { DashboardPage } from '@/pages/DashboardPage'
-import { ClientsPage } from '@/pages/ClientsPage'
-import { CompaniesPage } from '@/pages/CompaniesPage'
-import { ProductsPage } from '@/pages/ProductsPage'
-import { ReportsPage } from '@/pages/ReportsPage'
-import { SalesSummaryPage } from '@/pages/SalesSummaryPage'
-import { VendorsPage } from '@/pages/VendorsPage'
-import { SettingsPage } from '@/pages/SettingsPage'
-import { HelpPage } from '@/pages/HelpPage'
-import { GestionVentasPage } from '@/pages/GestionVentasPage'
-import { AnalisisFinancieroPage } from '@/pages/AnalisisFinancieroPage'
-import { PedidosPage } from '@/pages/PedidosPage'
-import { SecuritySettingsPage } from '@/pages/SecuritySettingsPage'
-import { MaestroRolesPage } from '@/pages/MaestroRolesPage'
-import { MaestroUsuariosPage } from '@/pages/MaestroUsuariosPage'
-import { MaestroDescuentosFinancierosPage } from '@/pages/MaestroDescuentosFinancierosPage'
-import { EgresoPage } from '@/pages/EgresoPage'
-import FerregangaPage from '@/pages/FerregangaPage'
-import { ReciboCajaPage } from '@/pages/ReciboCajaPage'
-import { TesoreriaEntregaRecaudoPage } from '@/pages/TesoreriaEntregaRecaudoPage'
 import { LoginPage } from '@/pages/LoginPage'
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute'
 import { PERMISOS } from '@/config/permisos'
 import { useUIStore } from '@/store/uiStore'
-import { useCallback, useEffect, useState } from 'react'
+import { lazy, Suspense, useCallback, useEffect, useState } from 'react'
 import { useAuth } from '@/hooks/useAuth'
 import { useInactivityTimeout } from '@/hooks/useInactivityTimeout'
 import { InactivityModal } from '@/components/ui/InactivityModal'
+
+// Code-splitting por ruta: antes las ~20 páginas (con dependencias pesadas
+// como exceljs, recharts, framer-motion) se importaban todas de forma
+// eager en el módulo de App, así que CUALQUIER carga/recarga tenía que
+// parsear y evaluar el bundle completo de la app antes de poder mostrar
+// nada, aunque el usuario solo quisiera ver el Dashboard. Con React.lazy
+// cada página solo se descarga/evalúa cuando se navega a su ruta.
+const ClientsPage = lazy(() => import('@/pages/ClientsPage').then(m => ({ default: m.ClientsPage })))
+const CompaniesPage = lazy(() => import('@/pages/CompaniesPage').then(m => ({ default: m.CompaniesPage })))
+const ProductsPage = lazy(() => import('@/pages/ProductsPage').then(m => ({ default: m.ProductsPage })))
+const ReportsPage = lazy(() => import('@/pages/ReportsPage').then(m => ({ default: m.ReportsPage })))
+const SalesSummaryPage = lazy(() => import('@/pages/SalesSummaryPage').then(m => ({ default: m.SalesSummaryPage })))
+const VendorsPage = lazy(() => import('@/pages/VendorsPage').then(m => ({ default: m.VendorsPage })))
+const SettingsPage = lazy(() => import('@/pages/SettingsPage').then(m => ({ default: m.SettingsPage })))
+const HelpPage = lazy(() => import('@/pages/HelpPage').then(m => ({ default: m.HelpPage })))
+const GestionVentasPage = lazy(() => import('@/pages/GestionVentasPage').then(m => ({ default: m.GestionVentasPage })))
+const AnalisisFinancieroPage = lazy(() => import('@/pages/AnalisisFinancieroPage').then(m => ({ default: m.AnalisisFinancieroPage })))
+const PedidosPage = lazy(() => import('@/pages/PedidosPage').then(m => ({ default: m.PedidosPage })))
+const SecuritySettingsPage = lazy(() => import('@/pages/SecuritySettingsPage').then(m => ({ default: m.SecuritySettingsPage })))
+const MaestroRolesPage = lazy(() => import('@/pages/MaestroRolesPage').then(m => ({ default: m.MaestroRolesPage })))
+const MaestroUsuariosPage = lazy(() => import('@/pages/MaestroUsuariosPage').then(m => ({ default: m.MaestroUsuariosPage })))
+const MaestroDescuentosFinancierosPage = lazy(() => import('@/pages/MaestroDescuentosFinancierosPage').then(m => ({ default: m.MaestroDescuentosFinancierosPage })))
+const EgresoPage = lazy(() => import('@/pages/EgresoPage').then(m => ({ default: m.EgresoPage })))
+const FerregangaPage = lazy(() => import('@/pages/FerregangaPage'))
+const ReciboCajaPage = lazy(() => import('@/pages/ReciboCajaPage').then(m => ({ default: m.ReciboCajaPage })))
+const TesoreriaEntregaRecaudoPage = lazy(() => import('@/pages/TesoreriaEntregaRecaudoPage').then(m => ({ default: m.TesoreriaEntregaRecaudoPage })))
 
 const queryClient = new QueryClient({
     defaultOptions: {
@@ -49,6 +56,11 @@ function AppLayout() {
                 <div className="flex-1 flex flex-col overflow-hidden">
                     <Header />
                     <main className="flex-1 overflow-auto custom-scrollbar">
+                        <Suspense fallback={
+                            <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
+                                Cargando…
+                            </div>
+                        }>
                         <Routes>
                             {/* Dashboard: accesible a todos los autenticados */}
                             <Route path="/" element={<DashboardPage />} />
@@ -82,6 +94,7 @@ function AppLayout() {
                             <Route path="/configuracion/seguridad"           element={<SecuritySettingsPage />} />
                             <Route path="/ayuda"                             element={<HelpPage />} />
                         </Routes>
+                        </Suspense>
                     </main>
                 </div>
             </div>
