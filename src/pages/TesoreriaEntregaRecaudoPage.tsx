@@ -209,9 +209,10 @@ const TableroConciliacion = ({ movimientos, onResuelto }: { movimientos: Movimie
                                 <thead>
                                     <tr className="border-b border-border bg-muted/30">
                                         <th className="px-5 py-3 text-left text-[10px] font-black uppercase tracking-wider text-muted-foreground">Conductor</th>
-                                        <th className="px-5 py-3 text-center text-[10px] font-black uppercase tracking-wider text-muted-foreground">Estado</th>
-                                        <th className="px-5 py-3 text-right text-[10px] font-black uppercase tracking-wider text-muted-foreground">Diferencia</th>
-                                        <th className="px-5 py-3 text-right text-[10px] font-black uppercase tracking-wider text-muted-foreground">Acción</th>
+                                        <th className="px-5 py-3 text-left text-[10px] font-black uppercase tracking-wider text-muted-foreground">Total</th>
+                                        <th className="px-5 py-3 text-left text-[10px] font-black uppercase tracking-wider text-muted-foreground">Estado</th>
+                                        <th className="px-5 py-3 text-left text-[10px] font-black uppercase tracking-wider text-muted-foreground">Diferencia</th>
+                                        <th className="px-5 py-3 text-left text-[10px] font-black uppercase tracking-wider text-muted-foreground">Acción</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -219,7 +220,7 @@ const TableroConciliacion = ({ movimientos, onResuelto }: { movimientos: Movimie
                                         const alDia = conductor.movimientosConDiferencia === 0
                                         return (
                                             <tr key={conductor.conductorId} className="border-b border-border/60 last:border-0 hover:bg-muted/20">
-                                                <td className="px-5 py-3">
+                                                <td className="px-5 py-3 text-left">
                                                     <div className="flex items-center gap-3">
                                                         <div className={cn(
                                                             'flex h-9 w-9 items-center justify-center rounded-full text-xs font-bold text-white',
@@ -233,7 +234,10 @@ const TableroConciliacion = ({ movimientos, onResuelto }: { movimientos: Movimie
                                                         </div>
                                                     </div>
                                                 </td>
-                                                <td className="px-5 py-3 text-center">
+                                                <td className="px-5 py-3 text-left">
+                                                    <p className="font-bold tabular-nums text-foreground">{formatters.currency(conductor.total)}</p>
+                                                </td>
+                                                <td className="px-5 py-3 text-left">
                                                     <span className={cn(
                                                         'inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-bold',
                                                         alDia
@@ -244,7 +248,7 @@ const TableroConciliacion = ({ movimientos, onResuelto }: { movimientos: Movimie
                                                         {alDia ? 'Al día' : 'Tiene un descuadre'}
                                                     </span>
                                                 </td>
-                                                <td className="px-5 py-3 text-right">
+                                                <td className="px-5 py-3 text-left">
                                                     <p className={cn('font-bold tabular-nums', alDia ? 'text-emerald-600' : conductor.diferencia < 0 ? 'text-red-600' : 'text-blue-600')}>
                                                         {alDia ? formatters.currency(0) : formatters.currency(conductor.montoPendiente)}
                                                     </p>
@@ -254,7 +258,7 @@ const TableroConciliacion = ({ movimientos, onResuelto }: { movimientos: Movimie
                                                         </p>
                                                     )}
                                                 </td>
-                                                <td className="px-5 py-3 text-right">
+                                                <td className="px-5 py-3 text-left">
                                                     <Button
                                                         variant={alDia ? 'ghost' : 'default'}
                                                         size="sm"
@@ -273,8 +277,8 @@ const TableroConciliacion = ({ movimientos, onResuelto }: { movimientos: Movimie
                                 {descuadrados.length > 0 && (
                                     <tfoot>
                                         <tr className="border-t border-border bg-red-50/60 dark:bg-red-950/10">
-                                            <td colSpan={2} className="px-5 py-3 text-xs font-bold uppercase tracking-wide text-muted-foreground">Total de diferencias por conciliar</td>
-                                            <td className="px-5 py-3 text-right font-extrabold tabular-nums text-red-600">{formatters.currency(totalPorConciliar)}</td>
+                                            <td colSpan={3} className="px-5 py-3 text-left text-xs font-bold uppercase tracking-wide text-muted-foreground">Total de diferencias por conciliar</td>
+                                            <td className="px-5 py-3 text-left font-extrabold tabular-nums text-red-600">{formatters.currency(totalPorConciliar)}</td>
                                             <td />
                                         </tr>
                                     </tfoot>
@@ -411,14 +415,14 @@ const EntregasSubAccordion = ({ entregas, colSpan, onValidar }: { entregas: Movi
                             <tr className="border-b border-primary/10">
                                 <th className="h-8 px-4 text-left font-medium uppercase tracking-wide text-muted-foreground">Fecha</th>
                                 <th className="h-8 px-4 text-left font-medium uppercase tracking-wide text-muted-foreground">Referencia</th>
-                                <th className="h-8 px-4 text-right font-medium uppercase tracking-wide text-muted-foreground">Valor</th>
+                                <th className="h-8 px-4 text-left font-medium uppercase tracking-wide text-muted-foreground">Valor</th>
                                 {confirmadas ? (
                                     <>
-                                        <th className="h-8 px-4 text-right font-medium uppercase tracking-wide text-muted-foreground">Diferencia</th>
+                                        <th className="h-8 px-4 text-left font-medium uppercase tracking-wide text-muted-foreground">Diferencia</th>
                                         <th className="h-8 px-4 text-left font-medium uppercase tracking-wide text-muted-foreground">Aprobado por</th>
                                     </>
                                 ) : (
-                                    <th className="h-8 px-4 text-right font-medium uppercase tracking-wide text-muted-foreground">Acción</th>
+                                    <th className="h-8 px-4 text-left font-medium uppercase tracking-wide text-muted-foreground">Acción</th>
                                 )}
                             </tr>
                         </thead>
@@ -431,12 +435,12 @@ const EntregasSubAccordion = ({ entregas, colSpan, onValidar }: { entregas: Movi
                                     animate={{ opacity: 1, x: 0 }}
                                     transition={{ duration: 0.18, delay: idx * 0.04, ease: [0.22, 1, 0.36, 1] }}
                                 >
-                                    <td className="px-4 py-2 text-muted-foreground">{formatters.dateTime(mov.fecha)}</td>
-                                    <td className="px-4 py-2 text-muted-foreground">{mov.referencia || <span className="italic">—</span>}</td>
-                                    <td className="px-4 py-2 text-right font-semibold text-primary">{formatters.currency(mov.valor)}</td>
+                                    <td className="px-4 py-2 text-left text-muted-foreground">{formatters.dateTime(mov.fecha)}</td>
+                                    <td className="px-4 py-2 text-left text-muted-foreground">{mov.referencia || <span className="italic">—</span>}</td>
+                                    <td className="px-4 py-2 text-left font-semibold text-primary">{formatters.currency(mov.valor)}</td>
                                     {confirmadas ? (
                                         <>
-                                            <td className="px-4 py-2 text-right font-semibold">
+                                            <td className="px-4 py-2 text-left font-semibold">
                                                 {mov.diferencia ? (
                                                     <span className={mov.diferencia > 0 ? 'text-blue-600 dark:text-blue-400' : 'text-red-600 dark:text-red-400'}>
                                                         {mov.diferencia > 0 ? '+' : ''}{formatters.currency(mov.diferencia)}
@@ -445,10 +449,10 @@ const EntregasSubAccordion = ({ entregas, colSpan, onValidar }: { entregas: Movi
                                                     <span className="text-green-600 dark:text-green-400">Cuadrado</span>
                                                 )}
                                             </td>
-                                            <td className="px-4 py-2 text-muted-foreground">{mov.usuario_confirma_nombre || '—'}</td>
+                                            <td className="px-4 py-2 text-left text-muted-foreground">{mov.usuario_confirma_nombre || '—'}</td>
                                         </>
                                     ) : (
-                                        <td className="px-4 py-2 text-right">
+                                        <td className="px-4 py-2 text-left">
                                             <Button size="sm" className="h-7 gap-1 text-xs" onClick={(e) => { e.stopPropagation(); onValidar!(mov) }}>
                                                 <CheckCircle2 className="h-3 w-3" /> Validar
                                             </Button>
@@ -510,10 +514,10 @@ const ConductorGrupoRow = ({ grupo, idx, onValidar, onVerRC, etiqueta }: { grupo
                         </div>
                     </div>
                 </td>
-                <td className="px-4 py-3 text-right">
+                <td className="px-4 py-3 text-left">
                     <span className="text-sm font-bold tabular-nums text-foreground">{formatters.currency(grupo.total)}</span>
                 </td>
-                <td className="px-4 py-3 text-right">
+                <td className="px-4 py-3 text-left">
                     <Button
                         variant="outline"
                         size="sm"
@@ -739,8 +743,8 @@ const EntregasPanel = ({ esPendiente, data, isLoading, error, onValidar, onVerRC
                             <thead>
                                 <tr className="border-b border-border bg-muted/40">
                                     <th className="px-4 py-3 text-left text-[10px] font-black uppercase tracking-wider text-muted-foreground">Conductor</th>
-                                    <th className="px-4 py-3 text-right text-[10px] font-black uppercase tracking-wider text-muted-foreground">Total</th>
-                                    <th className="px-4 py-3 text-right text-[10px] font-black uppercase tracking-wider text-muted-foreground">Recibos</th>
+                                    <th className="px-4 py-3 text-left text-[10px] font-black uppercase tracking-wider text-muted-foreground">Total</th>
+                                    <th className="px-4 py-3 text-left text-[10px] font-black uppercase tracking-wider text-muted-foreground">Recibos</th>
                                 </tr>
                             </thead>
                             <tbody>
