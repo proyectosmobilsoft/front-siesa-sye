@@ -1,6 +1,8 @@
 import { motion } from 'framer-motion'
 import { StatsCards } from '@/components/dashboard/StatsCards'
 import { ChartsSection } from '@/components/dashboard/ChartsSection'
+import { FinancialSummaryCard } from '@/components/dashboard/FinancialSummaryCard'
+import { QuickLinksGrid } from '@/components/dashboard/QuickLinksGrid'
 import { RecentOrdersTable } from '@/components/dashboard/RecentOrdersTable'
 import { RecentInvoicesTable } from '@/components/dashboard/RecentInvoicesTable'
 
@@ -18,32 +20,36 @@ export const DashboardPage = () => {
                 <p className="text-muted-foreground">Monitoreo de actividad comercial y financiera en tiempo real</p>
             </motion.div>
 
-            {/* Stats Cards */}
+            {/* Accesos rápidos a los módulos */}
+            <QuickLinksGrid />
+
+            {/* KPIs */}
             <StatsCards />
 
-            {/* Main Content Grid */}
+            {/* Tendencia financiera + Top vendedores */}
+            <ChartsSection />
+
+            {/* Pérdidas y Ganancias + Actividad reciente */}
             <div className="grid gap-6 lg:grid-cols-2">
-                {/* Charts Section */}
-                <div className="lg:col-span-2">
-                    <ChartsSection />
+                <FinancialSummaryCard />
+
+                <div className="space-y-6">
+                    <motion.div
+                        initial={{ opacity: 0, x: -20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ duration: 0.5, delay: 0.4 }}
+                    >
+                        <RecentOrdersTable />
+                    </motion.div>
+
+                    <motion.div
+                        initial={{ opacity: 0, x: 20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ duration: 0.5, delay: 0.5 }}
+                    >
+                        <RecentInvoicesTable />
+                    </motion.div>
                 </div>
-
-                {/* Recent Activity Tables */}
-                <motion.div
-                    initial={{ opacity: 0, x: -20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ duration: 0.5, delay: 0.4 }}
-                >
-                    <RecentOrdersTable />
-                </motion.div>
-
-                <motion.div
-                    initial={{ opacity: 0, x: 20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ duration: 0.5, delay: 0.5 }}
-                >
-                    <RecentInvoicesTable />
-                </motion.div>
             </div>
         </div>
     )
