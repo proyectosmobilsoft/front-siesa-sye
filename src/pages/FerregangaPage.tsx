@@ -125,6 +125,7 @@ const FerregangaPage: React.FC = () => {
   const [raffleWinner, setRaffleWinner] = useState<{ name: string; ticket: string; prize: string; level?: string } | null>(null);
   const [podiumWinners, setPodiumWinners] = useState<{ Oro?: any, Plata?: any, Bronce?: any }>({});
   const [showConfetti, setShowConfetti] = useState(false);
+  const [wheelRotation, setWheelRotation] = useState(0);
 
   // Campañas desde API
   const [campanias, setCampanias] = useState<CampaniaAPI[]>([]);
@@ -239,11 +240,13 @@ const FerregangaPage: React.FC = () => {
 
   const nextPrize = pendingPrizes[0];
   const isRaffleCompleted = !nextPrize && !isSpinning;
+  const hasAnyWinner = Object.keys(podiumWinners).length > 0;
 
   const handleStartRaffle = () => {
     if (!nextPrize) return;
     setIsSpinning(true);
     setRaffleWinner(null);
+    setWheelRotation(prev => prev + 360 * 7 + Math.floor(Math.random() * 360));
     setTimeout(() => {
       setIsSpinning(false);
       const newWinner = {
@@ -768,60 +771,128 @@ const FerregangaPage: React.FC = () => {
   );
 
   const renderSorteo = () => (
-    <div className="flex flex-col items-start justify-center space-y-12 py-10 w-full relative overflow-hidden min-h-[850px]">
+    <div className="flex flex-col gap-3 lg:gap-4">
       <AnimatePresence>
         {showConfetti && <ConfettiCelebration />}
       </AnimatePresence>
 
-      <div className="text-center space-y-2 w-full">
-        <h2 className="text-4xl font-black uppercase tracking-tighter">Sorteo de Campaña</h2>
-        <p className="text-muted-foreground uppercase font-bold tracking-widest text-xs">{currentCampaign.name}</p>
+      {/* Título compacto */}
+      <div className="text-center shrink-0">
+        <h2 className="text-2xl lg:text-3xl font-black uppercase tracking-tighter">Sorteo de Campaña</h2>
+        <p className="text-muted-foreground uppercase font-bold tracking-widest text-[10px] mt-0.5">{currentCampaign.name}</p>
       </div>
 
-      <motion.div layout className={cn("flex flex-col xl:flex-row items-center justify-start gap-12 w-full px-4 transition-all duration-1000", isRaffleCompleted && "justify-center")}>
-        <AnimatePresence mode="wait">
+      {/* Contenido principal: ruleta + pódium */}
+      <div className="flex items-center gap-5 w-full">
+
+        {/* Ruleta — centrada y grande sin ganadores; se encoge y va a la izquierda al revelar el primero */}
+        <AnimatePresence>
           {!isRaffleCompleted && (
-            <motion.div key="roulette-section" initial={{ opacity: 0, x: -50 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, scale: 0.5, transition: { duration: 0.5 } }} className="flex flex-col items-center space-y-8 w-full xl:w-[35%] shrink-0">
-              <div className="relative w-64 h-64 md:w-80 md:h-80 flex items-center justify-center">
-                <div className={cn("w-full h-full rounded-full border-8 border-primary/20 flex items-center justify-center relative overflow-hidden transition-all duration-500", isSpinning && "animate-spin")}>
+            <motion.div
+              key="roulette"
+              layout
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0, scale: 0.8, transition: { duration: 0.4 } }}
+              className={cn(
+                "flex flex-col items-center gap-4 shrink-0 transition-all duration-700",
+                hasAnyWinner ? "w-[32%]" : "w-full"
+              )}
+            >
+              {/* Rueda — tamaño dinámico (vmin escala horizontal y verticalmente) */}
+              <div className={cn(
+                "relative flex items-center justify-center transition-all duration-700",
+                hasAnyWinner
+                  ? "w-[min(22vmin,13rem)] h-[min(22vmin,13rem)]"
+                  : "w-[min(34vmin,18rem)] h-[min(34vmin,18rem)]"
+              )}>
+                <AnimatePresence>
+                  {isSpinning && (
+                    <motion.div
+                      key="glow-ring"
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: [0.3, 0.9, 0.3] }}
+                      exit={{ opacity: 0 }}
+                      transition={{ duration: 0.8, repeat: Infinity, ease: 'easeInOut' }}
+                      className="absolute rounded-full pointer-events-none"
+                      style={{ top: '-10px', right: '-10px', bottom: '-10px', left: '-10px', boxShadow: '0 0 0 4px hsl(var(--primary) / 0.35), 0 0 45px 14px hsl(var(--primary) / 0.2)' }}
+                    />
+                  )}
+                </AnimatePresence>
+
+                {/* Aro giratorio */}
+                <motion.div
+                  animate={{ rotate: wheelRotation }}
+                  transition={{ duration: 3, ease: [0.16, 1, 0.3, 1] }}
+                  className="absolute inset-0 rounded-full border-8 border-primary/20 overflow-hidden"
+                >
                   {[...Array(12)].map((_, i) => (
-                    <div key={i} className="absolute w-1 h-full bg-primary/10" style={{ transform: `rotate(${i * 30}deg)` }} />
+                    <div
+                      key={i}
+                      className={cn("absolute w-0.5 h-full top-0", i % 2 === 0 ? "bg-primary/20" : "bg-primary/5")}
+                      style={{ left: '50%', transform: `translateX(-50%) rotate(${i * 30}deg)` }}
+                    />
                   ))}
-                  <div className="w-48 h-48 md:w-64 md:h-64 rounded-full bg-card border-4 border-primary flex flex-col items-center justify-center text-center p-6 shadow-2xl z-10">
-                    {raffleWinner ? (
-                      <div className="animate-in zoom-in duration-500">
-                        <Trophy size={48} className={cn("mb-2 mx-auto", raffleWinner.level === 'Oro' ? "text-yellow-500" : raffleWinner.level === 'Plata' ? "text-slate-400" : "text-amber-700")} />
-                        <p className="text-[10px] font-bold uppercase text-muted-foreground">¡Ganador!</p>
-                        <h3 className="text-base font-black leading-tight uppercase line-clamp-2">{raffleWinner.name}</h3>
-                        <p className="text-[9px] font-mono mt-1 text-primary">{raffleWinner.ticket}</p>
-                        <div className="mt-2 px-2 py-1 bg-primary/10 rounded text-[9px] font-bold text-primary uppercase">{raffleWinner.prize}</div>
-                      </div>
-                    ) : (
-                      <div className="flex flex-col items-center animate-pulse">
-                        {nextPrize ? (
-                          <>
-                            <Gift size={48} className="text-primary/30 mb-2" />
-                            <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest text-[9px]">Siguiente Premio:</p>
-                            <p className="text-sm font-black text-primary uppercase tracking-tighter">{nextPrize.level}</p>
-                          </>
-                        ) : (
-                          <>
-                            <Trophy size={48} className="text-yellow-500 mb-2" />
-                            <p className="text-sm font-black uppercase">Sorteo Finalizado</p>
-                          </>
-                        )}
-                      </div>
-                    )}
-                  </div>
+                </motion.div>
+
+                {/* Círculo central estático */}
+                <div className={cn(
+                  "relative z-10 rounded-full bg-card border-4 border-primary flex flex-col items-center justify-center text-center shadow-2xl transition-all duration-700",
+                  hasAnyWinner
+                    ? "w-[min(15vmin,8.5rem)] h-[min(15vmin,8.5rem)] p-2"
+                    : "w-[min(24vmin,13rem)] h-[min(24vmin,13rem)] p-3"
+                )}>
+                  {raffleWinner ? (
+                    <motion.div initial={{ scale: 0.5, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ type: 'spring', stiffness: 320, damping: 22 }}>
+                      <Trophy size={hasAnyWinner ? 22 : 36} className={cn("mb-1 mx-auto", raffleWinner.level === 'Oro' ? "text-yellow-500" : raffleWinner.level === 'Plata' ? "text-slate-400" : "text-amber-700")} />
+                      <p className="text-[9px] font-bold uppercase text-muted-foreground">¡Ganador!</p>
+                      <h3 className="text-[10px] font-black leading-tight uppercase line-clamp-2">{raffleWinner.name}</h3>
+                      <p className="text-[8px] font-mono mt-0.5 text-primary">{raffleWinner.ticket}</p>
+                      <div className="mt-1 px-1.5 py-0.5 bg-primary/10 rounded text-[8px] font-bold text-primary uppercase leading-tight">{raffleWinner.prize}</div>
+                    </motion.div>
+                  ) : (
+                    <div className="flex flex-col items-center">
+                      {nextPrize ? (
+                        <motion.div animate={{ scale: [1, 1.06, 1] }} transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }} className="flex flex-col items-center">
+                          <Gift size={hasAnyWinner ? 26 : 40} className="text-primary/30 mb-1" />
+                          <p className="font-bold text-muted-foreground uppercase tracking-widest text-[8px]">Siguiente:</p>
+                          <p className={cn("font-black text-primary uppercase tracking-tighter", hasAnyWinner ? "text-xs" : "text-sm")}>{nextPrize.level}</p>
+                        </motion.div>
+                      ) : (
+                        <>
+                          <Trophy size={hasAnyWinner ? 26 : 36} className="text-yellow-500 mb-1" />
+                          <p className="text-xs font-black uppercase">Finalizado</p>
+                        </>
+                      )}
+                    </div>
+                  )}
                 </div>
-                <div className="absolute -top-2 left-1/2 -translate-x-1/2 w-6 h-6 bg-red-500 rounded-full border-4 border-background z-20" />
+
+                {/* Puntero */}
+                <div className="absolute -top-3 left-1/2 -translate-x-1/2 z-20 flex flex-col items-center gap-0">
+                  <div className="w-4 h-4 bg-red-500 rounded-full border-2 border-background shadow-md" />
+                  <div className="w-0 h-0" style={{ borderLeft: '5px solid transparent', borderRight: '5px solid transparent', borderTop: '9px solid #ef4444' }} />
+                </div>
               </div>
 
-              <div className="flex flex-col w-full max-w-[280px] gap-4">
-                <Button size="lg" className="w-full py-8 text-lg font-black uppercase tracking-widest gap-3 shadow-xl" disabled={isSpinning || !nextPrize} onClick={handleStartRaffle}>
-                  {isSpinning ? (<><RefreshCw className="animate-spin" size={20} /> Sorteando...</>) : (nextPrize ? `Sortear ${nextPrize.level}` : "Completado")}
+              {/* Botones */}
+              <div className={cn("flex flex-col gap-2", hasAnyWinner ? "w-full" : "w-full max-w-[260px]")}>
+                <Button
+                  size="lg"
+                  className="w-full py-4 text-sm font-black uppercase tracking-widest gap-2 shadow-xl"
+                  disabled={isSpinning || !nextPrize}
+                  onClick={handleStartRaffle}
+                >
+                  {isSpinning
+                    ? (<><RefreshCw className="animate-spin" size={16} /> Sorteando...</>)
+                    : (nextPrize ? `Sortear ${nextPrize.level}` : "Completado")}
                 </Button>
-                <Button variant="ghost" size="sm" className="text-[10px] uppercase font-black text-muted-foreground" onClick={() => { setPodiumWinners({}); setRaffleWinner(null); }}>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="text-[10px] uppercase font-black text-muted-foreground"
+                  onClick={() => { setPodiumWinners({}); setRaffleWinner(null); }}
+                >
                   Reiniciar Sorteo
                 </Button>
               </div>
@@ -829,92 +900,113 @@ const FerregangaPage: React.FC = () => {
           )}
         </AnimatePresence>
 
-        <motion.div layout className={cn("flex flex-col items-center justify-end h-full pt-10 transition-all duration-1000 ease-in-out", !isRaffleCompleted ? "w-full xl:w-[65%]" : "w-full max-w-6xl mx-auto")}>
-          <div className={cn("flex items-end gap-3 md:gap-8 h-[550px] w-full px-4 transition-all duration-1000", isRaffleCompleted ? "scale-110 mt-10" : "scale-100")}>
-            <div className="flex-1 flex flex-col items-center">
-              <div className={cn("w-full h-[280px] rounded-t-3xl border-x-4 border-t-4 flex flex-col items-center justify-end p-6 transition-all duration-700 shadow-2xl relative", podiumWinners.Plata ? "bg-slate-100 border-slate-300 dark:bg-slate-900/50 dark:border-slate-700 shadow-xl" : "bg-accent/10 border-transparent opacity-10")}>
-                {podiumWinners.Plata && (
-                  <motion.div initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} className="text-center w-full">
-                    <div className="w-16 h-16 rounded-full bg-white dark:bg-slate-800 shadow-xl flex items-center justify-center mx-auto mb-8 -mt-28 border-4 border-slate-300">
-                      <Medal size={32} className="text-slate-400" />
-                    </div>
-                    <p className="text-sm font-black uppercase truncate w-full px-2">{podiumWinners.Plata.name}</p>
-                    <p className="text-[10px] text-muted-foreground uppercase font-black mt-2 tracking-widest">Segundo Puesto</p>
-                  </motion.div>
-                )}
-                <div className="mt-auto font-black text-6xl text-slate-300 dark:text-slate-700">2</div>
-              </div>
-            </div>
+        {/* Pódium — aparece cuando hay al menos un ganador */}
+        <AnimatePresence>
+          {hasAnyWinner && (
+            <motion.div
+              key="podium"
+              layout
+              initial={{ opacity: 0, x: 60 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: 60 }}
+              transition={{ duration: 0.55, ease: [0.22, 1, 0.36, 1] }}
+              className={cn("flex flex-col items-center", isRaffleCompleted ? "w-full" : "flex-1")}
+            >
+              <div className="flex gap-2 md:gap-5 w-full h-[42vh] lg:h-[48vh] max-h-[460px] min-h-[200px]">
 
-            <div className="flex-1 flex flex-col items-center">
-              <div className={cn("w-full h-[450px] rounded-t-[2.5rem] border-x-4 border-t-4 flex flex-col items-center justify-end p-6 transition-all duration-1000 shadow-2xl relative", podiumWinners.Oro ? "bg-yellow-50 border-yellow-300 dark:bg-yellow-900/20 dark:border-yellow-900/50 shadow-[0_-30px_60px_-15px_rgba(234,179,8,0.4)]" : "bg-accent/10 border-transparent opacity-10")}>
-                {podiumWinners.Oro && (
-                  <motion.div initial={{ y: 30, opacity: 0 }} animate={{ y: 0, opacity: 1 }} className="text-center w-full">
-                    <div className="w-24 h-24 rounded-full bg-white dark:bg-slate-800 shadow-2xl flex items-center justify-center mx-auto mb-12 -mt-40 border-4 border-yellow-400 relative">
-                      <motion.div animate={{ rotate: [0, -10, 10, -10, 0], scale: [1, 1.1, 1] }} transition={{ repeat: Infinity, duration: 3 }}>
-                        <Trophy size={56} className="text-yellow-500" />
+                {/* Plata — 2° */}
+                <div className="flex-1 flex flex-col justify-end items-center">
+                  <div className={cn("w-full rounded-t-2xl border-x-4 border-t-4 flex flex-col items-center justify-end p-2 md:p-4 transition-all duration-700 shadow-xl relative h-[58%]", podiumWinners.Plata ? "bg-slate-100 border-slate-300 dark:bg-slate-900/50 dark:border-slate-700" : "bg-accent/10 border-transparent opacity-10")}>
+                    {podiumWinners.Plata && (
+                      <motion.div initial={{ y: 35, opacity: 0, scale: 0.85 }} animate={{ y: 0, opacity: 1, scale: 1 }} transition={{ type: 'spring', stiffness: 280, damping: 22 }} className="text-center w-full">
+                        <div className="w-10 h-10 md:w-14 md:h-14 rounded-full bg-white dark:bg-slate-800 shadow-xl flex items-center justify-center mx-auto mb-3 md:mb-5 -mt-10 md:-mt-14 border-4 border-slate-300">
+                          <Medal size={18} className="text-slate-400" />
+                        </div>
+                        <p className="text-xs font-black uppercase truncate w-full px-1">{podiumWinners.Plata.name}</p>
+                        <p className="text-[9px] text-muted-foreground uppercase font-black mt-1 tracking-widest">2° Puesto</p>
                       </motion.div>
-                      <div className="absolute inset-0 rounded-full animate-ping bg-yellow-400/30" />
-                    </div>
-                    <p className="text-2xl font-black uppercase truncate w-full px-2 leading-none">{podiumWinners.Oro.name}</p>
-                    <p className="text-xs text-yellow-600 font-black mt-3 uppercase tracking-[0.3em]">Gran Ganador Oro</p>
-                    <div className="mt-6 px-6 py-2.5 bg-yellow-400 text-yellow-950 rounded-full text-xs font-black uppercase tracking-tight shadow-lg inline-block">
-                      {podiumWinners.Oro.prize}
-                    </div>
+                    )}
+                    <div className="mt-auto font-black text-3xl md:text-5xl text-slate-300 dark:text-slate-700">2</div>
+                  </div>
+                </div>
+
+                {/* Oro — 1er */}
+                <div className="flex-1 flex flex-col justify-end items-center">
+                  <div className={cn("w-full rounded-t-[2rem] border-x-4 border-t-4 flex flex-col items-center justify-end p-3 md:p-5 transition-all duration-1000 shadow-2xl relative h-[92%]", podiumWinners.Oro ? "bg-yellow-50 border-yellow-300 dark:bg-yellow-900/20 dark:border-yellow-900/50 shadow-[0_-20px_50px_-10px_rgba(234,179,8,0.35)]" : "bg-accent/10 border-transparent opacity-10")}>
+                    {podiumWinners.Oro && (
+                      <motion.div initial={{ y: 60, opacity: 0, scale: 0.7 }} animate={{ y: 0, opacity: 1, scale: 1 }} transition={{ type: 'spring', stiffness: 200, damping: 18, delay: 0.1 }} className="text-center w-full">
+                        <div className="w-14 h-14 md:w-20 md:h-20 rounded-full bg-white dark:bg-slate-800 shadow-2xl flex items-center justify-center mx-auto mb-4 md:mb-7 -mt-14 md:-mt-20 border-4 border-yellow-400 relative">
+                          <motion.div animate={{ rotate: [0, -10, 10, -10, 0], scale: [1, 1.1, 1] }} transition={{ repeat: Infinity, duration: 3 }}>
+                            <Trophy size={32} className="text-yellow-500" />
+                          </motion.div>
+                          <div className="absolute inset-0 rounded-full animate-ping bg-yellow-400/30" />
+                        </div>
+                        <p className="text-base md:text-xl font-black uppercase truncate w-full px-2 leading-none">{podiumWinners.Oro.name}</p>
+                        <p className="text-[10px] text-yellow-600 font-black mt-2 uppercase tracking-[0.2em]">Gran Ganador</p>
+                        <div className="mt-2 md:mt-3 px-4 py-1.5 bg-yellow-400 text-yellow-950 rounded-full text-[10px] font-black uppercase tracking-tight shadow-lg inline-block">
+                          {podiumWinners.Oro.prize}
+                        </div>
+                      </motion.div>
+                    )}
+                    <div className="mt-auto font-black text-5xl md:text-8xl leading-none text-yellow-400/20 dark:text-yellow-900/30">1</div>
+                  </div>
+                </div>
+
+                {/* Bronce — 3er */}
+                <div className="flex-1 flex flex-col justify-end items-center">
+                  <div className={cn("w-full rounded-t-2xl border-x-4 border-t-4 flex flex-col items-center justify-end p-2 md:p-3 transition-all duration-500 shadow-xl relative h-[40%]", podiumWinners.Bronce ? "bg-amber-50/70 border-amber-700 dark:bg-amber-900/20 dark:border-amber-700/60" : "bg-accent/10 border-transparent opacity-10")}>
+                    {podiumWinners.Bronce && (
+                      <motion.div initial={{ y: 30, opacity: 0, scale: 0.85 }} animate={{ y: 0, opacity: 1, scale: 1 }} transition={{ type: 'spring', stiffness: 280, damping: 22 }} className="text-center w-full">
+                        <div className="w-9 h-9 md:w-12 md:h-12 rounded-full bg-white dark:bg-slate-800 shadow-lg flex items-center justify-center mx-auto mb-2 md:mb-3 -mt-9 md:-mt-12 border-4 border-amber-700">
+                          <Medal size={15} className="text-amber-700" />
+                        </div>
+                        <p className="text-xs font-black uppercase truncate w-full px-1">{podiumWinners.Bronce.name}</p>
+                        <p className="text-[9px] text-amber-800/70 font-black mt-1 uppercase tracking-widest">3° Puesto</p>
+                      </motion.div>
+                    )}
+                    <div className="mt-auto font-black text-2xl md:text-4xl text-amber-700/20 dark:text-amber-900/30">3</div>
+                  </div>
+                </div>
+              </div>
+
+              <AnimatePresence>
+                {isRaffleCompleted && (
+                  <motion.div initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 1.2, duration: 0.5 }} className="mt-4">
+                    <Button size="lg" variant="outline" className="uppercase font-black tracking-[0.3em] px-8 py-4 border-2 hover:bg-primary hover:text-white transition-all text-xs" onClick={() => { setPodiumWinners({}); setRaffleWinner(null); }}>
+                      Reiniciar Todo el Sorteo
+                    </Button>
                   </motion.div>
                 )}
-                <div className="mt-auto font-black text-[10rem] leading-none text-yellow-400/20 dark:text-yellow-900/30">1</div>
-              </div>
-            </div>
-
-            <div className="flex-1 flex flex-col items-center">
-              <div className={cn("w-full h-[200px] rounded-t-3xl border-x-4 border-t-4 flex flex-col items-center justify-end p-6 transition-all duration-500 shadow-2xl relative", podiumWinners.Bronce ? "bg-amber-50 border-amber-300 dark:bg-amber-900/20 dark:border-amber-900/50 shadow-lg" : "bg-accent/10 border-transparent opacity-10")}>
-                {podiumWinners.Bronce && (
-                  <motion.div initial={{ y: 15, opacity: 0 }} animate={{ y: 0, opacity: 1 }} className="text-center w-full">
-                    <div className="w-14 h-14 rounded-full bg-white dark:bg-slate-800 shadow-lg flex items-center justify-center mx-auto mb-6 -mt-24 border-4 border-amber-700">
-                      <Medal size={28} className="text-amber-700" />
-                    </div>
-                    <p className="text-sm font-black uppercase truncate w-full px-2">{podiumWinners.Bronce.name}</p>
-                    <p className="text-[10px] text-amber-800/70 font-black mt-2 uppercase tracking-widest">Tercer Puesto</p>
-                  </motion.div>
-                )}
-                <div className="mt-auto font-black text-5xl text-amber-700/20 dark:text-amber-900/30">3</div>
-              </div>
-            </div>
-          </div>
-
-          <AnimatePresence>
-            {isRaffleCompleted && (
-              <motion.div initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 1.2, duration: 0.5 }} className="mt-16">
-                <Button size="lg" variant="outline" className="uppercase font-black tracking-[0.3em] px-10 py-8 border-2 hover:bg-primary hover:text-white transition-all text-xs" onClick={() => { setPodiumWinners({}); setRaffleWinner(null); }}>
-                  Reiniciar Todo el Sorteo
-                </Button>
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </motion.div>
-      </motion.div>
+              </AnimatePresence>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
     </div>
   );
 
+  const isSorteo = activeTab === 'sorteo';
+
   return (
-    <div className="p-6 lg:p-10 space-y-8 bg-background">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+    <div className={cn("bg-background", isSorteo ? "p-3 lg:p-5 flex flex-col gap-3" : "p-6 lg:p-10 space-y-8")}>
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
         <div>
-          <h1 className="text-4xl font-black uppercase tracking-tighter flex items-center gap-3">
-            Ferreganga <Ticket className="text-primary" size={32} />
+          <h1 className={cn("font-black uppercase tracking-tighter flex items-center gap-3", isSorteo ? "text-2xl lg:text-3xl" : "text-4xl")}>
+            Ferreganga <Ticket className="text-primary" size={isSorteo ? 22 : 32} />
           </h1>
-          <p className="text-muted-foreground text-sm uppercase font-black tracking-[0.2em] mt-1">
-            Plataforma de Fidelización y Recompensas
-          </p>
+          {!isSorteo && (
+            <p className="text-muted-foreground text-sm uppercase font-black tracking-[0.2em] mt-1">
+              Plataforma de Fidelización y Recompensas
+            </p>
+          )}
         </div>
-        <div className="flex items-center gap-2 bg-accent/50 p-1 rounded-xl border border-border">
+        <div className="flex items-center gap-1.5 bg-accent/50 p-1 rounded-xl border border-border">
           {['general', 'clientes', 'campanas', 'sorteo'].map((tab) => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab as any)}
               className={cn(
-                "px-5 py-2 rounded-lg text-xs font-black uppercase transition-all duration-300",
+                "px-4 py-1.5 rounded-lg text-xs font-black uppercase transition-all duration-300",
                 activeTab === tab ? "bg-primary text-primary-foreground shadow-lg scale-105" : "hover:bg-accent text-muted-foreground"
               )}
             >
@@ -924,18 +1016,20 @@ const FerregangaPage: React.FC = () => {
         </div>
       </div>
 
-      <motion.div key={activeTab} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }} className="mt-8">
+      <motion.div key={activeTab} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }} className={isSorteo ? "" : "mt-8"}>
         {activeTab === 'general' && renderGeneral()}
         {activeTab === 'clientes' && renderClientes()}
         {activeTab === 'campanas' && renderCampanas()}
         {activeTab === 'sorteo' && renderSorteo()}
       </motion.div>
 
-      <footer className="mt-20 pt-8 border-t border-border/50 text-center opacity-30">
-        <p className="text-[10px] font-black uppercase tracking-[0.5em]">
-          Ferreganga v1.0 • Motor de Fidelidad y Datos
-        </p>
-      </footer>
+      {!isSorteo && (
+        <footer className="mt-20 pt-8 border-t border-border/50 text-center opacity-30">
+          <p className="text-[10px] font-black uppercase tracking-[0.5em]">
+            Ferreganga v1.0 • Motor de Fidelidad y Datos
+          </p>
+        </footer>
+      )}
 
       {/* Modal Formulario Campaña */}
       <AnimatePresence>
@@ -1150,24 +1244,36 @@ const ConfettiCelebration = () => {
   const colors = ['#eab308', '#ef4444', '#3b82f6', '#22c55e', '#a855f7', '#f97316'];
   return (
     <div className="fixed inset-0 pointer-events-none z-[9999] overflow-hidden">
-      {[...Array(150)].map((_, i) => (
-        <motion.div
-          key={`left-${i}`}
-          initial={{ bottom: -50, left: -50, opacity: 1, scale: Math.random() * 0.5 + 0.5, rotate: 0 }}
-          animate={{ bottom: ['0%', '100%', '80%'], left: ['0%', '100%', '120%'], rotate: Math.random() * 1000 + 500, opacity: [1, 1, 0] }}
-          transition={{ duration: Math.random() * 3 + 4, ease: [0.22, 1, 0.36, 1], repeat: 0, delay: Math.random() * 0.5 }}
-          style={{ position: 'absolute', width: Math.random() * 15 + 5, height: Math.random() * 8 + 4, backgroundColor: colors[Math.floor(Math.random() * colors.length)], borderRadius: '2px' }}
-        />
-      ))}
-      {[...Array(150)].map((_, i) => (
-        <motion.div
-          key={`right-${i}`}
-          initial={{ bottom: -50, right: -50, opacity: 1, scale: Math.random() * 0.5 + 0.5, rotate: 0 }}
-          animate={{ bottom: ['0%', '100%', '80%'], right: ['0%', '100%', '120%'], rotate: Math.random() * -1000 - 500, opacity: [1, 1, 0] }}
-          transition={{ duration: Math.random() * 3 + 4, ease: [0.22, 1, 0.36, 1], repeat: 0, delay: Math.random() * 0.5 }}
-          style={{ position: 'absolute', width: Math.random() * 15 + 5, height: Math.random() * 8 + 4, backgroundColor: colors[Math.floor(Math.random() * colors.length)], borderRadius: '2px' }}
-        />
-      ))}
+      {[...Array(110)].map((_, i) => {
+        const isCircle = i % 3 === 0;
+        const startX = Math.random() * 100;
+        const driftX = (Math.random() - 0.5) * 20;
+        const size = Math.random() * 12 + 5;
+        const color = colors[Math.floor(Math.random() * colors.length)];
+        const duration = Math.random() * 2 + 3.5;
+        const delay = Math.random() * 2.5;
+        const spinDir = i % 2 === 0 ? 1 : -1;
+        return (
+          <motion.div
+            key={i}
+            initial={{ top: -20, left: `${startX}%`, opacity: 1, rotate: 0, scale: Math.random() * 0.5 + 0.6 }}
+            animate={{
+              top: '110%',
+              left: `${startX + driftX}%`,
+              rotate: spinDir * (Math.random() * 540 + 180),
+              opacity: [1, 1, 1, 0.6, 0],
+            }}
+            transition={{ duration, ease: 'easeIn', delay }}
+            style={{
+              position: 'absolute',
+              width: isCircle ? size : size * 1.8,
+              height: isCircle ? size : size * 0.55,
+              backgroundColor: color,
+              borderRadius: isCircle ? '50%' : '2px',
+            }}
+          />
+        );
+      })}
     </div>
   );
 };
