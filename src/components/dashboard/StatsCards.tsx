@@ -1,4 +1,5 @@
 import { motion } from 'framer-motion'
+import { useMemo } from 'react'
 import { Users, Package, AlertTriangle, ShoppingBag, TrendingUp } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/lib/skeleton'
@@ -84,10 +85,18 @@ export const StatsCards = () => {
     const totalClients = clients && Array.isArray(clients) ? clients.length : 0
     const countClientsActivos = clientsActivos?.activos_anio ?? 0
 
-    const totalProducts = products && Array.isArray(products) ? products.length : 0
-    const productsInStock = products && Array.isArray(products) ? products.filter(p => (p.stock ?? 0) > 0).length : 0
-
-    const outOfStock = products && Array.isArray(products) ? products.filter(p => (p.stock ?? 0) === 0).length : 0
+    // products puede traer miles de registros (14k+): se recorre una sola vez
+    // y solo cuando products cambia, no en cada render de StatsCards.
+    const { totalProducts, productsInStock, outOfStock } = useMemo(() => {
+        if (!products || !Array.isArray(products)) {
+            return { totalProducts: 0, productsInStock: 0, outOfStock: 0 }
+        }
+        let inStock = 0
+        for (const p of products) {
+            if ((p.stock ?? 0) > 0) inStock++
+        }
+        return { totalProducts: products.length, productsInStock: inStock, outOfStock: products.length - inStock }
+    }, [products])
 
     const totalPedidosSemana = pedidos && Array.isArray(pedidos) ? pedidos.length : 0
 
