@@ -3,17 +3,21 @@ import { ResponsiveBar } from '@nivo/bar'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/lib/skeleton'
 import { ErrorBoundary } from '@/components/ui/error-boundary'
-import { useVendors } from '@/hooks/useReports'
+import { useSalesSummary } from '@/hooks/useReports'
 import { formatters } from '@/utils/formatters'
 
 const VendorsChartContent = () => {
-    const { data: vendors, isLoading, error } = useVendors()
+    // /reports/vendors está vacío en el backend por ahora (ver
+    // docs/rendimiento-catalogos.md); el dato real de ventas por
+    // vendedor viene de /reports/sales-summary, igual que en
+    // SalesSummaryPage.
+    const { data: sales, isLoading, error } = useSalesSummary()
 
-    const chartData = vendors && Array.isArray(vendors)
+    const chartData = sales && Array.isArray(sales)
         ? Object.entries(
-            vendors.reduce((acc, vendor) => {
-                const nombre = vendor['Nombre vendedor'] || 'Sin Vendedor'
-                acc[nombre] = (acc[nombre] || 0) + (vendor['Valor neto'] || 0)
+            sales.reduce((acc, sale) => {
+                const nombre = sale['Vendedor'] || 'Sin Vendedor'
+                acc[nombre] = (acc[nombre] || 0) + (sale['Vlr. Neto documento'] || 0)
                 return acc
             }, {} as Record<string, number>)
         )
@@ -57,9 +61,8 @@ const VendorsChartContent = () => {
                 <CardHeader>
                     <CardTitle>Top Vendedores</CardTitle>
                 </CardHeader>
-                <CardContent className="flex h-[280px] flex-col items-center justify-center gap-1 text-center text-sm text-muted-foreground">
-                    <p>No hay ventas registradas por vendedor todavía</p>
-                    <p className="text-xs">El backend no tiene datos en este momento, no es un error de carga</p>
+                <CardContent className="flex h-[280px] items-center justify-center text-sm text-muted-foreground">
+                    Sin datos disponibles
                 </CardContent>
             </Card>
         )
