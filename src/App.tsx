@@ -37,6 +37,7 @@ const EgresoPage = lazy(() => import('@/pages/EgresoPage').then(m => ({ default:
 const FerregangaPage = lazy(() => import('@/pages/FerregangaPage'))
 const ReciboCajaPage = lazy(() => import('@/pages/ReciboCajaPage').then(m => ({ default: m.ReciboCajaPage })))
 const TesoreriaEntregaRecaudoPage = lazy(() => import('@/pages/TesoreriaEntregaRecaudoPage').then(m => ({ default: m.TesoreriaEntregaRecaudoPage })))
+const TrasladoFondosPage = lazy(() => import('@/pages/TrasladoFondosPage').then(m => ({ default: m.TrasladoFondosPage })))
 
 const queryClient = new QueryClient({
     defaultOptions: {
@@ -73,6 +74,11 @@ function AppLayout() {
                             {/* Gestión de Ventas: protegido por VER_RECIBO */}
                             <Route path="/facturas/gestion-ventas" element={
                                 <ProtectedRoute permiso={PERMISOS.GESTION_VENTAS}><GestionVentasPage /></ProtectedRoute>
+                            } />
+
+                            {/* Traslado de Fondos: solo Administrador (permiso asignado exclusivamente a ese rol en backend) */}
+                            <Route path="/tesoreria/traslado-fondos" element={
+                                <ProtectedRoute permiso={PERMISOS.TRASLADO_FONDOS}><TrasladoFondosPage /></ProtectedRoute>
                             } />
 
                             {/* Rutas sin permiso aún en backend — accesibles a cualquier usuario autenticado */}

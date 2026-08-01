@@ -12,6 +12,9 @@ export const PERMISOS = {
   VIATICOS:               'VER_VIATICO',
   LEGALIZACION_ANTICIPO:  'VER_LEGALIZACION_ANTICIPO',
   CONDUCTOR:              'MODULO_CONDUCTOR',
+  // Traslado de Fondos (caja -> caja): por ahora solo el rol Administrador
+  // debe tener este permiso asignado en backend. Ver docs/traslado-fondos.md
+  TRASLADO_FONDOS:        'TRASLADO_FONDOS',
 
   // --- Acciones sobre anticipos ---
   CREAR_ANTICIPO:         'CREAR_ANTICIPO',

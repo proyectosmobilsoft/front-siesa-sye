@@ -300,6 +300,39 @@ export interface MovimientosEfectivoResponse {
   data: MovimientoEfectivo[]
 }
 
+/**
+ * Traslado de Fondos: movimiento manual entre dos cajas (caja origen -> caja
+ * destino), solo disponible para el rol Administrador. Ver
+ * docs/traslado-fondos.md para el contrato completo con backend.
+ */
+export type TrasladoFondosEstado = 'PENDIENTE' | 'CONFIRMADO' | 'RECHAZADO'
+
+export interface TrasladoFondos {
+  id: number
+  caja_origen_id: string
+  caja_origen_nombre: string
+  caja_destino_id: string
+  caja_destino_nombre: string
+  valor: number
+  referencia: string | null
+  estado: TrasladoFondosEstado
+  usuario_registro: number
+  usuario_registro_nombre?: string
+  fecha: string
+  created_at: string
+}
+
+export interface TrasladoFondosResponse {
+  success: boolean
+  data: TrasladoFondos
+}
+
+export interface TrasladosFondosResponse {
+  success: boolean
+  total: number
+  data: TrasladoFondos[]
+}
+
 export interface FacturaAfectadaRC {
   Rowid: number
   Tipo: string

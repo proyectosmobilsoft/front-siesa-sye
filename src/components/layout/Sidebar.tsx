@@ -25,6 +25,7 @@ import {
     User,
     Landmark,
     Banknote,
+    ArrowRightLeft,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useUIStore } from '@/store/uiStore'
@@ -95,6 +96,7 @@ const navigation: NavItem[] = [
         subItems: [
             { name: 'Recibo de Caja', href: '/tesoreria/recibo-caja', icon: Receipt },
             { name: 'Entrega de Recaudo', href: '/tesoreria/entrega-recaudo', icon: Banknote },
+            { name: 'Traslado de Fondos', href: '/tesoreria/traslado-fondos', icon: ArrowRightLeft, permiso: PERMISOS.TRASLADO_FONDOS },
         ]
     },
     { name: 'Configuración', href: '/configuracion', icon: Settings },

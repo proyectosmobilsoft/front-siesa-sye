@@ -53,6 +53,7 @@ const PAGE_SUBTITLES: Record<string, string> = {
     '/maestro/descuentos-financieros': 'Condiciones y descuentos de pago',
     '/tesoreria/recibo-caja': 'Consulta y arqueo de recibos de caja',
     '/tesoreria/entrega-recaudo': 'Validación y conciliación de efectivo de conductores',
+    '/tesoreria/traslado-fondos': 'Movimientos manuales de efectivo entre cajas',
     '/configuracion': 'Preferencias del sistema',
     '/configuracion/seguridad': 'Configuración de seguridad',
     '/ayuda': 'Documentación y soporte',
