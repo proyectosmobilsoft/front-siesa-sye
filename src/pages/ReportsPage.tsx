@@ -11,7 +11,7 @@ import { ResponsiveBar } from '@nivo/bar'
 import { ResponsiveLine } from '@nivo/line'
 import { DataTable } from '@/components/dashboard/DataTable'
 import { formatters } from '@/utils/formatters'
-import { PieChart, BarChart3, Clock, LineChart } from 'lucide-react'
+import { PieChart, BarChart3, Clock, LineChart, ArrowRight } from 'lucide-react'
 
 // Theme compartido para los gráficos Nivo: usa los tokens semánticos del
 // proyecto para que texto/ejes se lean bien tanto en claro como en oscuro.
@@ -192,10 +192,28 @@ export const ReportsPage = () => {
                                     <p className="text-xs text-muted-foreground">
                                         {formatters.abbreviate(topStatus.value)} pedidos · {topStatusPct}% del total
                                     </p>
+                                    <div className="h-16">
+                                        <ResponsivePie
+                                            data={ordersByStatusData}
+                                            margin={{ top: 2, right: 2, bottom: 2, left: 2 }}
+                                            innerRadius={0.5}
+                                            padAngle={1}
+                                            cornerRadius={2}
+                                            colors={{ scheme: 'category10' }}
+                                            enableArcLinkLabels={false}
+                                            enableArcLabels={false}
+                                            isInteractive={false}
+                                            animate={false}
+                                            legends={[]}
+                                        />
+                                    </div>
                                 </>
                             ) : (
                                 <p className="text-sm text-muted-foreground">Sin datos</p>
                             )}
+                            <p className="mt-1 flex items-center justify-end gap-1 text-xs font-medium text-primary">
+                                Abrir Detalle <ArrowRight className="h-3 w-3" />
+                            </p>
                         </CardContent>
                     </Card>
 
@@ -219,10 +237,33 @@ export const ReportsPage = () => {
                                     <p className="text-xs text-muted-foreground">
                                         {formatters.abbreviate(topCompany.pedidos)} pedidos · {topCompanyPct}% del total
                                     </p>
+                                    <div className="h-16">
+                                        <ResponsiveBar
+                                            data={ordersByCompanyData}
+                                            keys={['pedidos']}
+                                            indexBy="compañía"
+                                            margin={{ top: 2, right: 2, bottom: 2, left: 2 }}
+                                            padding={0.3}
+                                            colors={{ scheme: 'category10' }}
+                                            axisTop={null}
+                                            axisRight={null}
+                                            axisBottom={null}
+                                            axisLeft={null}
+                                            enableLabel={false}
+                                            enableGridX={false}
+                                            enableGridY={false}
+                                            isInteractive={false}
+                                            animate={false}
+                                            legends={[]}
+                                        />
+                                    </div>
                                 </>
                             ) : (
                                 <p className="text-sm text-muted-foreground">Sin datos</p>
                             )}
+                            <p className="mt-1 flex items-center justify-end gap-1 text-xs font-medium text-primary">
+                                Abrir Detalle <ArrowRight className="h-3 w-3" />
+                            </p>
                         </CardContent>
                     </Card>
 
@@ -244,10 +285,34 @@ export const ReportsPage = () => {
                                     <p className="text-xs text-muted-foreground">
                                         Hora pico · {formatters.abbreviate(peakHour.pedidos)} pedidos
                                     </p>
+                                    <div className="h-16">
+                                        <ResponsiveBar
+                                            data={ordersByHourData}
+                                            keys={['pedidos']}
+                                            indexBy="hora"
+                                            margin={{ top: 2, right: 2, bottom: 2, left: 2 }}
+                                            padding={0.3}
+                                            layout="horizontal"
+                                            colors="hsl(var(--primary))"
+                                            axisTop={null}
+                                            axisRight={null}
+                                            axisBottom={null}
+                                            axisLeft={null}
+                                            enableLabel={false}
+                                            enableGridX={false}
+                                            enableGridY={false}
+                                            isInteractive={false}
+                                            animate={false}
+                                            legends={[]}
+                                        />
+                                    </div>
                                 </>
                             ) : (
                                 <p className="text-sm text-muted-foreground">Sin datos</p>
                             )}
+                            <p className="mt-1 flex items-center justify-end gap-1 text-xs font-medium text-primary">
+                                Abrir Detalle <ArrowRight className="h-3 w-3" />
+                            </p>
                         </CardContent>
                     </Card>
 
@@ -266,6 +331,33 @@ export const ReportsPage = () => {
                             <div className="text-2xl font-bold">{formatters.abbreviate(totalPedidos)}</div>
                             <p className="text-xs text-muted-foreground">
                                 Total del día · {hoursWithData} franjas horarias
+                            </p>
+                            <div className="h-16">
+                                <ResponsiveLine
+                                    data={evolutionByHourData}
+                                    margin={{ top: 2, right: 2, bottom: 2, left: 2 }}
+                                    xScale={{ type: 'point' }}
+                                    yScale={{ type: 'linear', min: 'auto', max: 'auto', stacked: false, reverse: false }}
+                                    axisTop={null}
+                                    axisRight={null}
+                                    axisBottom={null}
+                                    axisLeft={null}
+                                    enableGridX={false}
+                                    enableGridY={false}
+                                    colors={['hsl(var(--primary))']}
+                                    lineWidth={2}
+                                    pointSize={0}
+                                    enablePoints={false}
+                                    enableArea={true}
+                                    areaOpacity={0.15}
+                                    useMesh={false}
+                                    isInteractive={false}
+                                    animate={false}
+                                    legends={[]}
+                                />
+                            </div>
+                            <p className="mt-1 flex items-center justify-end gap-1 text-xs font-medium text-primary">
+                                Abrir Detalle <ArrowRight className="h-3 w-3" />
                             </p>
                         </CardContent>
                     </Card>

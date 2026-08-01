@@ -24,7 +24,8 @@ import {
     Layers,
     LineChart,
     Activity,
-    ChevronRight
+    ChevronRight,
+    ArrowRight
 } from 'lucide-react'
 
 type ChartKey = 'vendor-bar' | 'vendor-pie' | 'stacked-units' | 'hour-evolution' | 'scatter'
@@ -419,6 +420,28 @@ export const SalesSummaryPage = () => {
                                 <p className="text-xs text-muted-foreground mt-1">
                                     Top vendedor: {topVendor ? formatters.currency(topVendor.ventas) : 'Sin datos'}
                                 </p>
+                                <div className="h-16 mt-2">
+                                    <ResponsiveBar
+                                        data={salesByVendorData.slice(0, 10)}
+                                        keys={['ventas']}
+                                        indexBy="vendedor"
+                                        margin={{ top: 2, right: 2, bottom: 2, left: 2 }}
+                                        padding={0.3}
+                                        colors={(d) => d.data.color}
+                                        axisTop={null}
+                                        axisRight={null}
+                                        axisBottom={null}
+                                        axisLeft={null}
+                                        enableLabel={false}
+                                        enableGridX={false}
+                                        enableGridY={false}
+                                        isInteractive={false}
+                                        animate={false}
+                                    />
+                                </div>
+                                <p className="text-xs font-medium text-primary mt-2 flex items-center gap-1">
+                                    Abrir Detalle <ArrowRight className="h-3 w-3" />
+                                </p>
                             </CardContent>
                         </Card>
                     </button>
@@ -446,6 +469,23 @@ export const SalesSummaryPage = () => {
                                         ? `${((topVendor.ventas / totalSales) * 100).toFixed(1)}% del total vendido`
                                         : 'Sin datos'}
                                 </p>
+                                <div className="h-16 mt-2">
+                                    <ResponsivePie
+                                        data={pieData.slice(0, 8)}
+                                        margin={{ top: 2, right: 2, bottom: 2, left: 2 }}
+                                        innerRadius={0.6}
+                                        padAngle={2}
+                                        cornerRadius={2}
+                                        colors={(d) => d.data.color}
+                                        enableArcLinkLabels={false}
+                                        enableArcLabels={false}
+                                        isInteractive={false}
+                                        animate={false}
+                                    />
+                                </div>
+                                <p className="text-xs font-medium text-primary mt-2 flex items-center gap-1">
+                                    Abrir Detalle <ArrowRight className="h-3 w-3" />
+                                </p>
                             </CardContent>
                         </Card>
                     </button>
@@ -471,6 +511,28 @@ export const SalesSummaryPage = () => {
                                 <p className="text-xs text-muted-foreground mt-1">
                                     {topDocType ? `${formatters.number(topDocType[1])} unidades (tipo top)` : 'Sin datos'}
                                 </p>
+                                <div className="h-16 mt-2">
+                                    <ResponsiveBar
+                                        data={stackedBarData}
+                                        keys={docTypesKeys}
+                                        indexBy="vendedor"
+                                        margin={{ top: 2, right: 2, bottom: 2, left: 2 }}
+                                        padding={0.3}
+                                        colors={colorPalette}
+                                        axisTop={null}
+                                        axisRight={null}
+                                        axisBottom={null}
+                                        axisLeft={null}
+                                        enableLabel={false}
+                                        enableGridX={false}
+                                        enableGridY={false}
+                                        isInteractive={false}
+                                        animate={false}
+                                    />
+                                </div>
+                                <p className="text-xs font-medium text-primary mt-2 flex items-center gap-1">
+                                    Abrir Detalle <ArrowRight className="h-3 w-3" />
+                                </p>
                             </CardContent>
                         </Card>
                     </button>
@@ -495,6 +557,32 @@ export const SalesSummaryPage = () => {
                                 </div>
                                 <p className="text-xs text-muted-foreground mt-1">
                                     {peakHour ? formatters.currency(peakHour.y as number) : 'Sin datos'}
+                                </p>
+                                <div className="h-16 mt-2">
+                                    <ResponsiveLine
+                                        data={evolutionByHourData}
+                                        margin={{ top: 4, right: 4, bottom: 4, left: 4 }}
+                                        xScale={{ type: 'point' }}
+                                        yScale={{ type: 'linear', min: 'auto', max: 'auto', stacked: false, reverse: false }}
+                                        axisTop={null}
+                                        axisRight={null}
+                                        axisBottom={null}
+                                        axisLeft={null}
+                                        colors={[colors.indigo]}
+                                        lineWidth={2}
+                                        curve="monotoneX"
+                                        enableGridX={false}
+                                        enableGridY={false}
+                                        enablePoints={false}
+                                        enableArea={true}
+                                        areaOpacity={0.25}
+                                        isInteractive={false}
+                                        animate={false}
+                                        useMesh={false}
+                                    />
+                                </div>
+                                <p className="text-xs font-medium text-primary mt-2 flex items-center gap-1">
+                                    Abrir Detalle <ArrowRight className="h-3 w-3" />
                                 </p>
                             </CardContent>
                         </Card>
@@ -522,6 +610,25 @@ export const SalesSummaryPage = () => {
                                     {scatterData.length > 0
                                         ? `Ticket promedio: ${formatters.currency(topVendorAvgTicket)}`
                                         : 'Sin datos'}
+                                </p>
+                                <div className="h-16 mt-2">
+                                    <ResponsiveScatterPlot
+                                        data={scatterData}
+                                        margin={{ top: 4, right: 4, bottom: 4, left: 4 }}
+                                        xScale={{ type: 'linear', min: 'auto', max: 'auto' }}
+                                        yScale={{ type: 'linear', min: 'auto', max: 'auto' }}
+                                        colors={(d) => scatterData.find((s) => s.id === d.serieId)?.color ?? colorPalette[0]}
+                                        nodeSize={6}
+                                        axisTop={null}
+                                        axisRight={null}
+                                        axisBottom={null}
+                                        axisLeft={null}
+                                        isInteractive={false}
+                                        animate={false}
+                                    />
+                                </div>
+                                <p className="text-xs font-medium text-primary mt-2 flex items-center gap-1">
+                                    Abrir Detalle <ArrowRight className="h-3 w-3" />
                                 </p>
                             </CardContent>
                         </Card>

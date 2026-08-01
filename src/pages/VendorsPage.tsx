@@ -19,7 +19,8 @@ import {
     PieChart,
     Package,
     Filter,
-    X
+    X,
+    ArrowRight
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Select } from '@/components/ui/select'
@@ -387,7 +388,32 @@ export const VendorsPage = () => {
                                 ) : (
                                     <p className="text-sm text-muted-foreground">Sin datos disponibles</p>
                                 )}
-                                <p className="text-xs text-primary mt-3">Ver detalle completo →</p>
+                                {salesByVendorData.length > 0 && (
+                                    <div className="h-16 mt-3">
+                                        <ResponsiveBar
+                                            data={salesByVendorData}
+                                            keys={['ventas']}
+                                            indexBy="vendedor"
+                                            margin={{ top: 4, right: 4, bottom: 4, left: 4 }}
+                                            padding={0.4}
+                                            valueScale={{ type: 'linear' }}
+                                            indexScale={{ type: 'band', round: true }}
+                                            colors={(d) => d.data.color}
+                                            axisTop={null}
+                                            axisRight={null}
+                                            axisBottom={null}
+                                            axisLeft={null}
+                                            enableLabel={false}
+                                            enableGridX={false}
+                                            enableGridY={false}
+                                            isInteractive={false}
+                                            animate={false}
+                                        />
+                                    </div>
+                                )}
+                                <p className="text-xs font-medium text-primary mt-3 flex items-center gap-1">
+                                    Abrir Detalle <ArrowRight className="h-3 w-3" />
+                                </p>
                             </CardContent>
                         </Card>
                     </button>
@@ -424,7 +450,27 @@ export const VendorsPage = () => {
                                 ) : (
                                     <p className="text-sm text-muted-foreground">Sin datos disponibles</p>
                                 )}
-                                <p className="text-xs text-primary mt-3">Ver detalle completo →</p>
+                                {documentTypeData.length > 0 && (
+                                    <div className="h-16 mt-3">
+                                        <ResponsivePie
+                                            data={documentTypeData}
+                                            margin={{ top: 4, right: 4, bottom: 4, left: 4 }}
+                                            innerRadius={0.6}
+                                            padAngle={2}
+                                            cornerRadius={2}
+                                            colors={(d) => d.data.color}
+                                            borderWidth={0}
+                                            enableArcLabels={false}
+                                            enableArcLinkLabels={false}
+                                            isInteractive={false}
+                                            animate={false}
+                                            legends={[]}
+                                        />
+                                    </div>
+                                )}
+                                <p className="text-xs font-medium text-primary mt-3 flex items-center gap-1">
+                                    Abrir Detalle <ArrowRight className="h-3 w-3" />
+                                </p>
                             </CardContent>
                         </Card>
                     </button>
@@ -457,7 +503,32 @@ export const VendorsPage = () => {
                                 ) : (
                                     <p className="text-sm text-muted-foreground">Sin datos disponibles</p>
                                 )}
-                                <p className="text-xs text-primary mt-3">Ver detalle completo →</p>
+                                {unitsByVendorData.length > 0 && (
+                                    <div className="h-16 mt-3">
+                                        <ResponsiveBar
+                                            data={unitsByVendorData}
+                                            keys={['unidades']}
+                                            indexBy="vendedor"
+                                            margin={{ top: 4, right: 4, bottom: 4, left: 4 }}
+                                            padding={0.4}
+                                            valueScale={{ type: 'linear' }}
+                                            indexScale={{ type: 'band', round: true }}
+                                            colors={(d) => d.data.color}
+                                            axisTop={null}
+                                            axisRight={null}
+                                            axisBottom={null}
+                                            axisLeft={null}
+                                            enableLabel={false}
+                                            enableGridX={false}
+                                            enableGridY={false}
+                                            isInteractive={false}
+                                            animate={false}
+                                        />
+                                    </div>
+                                )}
+                                <p className="text-xs font-medium text-primary mt-3 flex items-center gap-1">
+                                    Abrir Detalle <ArrowRight className="h-3 w-3" />
+                                </p>
                             </CardContent>
                         </Card>
                     </button>
