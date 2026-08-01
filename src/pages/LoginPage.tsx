@@ -176,7 +176,7 @@ export const LoginPage = () => {
                 transition={{ duration: 0.5, ease: 'easeOut' }}
                 className="w-full max-w-md mx-4 z-10"
             >
-                <div className="bg-white/90 backdrop-blur-md rounded-3xl shadow-2xl shadow-slate-200 px-8 py-10 border border-white">
+                <div className="bg-white/90 rounded-3xl shadow-2xl shadow-slate-200 px-8 py-10 border border-white">
                     {/* Logo */}
                     <div className="flex justify-center mb-4">
                         <img src="/icon.png" alt="SYE Distribuciones" className="h-16 object-contain" />

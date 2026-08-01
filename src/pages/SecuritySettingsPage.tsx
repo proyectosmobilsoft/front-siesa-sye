@@ -324,7 +324,6 @@ export const SecuritySettingsPage = () => {
                 <div className="flex flex-col items-center text-center py-4">
                     {/* Icono grande animado */}
                     <div className="relative mb-6">
-                        <div className="absolute inset-0 bg-destructive/20 rounded-full blur-xl animate-pulse" />
                         <div className="relative h-20 w-20 rounded-full bg-gradient-to-br from-red-50 to-red-100 dark:from-red-950/50 dark:to-red-900/30 border-2 border-red-200 dark:border-red-800 flex items-center justify-center">
                             <AlertTriangle className="h-10 w-10 text-destructive" />
                         </div>
