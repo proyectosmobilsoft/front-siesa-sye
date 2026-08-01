@@ -1,7 +1,7 @@
 import { motion } from 'framer-motion'
 import { useState, useEffect, useRef } from 'react'
-import { Users, Search, UserPlus, Edit, Trash2, RefreshCw, Loader2 } from 'lucide-react'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Search, UserPlus, Edit, Trash2, RefreshCw, Loader2 } from 'lucide-react'
+import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { UserMasterModal } from '@/components/security/UserMasterModal'
@@ -101,10 +101,9 @@ export const MaestroUsuariosPage = () => {
 
             <Card className="border-2 border-primary/20 bg-gradient-to-br from-background to-primary/5">
                 <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-4">
-                    <CardTitle className="flex items-center gap-2">
-                        <Users className="h-5 w-5 text-primary" />
-                        Directorio de Usuarios
-                    </CardTitle>
+                    <p className="text-sm text-muted-foreground">
+                        {usuarios.length} {usuarios.length === 1 ? 'usuario' : 'usuarios'}
+                    </p>
                     <div className="flex items-center gap-3 w-full sm:w-auto">
                         <div className="relative flex-1 sm:w-64">
                             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />

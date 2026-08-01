@@ -1,7 +1,7 @@
 import { motion } from 'framer-motion'
 import { useState, useEffect, useRef } from 'react'
-import { Percent, Search, Plus, Edit, Trash2, RefreshCw, Loader2 } from 'lucide-react'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Search, Plus, Edit, Trash2, RefreshCw, Loader2 } from 'lucide-react'
+import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { CondicionPagoModal } from '@/components/financiero/CondicionPagoModal'
@@ -110,10 +110,9 @@ export const MaestroDescuentosFinancierosPage = () => {
 
             <Card className="border-2 border-primary/20 bg-gradient-to-br from-background to-primary/5">
                 <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-4">
-                    <CardTitle className="flex items-center gap-2">
-                        <Percent className="h-5 w-5 text-primary" />
-                        Condiciones de Pago
-                    </CardTitle>
+                    <p className="text-sm text-muted-foreground">
+                        {condiciones.length} {condiciones.length === 1 ? 'condición' : 'condiciones'}
+                    </p>
                     <div className="flex items-center gap-3 w-full sm:w-auto">
                         <div className="relative flex-1 sm:w-64">
                             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />

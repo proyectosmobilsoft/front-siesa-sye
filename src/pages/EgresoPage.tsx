@@ -7,7 +7,6 @@ import {
     Edit,
     RefreshCw,
     Loader2,
-    Wallet,
     ArrowUpDown,
     ChevronRight,
     Users,
@@ -885,10 +884,11 @@ export const EgresoPage = () => {
                 >
                     <Card className="border-2 border-primary/20 bg-gradient-to-br from-background to-primary/5">
                         <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-4">
-                            <CardTitle className="flex items-center gap-2">
-                                <Wallet className="h-5 w-5 text-primary" />
-                                Anticipos Operativos
-                            </CardTitle>
+                            {solicitudes && (
+                                <p className="text-sm text-muted-foreground">
+                                    {solicitudes.length} {solicitudes.length === 1 ? 'registro' : 'registros'}
+                                </p>
+                            )}
                             <div className="relative w-full sm:w-72">
                                 <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                                 <Input

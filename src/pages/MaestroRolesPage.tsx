@@ -9,7 +9,7 @@ import {
 } from '@tanstack/react-table'
 import { ArrowLeft, Plus, Edit, Shield, Loader2, Trash2, AlertTriangle, Key, Lock, Search, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Modal } from '@/components/ui/modal'
 import { useNavigate } from 'react-router-dom'
@@ -305,13 +305,7 @@ export const MaestroRolesPage = () => {
             </div>
 
             <Card className="border-2 border-primary/20 bg-gradient-to-br from-background to-primary/5">
-                <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                    <div>
-                        <CardTitle className="flex items-center gap-2">
-                            <Shield className="h-5 w-5 text-primary" />
-                            Lista de Roles
-                        </CardTitle>
-                    </div>
+                <CardHeader className="flex flex-row items-center justify-end gap-4">
                     <Button onClick={handleNewRole} className="whitespace-nowrap">
                         <Plus className="mr-2 h-4 w-4" />
                         Nuevo Rol

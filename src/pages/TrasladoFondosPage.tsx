@@ -108,22 +108,6 @@ export const TrasladoFondosPage = () => {
 
     return (
         <div className="mx-auto max-w-4xl space-y-6 p-4 sm:p-6">
-            {/* Header */}
-            <motion.div
-                initial={{ opacity: 0, y: -10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.4 }}
-                className="flex items-center gap-3"
-            >
-                <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-primary shadow-sm">
-                    <ArrowRightLeft className="h-5 w-5 text-primary-foreground" />
-                </div>
-                <div>
-                    <h1 className="text-xl font-bold tracking-tight">Traslado de Fondos</h1>
-                    <p className="text-sm text-muted-foreground">Mueve efectivo de una caja a otra · solo Administrador</p>
-                </div>
-            </motion.div>
-
             {/* Formulario */}
             <motion.div
                 initial={{ opacity: 0, y: 12 }}

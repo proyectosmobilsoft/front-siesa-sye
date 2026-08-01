@@ -1,108 +1,13 @@
 import { motion } from 'framer-motion'
 import { Link, useLocation } from 'react-router-dom'
 import { useEffect, useState } from 'react'
-import {
-    BarChart3,
-    Users,
-    Package,
-    FileText,
-    Settings,
-    X,
-    ChevronDown,
-    ChevronRight,
-    ClipboardList,
-    TrendingUp,
-    UserCircle,
-    Receipt,
-    ShoppingCart,
-    ShoppingBag,
-    Ticket,
-    TrendingDown,
-    Shield,
-    UserPlus,
-    Percent,
-    Wallet,
-    User,
-    Landmark,
-    Banknote,
-    ArrowRightLeft,
-} from 'lucide-react'
+import { BarChart3, X, ChevronDown, ChevronRight } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useUIStore } from '@/store/uiStore'
 import { useAuthStore } from '@/store/authStore'
 import { useMediaQuery } from '@/hooks/useMediaQuery'
 import { cn } from '@/lib/utils'
-import { PERMISOS } from '@/config/permisos'
-
-interface SubNavItem {
-    name: string
-    href: string
-    icon: React.ComponentType<{ className?: string }>
-    permiso?: string
-}
-
-interface NavItem {
-    name: string
-    href?: string
-    icon: React.ComponentType<{ className?: string }>
-    permiso?: string
-    subItems?: SubNavItem[]
-}
-
-const navigation: NavItem[] = [
-    // Dashboard: siempre visible para usuarios autenticados
-    { name: 'Dashboard', href: '/', icon: BarChart3 },
-
-    // Módulos sin permiso aún en backend → visibles para todos los autenticados
-    { name: 'Clientes',  href: '/clientes',  icon: User },
-    { name: 'Productos', href: '/productos', icon: Package },
-    { name: 'Pedidos',   href: '/pedidos',   icon: ShoppingBag },
-    { name: 'Ferreganga', href: '/ferreganga', icon: Ticket },
-
-    // Egreso/Anticipos: requiere VER_ANTICIPO
-    { name: 'Egreso', href: '/egreso', icon: Wallet, permiso: PERMISOS.EGRESO },
-
-    {
-        name: 'Facturas',
-        icon: Receipt,
-        subItems: [
-            // Gestión de Ventas (recibos): requiere VER_RECIBO
-            { name: 'Gestión de Ventas',   href: '/facturas/gestion-ventas',    icon: ShoppingCart, permiso: PERMISOS.GESTION_VENTAS },
-            // Análisis Financiero: sin permiso aún en backend
-            { name: 'Análisis Financiero', href: '/facturas/analisis-financiero', icon: TrendingDown },
-        ]
-    },
-    {
-        name: 'Reportes',
-        icon: FileText,
-        subItems: [
-            { name: 'Pedidos Diarios', href: '/reportes',           icon: ClipboardList },
-            { name: 'Resumen Ventas',  href: '/reportes/ventas',    icon: TrendingUp },
-            { name: 'Vendedores',      href: '/reportes/vendedores', icon: UserCircle },
-        ]
-    },
-    {
-        name: 'Maestro',
-        icon: Users,
-        subItems: [
-            { name: 'Maestro de Roles',        href: '/maestro/roles',                    icon: Shield },
-            { name: 'Maestro de Usuarios',     href: '/maestro/usuarios',                 icon: UserPlus },
-            { name: 'Descuentos Financieros',  href: '/maestro/descuentos-financieros',   icon: Percent },
-        ]
-    },
-    {
-        name: 'Tesorería',
-        icon: Landmark,
-        subItems: [
-            { name: 'Recibo de Caja', href: '/tesoreria/recibo-caja', icon: Receipt },
-            { name: 'Entrega de Recaudo', href: '/tesoreria/entrega-recaudo', icon: Banknote },
-            // Sin permiso todavía en backend (ver docs/traslado-fondos.md): visible para
-            // cualquier autenticado, igual que el resto de módulos sin permiso aún.
-            { name: 'Traslado de Fondos', href: '/tesoreria/traslado-fondos', icon: ArrowRightLeft },
-        ]
-    },
-    { name: 'Configuración', href: '/configuracion', icon: Settings },
-]
+import { navigation, getPageMeta, NavItem } from '@/config/navigation'
 
 export const Sidebar = () => {
     const { sidebarOpen, setSidebarOpen } = useUIStore()
@@ -145,19 +50,7 @@ export const Sidebar = () => {
         })
     }, [location.pathname]) // eslint-disable-line react-hooks/exhaustive-deps
 
-    const getCurrentPageInfo = () => {
-        for (const item of navFiltrado) {
-            if (item.subItems) {
-                const sub = item.subItems.find((s) => s.href === location.pathname)
-                if (sub) return { name: sub.name, icon: sub.icon }
-            } else if (item.href === location.pathname) {
-                return { name: item.name, icon: item.icon }
-            }
-        }
-        return { name: 'Dashboard', icon: BarChart3 }
-    }
-
-    const currentPage = getCurrentPageInfo()
+    const currentPage = getPageMeta(location.pathname) ?? { name: 'Dashboard', icon: BarChart3 }
 
     const toggleExpanded = (itemName: string) => {
         setExpandedItems((prev) => {

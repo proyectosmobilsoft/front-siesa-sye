@@ -242,14 +242,6 @@ export const SalesSummaryPage = () => {
     return (
         <ErrorBoundary>
             <div className="flex-1 space-y-6 p-6">
-                {/* Header */}
-                <motion.div
-                    initial={{ opacity: 0, y: -20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.5 }}
-                >
-                </motion.div>
-
                 {/* Cards de Estadísticas */}
                 <motion.div
                     className="grid gap-4 md:grid-cols-2 lg:grid-cols-5"

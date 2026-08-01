@@ -7,9 +7,9 @@ import {
     getPaginationRowModel,
     useReactTable,
 } from '@tanstack/react-table'
-import { ArrowLeft, UserPlus, Edit, Shield, Activity, Search, RefreshCw, Loader2, Trash2, AlertTriangle } from 'lucide-react'
+import { ArrowLeft, UserPlus, Edit, Activity, Search, RefreshCw, Loader2, Trash2, AlertTriangle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { useNavigate } from 'react-router-dom'
 import { UserFormModal } from '@/components/security/UserFormModal'
@@ -207,12 +207,9 @@ export const SecuritySettingsPage = () => {
 
             <Card className="border-2 border-primary/20 bg-gradient-to-br from-background to-primary/5">
                 <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                    <div>
-                        <CardTitle className="flex items-center gap-2">
-                            <Shield className="h-5 w-5 text-primary" />
-                            Directorio de Accesos
-                        </CardTitle>
-                    </div>
+                    <p className="text-sm text-muted-foreground">
+                        {usuarios.length} {usuarios.length === 1 ? 'usuario' : 'usuarios'}
+                    </p>
                     <div className="flex items-center gap-3 w-full sm:w-auto">
                         <div className="relative flex-1 sm:w-64">
                             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />

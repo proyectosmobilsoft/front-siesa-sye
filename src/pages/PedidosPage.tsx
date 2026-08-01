@@ -14,7 +14,7 @@ import {
 import { ArrowUpDown, Search, Send, AlertCircle, Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Skeleton } from '@/lib/skeleton'
 import { DatePicker } from '@/components/ui/date-picker'
 import { Modal } from '@/components/ui/modal'
@@ -344,17 +344,11 @@ export const PedidosPage = () => {
                 <Card className="border-2 border-primary/20 bg-gradient-to-br from-background to-primary/5">
                     <CardHeader className="space-y-4">
                         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                            <div>
-                                <CardTitle className="flex items-center gap-2">
-                                    <span className="text-primary">Pedidos</span>
-                                    {pedidos && (
-                                        <span className="ml-2 text-sm font-normal text-muted-foreground">
-                                            ({pedidos.length} {pedidos.length === 1 ? 'registro' : 'registros'})
-                                        </span>
-                                    )}
-                                </CardTitle>
-                                <p className="text-xs text-muted-foreground mt-1">Gestión y seguimiento de órdenes de venta</p>
-                            </div>
+                            {pedidos && (
+                                <p className="text-sm text-muted-foreground">
+                                    {pedidos.length} {pedidos.length === 1 ? 'registro' : 'registros'}
+                                </p>
+                            )}
 
                             {/* Integrated Filters inside Header */}
                             <div className="flex flex-col sm:flex-row items-end gap-3">

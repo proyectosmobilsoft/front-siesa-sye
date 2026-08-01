@@ -912,16 +912,7 @@ export const TesoreriaEntregaRecaudoPage = () => {
 
     return (
         <div className="mx-auto max-w-7xl space-y-5 p-4 sm:p-6">
-            <div className="sticky top-0 z-10 -mx-4 flex flex-wrap items-center justify-between gap-3 border-b border-transparent bg-background/80 px-4 py-2 backdrop-blur-sm sm:-mx-6 sm:px-6">
-                <div className="flex items-center gap-3">
-                    <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-primary">
-                        <Landmark className="h-5 w-5 text-primary-foreground" />
-                    </div>
-                    <div>
-                        <h1 className="text-xl font-bold tracking-tight">Entrega de Recaudo</h1>
-                        <p className="text-sm text-muted-foreground">Valida el efectivo entregado físicamente por los conductores</p>
-                    </div>
-                </div>
+            <div className="flex justify-end">
                 <Button variant="outline" size="sm" className="gap-2" onClick={refrescarTodo} disabled={refrescando}>
                     <RefreshCw className={cn('h-3.5 w-3.5', refrescando && 'animate-spin')} /> Actualizar
                 </Button>
