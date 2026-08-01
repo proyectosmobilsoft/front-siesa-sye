@@ -6,7 +6,6 @@ import { useDailyOrders } from '@/hooks/useReports'
 import { ResponsivePie } from '@nivo/pie'
 import { ResponsiveBar } from '@nivo/bar'
 import { ResponsiveLine } from '@nivo/line'
-import { DailyOrder } from '@/api/types'
 import { DataTable } from '@/components/dashboard/DataTable'
 import { formatters } from '@/utils/formatters'
 
@@ -306,8 +305,6 @@ export const ReportsPage = () => {
                                             legend: 'Compañía',
                                             legendPosition: 'middle',
                                             legendOffset: 60,
-                                            tickColor: '#ffffff',
-                                            legendColor: '#ffffff',
                                         }}
                                         axisLeft={{
                                             tickSize: 5,
@@ -316,8 +313,6 @@ export const ReportsPage = () => {
                                             legend: 'Cantidad de Pedidos',
                                             legendPosition: 'middle',
                                             legendOffset: -40,
-                                            tickColor: '#ffffff',
-                                            legendColor: '#ffffff',
                                         }}
                                         theme={{
                                             axis: {
@@ -327,10 +322,10 @@ export const ReportsPage = () => {
                                                 legend: {
                                                     text: { fill: '#ffffff' }
                                                 },
-                                                grid: {
-                                                    line: {
-                                                        stroke: 'rgba(255, 255, 255, 0.2)'
-                                                    }
+                                            },
+                                            grid: {
+                                                line: {
+                                                    stroke: 'rgba(255, 255, 255, 0.2)'
                                                 }
                                             }
                                         }}
@@ -422,8 +417,6 @@ export const ReportsPage = () => {
                                         legend: 'Cantidad de Pedidos',
                                         legendPosition: 'middle',
                                         legendOffset: 40,
-                                        tickColor: '#ffffff',
-                                        legendColor: '#ffffff',
                                         format: (v) => formatters.abbreviate(Number(v))
                                     }}
                                     axisLeft={{
@@ -433,8 +426,6 @@ export const ReportsPage = () => {
                                         legend: 'Hora',
                                         legendPosition: 'middle',
                                         legendOffset: -50,
-                                        tickColor: '#ffffff',
-                                        legendColor: '#ffffff',
                                     }}
                                     theme={{
                                         axis: {
@@ -444,10 +435,10 @@ export const ReportsPage = () => {
                                             legend: {
                                                 text: { fill: '#ffffff' }
                                             },
-                                            grid: {
-                                                line: {
-                                                    stroke: 'rgba(255, 255, 255, 0.2)'
-                                                }
+                                        },
+                                        grid: {
+                                            line: {
+                                                stroke: 'rgba(255, 255, 255, 0.2)'
                                             }
                                         }
                                     }}
@@ -456,7 +447,7 @@ export const ReportsPage = () => {
                                     labelTextColor="#ffffff"
                                     animate={true}
                                     motionConfig="gentle"
-                                    tooltip={({ id, value, indexValue, color }) => (
+                                    tooltip={({ value, indexValue, color }) => (
                                         <div
                                             style={{
                                                 display: 'flex',
@@ -549,8 +540,6 @@ export const ReportsPage = () => {
                                         legend: 'Hora',
                                         legendOffset: 36,
                                         legendPosition: 'middle',
-                                        tickColor: '#ffffff',
-                                        legendColor: '#ffffff',
                                     }}
                                     axisLeft={{
                                         tickSize: 5,
@@ -559,7 +548,6 @@ export const ReportsPage = () => {
                                         legend: 'Cantidad',
                                         legendOffset: -40,
                                         legendPosition: 'middle',
-                                        tickColor: '#ffffff',
                                         format: (v) => formatters.abbreviate(Number(v))
                                         }}
                                     theme={{
@@ -570,10 +558,10 @@ export const ReportsPage = () => {
                                             legend: {
                                                 text: { fill: '#ffffff' }
                                             },
-                                            grid: {
-                                                line: {
-                                                    stroke: 'rgba(255, 255, 255, 0.2)'
-                                                }
+                                        },
+                                        grid: {
+                                            line: {
+                                                stroke: 'rgba(255, 255, 255, 0.2)'
                                             }
                                         }
                                     }}
@@ -591,7 +579,7 @@ export const ReportsPage = () => {
                                     enableGridY={true}
                                     enablePoints={true}
                                     enablePointLabel={false}
-                                    pointLabel={(point) => `${point.data.yFormatted}`}
+                                    pointLabel={(point) => `${point.yFormatted}`}
                                     enableArea={false}
                                     areaOpacity={0.1}
                                     areaBlendMode="normal"
@@ -626,7 +614,11 @@ export const ReportsPage = () => {
                                                 boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
                                             }}
                                         >
-                                            <strong>{slice.id}:</strong> {slice.value}
+                                            {slice.points.map((point) => (
+                                                <div key={point.id}>
+                                                    <strong>{point.data.xFormatted}:</strong> {point.data.yFormatted}
+                                                </div>
+                                            ))}
                                         </div>
                                     )}
                                     enableCrosshair={true}

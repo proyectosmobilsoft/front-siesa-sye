@@ -18,7 +18,7 @@ export const MaestroUsuariosPage = () => {
     const [loading, setLoading] = useState(true)
     const [deleting, setDeleting] = useState(false)
     const [errorDelete, setErrorDelete] = useState<string | null>(null)
-    const [total, setTotal] = useState(0)
+    const [, setTotal] = useState(0)
     const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
     const fetchUsuarios = async (searchTerm = search) => {

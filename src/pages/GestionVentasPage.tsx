@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion'
-import { useState } from 'react'
+import { useState, ReactNode } from 'react'
 import {
     ColumnDef,
     flexRender,
@@ -84,7 +84,7 @@ export const GestionVentasPage = () => {
                 if (typeof value === 'string' && value.length > 50) {
                     return <div className="text-sm text-muted-foreground max-w-[200px] truncate" title={value}>{value}</div>
                 }
-                return <div className="text-sm">{value ?? <span className="text-muted-foreground italic">N/A</span>}</div>
+                return <div className="text-sm">{(value as ReactNode) ?? <span className="text-muted-foreground italic">N/A</span>}</div>
             },
         }))
     }

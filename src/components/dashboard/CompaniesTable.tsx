@@ -67,7 +67,7 @@ const CompaniesTableContent = () => {
                 )
             },
             cell: ({ row }) => {
-                const value = row.getValue('f010_razon_social')
+                const value = row.getValue('f010_razon_social') as string
                 return (
                     <div className="font-medium">
                         {value && String(value).trim() ? formatters.truncate(value, 30) : <span className="text-muted-foreground italic">Sin valor</span>}
@@ -79,7 +79,7 @@ const CompaniesTableContent = () => {
             accessorKey: 'f010_nit',
             header: 'NIT',
             cell: ({ row }) => {
-                const value = row.getValue('f010_nit')
+                const value = row.getValue('f010_nit') as string
                 return (
                     <div className="text-sm font-mono">
                         {value && String(value).trim() ? value : <span className="text-muted-foreground italic">Sin valor</span>}
@@ -119,7 +119,7 @@ const CompaniesTableContent = () => {
                 )
             },
             cell: ({ row }) => {
-                const value = row.getValue('f010_ult_ano_cerrado')
+                const value = row.getValue('f010_ult_ano_cerrado') as number | string | null | undefined
                 return (
                     <div className="text-sm">
                         {value !== null && value !== undefined && value !== '' ? value : <span className="text-muted-foreground italic">Sin valor</span>}
@@ -131,7 +131,7 @@ const CompaniesTableContent = () => {
             accessorKey: 'f010_telefono',
             header: 'Teléfono',
             cell: ({ row }) => {
-                const value = row.getValue('f010_telefono')
+                const value = row.getValue('f010_telefono') as string
                 const formatted = formatters.phone(value)
                 return (
                     <div className="text-sm">
@@ -144,7 +144,7 @@ const CompaniesTableContent = () => {
             accessorKey: 'f010_email',
             header: 'Email',
             cell: ({ row }) => {
-                const value = row.getValue('f010_email')
+                const value = row.getValue('f010_email') as string
                 return (
                     <div className="text-sm">
                         {value && String(value).trim() ? (
@@ -162,7 +162,7 @@ const CompaniesTableContent = () => {
             accessorKey: 'f010_fecha_creacion',
             header: 'Fecha Creación',
             cell: ({ row }) => {
-                const value = row.getValue('f010_fecha_creacion')
+                const value = row.getValue('f010_fecha_creacion') as string
                 const formatted = formatters.date(value)
                 return (
                     <div className="text-sm text-muted-foreground">

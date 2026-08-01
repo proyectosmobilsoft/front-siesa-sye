@@ -7,7 +7,6 @@ import { ResponsiveBar } from '@nivo/bar'
 import { ResponsivePie } from '@nivo/pie'
 import { ResponsiveLine } from '@nivo/line'
 import { ResponsiveScatterPlot } from '@nivo/scatterplot'
-import { SalesSummary } from '@/api/types'
 import { formatters } from '@/utils/formatters'
 import { CountUp } from '@/components/ui/count-up'
 import { DataTable } from '@/components/dashboard/DataTable'
@@ -17,7 +16,6 @@ import {
     FileText, 
     Trophy, 
     TrendingUp,
-    Users,
     BarChart3,
     PieChart,
     Layers,
@@ -41,17 +39,6 @@ const colorPalette = [colors.indigo, colors.emerald, colors.rose, colors.amber, 
 
 export const SalesSummaryPage = () => {
     const { data: sales, isLoading, error } = useSalesSummary()
-
-    // Función helper para obtener hora de la fecha
-    const getHour = (dateString: string): string => {
-        if (!dateString) return ''
-        try {
-            const date = new Date(dateString)
-            return `${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}`
-        } catch {
-            return ''
-        }
-    }
 
     // Función helper para obtener solo la hora (HH:00)
     const getHourOnly = (dateString: string): string => {
@@ -83,7 +70,7 @@ export const SalesSummaryPage = () => {
         : []
 
     // 2. Gráfico de pastel/donut: Distribución del total de ventas por vendedor
-    const pieData = salesByVendorData.map((item, index) => ({
+    const pieData = salesByVendorData.map((item) => ({
         id: item.vendedor,
         label: item.vendedor,
         value: item.ventas,
@@ -433,8 +420,6 @@ export const SalesSummaryPage = () => {
                                                 legend: 'Vendedor',
                                                 legendPosition: 'middle',
                                                 legendOffset: 80,
-                                                tickColor: 'hsl(var(--muted-foreground))',
-                                                legendColor: 'hsl(var(--foreground))',
                                             }}
                                             axisLeft={{
                                                 tickSize: 5,
@@ -444,8 +429,6 @@ export const SalesSummaryPage = () => {
                                                 legendPosition: 'middle',
                                                 legendOffset: -60,
                                                 format: (value) => formatters.compactCurrency(value),
-                                                tickColor: 'hsl(var(--muted-foreground))',
-                                                legendColor: 'hsl(var(--foreground))',
                                             }}
                                             theme={{
                                                 axis: {
@@ -455,11 +438,11 @@ export const SalesSummaryPage = () => {
                                                     legend: {
                                                         text: { fill: 'hsl(var(--foreground))' }
                                                     },
-                                                    grid: {
-                                                        line: {
-                                                            stroke: 'hsl(var(--border))',
-                                                            strokeWidth: 1,
-                                                        }
+                                                },
+                                                grid: {
+                                                    line: {
+                                                        stroke: 'hsl(var(--border))',
+                                                        strokeWidth: 1,
                                                     }
                                                 },
                                                 tooltip: {
@@ -587,8 +570,8 @@ export const SalesSummaryPage = () => {
                                                 }
                                             }
                                         }}
-                                        tooltip={(tooltip) => {
-                                            const percentage = ((tooltip.value as number) / totalSales * 100).toFixed(2)
+                                        tooltip={({ datum }) => {
+                                            const percentage = (datum.value / totalSales * 100).toFixed(2)
                                             return (
                                                 <div
                                                     style={{
@@ -600,9 +583,9 @@ export const SalesSummaryPage = () => {
                                                         color: 'hsl(var(--foreground))',
                                                     }}
                                                 >
-                                                    <div className="font-semibold">{tooltip.label}</div>
+                                                    <div className="font-semibold">{datum.label}</div>
                                                     <div className="text-sm mt-1">
-                                                        {formatters.currency(tooltip.value as number)}
+                                                        {formatters.currency(datum.value)}
                                                     </div>
                                                     <div className="text-xs text-muted-foreground mt-1">
                                                         {percentage}% del total
@@ -671,8 +654,6 @@ export const SalesSummaryPage = () => {
                                             legend: 'Vendedor',
                                             legendPosition: 'middle',
                                             legendOffset: 80,
-                                            tickColor: 'hsl(var(--muted-foreground))',
-                                            legendColor: 'hsl(var(--foreground))',
                                         }}
                                         axisLeft={{
                                             tickSize: 5,
@@ -681,8 +662,6 @@ export const SalesSummaryPage = () => {
                                             legend: 'Total de Unidades',
                                             legendPosition: 'middle',
                                             legendOffset: -50,
-                                            tickColor: 'hsl(var(--muted-foreground))',
-                                            legendColor: 'hsl(var(--foreground))',
                                         }}
                                         theme={{
                                             axis: {
@@ -692,11 +671,11 @@ export const SalesSummaryPage = () => {
                                                 legend: {
                                                     text: { fill: 'hsl(var(--foreground))' }
                                                 },
-                                                grid: {
-                                                    line: {
-                                                        stroke: 'hsl(var(--border))',
-                                                        strokeWidth: 1,
-                                                    }
+                                            },
+                                            grid: {
+                                                line: {
+                                                    stroke: 'hsl(var(--border))',
+                                                    strokeWidth: 1,
                                                 }
                                             },
                                             tooltip: {
@@ -805,8 +784,6 @@ export const SalesSummaryPage = () => {
                                             legend: 'Hora del Día',
                                             legendOffset: 36,
                                             legendPosition: 'middle',
-                                            tickColor: 'hsl(var(--muted-foreground))',
-                                            legendColor: 'hsl(var(--foreground))',
                                         }}
                                         axisLeft={{
                                             tickSize: 5,
@@ -816,8 +793,6 @@ export const SalesSummaryPage = () => {
                                             legendOffset: -60,
                                             legendPosition: 'middle',
                                             format: (value) => formatters.currency(Number(value)),
-                                            tickColor: 'hsl(var(--muted-foreground))',
-                                            legendColor: 'hsl(var(--foreground))',
                                         }}
                                         theme={{
                                             axis: {
@@ -827,11 +802,11 @@ export const SalesSummaryPage = () => {
                                                 legend: {
                                                     text: { fill: 'hsl(var(--foreground))' }
                                                 },
-                                                grid: {
-                                                    line: {
-                                                        stroke: 'hsl(var(--border))',
-                                                        strokeWidth: 1,
-                                                    }
+                                            },
+                                            grid: {
+                                                line: {
+                                                    stroke: 'hsl(var(--border))',
+                                                    strokeWidth: 1,
                                                 }
                                             },
                                             tooltip: {
@@ -922,12 +897,9 @@ export const SalesSummaryPage = () => {
                                         xFormat={(value) => `${value} unidades`}
                                         yScale={{ type: 'linear', min: 'auto', max: 'auto' }}
                                         yFormat={(value) => formatters.compactCurrency(Number(value))}
-                                        colors={(d) => d.color}
+                                        colors={(d) => scatterData.find((s) => s.id === d.serieId)?.color ?? colorPalette[0]}
                                         blendMode="normal"
                                         nodeSize={14}
-                                        nodeOpacity={0.9}
-                                        nodeBorderWidth={2}
-                                        nodeBorderColor={{ from: 'color', modifiers: [['darker', 0.3]] }}
                                         axisTop={null}
                                         axisRight={null}
                                         axisBottom={{
@@ -938,8 +910,6 @@ export const SalesSummaryPage = () => {
                                             legendPosition: 'middle',
                                             legendOffset: 46,
                                             format: (value) => formatters.number(value),
-                                            tickColor: 'hsl(var(--muted-foreground))',
-                                            legendColor: 'hsl(var(--foreground))',
                                         }}
                                         axisLeft={{
                                             tickSize: 5,
@@ -949,8 +919,6 @@ export const SalesSummaryPage = () => {
                                             legendPosition: 'middle',
                                             legendOffset: -70,
                                             format: (value) => formatters.compactCurrency(value),
-                                            tickColor: 'hsl(var(--muted-foreground))',
-                                            legendColor: 'hsl(var(--foreground))',
                                         }}
                                         legends={[
                                             {
@@ -976,11 +944,11 @@ export const SalesSummaryPage = () => {
                                                 legend: {
                                                     text: { fill: 'hsl(var(--foreground))' }
                                                 },
-                                                grid: {
-                                                    line: {
-                                                        stroke: 'hsl(var(--border))',
-                                                        strokeWidth: 1,
-                                                    }
+                                            },
+                                            grid: {
+                                                line: {
+                                                    stroke: 'hsl(var(--border))',
+                                                    strokeWidth: 1,
                                                 }
                                             },
                                             tooltip: {

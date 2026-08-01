@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion'
-import { AlertCircle, X } from 'lucide-react'
+import { AlertCircle } from 'lucide-react'
 import { useEffect } from 'react'
 
 interface InactivityModalProps {

@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion'
-import { useState } from 'react'
+import { useState, ReactNode } from 'react'
 import {
     ColumnDef,
     flexRender,
@@ -123,7 +123,7 @@ export const AnalisisFinancieroPage = () => {
                 } else {
                     // Columnas normales
                     columns.push({
-                        accessorKey: key,
+                        accessorKey: key as keyof EstadoFinanciero,
                         header: ({ column }) => {
                             return (
                                 <Button
@@ -141,7 +141,7 @@ export const AnalisisFinancieroPage = () => {
 
                             // Formateo especial para "Nombre Compañía"
                             if (key === 'Nombre Compañía') {
-                                return <div className="font-medium">{value ?? <span className="text-muted-foreground italic">N/A</span>}</div>
+                                return <div className="font-medium">{(value as ReactNode) ?? <span className="text-muted-foreground italic">N/A</span>}</div>
                             }
 
                             // Formateo especial para "Total Cuenta"
@@ -165,7 +165,7 @@ export const AnalisisFinancieroPage = () => {
                                 const trimmedValue = value.trim()
                                 return <div className="text-sm">{trimmedValue || <span className="text-muted-foreground italic">N/A</span>}</div>
                             }
-                            return <div className="text-sm">{value ?? <span className="text-muted-foreground italic">N/A</span>}</div>
+                            return <div className="text-sm">{(value as ReactNode) ?? <span className="text-muted-foreground italic">N/A</span>}</div>
                         },
                     })
                 }
@@ -413,7 +413,7 @@ export const AnalisisFinancieroPage = () => {
             if (col.id === 'Cuenta') {
                 excelColumns.push({ header: 'Código Cuenta', key: 'CodigoCuenta', width: 20 })
                 excelColumns.push({ header: 'Nombre de la Cuenta', key: 'NombreCuenta', width: 40 })
-            } else if (col.accessorKey) {
+            } else if ('accessorKey' in col && col.accessorKey) {
                 const key = col.accessorKey as string
                 let width = 15
                 if (key === 'Total Cuenta') width = 18
@@ -434,7 +434,7 @@ export const AnalisisFinancieroPage = () => {
                 if (col.id === 'Cuenta') {
                     excelRow['CodigoCuenta'] = row['Código Cuenta']?.toString().trim() || ''
                     excelRow['NombreCuenta'] = row['Nombre de la Cuenta']?.toString().trim() || ''
-                } else if (col.accessorKey) {
+                } else if ('accessorKey' in col && col.accessorKey) {
                     const key = col.accessorKey as string
                     const value = row[key]
 
@@ -854,8 +854,6 @@ export const AnalisisFinancieroPage = () => {
                                                         format: (value) => {
                                                             return formatCurrencyColombian(value)
                                                         },
-                                                        tickColor: 'hsl(var(--muted-foreground))',
-                                                        legendColor: 'hsl(var(--foreground))',
                                                         tickValues: 5,
                                                     }}
                                                     axisLeft={{
@@ -865,8 +863,6 @@ export const AnalisisFinancieroPage = () => {
                                                         legend: 'Descripción de Cuenta',
                                                         legendPosition: 'middle',
                                                         legendOffset: -220,
-                                                        tickColor: 'hsl(var(--muted-foreground))',
-                                                        legendColor: 'hsl(var(--foreground))',
                                                         renderTick: (tick) => {
                                                             const item = chartData.find(d => d.id === tick.value)
                                                             const label = item?.cuenta || tick.value
@@ -907,14 +903,6 @@ export const AnalisisFinancieroPage = () => {
                                                                     fontFamily: 'Inter, Roboto, "Open Sans", system-ui, sans-serif'
                                                                 }
                                                             },
-                                                            grid: {
-                                                                line: {
-                                                                    stroke: 'hsl(var(--border))',
-                                                                    strokeWidth: 1,
-                                                                    strokeDasharray: '3 3',
-                                                                    opacity: 0.4
-                                                                }
-                                                            }
                                                         },
                                                         grid: {
                                                             line: {
@@ -989,7 +977,7 @@ export const AnalisisFinancieroPage = () => {
                                                     ]}
                                                     animate={true}
                                                     motionConfig="gentle"
-                                                    tooltip={({ id, value, indexValue }) => {
+                                                    tooltip={({ value, indexValue }) => {
                                                         const item = chartData.find(d => d.id === indexValue)
                                                         return (
                                                             <div

@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion'
-import { useState } from 'react'
+import { useState, ReactNode } from 'react'
 import {
     ColumnDef,
     flexRender,
@@ -95,7 +95,7 @@ export const PedidosPage = () => {
             },
             cell: ({ row }) => {
                 const value = row.getValue('f_co')
-                return <div className="font-medium">{value ?? <span className="text-muted-foreground italic">N/A</span>}</div>
+                return <div className="font-medium">{(value as ReactNode) ?? <span className="text-muted-foreground italic">N/A</span>}</div>
             },
         },
         {
@@ -114,7 +114,7 @@ export const PedidosPage = () => {
             },
             cell: ({ row }) => {
                 const value = row.getValue('f_nrodocto')
-                return <div className="font-medium font-mono text-sm">{value ?? <span className="text-muted-foreground italic">N/A</span>}</div>
+                return <div className="font-medium font-mono text-sm">{(value as ReactNode) ?? <span className="text-muted-foreground italic">N/A</span>}</div>
             },
         },
         {

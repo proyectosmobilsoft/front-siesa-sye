@@ -36,12 +36,13 @@ const getUsuarioFromToken = (): { nombre: string; inicial: string } => {
 
 // Subtítulo dinámico por ruta — mismo texto que aparece en cada página
 const PAGE_SUBTITLES: Record<string, string> = {
-    '/': 'Resumen de clientes, productos y estado del inventario',
+    '/': 'Resumen de pedidos, ventas y vendedores',
     '/clientes': 'Gestión y visualización de clientes',
     '/companias': 'Gestión y visualización de compañías',
     '/productos': 'Gestión y visualización de productos',
     '/egreso': 'Gestión de anticipos operativos',
     '/pedidos': 'Historial y seguimiento de pedidos',
+    '/ferreganga': 'Campañas, sorteos y clientes de Ferreganga',
     '/facturas/gestion-ventas': 'Documentos y gestión de ventas',
     '/facturas/analisis-financiero': 'Análisis financiero por periodo',
     '/reportes': 'Pedidos diarios consolidados',
@@ -50,6 +51,8 @@ const PAGE_SUBTITLES: Record<string, string> = {
     '/maestro/roles': 'Administración de roles y permisos',
     '/maestro/usuarios': 'Administración de usuarios del sistema',
     '/maestro/descuentos-financieros': 'Condiciones y descuentos de pago',
+    '/tesoreria/recibo-caja': 'Consulta y arqueo de recibos de caja',
+    '/tesoreria/entrega-recaudo': 'Validación y conciliación de efectivo de conductores',
     '/configuracion': 'Preferencias del sistema',
     '/configuracion/seguridad': 'Configuración de seguridad',
     '/ayuda': 'Documentación y soporte',

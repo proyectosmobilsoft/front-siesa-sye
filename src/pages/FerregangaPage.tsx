@@ -1,15 +1,15 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { apiClient } from '@/api/client';
 import {
-  Bell, Ticket, Trophy, Home, User, Package,
-  ChevronRight, Settings, BarChart3, PlusCircle,
-  History, CheckCircle2, Users, DollarSign,
-  TrendingUp, LayoutGrid, Phone, Mail, MapPin,
-  ArrowLeft, Search, Megaphone, Zap, AlertTriangle,
-  BrainCircuit, AlertCircle, HardHat, Star, Gift,
-  Clock, ArrowRight, Wallet, ShoppingCart, X, Save,
-  ScrollText, CalendarCheck, Medal, Trash2, Edit3,
-  ExternalLink, PlayCircle, Plus
+  Ticket, Trophy, User,
+  PlusCircle,
+  CheckCircle2, Users,
+  TrendingUp,
+  Search, Megaphone,
+  AlertCircle, Gift,
+  Save,
+  Medal, Trash2, Edit3,
+  Plus, X
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -36,27 +36,6 @@ interface Campaign {
   prizes: Prize[];
   status: 'Activa' | 'Programada' | 'Finalizada';
   color: string;
-}
-
-interface Transaction {
-  id: string;
-  date: string;
-  details: string;
-  amount: string;
-  tickets: number;
-}
-
-interface Client {
-  id: string;
-  name: string;
-  type: 'Instalador Pro' | 'Hogar';
-  email: string;
-  phone: string;
-  location: string;
-  totalTickets: number;
-  totalPurchase: string;
-  crossSellRate: number;
-  history: Transaction[];
 }
 
 // --- TIPOS API CAMPAÑAS ---
@@ -119,7 +98,6 @@ const emptyForm = (): CampaignFormData => ({
 const FerregangaPage: React.FC = () => {
   // --- ESTADOS ---
   const [activeTab, setActiveTab] = useState<'general' | 'clientes' | 'campanas' | 'sorteo'>('general');
-  const [selectedClient, setSelectedClient] = useState<Client | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [isSpinning, setIsSpinning] = useState(false);
   const [raffleWinner, setRaffleWinner] = useState<{ name: string; ticket: string; prize: string; level?: string } | null>(null);

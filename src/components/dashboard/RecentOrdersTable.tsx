@@ -1,115 +1,106 @@
 import { motion } from 'framer-motion'
-import { useState, useEffect } from 'react'
-import {
-    ColumnDef,
-    flexRender,
-    getCoreRowModel,
-    useReactTable,
-} from '@tanstack/react-table'
-import { ArrowRight, ShoppingCart } from 'lucide-react'
-import { Button } from '@/components/ui/button'
+import { Link } from 'react-router-dom'
+import { ArrowUpRight, ShoppingBag } from 'lucide-react'
+import { ErrorBoundary } from '@/components/ui/error-boundary'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/lib/skeleton'
-import { ErrorBoundary } from '@/components/ui/error-boundary'
-import { usePedidos } from '@/hooks/usePedidos'
-import { Pedido } from '@/api/types'
-import { formatters } from '@/utils/formatters'
-import { useNavigate } from 'react-router-dom'
+import { useDailyOrders } from '@/hooks/useReports'
+import { DailyOrder } from '@/api/types'
 
-export const RecentOrdersTable = () => {
-    const today = new Date().toISOString().split('T')[0]
-    const lastWeek = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
-    
-    const { data: pedidos, isLoading, error } = usePedidos({
-        fechaInicial: lastWeek,
-        fechaFinal: today
-    })
-    
-    const navigate = useNavigate()
+const RecentOrdersTableContent = () => {
+    const { data: orders, isLoading, error } = useDailyOrders()
 
-    const columns: ColumnDef<Pedido>[] = [
-        {
-            accessorKey: 'f_nrodocto',
-            header: 'Nro Pedido',
-            cell: ({ row }) => <span className="font-mono font-bold">{row.getValue('f_nrodocto')}</span>,
-        },
-        {
-            accessorKey: 'f_cliente_desp_razon_soc',
-            header: 'Cliente',
-            cell: ({ row }) => <div className="max-w-[180px] truncate">{row.getValue('f_cliente_desp_razon_soc')}</div>,
-        },
-        {
-            accessorKey: 'f_fecha',
-            header: 'Fecha',
-            cell: ({ row }) => formatters.date(row.getValue('f_fecha')),
-        },
-        {
-            accessorKey: 'f_valor_bruto_docto',
-            header: 'Total',
-            cell: ({ row }) => <span className="font-semibold text-primary">{formatters.currency(row.getValue('f_valor_bruto_docto'))}</span>,
-        },
-        {
-            accessorKey: 'f_estado',
-            header: 'Estado',
-            cell: ({ row }) => {
-                const estado = row.getValue('f_estado') as string
-                return (
-                    <span className="px-2 py-1 rounded-full text-[10px] font-bold bg-primary/10 text-primary uppercase">
-                        {estado}
-                    </span>
-                )
-            }
-        }
-    ]
+    if (isLoading) {
+        return (
+            <Card>
+                <CardHeader>
+                    <CardTitle>Pedidos Recientes</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                    {Array.from({ length: 5 }).map((_, i) => (
+                        <Skeleton key={i} className="h-12 w-full" />
+                    ))}
+                </CardContent>
+            </Card>
+        )
+    }
 
-    const table = useReactTable({
-        data: pedidos?.slice(0, 5) || [],
-        columns,
-        getCoreRowModel: getCoreRowModel(),
-    })
+    if (error) {
+        return (
+            <Card className="border-destructive/50">
+                <CardHeader>
+                    <CardTitle className="text-destructive">Pedidos Recientes</CardTitle>
+                </CardHeader>
+                <CardContent className="flex h-[280px] items-center justify-center text-sm text-muted-foreground">
+                    No se pudieron cargar los datos
+                </CardContent>
+            </Card>
+        )
+    }
 
-    if (isLoading) return <Skeleton className="h-[300px] w-full" />
+    const recent: DailyOrder[] = Array.isArray(orders)
+        ? [...orders]
+            .sort((a, b) => (b['Hora creacion dt'] || '').localeCompare(a['Hora creacion dt'] || ''))
+            .slice(0, 8)
+        : []
 
     return (
-        <Card className="border-none shadow-md bg-white/50 backdrop-blur-sm">
-            <CardHeader className="flex flex-row items-center justify-between">
-                <div className="flex items-center gap-3">
-                    <div className="p-2 bg-primary/10 rounded-lg">
-                        <ShoppingCart className="h-5 w-5 text-primary" />
-                    </div>
-                    <div>
-                        <CardTitle className="text-lg">Pedidos Recientes</CardTitle>
-                        <p className="text-xs text-muted-foreground">Últimas órdenes registradas</p>
-                    </div>
-                </div>
-                <Button variant="ghost" size="sm" onClick={() => navigate('/pedidos')}>
-                    Ver todos <ArrowRight className="ml-2 h-4 w-4" />
-                </Button>
+        <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0">
+                <CardTitle>Pedidos Recientes</CardTitle>
+                <Link
+                    to="/reportes"
+                    className="flex items-center gap-1 text-xs font-medium text-primary hover:underline"
+                >
+                    Ver todos
+                    <ArrowUpRight className="h-3.5 w-3.5" />
+                </Link>
             </CardHeader>
             <CardContent>
-                <div className="overflow-x-auto">
-                    <table className="w-full text-sm text-left">
-                        <thead className="text-xs uppercase text-muted-foreground border-b border-primary/10">
-                            {table.getHeaderGroups().map(hg => (
-                                <tr key={hg.id}>
-                                    {hg.headers.map(h => (
-                                        <th key={h.id} className="px-4 py-3 font-bold">{flexRender(h.column.columnDef.header, h.getContext())}</th>
-                                    ))}
-                                </tr>
-                            ))}
-                        </thead>
-                        <tbody>
-                            {table.getRowModel().rows.map(row => (
-                                <tr key={row.id} className="border-b border-primary/5 hover:bg-primary/5 transition-colors">
-                                    {row.getVisibleCells().map(cell => (
-                                        <td key={cell.id} className="px-4 py-3">{flexRender(cell.column.columnDef.cell, cell.getContext())}</td>
-                                    ))}
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
-                </div>
+                {recent.length === 0 ? (
+                    <div className="flex h-[220px] items-center justify-center text-sm text-muted-foreground">
+                        Sin pedidos disponibles
+                    </div>
+                ) : (
+                    <div className="divide-y">
+                        {recent.map((order) => (
+                            <div
+                                key={order.rowid}
+                                className="flex items-center gap-3 py-3 first:pt-0 last:pb-0"
+                            >
+                                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+                                    <ShoppingBag className="h-4 w-4" />
+                                </div>
+                                <div className="min-w-0 flex-1">
+                                    <p className="truncate text-sm font-medium">
+                                        {order['Desc. CO'] || 'Sin descripción'}
+                                    </p>
+                                    <p className="text-xs text-muted-foreground">
+                                        C.O. {order['ID. CO'] || 'N/A'} · {order['Fecha docto']} · {order['Hora creacion']}
+                                    </p>
+                                </div>
+                                <span className="inline-flex shrink-0 items-center rounded-full bg-primary/10 px-2.5 py-1 text-xs font-medium text-primary">
+                                    {order.Estado || 'Sin Estado'}
+                                </span>
+                            </div>
+                        ))}
+                    </div>
+                )}
             </CardContent>
         </Card>
+    )
+}
+
+export const RecentOrdersTable = () => {
+    return (
+        <motion.div
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.35, delay: 0.2 }}
+        >
+            <ErrorBoundary>
+                <RecentOrdersTableContent />
+            </ErrorBoundary>
+        </motion.div>
     )
 }

@@ -30,6 +30,16 @@
     scrollbar-width: thin;
     scrollbar-color: hsl(var(--muted-foreground) / 0.3) hsl(var(--muted));
   }
+
+  /* Scroll sin barra visible (el contenido sigue siendo desplazable) */
+  .no-scrollbar {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
 }
 
 @layer base {

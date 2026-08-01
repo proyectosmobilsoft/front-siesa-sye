@@ -225,7 +225,7 @@ export const Sidebar = () => {
                     </div>
 
                     {/* Navigation */}
-                    <nav className={cn('flex-1 space-y-2 overflow-y-auto py-6 custom-scrollbar', sidebarOpen ? 'px-4' : 'px-3')}>
+                    <nav className={cn('flex-1 space-y-2 overflow-y-auto py-6 no-scrollbar', sidebarOpen ? 'px-4' : 'px-3')}>
                         {navFiltrado.map((item) => {
                             const hasSubItems = item.subItems && item.subItems.length > 0
                             const isExpanded = isItemExpanded(item.name)

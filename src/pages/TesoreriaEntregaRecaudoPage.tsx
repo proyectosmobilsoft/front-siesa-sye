@@ -101,10 +101,13 @@ const ConciliarConductorModal = ({
                         {conductor.diferencia === 0 ? 'Diferencias por resolver' : esFaltante ? 'Faltante por resolver' : 'Sobrante por resolver'}
                     </p>
                     <p className={cn('mt-1 text-3xl font-extrabold tabular-nums', esFaltante ? 'text-red-600' : 'text-blue-600')}>
-                        {formatters.currency(conductor.montoPendiente)}
+                        {formatters.currency(conductor.diferencia !== 0 ? Math.abs(conductor.diferencia) : conductor.montoPendiente)}
                     </p>
                     <p className="mt-2 text-xs text-muted-foreground">
-                        Corresponde a {conductor.movimientosConDiferencia} entrega{conductor.movimientosConDiferencia !== 1 ? 's' : ''} con diferencia.
+                        Corresponde a {conductor.movimientosConDiferencia} entrega{conductor.movimientosConDiferencia !== 1 ? 's' : ''} con diferencia
+                        {conductor.diferencia !== 0 && conductor.montoPendiente !== Math.abs(conductor.diferencia)
+                            ? ` (neto; monto bruto ${formatters.currency(conductor.montoPendiente)})`
+                            : '.'}
                     </p>
                 </div>
 
@@ -120,8 +123,8 @@ const ConciliarConductorModal = ({
                 )}
 
                 <div className="flex justify-end gap-2 pt-1">
-                    <Button variant="outline" className="rounded-full" onClick={onClose} disabled={loading}>Cancelar</Button>
-                    <Button className="gap-2 rounded-full" onClick={() => onConciliar(conductor)} disabled={loading}>
+                    <Button variant="outline" onClick={onClose} disabled={loading}>Cancelar</Button>
+                    <Button className="gap-2" onClick={() => onConciliar(conductor)} disabled={loading}>
                         {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <ShieldCheck className="h-4 w-4" />}
                         Confirmar conciliación
                     </Button>
@@ -274,7 +277,7 @@ const TableroConciliacion = ({ movimientos, onResuelto }: { movimientos: Movimie
                                                         variant={alDia ? 'ghost' : 'default'}
                                                         size="sm"
                                                         disabled={alDia}
-                                                        className="gap-1.5 rounded-full text-xs"
+                                                        className="gap-1.5 text-xs"
                                                         onClick={() => setSeleccionado(conductor)}
                                                     >
                                                         {alDia ? <CheckCircle2 className="h-3.5 w-3.5" /> : <Scale className="h-3.5 w-3.5" />}
@@ -386,8 +389,8 @@ const ValidarEntregaModal = ({ entrega, onClose, onConfirmado }: ValidarEntregaM
                 )}
 
                 <div className="flex justify-end gap-2 pt-2">
-                    <Button variant="outline" className="rounded-full" onClick={onClose} disabled={loading}>Cancelar</Button>
-                    <Button onClick={handleConfirmar} disabled={loading} className="gap-2 rounded-full">
+                    <Button variant="outline" onClick={onClose} disabled={loading}>Cancelar</Button>
+                    <Button onClick={handleConfirmar} disabled={loading} className="gap-2">
                         {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
                         Confirmar recepción
                     </Button>
@@ -532,7 +535,7 @@ const ConductorGrupoRow = ({ grupo, idx, onValidar, onVerRC, etiqueta }: { grupo
                     <Button
                         variant="outline"
                         size="sm"
-                        className="h-7 gap-1.5 rounded-full text-xs"
+                        className="h-7 gap-1.5 text-xs"
                         onClick={(e) => { e.stopPropagation(); onVerRC(grupo) }}
                     >
                         <Receipt className="h-3 w-3" /> Ver recibos
@@ -610,7 +613,7 @@ const RecibosConductorModal = ({ grupo, onClose, rango }: { grupo: GrupoConducto
                         <Button
                             variant="outline"
                             size="sm"
-                            className="gap-1.5 rounded-full text-xs"
+                            className="gap-1.5 text-xs"
                             onClick={() => exportarRecibosCSV(recibos, grupo.conductorNombre)}
                         >
                             <Download className="h-3.5 w-3.5" /> Exportar CSV
@@ -836,7 +839,17 @@ const ResumenPeriodo = ({ pendientes, confirmadas }: { pendientes: MovimientoEfe
     const totalPendiente = useMemo(() => (pendientes ?? []).reduce((sum, m) => sum + m.valor, 0), [pendientes])
     const totalConfirmado = useMemo(() => (confirmadas ?? []).reduce((sum, m) => sum + m.valor, 0), [confirmadas])
     const totalGeneral = totalPendiente + totalConfirmado
-    const pctConciliado = totalGeneral > 0 ? Math.round((totalConfirmado / totalGeneral) * 100) : 0
+    // "Conciliado" = confirmado sin diferencia abierta (resuelta o nunca la tuvo).
+    // No es lo mismo que "confirmado": una entrega puede estar validada y aun así
+    // tener una diferencia pendiente de resolver (ver TableroConciliacion).
+    const montoConciliado = useMemo(
+        () => (confirmadas ?? []).reduce(
+            (sum, m) => sum + (m.diferencia_resuelta || (m.diferencia ?? 0) === 0 ? m.valor : 0),
+            0
+        ),
+        [confirmadas]
+    )
+    const pctConciliado = totalConfirmado > 0 ? Math.round((montoConciliado / totalConfirmado) * 100) : 0
     const conductoresActivos = useMemo(() => {
         const ids = new Set<number>()
         for (const m of [...(pendientes ?? []), ...(confirmadas ?? [])]) ids.add(m.conductor_id)
@@ -901,7 +914,7 @@ export const TesoreriaEntregaRecaudoPage = () => {
         <div className="mx-auto max-w-7xl space-y-5 p-4 sm:p-6">
             <div className="sticky top-0 z-10 -mx-4 flex flex-wrap items-center justify-between gap-3 border-b border-transparent bg-background/80 px-4 py-2 backdrop-blur-sm sm:-mx-6 sm:px-6">
                 <div className="flex items-center gap-3">
-                    <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br from-primary to-primary/70 shadow-sm">
+                    <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-primary">
                         <Landmark className="h-5 w-5 text-primary-foreground" />
                     </div>
                     <div>
@@ -909,7 +922,7 @@ export const TesoreriaEntregaRecaudoPage = () => {
                         <p className="text-sm text-muted-foreground">Valida el efectivo entregado físicamente por los conductores</p>
                     </div>
                 </div>
-                <Button variant="outline" size="sm" className="gap-2 rounded-full" onClick={refrescarTodo} disabled={refrescando}>
+                <Button variant="outline" size="sm" className="gap-2" onClick={refrescarTodo} disabled={refrescando}>
                     <RefreshCw className={cn('h-3.5 w-3.5', refrescando && 'animate-spin')} /> Actualizar
                 </Button>
             </div>

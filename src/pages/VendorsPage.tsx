@@ -6,8 +6,6 @@ import { ErrorBoundary } from '@/components/ui/error-boundary'
 import { useVendors } from '@/hooks/useReports'
 import { ResponsiveBar } from '@nivo/bar'
 import { ResponsivePie } from '@nivo/pie'
-import { ResponsiveLine } from '@nivo/line'
-import { Vendor } from '@/api/types'
 import { formatters } from '@/utils/formatters'
 import { CountUp } from '@/components/ui/count-up'
 import { DataTable } from '@/components/dashboard/DataTable'
@@ -34,15 +32,6 @@ const vibrantColors = {
     neonPurple: '#9d4edd',
     neonCyan: '#00e5ff',
     neonLime: '#ccff00',
-}
-
-const pastelColors = {
-    pastelBlue: '#a5d8ff',
-    pastelGreen: '#c9e4ca',
-    pastelPink: '#ffd1dc',
-    pastelYellow: '#fff4a3',
-    pastelOrange: '#ffcc99',
-    pastelPurple: '#e1bee7',
 }
 
 const colorPalette = [
@@ -428,8 +417,6 @@ export const VendorsPage = () => {
                                                 legend: 'Vendedor',
                                                 legendPosition: 'middle',
                                                 legendOffset: 95,
-                                                tickColor: 'hsl(var(--muted-foreground))',
-                                                legendColor: 'hsl(var(--foreground))',
                                             }}
                                             axisLeft={{
                                                 tickSize: 5,
@@ -439,8 +426,6 @@ export const VendorsPage = () => {
                                                 legendPosition: 'middle',
                                                 legendOffset: -70,
                                                 format: (value) => formatters.compactCurrency(value),
-                                                tickColor: 'hsl(var(--muted-foreground))',
-                                                legendColor: 'hsl(var(--foreground))',
                                             }}
                                             theme={{
                                                 axis: {
@@ -450,12 +435,12 @@ export const VendorsPage = () => {
                                                     legend: {
                                                         text: { fill: 'hsl(var(--foreground))', fontSize: 12, fontWeight: 600 }
                                                     },
-                                                    grid: {
-                                                        line: {
-                                                            stroke: 'hsl(var(--border))',
-                                                            strokeWidth: 1,
-                                                            opacity: 0.5,
-                                                        }
+                                                },
+                                                grid: {
+                                                    line: {
+                                                        stroke: 'hsl(var(--border))',
+                                                        strokeWidth: 1,
+                                                        opacity: 0.5,
                                                     }
                                                 },
                                                 tooltip: {
@@ -476,7 +461,7 @@ export const VendorsPage = () => {
                                             }}
                                             animate={true}
                                             motionConfig={{
-                                                stiffness: 90,
+                                                tension: 90,
                                                 damping: 15,
                                             }}
                                             tooltip={(tooltip) => (
@@ -622,8 +607,8 @@ export const VendorsPage = () => {
                                                     }
                                                 }
                                             }}
-                                            tooltip={(tooltip) => {
-                                                const percentage = ((tooltip.value as number) / totalDeliverySales * 100).toFixed(2)
+                                            tooltip={({ datum }) => {
+                                                const percentage = (datum.value / totalDeliverySales * 100).toFixed(2)
                                                 return (
                                                     <div
                                                         style={{
@@ -635,9 +620,9 @@ export const VendorsPage = () => {
                                                             color: 'hsl(var(--foreground))',
                                                         }}
                                                     >
-                                                        <div className="font-bold text-base">{tooltip.label}</div>
+                                                        <div className="font-bold text-base">{datum.label}</div>
                                                         <div className="text-sm mt-2 font-semibold">
-                                                            {formatters.currency(tooltip.value as number)}
+                                                            {formatters.currency(datum.value)}
                                                         </div>
                                                         <div className="text-xs text-muted-foreground mt-1">
                                                             {percentage}% del total
@@ -647,7 +632,7 @@ export const VendorsPage = () => {
                                             }}
                                             animate={true}
                                             motionConfig={{
-                                                stiffness: 90,
+                                                tension: 90,
                                                 damping: 15,
                                             }}
                                         />
@@ -716,8 +701,6 @@ export const VendorsPage = () => {
                                                 legend: 'Vendedor',
                                                 legendPosition: 'middle',
                                                 legendOffset: 90,
-                                                tickColor: 'hsl(var(--muted-foreground))',
-                                                legendColor: 'hsl(var(--foreground))',
                                             }}
                                             axisLeft={{
                                                 tickSize: 5,
@@ -727,8 +710,6 @@ export const VendorsPage = () => {
                                                 legendPosition: 'middle',
                                                 legendOffset: -60,
                                                 format: (value) => formatters.compactCurrency(value),
-                                                tickColor: 'hsl(var(--muted-foreground))',
-                                                legendColor: 'hsl(var(--foreground))',
                                             }}
                                             theme={{
                                                 axis: {
@@ -738,12 +719,12 @@ export const VendorsPage = () => {
                                                     legend: {
                                                         text: { fill: 'hsl(var(--foreground))', fontSize: 12, fontWeight: 600 }
                                                     },
-                                                    grid: {
-                                                        line: {
-                                                            stroke: 'hsl(var(--border))',
-                                                            strokeWidth: 1,
-                                                            opacity: 0.5,
-                                                        }
+                                                },
+                                                grid: {
+                                                    line: {
+                                                        stroke: 'hsl(var(--border))',
+                                                        strokeWidth: 1,
+                                                        opacity: 0.5,
                                                     }
                                                 },
                                                 tooltip: {
@@ -760,7 +741,7 @@ export const VendorsPage = () => {
                                             labelSkipHeight={12}
                                             animate={true}
                                             motionConfig={{
-                                                stiffness: 90,
+                                                tension: 90,
                                                 damping: 15,
                                             }}
                                             tooltip={(tooltip) => {
