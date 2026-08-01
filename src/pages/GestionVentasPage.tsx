@@ -146,9 +146,9 @@ export const GestionVentasPage = () => {
         >
             {/* Filtros */}
             <div className="flex shrink-0 flex-col gap-4 border-b pb-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                    <div className="space-y-2">
-                        <label className="text-sm font-medium">Periodo Inicial (YYYYMM)</label>
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5 lg:items-end">
+                    <div className="space-y-1.5">
+                        <label className="block text-[10px] font-bold uppercase tracking-wide text-muted-foreground">Periodo Inicial (YYYYMM)</label>
                         <Input
                             type="text"
                             placeholder="202401"
@@ -156,14 +156,12 @@ export const GestionVentasPage = () => {
                             onChange={handlePeriodoInicialChange}
                             maxLength={6}
                         />
-                        {filtros.periodoInicial && (
-                            <p className="text-xs text-muted-foreground">
-                                {formatPeriodo(filtros.periodoInicial)}
-                            </p>
-                        )}
+                        <p className="h-4 text-xs text-muted-foreground">
+                            {filtros.periodoInicial ? formatPeriodo(filtros.periodoInicial) : ''}
+                        </p>
                     </div>
-                    <div className="space-y-2">
-                        <label className="text-sm font-medium">Periodo Final (YYYYMM)</label>
+                    <div className="space-y-1.5">
+                        <label className="block text-[10px] font-bold uppercase tracking-wide text-muted-foreground">Periodo Final (YYYYMM)</label>
                         <Input
                             type="text"
                             placeholder="202412"
@@ -171,14 +169,12 @@ export const GestionVentasPage = () => {
                             onChange={handlePeriodoFinalChange}
                             maxLength={6}
                         />
-                        {filtros.periodoFinal && (
-                            <p className="text-xs text-muted-foreground">
-                                {formatPeriodo(filtros.periodoFinal)}
-                            </p>
-                        )}
+                        <p className="h-4 text-xs text-muted-foreground">
+                            {filtros.periodoFinal ? formatPeriodo(filtros.periodoFinal) : ''}
+                        </p>
                     </div>
-                    <div className="space-y-2">
-                        <label className="text-sm font-medium">Página</label>
+                    <div className="space-y-1.5">
+                        <label className="block text-[10px] font-bold uppercase tracking-wide text-muted-foreground">Página</label>
                         <Input
                             type="number"
                             placeholder="1"
@@ -186,9 +182,10 @@ export const GestionVentasPage = () => {
                             onChange={handlePageChange}
                             min={1}
                         />
+                        <p className="h-4" />
                     </div>
-                    <div className="space-y-2">
-                        <label className="text-sm font-medium">Registros por página (Máx. 5000)</label>
+                    <div className="space-y-1.5">
+                        <label className="block text-[10px] font-bold uppercase tracking-wide text-muted-foreground">Registros por página (Máx. 5000)</label>
                         <Input
                             type="number"
                             placeholder="1000"
@@ -197,19 +194,20 @@ export const GestionVentasPage = () => {
                             min={1}
                             max={5000}
                         />
+                        <p className="h-4" />
                     </div>
+                    <Button onClick={handleBuscar} className="h-10 w-full">
+                        <Search className="mr-2 h-4 w-4" />
+                        Buscar Facturas
+                    </Button>
                 </div>
-                <Button onClick={handleBuscar} className="w-full md:w-auto">
-                    <Search className="mr-2 h-4 w-4" />
-                    Buscar Facturas
-                </Button>
             </div>
 
             {/* Tabla */}
             {!searchParams ? (
                 <div className="flex flex-1 flex-col items-center justify-center text-center text-muted-foreground">
                     <Filter className="h-12 w-12 mb-4 opacity-50" />
-                    <p className="text-lg font-medium">Selecciona los filtros y haz clic en "Buscar Facturas"</p>
+                    <p className="text-lg font-medium text-foreground">Selecciona los filtros y haz clic en "Buscar Facturas"</p>
                     <p className="text-sm mt-2">Los valores por defecto son: Periodo Inicial 202401, Periodo Final 202412</p>
                 </div>
             ) : isLoading ? (
@@ -230,14 +228,14 @@ export const GestionVentasPage = () => {
                     transition={{ duration: 0.5, delay: 0.2 }}
                     className="flex min-h-0 flex-1 flex-col gap-4"
                 >
-                    <div className="flex shrink-0 flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    <div className="flex shrink-0 flex-col gap-3 border-b pb-3 sm:flex-row sm:items-center sm:justify-between">
                         <div className="relative w-full sm:max-w-sm">
-                            <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                             <Input
                                 placeholder="Buscar en facturas..."
                                 value={globalFilter ?? ''}
                                 onChange={(event) => setGlobalFilter(String(event.target.value))}
-                                className="pl-8"
+                                className="pl-9"
                             />
                         </div>
                         <p className="shrink-0 text-sm text-muted-foreground">
@@ -254,11 +252,11 @@ export const GestionVentasPage = () => {
                                 <table className="w-full text-sm">
                                     <thead className="sticky top-0 z-10 bg-card">
                                         {table.getHeaderGroups().map((headerGroup) => (
-                                            <tr key={headerGroup.id} className="border-b">
+                                            <tr key={headerGroup.id} className="border-b bg-muted/30">
                                                 {headerGroup.headers.map((header) => (
                                                     <th
                                                         key={header.id}
-                                                        className="h-10 px-3 text-left align-middle font-medium text-muted-foreground"
+                                                        className="h-10 px-3 text-left align-middle font-semibold text-muted-foreground"
                                                     >
                                                         {header.isPlaceholder
                                                             ? null
@@ -282,7 +280,7 @@ export const GestionVentasPage = () => {
                                                     transition={{ duration: 0.2 }}
                                                 >
                                                     {row.getVisibleCells().map((cell) => (
-                                                        <td key={cell.id} className="py-2 px-3 align-middle">
+                                                        <td key={cell.id} className="py-2.5 px-3 align-middle">
                                                             {flexRender(cell.column.columnDef.cell, cell.getContext())}
                                                         </td>
                                                     ))}
@@ -299,13 +297,14 @@ export const GestionVentasPage = () => {
                                 </table>
                             </div>
                             <div className="flex shrink-0 items-center justify-between space-x-2">
-                                <div className="flex-1 text-sm text-muted-foreground">
-                                    {table.getFilteredRowModel().rows.length} de {table.getCoreRowModel().rows.length} filas.
+                                <div className="flex-1 text-xs font-medium text-muted-foreground">
+                                    Mostrando {table.getFilteredRowModel().rows.length} de {table.getCoreRowModel().rows.length} filas.
                                 </div>
                                 <div className="flex items-center space-x-2">
                                     <Button
                                         variant="outline"
                                         size="sm"
+                                        className="h-8 text-xs"
                                         onClick={() => table.previousPage()}
                                         disabled={!table.getCanPreviousPage()}
                                     >
@@ -314,6 +313,7 @@ export const GestionVentasPage = () => {
                                     <Button
                                         variant="outline"
                                         size="sm"
+                                        className="h-8 text-xs"
                                         onClick={() => table.nextPage()}
                                         disabled={!table.getCanNextPage()}
                                     >

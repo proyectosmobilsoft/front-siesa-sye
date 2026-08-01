@@ -738,7 +738,7 @@ const EntregasPanel = ({ esPendiente, data, isLoading, error, onValidar, onVerRC
             <Card className={cn('overflow-hidden border-l-4', esPendiente ? 'border-l-amber-500' : 'border-l-emerald-500')}>
                 <CardHeader className="flex flex-row items-center justify-between gap-3 pb-2">
                     <div className="flex items-center gap-3">
-                        <div className={cn('flex h-9 w-9 items-center justify-center rounded-full', esPendiente ? 'bg-amber-500/10' : 'bg-emerald-500/10')}>
+                        <div className={cn('flex h-10 w-10 items-center justify-center rounded-xl', esPendiente ? 'bg-amber-500/10' : 'bg-emerald-500/10')}>
                             {esPendiente ? <Hourglass className="h-4 w-4 text-amber-600" /> : <CheckCircle2 className="h-4 w-4 text-emerald-600" />}
                         </div>
                         <CardTitle className="text-sm font-bold">
@@ -750,7 +750,7 @@ const EntregasPanel = ({ esPendiente, data, isLoading, error, onValidar, onVerRC
                     </span>
                 </CardHeader>
                 <CardContent>
-                    <p className="text-2xl font-bold tabular-nums text-foreground">{formatters.currency(total)}</p>
+                    <p className={cn('text-2xl font-extrabold tabular-nums', esPendiente ? 'text-amber-600' : 'text-emerald-600')}>{formatters.currency(total)}</p>
                 </CardContent>
             </Card>
 
@@ -857,23 +857,23 @@ const ResumenPeriodo = ({ pendientes, confirmadas }: { pendientes: MovimientoEfe
     }, [pendientes, confirmadas])
 
     const items = [
-        { label: 'Total del periodo', value: formatters.currency(totalGeneral), icon: Wallet, tono: 'text-primary bg-primary/10' },
-        { label: 'Pendiente por validar', value: formatters.currency(totalPendiente), icon: Hourglass, tono: 'text-amber-600 bg-amber-500/10' },
-        { label: '% conciliado', value: `${pctConciliado}%`, icon: ShieldCheck, tono: 'text-emerald-600 bg-emerald-500/10' },
-        { label: 'Conductores activos', value: String(conductoresActivos), icon: Users, tono: 'text-blue-600 bg-blue-500/10' },
+        { label: 'Total del periodo', value: formatters.currency(totalGeneral), icon: Wallet, tono: 'text-primary bg-primary/10', borde: 'border-l-primary' },
+        { label: 'Pendiente por validar', value: formatters.currency(totalPendiente), icon: Hourglass, tono: 'text-amber-600 bg-amber-500/10', borde: 'border-l-amber-500' },
+        { label: '% conciliado', value: `${pctConciliado}%`, icon: ShieldCheck, tono: 'text-emerald-600 bg-emerald-500/10', borde: 'border-l-emerald-500' },
+        { label: 'Conductores activos', value: String(conductoresActivos), icon: Users, tono: 'text-blue-600 bg-blue-500/10', borde: 'border-l-blue-500' },
     ]
 
     return (
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-            {items.map(({ label, value, icon: Icon, tono }) => (
-                <Card key={label} className="overflow-hidden">
+            {items.map(({ label, value, icon: Icon, tono, borde }) => (
+                <Card key={label} className={cn('overflow-hidden border-l-4 transition-shadow hover:shadow-md', borde)}>
                     <CardContent className="flex items-center gap-3 p-4">
-                        <div className={cn('flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl', tono)}>
-                            <Icon className="h-4 w-4" />
+                        <div className={cn('flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-xl', tono)}>
+                            <Icon className="h-5 w-5" />
                         </div>
                         <div className="min-w-0">
                             <p className="truncate text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">{label}</p>
-                            <p className="truncate text-lg font-extrabold tabular-nums text-foreground">{value}</p>
+                            <p className="truncate text-xl font-extrabold tabular-nums text-foreground">{value}</p>
                         </div>
                     </CardContent>
                 </Card>
@@ -912,17 +912,14 @@ export const TesoreriaEntregaRecaudoPage = () => {
 
     return (
         <div className="mx-auto max-w-7xl space-y-5 p-4 sm:p-6">
-            <div className="flex justify-end">
-                <Button variant="outline" size="sm" className="gap-2" onClick={refrescarTodo} disabled={refrescando}>
-                    <RefreshCw className={cn('h-3.5 w-3.5', refrescando && 'animate-spin')} /> Actualizar
-                </Button>
-            </div>
-
             <ResumenPeriodo pendientes={pendientesQuery.data} confirmadas={confirmadasQuery.data} />
 
             <div className="flex flex-wrap items-center gap-x-5 gap-y-3 rounded-xl border border-border bg-muted/30 px-4 py-3">
-                <div className="flex items-center gap-2 text-sm font-semibold text-muted-foreground">
-                    <CalendarRange className="h-4 w-4" /> Periodo
+                <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
+                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10">
+                        <CalendarRange className="h-4 w-4 text-primary" />
+                    </div>
+                    Periodo
                 </div>
                 <div className="flex flex-wrap items-center gap-3">
                     <label className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
@@ -945,17 +942,20 @@ export const TesoreriaEntregaRecaudoPage = () => {
                             placeholder="Hoy"
                         />
                     </label>
+                    {filtroActivo && (
+                        <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-8 gap-1.5 text-xs text-muted-foreground"
+                            onClick={() => { setFechaDesde(hoyISO()); setFechaHasta('') }}
+                        >
+                            <RefreshCw className="h-3 w-3" /> Volver a hoy
+                        </Button>
+                    )}
                 </div>
-                {filtroActivo && (
-                    <Button
-                        variant="ghost"
-                        size="sm"
-                        className="ml-auto h-8 gap-1.5 text-xs text-muted-foreground"
-                        onClick={() => { setFechaDesde(hoyISO()); setFechaHasta('') }}
-                    >
-                        <RefreshCw className="h-3 w-3" /> Volver a hoy
-                    </Button>
-                )}
+                <Button variant="outline" size="sm" className="ml-auto h-8 gap-2 text-xs" onClick={refrescarTodo} disabled={refrescando}>
+                    <RefreshCw className={cn('h-3.5 w-3.5', refrescando && 'animate-spin')} /> Actualizar
+                </Button>
             </div>
 
             <div className="grid items-start gap-5 lg:grid-cols-2">

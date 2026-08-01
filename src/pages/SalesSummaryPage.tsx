@@ -39,7 +39,7 @@ const colors = {
 const colorPalette = [colors.indigo, colors.emerald, colors.rose, colors.amber, colors.violet, colors.cyan, colors.orange, colors.pink]
 
 export const SalesSummaryPage = () => {
-    const { data: sales, isLoading, error } = useSalesSummary()
+    const { data: sales, isLoading, error, refetch } = useSalesSummary()
 
     // Función helper para obtener solo la hora (HH:00)
     const getHourOnly = (dateString: string): string => {
@@ -182,12 +182,6 @@ export const SalesSummaryPage = () => {
     if (isLoading) {
         return (
             <div className="flex-1 space-y-6 p-6">
-                <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.5 }}
-                >
-                </motion.div>
                 <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-5">
                     {[1, 2, 3, 4, 5].map((i) => (
                         <Card key={i}>
@@ -219,7 +213,11 @@ export const SalesSummaryPage = () => {
     if (error) {
         return (
             <div className="flex-1 space-y-6 p-6">
-                <ErrorState title="Error al cargar resumen de ventas" message={`No se pudieron obtener los datos. Error: ${error.message}`} />
+                <ErrorState
+                    title="Error al cargar resumen de ventas"
+                    message={`No se pudieron obtener los datos. Error: ${error.message}`}
+                    onRetry={() => refetch()}
+                />
             </div>
         )
     }
@@ -240,15 +238,15 @@ export const SalesSummaryPage = () => {
                         animate={{ opacity: 1, scale: 1 }}
                         transition={{ duration: 0.5, delay: 0.2 }}
                     >
-                        <Card className="border-indigo-200 dark:border-indigo-800 bg-indigo-50/50 dark:bg-indigo-950/20 hover:shadow-lg transition-shadow">
+                        <Card className="hover:shadow-lg transition-shadow">
                             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                                <CardTitle className="text-sm font-medium text-indigo-700 dark:text-indigo-300">
+                                <CardTitle className="text-sm font-medium text-muted-foreground">
                                     Total Vendido
                                 </CardTitle>
-                                <DollarSign className="h-4 w-4 text-indigo-600 dark:text-indigo-400" />
+                                <DollarSign className="h-4 w-4 text-primary" />
                             </CardHeader>
                             <CardContent>
-                                <div className="text-2xl font-bold text-indigo-900 dark:text-indigo-100">
+                                <div className="text-2xl font-bold">
                                     <CountUp end={totalSalesAmount} />
                                 </div>
                                 <p className="text-xs text-muted-foreground mt-1">
@@ -264,15 +262,15 @@ export const SalesSummaryPage = () => {
                         animate={{ opacity: 1, scale: 1 }}
                         transition={{ duration: 0.5, delay: 0.3 }}
                     >
-                        <Card className="border-emerald-200 dark:border-emerald-800 bg-emerald-50/50 dark:bg-emerald-950/20 hover:shadow-lg transition-shadow">
+                        <Card className="hover:shadow-lg transition-shadow">
                             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                                <CardTitle className="text-sm font-medium text-emerald-700 dark:text-emerald-300">
+                                <CardTitle className="text-sm font-medium text-muted-foreground">
                                     Unidades Vendidas
                                 </CardTitle>
-                                <Package className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+                                <Package className="h-4 w-4 text-primary" />
                             </CardHeader>
                             <CardContent>
-                                <div className="text-2xl font-bold text-emerald-900 dark:text-emerald-100">
+                                <div className="text-2xl font-bold">
                                     <CountUp end={totalUnitsSold} />
                                 </div>
                                 <p className="text-xs text-muted-foreground mt-1">
@@ -288,15 +286,15 @@ export const SalesSummaryPage = () => {
                         animate={{ opacity: 1, scale: 1 }}
                         transition={{ duration: 0.5, delay: 0.4 }}
                     >
-                        <Card className="border-rose-200 dark:border-rose-800 bg-rose-50/50 dark:bg-rose-950/20 hover:shadow-lg transition-shadow">
+                        <Card className="hover:shadow-lg transition-shadow">
                             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                                <CardTitle className="text-sm font-medium text-rose-700 dark:text-rose-300">
+                                <CardTitle className="text-sm font-medium text-muted-foreground">
                                     Documentos Únicos
                                 </CardTitle>
-                                <FileText className="h-4 w-4 text-rose-600 dark:text-rose-400" />
+                                <FileText className="h-4 w-4 text-primary" />
                             </CardHeader>
                             <CardContent>
-                                <div className="text-2xl font-bold text-rose-900 dark:text-rose-100">
+                                <div className="text-2xl font-bold">
                                     <CountUp end={uniqueDocuments} />
                                 </div>
                                 <p className="text-xs text-muted-foreground mt-1">
@@ -312,15 +310,15 @@ export const SalesSummaryPage = () => {
                         animate={{ opacity: 1, scale: 1 }}
                         transition={{ duration: 0.5, delay: 0.5 }}
                     >
-                        <Card className="border-amber-200 dark:border-amber-800 bg-amber-50/50 dark:bg-amber-950/20 hover:shadow-lg transition-shadow">
+                        <Card className="hover:shadow-lg transition-shadow">
                             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                                <CardTitle className="text-sm font-medium text-amber-700 dark:text-amber-300">
+                                <CardTitle className="text-sm font-medium text-muted-foreground">
                                     Top Vendedor
                                 </CardTitle>
-                                <Trophy className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+                                <Trophy className="h-4 w-4 text-primary" />
                             </CardHeader>
                             <CardContent>
-                                <div className="text-sm font-bold text-amber-900 dark:text-amber-100 truncate">
+                                <div className="text-sm font-bold truncate">
                                     {topVendor ? topVendor.vendedor : 'N/A'}
                                 </div>
                                 <p className="text-xs text-muted-foreground mt-1">
@@ -336,15 +334,15 @@ export const SalesSummaryPage = () => {
                         animate={{ opacity: 1, scale: 1 }}
                         transition={{ duration: 0.5, delay: 0.6 }}
                     >
-                        <Card className="border-violet-200 dark:border-violet-800 bg-violet-50/50 dark:bg-violet-950/20 hover:shadow-lg transition-shadow">
+                        <Card className="hover:shadow-lg transition-shadow">
                             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                                <CardTitle className="text-sm font-medium text-violet-700 dark:text-violet-300">
+                                <CardTitle className="text-sm font-medium text-muted-foreground">
                                     Producto Top
                                 </CardTitle>
-                                <TrendingUp className="h-4 w-4 text-violet-600 dark:text-violet-400" />
+                                <TrendingUp className="h-4 w-4 text-primary" />
                             </CardHeader>
                             <CardContent>
-                                <div className="text-sm font-bold text-violet-900 dark:text-violet-100 truncate">
+                                <div className="text-sm font-bold truncate">
                                     {topProduct ? (topProduct[0].length > 20 ? topProduct[0].substring(0, 20) + '...' : topProduct[0]) : 'N/A'}
                                 </div>
                                 <p className="text-xs text-muted-foreground mt-1">
@@ -368,10 +366,10 @@ export const SalesSummaryPage = () => {
                         animate={{ opacity: 1, x: 0 }}
                         transition={{ duration: 0.6, delay: 0.4 }}
                     >
-                        <Card className="hover:shadow-lg transition-shadow rounded-xl border">
+                        <Card className="hover:shadow-lg transition-shadow">
                             <CardHeader>
                                 <CardTitle className="flex items-center gap-2">
-                                    <BarChart3 className="h-5 w-5 text-indigo-600" />
+                                    <BarChart3 className="h-5 w-5 text-primary" />
                                     Ventas por Vendedor
                                 </CardTitle>
                             </CardHeader>
@@ -483,10 +481,10 @@ export const SalesSummaryPage = () => {
                         animate={{ opacity: 1, x: 0 }}
                         transition={{ duration: 0.6, delay: 0.5 }}
                     >
-                        <Card className="hover:shadow-lg transition-shadow rounded-xl border">
+                        <Card className="hover:shadow-lg transition-shadow">
                             <CardHeader>
                                 <CardTitle className="flex items-center gap-2">
-                                    <PieChart className="h-5 w-5 text-emerald-600" />
+                                    <PieChart className="h-5 w-5 text-primary" />
                                     Distribución de Ventas por Vendedor
                                 </CardTitle>
                             </CardHeader>
@@ -603,10 +601,10 @@ export const SalesSummaryPage = () => {
                         animate={{ opacity: 1, x: 0 }}
                         transition={{ duration: 0.6, delay: 0.6 }}
                     >
-                        <Card className="hover:shadow-lg transition-shadow rounded-xl border">
+                        <Card className="hover:shadow-lg transition-shadow">
                             <CardHeader>
                                 <CardTitle className="flex items-center gap-2">
-                                    <Layers className="h-5 w-5 text-rose-600" />
+                                    <Layers className="h-5 w-5 text-primary" />
                                     Unidades por Vendedor y Tipo de Documento
                                 </CardTitle>
                             </CardHeader>
@@ -731,10 +729,10 @@ export const SalesSummaryPage = () => {
                         animate={{ opacity: 1, x: 0 }}
                         transition={{ duration: 0.6, delay: 0.7 }}
                     >
-                        <Card className="hover:shadow-lg transition-shadow rounded-xl border">
+                        <Card className="hover:shadow-lg transition-shadow">
                             <CardHeader>
                                 <CardTitle className="flex items-center gap-2">
-                                    <LineChart className="h-5 w-5 text-amber-600" />
+                                    <LineChart className="h-5 w-5 text-primary" />
                                     Evolución de Ventas por Hora
                                 </CardTitle>
                             </CardHeader>
@@ -858,10 +856,10 @@ export const SalesSummaryPage = () => {
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ duration: 0.6, delay: 0.8 }}
                     >
-                        <Card className="hover:shadow-lg transition-shadow rounded-xl border">
+                        <Card className="hover:shadow-lg transition-shadow">
                             <CardHeader>
                                 <CardTitle className="flex items-center gap-2">
-                                    <Activity className="h-5 w-5 text-violet-600" />
+                                    <Activity className="h-5 w-5 text-primary" />
                                     Relación: Unidades vs Valor Neto (por Vendedor)
                                 </CardTitle>
                             </CardHeader>

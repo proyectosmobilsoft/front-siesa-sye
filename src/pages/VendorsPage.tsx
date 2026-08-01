@@ -47,7 +47,7 @@ const colorPalette = [
 ]
 
 export const VendorsPage = () => {
-    const { data: vendors, isLoading, error } = useVendors()
+    const { data: vendors, isLoading, error, refetch } = useVendors()
     const [selectedCenter, setSelectedCenter] = useState<string>('all')
     const [selectedCompany, setSelectedCompany] = useState<number | 'all'>('all')
 
@@ -171,12 +171,6 @@ export const VendorsPage = () => {
     if (isLoading) {
         return (
             <div className="flex-1 space-y-6 p-6">
-                <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.5 }}
-                >
-                </motion.div>
                 <div className="grid gap-4 md:grid-cols-3">
                     {[1, 2, 3].map((i) => (
                         <Card key={i}>
@@ -196,13 +190,11 @@ export const VendorsPage = () => {
     if (error) {
         return (
             <div className="flex-1 space-y-6 p-6">
-                <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.5 }}
-                >
-                </motion.div>
-                <ErrorState message={`No se pudieron obtener los datos. Error: ${error.message}`} />
+                <ErrorState
+                    title="Error al cargar vendedores"
+                    message={`No se pudieron obtener los datos. Error: ${error.message}`}
+                    onRetry={() => refetch()}
+                />
             </div>
         )
     }
@@ -281,20 +273,15 @@ export const VendorsPage = () => {
                         animate={{ opacity: 1, scale: 1 }}
                         transition={{ duration: 0.5, delay: 0.4 }}
                     >
-                        <Card className="border-blue-300 dark:border-blue-700 bg-gradient-to-br from-blue-50/50 to-transparent dark:from-blue-950/20 dark:to-transparent hover:shadow-lg hover:shadow-blue-200/50 dark:hover:shadow-blue-900/50 transition-all">
+                        <Card className="hover:shadow-lg transition-all">
                             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                                <CardTitle className="text-sm font-medium">
+                                <CardTitle className="text-sm font-medium text-muted-foreground">
                                     Total General de Ventas
                                 </CardTitle>
-                                <DollarSign className="h-5 w-5" style={{ color: vibrantColors.neonBlue }} />
+                                <DollarSign className="h-5 w-5 text-primary" />
                             </CardHeader>
                             <CardContent>
-                                <div className="text-3xl font-bold" style={{ 
-                                    background: `linear-gradient(to right, ${vibrantColors.neonBlue}, ${vibrantColors.neonCyan})`,
-                                    WebkitBackgroundClip: 'text',
-                                    WebkitTextFillColor: 'transparent',
-                                    backgroundClip: 'text'
-                                }}>
+                                <div className="text-3xl font-bold">
                                     {formatters.currency(totalSales)}
                                 </div>
                                 <p className="text-xs text-muted-foreground mt-2">
@@ -309,20 +296,15 @@ export const VendorsPage = () => {
                         animate={{ opacity: 1, scale: 1 }}
                         transition={{ duration: 0.5, delay: 0.5 }}
                     >
-                        <Card className="border-green-300 dark:border-green-700 bg-gradient-to-br from-green-50/50 to-transparent dark:from-green-950/20 dark:to-transparent hover:shadow-lg hover:shadow-green-200/50 dark:hover:shadow-green-900/50 transition-all">
+                        <Card className="hover:shadow-lg transition-all">
                             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                                <CardTitle className="text-sm font-medium">
+                                <CardTitle className="text-sm font-medium text-muted-foreground">
                                     Promedio por Vendedor
                                 </CardTitle>
-                                <TrendingUp className="h-5 w-5" style={{ color: vibrantColors.neonGreen }} />
+                                <TrendingUp className="h-5 w-5 text-primary" />
                             </CardHeader>
                             <CardContent>
-                                <div className="text-3xl font-bold" style={{ 
-                                    background: `linear-gradient(to right, ${vibrantColors.neonGreen}, ${vibrantColors.neonLime})`,
-                                    WebkitBackgroundClip: 'text',
-                                    WebkitTextFillColor: 'transparent',
-                                    backgroundClip: 'text'
-                                }}>
+                                <div className="text-3xl font-bold">
                                     {formatters.currency(avgSalePerVendor)}
                                 </div>
                                 <p className="text-xs text-muted-foreground mt-2">
@@ -337,20 +319,15 @@ export const VendorsPage = () => {
                         animate={{ opacity: 1, scale: 1 }}
                         transition={{ duration: 0.5, delay: 0.6 }}
                     >
-                        <Card className="border-pink-300 dark:border-pink-700 bg-gradient-to-br from-pink-50/50 to-transparent dark:from-pink-950/20 dark:to-transparent hover:shadow-lg hover:shadow-pink-200/50 dark:hover:shadow-pink-900/50 transition-all">
+                        <Card className="hover:shadow-lg transition-all">
                             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                                <CardTitle className="text-sm font-medium">
+                                <CardTitle className="text-sm font-medium text-muted-foreground">
                                     Número de Operaciones
                                 </CardTitle>
-                                <FileText className="h-5 w-5" style={{ color: vibrantColors.neonPink }} />
+                                <FileText className="h-5 w-5 text-primary" />
                             </CardHeader>
                             <CardContent>
-                                <div className="text-3xl font-bold" style={{ 
-                                    background: `linear-gradient(to right, ${vibrantColors.neonPink}, #a855f7)`,
-                                    WebkitBackgroundClip: 'text',
-                                    WebkitTextFillColor: 'transparent',
-                                    backgroundClip: 'text'
-                                }}>
+                                <div className="text-3xl font-bold">
                                     <CountUp end={totalOperations} />
                                 </div>
                                 <p className="text-xs text-muted-foreground mt-2">
@@ -374,10 +351,10 @@ export const VendorsPage = () => {
                         animate={{ opacity: 1, x: 0 }}
                         transition={{ duration: 0.6, delay: 0.5 }}
                     >
-                        <Card className="hover:shadow-xl transition-all rounded-xl border bg-gradient-to-br from-card to-card/50">
+                        <Card className="hover:shadow-lg transition-all">
                             <CardHeader>
                                 <CardTitle className="flex items-center gap-2">
-                                    <BarChart3 className="h-5 w-5" style={{ color: vibrantColors.neonBlue }} />
+                                    <BarChart3 className="h-5 w-5 text-primary" />
                                     Valor Neto Total por Vendedor
                                 </CardTitle>
                                 <p className="text-sm text-muted-foreground">
@@ -524,10 +501,10 @@ export const VendorsPage = () => {
                         animate={{ opacity: 1, x: 0 }}
                         transition={{ duration: 0.6, delay: 0.6 }}
                     >
-                        <Card className="hover:shadow-xl transition-all rounded-xl border bg-gradient-to-br from-card to-card/50">
+                        <Card className="hover:shadow-lg transition-all">
                             <CardHeader>
                                 <CardTitle className="flex items-center gap-2">
-                                    <PieChart className="h-5 w-5" style={{ color: vibrantColors.neonPink }} />
+                                    <PieChart className="h-5 w-5 text-primary" />
                                     Distribución por Tipo de Entrega
                                 </CardTitle>
                                 <p className="text-sm text-muted-foreground">
@@ -658,10 +635,10 @@ export const VendorsPage = () => {
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ duration: 0.6, delay: 0.7 }}
                     >
-                        <Card className="hover:shadow-xl transition-all rounded-xl border bg-gradient-to-br from-card to-card/50">
+                        <Card className="hover:shadow-lg transition-all">
                             <CardHeader>
                                 <CardTitle className="flex items-center gap-2">
-                                    <Layers className="h-5 w-5" style={{ color: vibrantColors.neonOrange }} />
+                                    <Layers className="h-5 w-5 text-primary" />
                                     Relación Subtotal vs Valor Neto (con Margen)
                                 </CardTitle>
                                 <p className="text-sm text-muted-foreground">

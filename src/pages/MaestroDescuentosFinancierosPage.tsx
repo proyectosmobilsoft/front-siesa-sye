@@ -121,19 +121,19 @@ export const MaestroDescuentosFinancierosPage = () => {
                         Nueva Condición
                     </Button>
                 </div>
-                <p className="shrink-0 text-sm text-muted-foreground">
+                <span className="inline-flex shrink-0 items-center rounded-full bg-muted px-3 py-1 text-xs font-medium text-muted-foreground">
                     {condiciones.length} {condiciones.length === 1 ? 'condición' : 'condiciones'}
-                </p>
+                </span>
             </div>
 
             <div className="min-h-0 flex-1 overflow-auto rounded-md border">
                 <table className="w-full text-sm">
                     <thead className="sticky top-0 z-10 bg-card">
                         <tr className="border-b bg-muted/50">
-                            <th className="h-11 px-4 text-left font-medium text-muted-foreground">Código</th>
-                            <th className="h-11 px-4 text-left font-medium text-muted-foreground">Nombre</th>
-                            <th className="h-11 px-4 text-left font-medium text-muted-foreground">Estado</th>
-                            <th className="h-11 px-4 text-right font-medium text-muted-foreground">Acciones</th>
+                            <th className="h-11 px-4 text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground">Código</th>
+                            <th className="h-11 px-4 text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground">Nombre</th>
+                            <th className="h-11 px-4 text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground">Estado</th>
+                            <th className="h-11 px-4 text-right text-xs font-semibold uppercase tracking-wide text-muted-foreground">Acciones</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -148,17 +148,18 @@ export const MaestroDescuentosFinancierosPage = () => {
                             </tr>
                         ) : condiciones.length > 0 ? (
                             condiciones.map((c) => (
-                                <tr key={c.code} className="border-b transition-colors hover:bg-muted/30">
-                                    <td className="py-3 px-4 font-mono text-sm font-semibold text-primary">{c.code}</td>
-                                    <td className="py-3 px-4">{c.name}</td>
-                                    <td className="py-3 px-4">
+                                <tr key={c.code} className="border-b transition-colors hover:bg-muted/40">
+                                    <td className="py-3.5 px-4 font-mono text-sm font-semibold text-primary">{c.code}</td>
+                                    <td className="py-3.5 px-4">{c.name}</td>
+                                    <td className="py-3.5 px-4">
                                         <span
-                                            className={`px-2.5 py-1 rounded-full text-xs font-semibold ${badgeClass(c.status === 1 || c.status === true ? 'green' : 'red')}`}
+                                            className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold ${badgeClass(c.status === 1 || c.status === true ? 'green' : 'red')}`}
                                         >
+                                            <span className="h-1.5 w-1.5 rounded-full bg-current" />
                                             {c.status === 1 || c.status === true ? 'Activo' : 'Inactivo'}
                                         </span>
                                     </td>
-                                    <td className="py-3 px-4">
+                                    <td className="py-3.5 px-4">
                                         <div className="flex justify-end gap-1">
                                             <Button
                                                 variant="ghost"
@@ -213,22 +214,35 @@ export const MaestroDescuentosFinancierosPage = () => {
                 className="max-w-md"
             >
                 <div className="flex flex-col items-center text-center py-4">
-                    <div className="relative mb-4">
-                        <div className="absolute inset-0 bg-destructive/20 rounded-full blur-xl" />
-                        <div className="relative h-16 w-16 rounded-full bg-destructive/10 border-2 border-destructive/30 flex items-center justify-center">
-                            <AlertTriangle className="h-8 w-8 text-destructive" />
+                    <div className="relative mb-6">
+                        <div className="absolute inset-0 bg-destructive/20 rounded-full blur-xl animate-pulse" />
+                        <div className="relative h-20 w-20 rounded-full bg-gradient-to-br from-red-50 to-red-100 dark:from-red-950/50 dark:to-red-900/30 border-2 border-red-200 dark:border-red-800 flex items-center justify-center">
+                            <AlertTriangle className="h-10 w-10 text-destructive" />
                         </div>
                     </div>
-                    <h3 className="text-lg font-bold mb-2">¿Eliminar esta condición de pago?</h3>
-                    <p className="text-muted-foreground text-sm mb-4">
-                        Se eliminará la condición y todos sus descuentos asociados: <strong>{deletingCondicion?.name}</strong>
+
+                    <h3 className="text-xl font-bold text-foreground mb-2">¿Eliminar esta condición de pago?</h3>
+
+                    <p className="text-muted-foreground mb-5 max-w-sm">
+                        Estás a punto de eliminar permanentemente la condición:
                     </p>
+
+                    <div className="w-full max-w-sm bg-muted/50 border border-border rounded-xl px-5 py-4 mb-6">
+                        <p className="text-lg font-semibold text-foreground">{deletingCondicion?.name}</p>
+                        <p className="text-sm text-muted-foreground mt-1 font-mono">{deletingCondicion?.code}</p>
+                    </div>
+
+                    <p className="text-xs text-red-500/80 dark:text-red-400/80 mb-6">
+                        Se eliminarán también todos sus descuentos asociados. Esta acción no se puede deshacer.
+                    </p>
+
                     {errorDelete && (
-                        <div className="w-full mb-4 p-3 text-sm text-destructive bg-destructive/10 border border-destructive/30 rounded-lg">
-                            {errorDelete}
+                        <div className="w-full max-w-sm bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 rounded-lg px-4 py-3 mb-4">
+                            <p className="text-sm text-red-600 dark:text-red-400 font-medium">{errorDelete}</p>
                         </div>
                     )}
-                    <div className="flex gap-3 w-full">
+
+                    <div className="flex gap-3 w-full max-w-sm">
                         <Button
                             variant="outline"
                             onClick={() => {
@@ -236,11 +250,11 @@ export const MaestroDescuentosFinancierosPage = () => {
                                 setErrorDelete(null)
                             }}
                             disabled={deleting}
-                            className="flex-1"
+                            className="flex-1 h-11"
                         >
                             Cancelar
                         </Button>
-                        <Button variant="destructive" onClick={confirmDelete} disabled={deleting} className="flex-1 gap-2">
+                        <Button variant="destructive" onClick={confirmDelete} disabled={deleting} className="flex-1 h-11 gap-2">
                             {deleting ? (
                                 <>
                                     <Loader2 className="h-4 w-4 animate-spin" />

@@ -225,7 +225,8 @@ export const MaestroRolesPage = () => {
             cell: ({ row }) => {
                 const activo = !!row.getValue('estado')
                 return (
-                    <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${badgeClass(activo ? 'green' : 'red')}`}>
+                    <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold ${badgeClass(activo ? 'green' : 'red')}`}>
+                        <span className="h-1.5 w-1.5 rounded-full bg-current" />
                         {activo ? 'Activo' : 'Inactivo'}
                     </span>
                 )
@@ -299,18 +300,18 @@ export const MaestroRolesPage = () => {
             className="flex h-full min-h-0 flex-col gap-4 p-6"
         >
             <div className="flex shrink-0 items-center justify-between border-b pb-4">
-                <Button variant="outline" size="icon" onClick={() => navigate('/configuracion')}>
-                    <ArrowLeft className="h-4 w-4" />
-                </Button>
-                <div className="flex items-center gap-4">
-                    <p className="shrink-0 text-sm text-muted-foreground">
-                        {roles.length} rol{roles.length !== 1 ? 'es' : ''} registrado{roles.length !== 1 ? 's' : ''}
-                    </p>
-                    <Button onClick={handleNewRole} className="whitespace-nowrap">
-                        <Plus className="mr-2 h-4 w-4" />
-                        Nuevo Rol
+                <div className="flex items-center gap-3">
+                    <Button variant="outline" size="icon" onClick={() => navigate('/configuracion')}>
+                        <ArrowLeft className="h-4 w-4" />
                     </Button>
+                    <span className="inline-flex shrink-0 items-center rounded-full bg-muted px-3 py-1 text-xs font-medium text-muted-foreground">
+                        {roles.length} rol{roles.length !== 1 ? 'es' : ''} registrado{roles.length !== 1 ? 's' : ''}
+                    </span>
                 </div>
+                <Button onClick={handleNewRole} className="whitespace-nowrap">
+                    <Plus className="mr-2 h-4 w-4" />
+                    Nuevo Rol
+                </Button>
             </div>
 
             <div className="min-h-0 flex-1 overflow-auto rounded-md border">
@@ -321,7 +322,7 @@ export const MaestroRolesPage = () => {
                                 {headerGroup.headers.map((header) => (
                                     <th
                                         key={header.id}
-                                        className="h-11 px-4 text-left align-middle font-medium text-muted-foreground"
+                                        className="h-11 px-4 text-left align-middle text-xs font-semibold uppercase tracking-wide text-muted-foreground"
                                     >
                                         {header.isPlaceholder
                                             ? null
@@ -348,13 +349,13 @@ export const MaestroRolesPage = () => {
                             table.getRowModel().rows.map((row) => (
                                 <motion.tr
                                     key={row.id}
-                                    className="border-b transition-colors hover:bg-muted/30"
+                                    className="border-b transition-colors hover:bg-muted/40"
                                     initial={{ opacity: 0 }}
                                     animate={{ opacity: 1 }}
                                     transition={{ duration: 0.2 }}
                                 >
                                     {row.getVisibleCells().map((cell) => (
-                                        <td key={cell.id} className="py-3 px-4 align-middle">
+                                        <td key={cell.id} className="py-3.5 px-4 align-middle">
                                             {flexRender(cell.column.columnDef.cell, cell.getContext())}
                                         </td>
                                     ))}
@@ -380,7 +381,7 @@ export const MaestroRolesPage = () => {
             >
                 <div className="mt-4 space-y-5">
                     <div className="space-y-2">
-                        <label className="text-sm font-medium">Nombre del Rol</label>
+                        <label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Nombre del Rol</label>
                         <Input
                             placeholder="Ej. SUPERVISOR"
                             value={formNombre}
@@ -392,7 +393,7 @@ export const MaestroRolesPage = () => {
                     {/* Tipo de Autenticación + Estado en una sola fila compacta */}
                     <div className="flex flex-wrap items-end gap-4">
                         <div className="flex-1 min-w-[140px] space-y-1">
-                            <label className="text-xs font-medium text-muted-foreground">Autenticación</label>
+                            <label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Autenticación</label>
                             <div className="flex gap-1.5">
                                 <button
                                     type="button"
@@ -422,7 +423,7 @@ export const MaestroRolesPage = () => {
                         </div>
                         {editingRole && (
                             <div className="flex-1 min-w-[120px] space-y-1">
-                                <label className="text-xs font-medium text-muted-foreground">Estado</label>
+                                <label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Estado</label>
                                 <div className="flex gap-1.5">
                                     <button
                                         type="button"
@@ -455,7 +456,7 @@ export const MaestroRolesPage = () => {
 
                     {/* Permisos: multiselect con search + tabla */}
                     <div className="space-y-2">
-                        <label className="text-sm font-medium">Permisos del Rol</label>
+                        <label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Permisos del Rol</label>
                         <div ref={permisosDropdownRef} className="relative">
                             <div
                                 onClick={() => setPermisosDropdownOpen(!permisosDropdownOpen)}

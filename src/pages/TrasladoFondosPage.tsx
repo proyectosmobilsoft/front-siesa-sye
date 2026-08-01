@@ -116,19 +116,22 @@ export const TrasladoFondosPage = () => {
             >
                 <Card className="overflow-hidden">
                     <div className="h-1 w-full bg-gradient-to-r from-primary via-primary/60 to-primary/20" />
-                    <CardHeader>
+                    <CardHeader className="flex flex-row items-center gap-3 space-y-0">
+                        <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10">
+                            <ArrowRightLeft className="h-4 w-4 text-primary" />
+                        </div>
                         <CardTitle className="text-base">Nuevo traslado</CardTitle>
                     </CardHeader>
                     <CardContent>
                         <form onSubmit={handleSubmit} className="space-y-5">
                             {/* Flujo origen -> destino */}
-                            <div className="flex flex-col items-center gap-3 sm:flex-row">
+                            <div className="flex flex-col items-center gap-3 rounded-xl border border-border bg-muted/20 p-4 sm:flex-row">
                                 <CajaSelector label="Caja origen" value={cajaOrigen} onChange={setCajaOrigen} disabledValue={cajaDestino} />
 
                                 <motion.div
                                     animate={{ rotate: [0, 8, -8, 0] }}
                                     transition={{ duration: 2.5, repeat: Infinity, ease: 'easeInOut' }}
-                                    className="mt-2 flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary sm:mt-6"
+                                    className="mt-2 flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary shadow-sm sm:mt-6"
                                 >
                                     <ArrowRight className="h-4 w-4 hidden sm:block" />
                                     <ArrowRightLeft className="h-4 w-4 sm:hidden" />
@@ -149,7 +152,7 @@ export const TrasladoFondosPage = () => {
                                 <label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                                     Valor a trasladar
                                 </label>
-                                <div className="relative rounded-xl border border-primary/20 bg-primary/5 px-4 py-3">
+                                <div className="relative rounded-xl border border-primary/20 bg-primary/5 px-4 py-3 transition-colors focus-within:border-primary/50 focus-within:bg-primary/10">
                                     <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-2xl font-bold text-primary/50">$</span>
                                     <input
                                         type="number"
@@ -284,10 +287,10 @@ export const TrasladoFondosPage = () => {
                                         initial={{ opacity: 0, x: -6 }}
                                         animate={{ opacity: 1, x: 0 }}
                                         transition={{ duration: 0.2, delay: idx * 0.03 }}
-                                        className="flex items-center gap-3 px-4 py-3 transition-colors hover:bg-muted/30"
+                                        className="flex items-center gap-3 px-4 py-3.5 transition-colors hover:bg-muted/30"
                                     >
                                         <div className={cn(
-                                            'flex h-9 w-9 shrink-0 items-center justify-center rounded-full',
+                                            'flex h-10 w-10 shrink-0 items-center justify-center rounded-full',
                                             t.estado === 'CONFIRMADO' ? 'bg-emerald-500/10 text-emerald-600' :
                                                 t.estado === 'RECHAZADO' ? 'bg-red-500/10 text-red-600' :
                                                     'bg-amber-500/10 text-amber-600'
@@ -295,19 +298,19 @@ export const TrasladoFondosPage = () => {
                                             <ArrowRightLeft className="h-4 w-4" />
                                         </div>
                                         <div className="min-w-0 flex-1">
-                                            <p className="flex flex-wrap items-center gap-1 truncate text-sm font-medium">
+                                            <p className="flex flex-wrap items-center gap-1.5 truncate text-sm font-semibold">
                                                 {t.caja_origen_nombre}
                                                 <ArrowRight className="h-3 w-3 text-muted-foreground" />
                                                 {t.caja_destino_nombre}
                                             </p>
-                                            <p className="text-xs text-muted-foreground">
+                                            <p className="mt-0.5 text-xs text-muted-foreground">
                                                 {formatters.dateTime(t.fecha)} · {t.usuario_registro_nombre || 'Administrador'}
                                                 {t.referencia ? ` · ${t.referencia}` : ''}
                                             </p>
                                         </div>
                                         <div className="text-right">
                                             <p className="text-sm font-bold tabular-nums">{formatters.currency(t.valor)}</p>
-                                            <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-bold uppercase ${badgeClass(ESTADO_TONO[t.estado])}`}>
+                                            <span className={`mt-0.5 inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-bold uppercase ${badgeClass(ESTADO_TONO[t.estado])}`}>
                                                 {ESTADO_LABEL[t.estado]}
                                             </span>
                                         </div>

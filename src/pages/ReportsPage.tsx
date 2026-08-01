@@ -9,9 +9,43 @@ import { ResponsiveBar } from '@nivo/bar'
 import { ResponsiveLine } from '@nivo/line'
 import { DataTable } from '@/components/dashboard/DataTable'
 import { formatters } from '@/utils/formatters'
+import { PieChart, BarChart3, Clock, LineChart } from 'lucide-react'
+
+// Theme compartido para los gráficos Nivo: usa los tokens semánticos del
+// proyecto para que texto/ejes se lean bien tanto en claro como en oscuro.
+const nivoTheme = {
+    axis: {
+        ticks: {
+            text: { fill: 'hsl(var(--muted-foreground))', fontSize: 11 },
+        },
+        legend: {
+            text: { fill: 'hsl(var(--foreground))', fontSize: 12, fontWeight: 600 },
+        },
+    },
+    grid: {
+        line: {
+            stroke: 'hsl(var(--border))',
+        },
+    },
+    tooltip: {
+        container: {
+            background: 'hsl(var(--card))',
+            color: 'hsl(var(--foreground))',
+            border: '1px solid hsl(var(--border))',
+            borderRadius: 8,
+            boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+        },
+    },
+    labels: {
+        text: { fontSize: 11 },
+    },
+    legends: {
+        text: { fontSize: 11 },
+    },
+}
 
 export const ReportsPage = () => {
-    const { data: orders, isLoading, error } = useDailyOrders()
+    const { data: orders, isLoading, error, refetch } = useDailyOrders()
 
     // Datos para gráfico de distribución de estados (Pie)
     const ordersByStatusData = orders && Array.isArray(orders)
@@ -84,12 +118,6 @@ export const ReportsPage = () => {
     if (isLoading) {
         return (
             <div className="flex-1 space-y-6 p-6">
-                <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.5 }}
-                >
-                </motion.div>
                 <div className="grid gap-6 md:grid-cols-2">
                     <Card>
                         <CardHeader>
@@ -131,7 +159,11 @@ export const ReportsPage = () => {
     if (error) {
         return (
             <div className="flex-1 space-y-6 p-6">
-                <ErrorState title="Error al cargar reportes" message={`No se pudieron obtener los datos. Error: ${error.message}`} />
+                <ErrorState
+                    title="Error al cargar reportes"
+                    message={`No se pudieron obtener los datos. Error: ${error.message}`}
+                    onRetry={() => refetch()}
+                />
             </div>
         )
     }
@@ -149,7 +181,10 @@ export const ReportsPage = () => {
                     {/* Gráfico de Pie: Distribución de Estados */}
                     <Card>
                         <CardHeader>
-                            <CardTitle>Distribución de Estados</CardTitle>
+                            <CardTitle className="flex items-center gap-2">
+                                <PieChart className="h-5 w-5 text-primary" />
+                                Distribución de Estados
+                            </CardTitle>
                         </CardHeader>
                         <CardContent>
                             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
@@ -164,12 +199,13 @@ export const ReportsPage = () => {
                                         borderWidth={1}
                                         borderColor={{ from: 'color', modifiers: [['darker', 0.2]] }}
                                         arcLinkLabelsSkipAngle={10}
-                                        arcLinkLabelsTextColor="#ffffff"
+                                        arcLinkLabelsTextColor="hsl(var(--foreground))"
                                         arcLinkLabelsThickness={2}
                                         arcLinkLabelsColor={{ from: 'color' }}
                                         arcLabelsSkipAngle={10}
-                                        arcLabelsTextColor="#ffffff"
+                                        arcLabelsTextColor="hsl(var(--background))"
                                         valueFormat={(v) => formatters.abbreviate(Number(v))}
+                                        theme={nivoTheme}
                                         defs={[
                                             {
                                                 id: 'dots',
@@ -191,7 +227,7 @@ export const ReportsPage = () => {
                                                 itemsSpacing: 8,
                                                 itemWidth: 60,
                                                 itemHeight: 16,
-                                                itemTextColor: '#ffffff',
+                                                itemTextColor: 'hsl(var(--foreground))',
                                                 itemDirection: 'left-to-right',
                                                 itemOpacity: 1,
                                                 symbolSize: 12,
@@ -200,7 +236,7 @@ export const ReportsPage = () => {
                                                     {
                                                         on: 'hover',
                                                         style: {
-                                                            itemTextColor: '#ffffff',
+                                                            itemTextColor: 'hsl(var(--foreground))',
                                                             itemOpacity: 1,
                                                         },
                                                     },
@@ -258,7 +294,10 @@ export const ReportsPage = () => {
                     {/* Gráfico de Barras: Pedidos por Compañía (Top 5) */}
                     <Card>
                         <CardHeader>
-                            <CardTitle>Pedidos por Compañía (Top 5)</CardTitle>
+                            <CardTitle className="flex items-center gap-2">
+                                <BarChart3 className="h-5 w-5 text-primary" />
+                                Pedidos por Compañía (Top 5)
+                            </CardTitle>
                         </CardHeader>
                         <CardContent>
                             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
@@ -291,24 +330,10 @@ export const ReportsPage = () => {
                                             legendPosition: 'middle',
                                             legendOffset: -40,
                                         }}
-                                        theme={{
-                                            axis: {
-                                                ticks: {
-                                                    text: { fill: '#ffffff' }
-                                                },
-                                                legend: {
-                                                    text: { fill: '#ffffff' }
-                                                },
-                                            },
-                                            grid: {
-                                                line: {
-                                                    stroke: 'rgba(255, 255, 255, 0.2)'
-                                                }
-                                            }
-                                        }}
+                                        theme={nivoTheme}
                                         labelSkipWidth={12}
                                         labelSkipHeight={12}
-                                        labelTextColor="#ffffff"
+                                        labelTextColor={{ from: 'color', modifiers: [['darker', 1.8]] }}
                                         animate={true}
                                         motionConfig="gentle"
                                         tooltip={({ value, indexValue, color }) => (
@@ -369,7 +394,10 @@ export const ReportsPage = () => {
                     {/* Gráfico de Barras Horizontal: Pedidos por Hora */}
                     <Card>
                         <CardHeader>
-                            <CardTitle>Pedidos por Hora del Día</CardTitle>
+                            <CardTitle className="flex items-center gap-2">
+                                <Clock className="h-5 w-5 text-primary" />
+                                Pedidos por Hora del Día
+                            </CardTitle>
                         </CardHeader>
                         <CardContent>
                             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
@@ -404,24 +432,10 @@ export const ReportsPage = () => {
                                         legendPosition: 'middle',
                                         legendOffset: -50,
                                     }}
-                                    theme={{
-                                        axis: {
-                                            ticks: {
-                                                text: { fill: '#ffffff' }
-                                            },
-                                            legend: {
-                                                text: { fill: '#ffffff' }
-                                            },
-                                        },
-                                        grid: {
-                                            line: {
-                                                stroke: 'rgba(255, 255, 255, 0.2)'
-                                            }
-                                        }
-                                    }}
+                                    theme={nivoTheme}
                                     labelSkipWidth={12}
                                     labelSkipHeight={12}
-                                    labelTextColor="#ffffff"
+                                    labelTextColor={{ from: 'color', modifiers: [['darker', 1.8]] }}
                                     animate={true}
                                     motionConfig="gentle"
                                     tooltip={({ value, indexValue, color }) => (
@@ -491,7 +505,10 @@ export const ReportsPage = () => {
                     {/* Gráfico de Líneas: Evolución de Pedidos */}
                     <Card>
                         <CardHeader>
-                            <CardTitle>Evolución de Pedidos por Hora</CardTitle>
+                            <CardTitle className="flex items-center gap-2">
+                                <LineChart className="h-5 w-5 text-primary" />
+                                Evolución de Pedidos por Hora
+                            </CardTitle>
                         </CardHeader>
                         <CardContent>
                             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
@@ -527,21 +544,7 @@ export const ReportsPage = () => {
                                         legendPosition: 'middle',
                                         format: (v) => formatters.abbreviate(Number(v))
                                         }}
-                                    theme={{
-                                        axis: {
-                                            ticks: {
-                                                text: { fill: '#ffffff' }
-                                            },
-                                            legend: {
-                                                text: { fill: '#ffffff' }
-                                            },
-                                        },
-                                        grid: {
-                                            line: {
-                                                stroke: 'rgba(255, 255, 255, 0.2)'
-                                            }
-                                        }
-                                    }}
+                                    theme={nivoTheme}
                                     pointSize={10}
                                     pointColor={{ theme: 'background' }}
                                     pointBorderWidth={2}

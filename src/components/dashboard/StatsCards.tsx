@@ -1,14 +1,14 @@
 import { User, Package, ShoppingBag, DollarSign } from 'lucide-react'
 import { ErrorBoundary } from '@/components/ui/error-boundary'
 import { StatCard } from '@/components/dashboard/StatCard'
-import { useClients } from '@/hooks/useClients'
-import { useProducts } from '@/hooks/useProducts'
+import { useClientsCount } from '@/hooks/useClients'
+import { useProductsCount } from '@/hooks/useProducts'
 import { useDailyOrders, useSalesSummary } from '@/hooks/useReports'
 import { formatters } from '@/utils/formatters'
 
 const StatsCardsContent = () => {
-    const { data: clients, isLoading: loadingClients, error: errorClients } = useClients()
-    const { data: products, isLoading: loadingProducts, error: errorProducts } = useProducts()
+    const { data: clientsCount, isLoading: loadingClients, error: errorClients } = useClientsCount()
+    const { data: productsCount, isLoading: loadingProducts, error: errorProducts } = useProductsCount()
     const { data: orders, isLoading: loadingOrders, error: errorOrders } = useDailyOrders()
     const { data: sales, isLoading: loadingSales, error: errorSales } = useSalesSummary()
 
@@ -36,7 +36,7 @@ const StatsCardsContent = () => {
             />
             <StatCard
                 label="Clientes"
-                value={formatters.number(Array.isArray(clients) ? clients.length : 0)}
+                value={formatters.number(clientsCount ?? 0)}
                 icon={User}
                 isLoading={loadingClients}
                 hasError={!!errorClients}
@@ -44,7 +44,7 @@ const StatsCardsContent = () => {
             />
             <StatCard
                 label="Productos"
-                value={formatters.number(Array.isArray(products) ? products.length : 0)}
+                value={formatters.number(productsCount ?? 0)}
                 icon={Package}
                 isLoading={loadingProducts}
                 hasError={!!errorProducts}

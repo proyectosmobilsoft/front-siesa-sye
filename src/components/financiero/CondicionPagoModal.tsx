@@ -96,7 +96,7 @@ export const CondicionPagoModal = ({ isOpen, onClose, condicion }: CondicionPago
 
                 <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-1.5">
-                        <label className="text-xs font-medium text-muted-foreground">Código <span className="text-destructive">*</span></label>
+                        <label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Código <span className="text-destructive">*</span></label>
                         <Input
                             placeholder="Ej. 30D"
                             value={code}
@@ -107,7 +107,7 @@ export const CondicionPagoModal = ({ isOpen, onClose, condicion }: CondicionPago
                         />
                     </div>
                     <div className="space-y-1.5">
-                        <label className="text-xs font-medium text-muted-foreground">Estado</label>
+                        <label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Estado</label>
                         <div
                             onClick={() => setStatus((s) => (s === 1 ? 0 : 1))}
                             className={`flex items-center justify-center gap-2 px-3 py-2 rounded-lg border-2 cursor-pointer transition-all select-none h-10 ${status === 1 ? 'border-green-500/50 bg-green-500/10 text-green-700 dark:text-green-400' : 'border-destructive/50 bg-destructive/10 text-destructive'}`}
@@ -119,7 +119,7 @@ export const CondicionPagoModal = ({ isOpen, onClose, condicion }: CondicionPago
                 </div>
 
                 <div className="space-y-1.5">
-                    <label className="text-xs font-medium text-muted-foreground">Descripción <span className="text-destructive">*</span></label>
+                    <label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Descripción <span className="text-destructive">*</span></label>
                     <Input
                         placeholder="Ej. CREDITO 30 DIAS"
                         value={descripcion}
@@ -131,7 +131,7 @@ export const CondicionPagoModal = ({ isOpen, onClose, condicion }: CondicionPago
 
                 <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-1.5">
-                        <label className="text-xs font-medium text-muted-foreground">Días Límite</label>
+                        <label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Días Límite</label>
                         <Input
                             type="number"
                             placeholder="0"

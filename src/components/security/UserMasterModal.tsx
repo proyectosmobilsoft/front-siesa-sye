@@ -212,14 +212,14 @@ export const UserMasterModal = ({ isOpen, onClose, user }: UserMasterModalProps)
 
                 {/* Nombre Completo - campo más grande */}
                 <div className="space-y-1">
-                    <label className="text-xs font-medium text-muted-foreground">Nombre Completo</label>
+                    <label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Nombre Completo</label>
                     <Input placeholder="Ej. Juan Pérez García" value={nombreCompleto} onChange={(e) => setNombreCompleto(e.target.value)} className="h-10 text-base" autoComplete="off" />
                 </div>
 
                 {/* Fila: Rol | Email | Teléfono */}
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                     <div className="space-y-1">
-                        <label className="text-xs font-medium text-muted-foreground">Rol <span className="text-destructive">*</span></label>
+                        <label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Rol <span className="text-destructive">*</span></label>
                         <Select
                             value={rolId?.toString() || ''}
                             onChange={(e) => handleRolChange(e.target.value)}
@@ -236,11 +236,11 @@ export const UserMasterModal = ({ isOpen, onClose, user }: UserMasterModalProps)
                         </Select>
                     </div>
                     <div className="space-y-1">
-                        <label className="text-xs font-medium text-muted-foreground">Correo Electrónico</label>
+                        <label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Correo Electrónico</label>
                         <Input type="email" placeholder="usuario@email.com" value={email} onChange={(e) => setEmail(e.target.value)} className="h-9" autoComplete="off" />
                     </div>
                     <div className="space-y-1">
-                        <label className="text-xs font-medium text-muted-foreground">Teléfono</label>
+                        <label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Teléfono</label>
                         <div className="flex gap-1.5">
                             <Input placeholder="+57" value={codigoPais} onChange={(e) => setCodigoPais(e.target.value)} className="h-9 w-16 text-center shrink-0" autoComplete="off" />
                             <Input placeholder="300 000 0000" value={telefono} onChange={(e) => setTelefono(e.target.value)} className="h-9 flex-1" type="tel" autoComplete="off" />
@@ -252,11 +252,11 @@ export const UserMasterModal = ({ isOpen, onClose, user }: UserMasterModalProps)
                 {rolSeleccionado ? (
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         <div className="space-y-1">
-                            <label className="text-xs font-medium text-muted-foreground">Usuario <span className="text-destructive">*</span></label>
+                            <label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Usuario <span className="text-destructive">*</span></label>
                             <Input placeholder="Ej. conductor1" value={usuario} onChange={(e) => setUsuario(e.target.value)} className="h-9" autoComplete="off" />
                         </div>
                         <div className="space-y-1">
-                            <label className="text-xs font-medium text-muted-foreground">
+                            <label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                                 {rolSeleccionado.pin ? 'PIN de Acceso' : 'Contraseña'} <span className="text-destructive">*</span>
                             </label>
                             <div className="flex gap-2">
@@ -275,11 +275,11 @@ export const UserMasterModal = ({ isOpen, onClose, user }: UserMasterModalProps)
                 ) : (
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         <div className="space-y-1">
-                            <label className="text-xs font-medium text-muted-foreground">Usuario <span className="text-destructive">*</span></label>
+                            <label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Usuario <span className="text-destructive">*</span></label>
                             <Input placeholder="Ej. conductor1" value={usuario} onChange={(e) => setUsuario(e.target.value)} className="h-9" autoComplete="off" />
                         </div>
                         <div className="space-y-1">
-                            <label className="text-xs font-medium text-muted-foreground">PIN / Contraseña</label>
+                            <label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">PIN / Contraseña</label>
                             <Input placeholder="Seleccione un rol primero" className="h-9" disabled autoComplete="off" />
                         </div>
                     </div>
@@ -290,7 +290,7 @@ export const UserMasterModal = ({ isOpen, onClose, user }: UserMasterModalProps)
                     className={`grid grid-cols-1 gap-3 ${rolTieneModuloConductor(rolSeleccionado) ? 'sm:grid-cols-2' : ''}`}
                 >
                     <div className="space-y-1">
-                        <label className="text-xs font-medium text-muted-foreground">Observaciones</label>
+                        <label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Observaciones</label>
                         <Input
                             placeholder="Notas opcionales..."
                             value={observaciones}
@@ -301,7 +301,7 @@ export const UserMasterModal = ({ isOpen, onClose, user }: UserMasterModalProps)
                     </div>
                     {rolTieneModuloConductor(rolSeleccionado) && (
                         <div className="space-y-1">
-                            <label className="text-xs font-medium text-muted-foreground">Forma de pago</label>
+                            <label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Forma de pago</label>
                             <Input
                                 placeholder="Opcional — ej. transferencia, efectivo..."
                                 value={formaPago}
@@ -314,7 +314,7 @@ export const UserMasterModal = ({ isOpen, onClose, user }: UserMasterModalProps)
                 </div>
 
                 {/* Estado + Botones */}
-                <div className="flex items-center justify-between pt-3 border-t gap-3">
+                <div className="flex items-center justify-between pt-4 border-t gap-3">
                     <div
                         onClick={() => setActivo(!activo)}
                         className={`flex items-center gap-2 px-3 py-2 rounded-lg border-2 cursor-pointer transition-all select-none shrink-0 ${activo ? 'border-green-500/50 bg-green-500/10 text-green-700 dark:text-green-400' : 'border-destructive/50 bg-destructive/10 text-destructive'}`}

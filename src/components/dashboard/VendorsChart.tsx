@@ -57,8 +57,9 @@ const VendorsChartContent = () => {
                 <CardHeader>
                     <CardTitle>Top Vendedores</CardTitle>
                 </CardHeader>
-                <CardContent className="flex h-[280px] items-center justify-center text-sm text-muted-foreground">
-                    Sin datos disponibles
+                <CardContent className="flex h-[280px] flex-col items-center justify-center gap-1 text-center text-sm text-muted-foreground">
+                    <p>No hay ventas registradas por vendedor todavía</p>
+                    <p className="text-xs">El backend no tiene datos en este momento, no es un error de carga</p>
                 </CardContent>
             </Card>
         )
