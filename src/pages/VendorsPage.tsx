@@ -206,7 +206,7 @@ export const VendorsPage = () => {
                         </Card>
                     ))}
                 </div>
-                <div className="grid gap-4 md:grid-cols-3">
+                <div className="grid gap-4 md:grid-cols-2">
                     {[1, 2, 3].map((i) => (
                         <Card key={`chart-${i}`}>
                             <CardHeader>
@@ -355,7 +355,7 @@ export const VendorsPage = () => {
 
                 {/* Cards resumen clicables */}
                 <motion.div
-                    className="grid gap-4 md:grid-cols-3"
+                    className="grid gap-4 md:grid-cols-2"
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.5, delay: 0.4 }}
@@ -389,7 +389,7 @@ export const VendorsPage = () => {
                                     <p className="text-sm text-muted-foreground">Sin datos disponibles</p>
                                 )}
                                 {salesByVendorData.length > 0 && (
-                                    <div className="h-16 mt-3">
+                                    <div className="h-24 mt-3">
                                         <ResponsiveBar
                                             data={salesByVendorData}
                                             keys={['ventas']}
@@ -451,7 +451,7 @@ export const VendorsPage = () => {
                                     <p className="text-sm text-muted-foreground">Sin datos disponibles</p>
                                 )}
                                 {documentTypeData.length > 0 && (
-                                    <div className="h-16 mt-3">
+                                    <div className="h-24 mt-3">
                                         <ResponsivePie
                                             data={documentTypeData}
                                             margin={{ top: 4, right: 4, bottom: 4, left: 4 }}
@@ -504,7 +504,7 @@ export const VendorsPage = () => {
                                     <p className="text-sm text-muted-foreground">Sin datos disponibles</p>
                                 )}
                                 {unitsByVendorData.length > 0 && (
-                                    <div className="h-16 mt-3">
+                                    <div className="h-24 mt-3">
                                         <ResponsiveBar
                                             data={unitsByVendorData}
                                             keys={['unidades']}

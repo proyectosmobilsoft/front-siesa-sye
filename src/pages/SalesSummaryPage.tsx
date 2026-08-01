@@ -394,7 +394,7 @@ export const SalesSummaryPage = () => {
 
                 {/* Cards resumen clicables: cada una abre el detalle completo del gráfico */}
                 <motion.div
-                    className="grid gap-4 grid-cols-1 md:grid-cols-2 xl:grid-cols-3"
+                    className="grid gap-4 grid-cols-1 md:grid-cols-2"
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.5, delay: 0.3 }}
@@ -420,7 +420,7 @@ export const SalesSummaryPage = () => {
                                 <p className="text-xs text-muted-foreground mt-1">
                                     Top vendedor: {topVendor ? formatters.currency(topVendor.ventas) : 'Sin datos'}
                                 </p>
-                                <div className="h-16 mt-2">
+                                <div className="h-24 mt-2">
                                     <ResponsiveBar
                                         data={salesByVendorData.slice(0, 10)}
                                         keys={['ventas']}
@@ -469,7 +469,7 @@ export const SalesSummaryPage = () => {
                                         ? `${((topVendor.ventas / totalSales) * 100).toFixed(1)}% del total vendido`
                                         : 'Sin datos'}
                                 </p>
-                                <div className="h-16 mt-2">
+                                <div className="h-24 mt-2">
                                     <ResponsivePie
                                         data={pieData.slice(0, 8)}
                                         margin={{ top: 2, right: 2, bottom: 2, left: 2 }}
@@ -511,7 +511,7 @@ export const SalesSummaryPage = () => {
                                 <p className="text-xs text-muted-foreground mt-1">
                                     {topDocType ? `${formatters.number(topDocType[1])} unidades (tipo top)` : 'Sin datos'}
                                 </p>
-                                <div className="h-16 mt-2">
+                                <div className="h-24 mt-2">
                                     <ResponsiveBar
                                         data={stackedBarData}
                                         keys={docTypesKeys}
@@ -558,7 +558,7 @@ export const SalesSummaryPage = () => {
                                 <p className="text-xs text-muted-foreground mt-1">
                                     {peakHour ? formatters.currency(peakHour.y as number) : 'Sin datos'}
                                 </p>
-                                <div className="h-16 mt-2">
+                                <div className="h-24 mt-2">
                                     <ResponsiveLine
                                         data={evolutionByHourData}
                                         margin={{ top: 4, right: 4, bottom: 4, left: 4 }}
@@ -611,7 +611,7 @@ export const SalesSummaryPage = () => {
                                         ? `Ticket promedio: ${formatters.currency(topVendorAvgTicket)}`
                                         : 'Sin datos'}
                                 </p>
-                                <div className="h-16 mt-2">
+                                <div className="h-24 mt-2">
                                     <ResponsiveScatterPlot
                                         data={scatterData}
                                         margin={{ top: 4, right: 4, bottom: 4, left: 4 }}

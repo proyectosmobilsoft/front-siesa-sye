@@ -136,7 +136,7 @@ export const ReportsPage = () => {
     if (isLoading) {
         return (
             <div className="flex-1 space-y-6 p-6">
-                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                <div className="grid gap-4 sm:grid-cols-2">
                     {Array.from({ length: 4 }).map((_, i) => (
                         <Card key={i}>
                             <CardHeader>
@@ -192,7 +192,7 @@ export const ReportsPage = () => {
                                     <p className="text-xs text-muted-foreground">
                                         {formatters.abbreviate(topStatus.value)} pedidos · {topStatusPct}% del total
                                     </p>
-                                    <div className="h-16">
+                                    <div className="h-24">
                                         <ResponsivePie
                                             data={ordersByStatusData}
                                             margin={{ top: 2, right: 2, bottom: 2, left: 2 }}
@@ -237,14 +237,16 @@ export const ReportsPage = () => {
                                     <p className="text-xs text-muted-foreground">
                                         {formatters.abbreviate(topCompany.pedidos)} pedidos · {topCompanyPct}% del total
                                     </p>
-                                    <div className="h-16">
+                                    <div className="h-24">
                                         <ResponsiveBar
                                             data={ordersByCompanyData}
                                             keys={['pedidos']}
                                             indexBy="compañía"
-                                            margin={{ top: 2, right: 2, bottom: 2, left: 2 }}
-                                            padding={0.3}
-                                            colors={{ scheme: 'category10' }}
+                                            margin={{ top: 4, right: 4, bottom: 4, left: 4 }}
+                                            padding={0.25}
+                                            colors={['hsl(0 79% 32%)', 'hsl(0 79% 41%)', 'hsl(0 75% 52%)', 'hsl(0 70% 63%)', 'hsl(0 65% 75%)']}
+                                            colorBy="indexValue"
+                                            borderRadius={3}
                                             axisTop={null}
                                             axisRight={null}
                                             axisBottom={null}
@@ -285,15 +287,15 @@ export const ReportsPage = () => {
                                     <p className="text-xs text-muted-foreground">
                                         Hora pico · {formatters.abbreviate(peakHour.pedidos)} pedidos
                                     </p>
-                                    <div className="h-16">
+                                    <div className="h-24">
                                         <ResponsiveBar
                                             data={ordersByHourData}
                                             keys={['pedidos']}
                                             indexBy="hora"
-                                            margin={{ top: 2, right: 2, bottom: 2, left: 2 }}
-                                            padding={0.3}
-                                            layout="horizontal"
+                                            margin={{ top: 4, right: 4, bottom: 4, left: 4 }}
+                                            padding={0.2}
                                             colors="hsl(var(--primary))"
+                                            borderRadius={2}
                                             axisTop={null}
                                             axisRight={null}
                                             axisBottom={null}
@@ -332,7 +334,7 @@ export const ReportsPage = () => {
                             <p className="text-xs text-muted-foreground">
                                 Total del día · {hoursWithData} franjas horarias
                             </p>
-                            <div className="h-16">
+                            <div className="h-24">
                                 <ResponsiveLine
                                     data={evolutionByHourData}
                                     margin={{ top: 2, right: 2, bottom: 2, left: 2 }}
