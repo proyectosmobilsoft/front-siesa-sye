@@ -9,7 +9,6 @@ import {
 } from '@tanstack/react-table'
 import { ArrowLeft, Plus, Edit, Shield, Loader2, Trash2, AlertTriangle, Key, Lock, Search, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Modal } from '@/components/ui/modal'
 import { useNavigate } from 'react-router-dom'
@@ -297,86 +296,80 @@ export const MaestroRolesPage = () => {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5 }}
-            className="flex h-full min-h-0 flex-col space-y-6 p-6"
+            className="flex h-full min-h-0 flex-col gap-4 p-6"
         >
-            <div className="flex shrink-0 items-center space-x-4">
-                <Button variant="outline" size="icon" onClick={() => navigate('/configuracion')}>
-                    <ArrowLeft className="h-4 w-4" />
+            <div className="flex shrink-0 items-center justify-between border-b pb-4">
+                <div className="flex items-center gap-4">
+                    <Button variant="outline" size="icon" onClick={() => navigate('/configuracion')}>
+                        <ArrowLeft className="h-4 w-4" />
+                    </Button>
+                    <p className="text-sm text-muted-foreground">
+                        {roles.length} rol{roles.length !== 1 ? 'es' : ''} registrado{roles.length !== 1 ? 's' : ''}
+                    </p>
+                </div>
+                <Button onClick={handleNewRole} className="whitespace-nowrap">
+                    <Plus className="mr-2 h-4 w-4" />
+                    Nuevo Rol
                 </Button>
             </div>
 
-            <Card className="flex min-h-0 flex-1 flex-col border-2 border-primary/20 bg-gradient-to-br from-background to-primary/5">
-                <CardHeader className="flex shrink-0 flex-row items-center justify-end gap-4">
-                    <Button onClick={handleNewRole} className="whitespace-nowrap">
-                        <Plus className="mr-2 h-4 w-4" />
-                        Nuevo Rol
-                    </Button>
-                </CardHeader>
-                <CardContent className="flex min-h-0 flex-1 flex-col">
-                    <div className="min-h-0 flex-1 overflow-auto rounded-md border bg-card">
-                        <table className="w-full text-sm">
-                            <thead className="sticky top-0 z-10 bg-card">
-                                    {table.getHeaderGroups().map((headerGroup) => (
-                                        <tr key={headerGroup.id} className="border-b bg-muted/50">
-                                            {headerGroup.headers.map((header) => (
-                                                <th
-                                                    key={header.id}
-                                                    className="h-11 px-4 text-left align-middle font-medium text-muted-foreground"
-                                                >
-                                                    {header.isPlaceholder
-                                                        ? null
-                                                        : flexRender(
-                                                            header.column.columnDef.header,
-                                                            header.getContext()
-                                                        )}
-                                                </th>
-                                            ))}
-                                        </tr>
+            <div className="min-h-0 flex-1 overflow-auto rounded-md border">
+                <table className="w-full text-sm">
+                    <thead className="sticky top-0 z-10 bg-card">
+                        {table.getHeaderGroups().map((headerGroup) => (
+                            <tr key={headerGroup.id} className="border-b bg-muted/50">
+                                {headerGroup.headers.map((header) => (
+                                    <th
+                                        key={header.id}
+                                        className="h-11 px-4 text-left align-middle font-medium text-muted-foreground"
+                                    >
+                                        {header.isPlaceholder
+                                            ? null
+                                            : flexRender(
+                                                header.column.columnDef.header,
+                                                header.getContext()
+                                            )}
+                                    </th>
+                                ))}
+                            </tr>
+                        ))}
+                    </thead>
+                    <tbody>
+                        {loading ? (
+                            <tr>
+                                <td colSpan={columns.length} className="h-32 text-center">
+                                    <div className="flex items-center justify-center gap-2 text-muted-foreground">
+                                        <Loader2 className="h-5 w-5 animate-spin" />
+                                        Cargando roles...
+                                    </div>
+                                </td>
+                            </tr>
+                        ) : table.getRowModel().rows?.length ? (
+                            table.getRowModel().rows.map((row) => (
+                                <motion.tr
+                                    key={row.id}
+                                    className="border-b transition-colors hover:bg-muted/30"
+                                    initial={{ opacity: 0 }}
+                                    animate={{ opacity: 1 }}
+                                    transition={{ duration: 0.2 }}
+                                >
+                                    {row.getVisibleCells().map((cell) => (
+                                        <td key={cell.id} className="py-3 px-4 align-middle">
+                                            {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                                        </td>
                                     ))}
-                                </thead>
-                                <tbody>
-                                    {loading ? (
-                                        <tr>
-                                            <td colSpan={columns.length} className="h-32 text-center">
-                                                <div className="flex items-center justify-center gap-2 text-muted-foreground">
-                                                    <Loader2 className="h-5 w-5 animate-spin" />
-                                                    Cargando roles...
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    ) : table.getRowModel().rows?.length ? (
-                                        table.getRowModel().rows.map((row) => (
-                                            <motion.tr
-                                                key={row.id}
-                                                className="border-b transition-colors hover:bg-muted/30"
-                                                initial={{ opacity: 0 }}
-                                                animate={{ opacity: 1 }}
-                                                transition={{ duration: 0.2 }}
-                                            >
-                                                {row.getVisibleCells().map((cell) => (
-                                                    <td key={cell.id} className="py-3 px-4 align-middle">
-                                                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                                                    </td>
-                                                ))}
-                                            </motion.tr>
-                                        ))
-                                    ) : (
-                                        <tr>
-                                            <td colSpan={columns.length} className="h-24 text-center text-muted-foreground">
-                                                No se encontraron roles.
-                                            </td>
-                                        </tr>
-                                    )}
-                                </tbody>
-                        </table>
-                    </div>
-                    <div className="flex shrink-0 items-center justify-between space-x-2 py-4">
-                        <div className="flex-1 text-sm text-muted-foreground">
-                            {roles.length} rol{roles.length !== 1 ? 'es' : ''} registrado{roles.length !== 1 ? 's' : ''}.
-                        </div>
-                    </div>
-                </CardContent>
-            </Card>
+                                </motion.tr>
+                            ))
+                        ) : (
+                            <tr>
+                                <td colSpan={columns.length} className="h-24 text-center text-muted-foreground">
+                                    No se encontraron roles.
+                                </td>
+                            </tr>
+                        )}
+                    </tbody>
+                </table>
+            </div>
 
             {/* Modal Crear / Editar Rol */}
             <Modal

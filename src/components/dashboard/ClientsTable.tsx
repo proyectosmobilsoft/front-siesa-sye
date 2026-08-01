@@ -14,7 +14,6 @@ import {
 import { ArrowUpDown, Search } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { ErrorState } from '@/components/ui/error-state'
 import { Skeleton } from '@/lib/skeleton'
 import { useClients } from '@/hooks/useClients'
@@ -153,17 +152,11 @@ export const ClientsTable = () => {
 
     if (isLoading) {
         return (
-            <Card>
-                <CardHeader>
-                    <Skeleton className="h-5 w-24" />
-                </CardHeader>
-                <CardContent>
-                    <div className="space-y-4">
-                        <Skeleton className="h-10 w-full" />
-                        <Skeleton className="h-64 w-full" />
-                    </div>
-                </CardContent>
-            </Card>
+            <div className="flex h-full min-h-0 flex-col gap-4">
+                <Skeleton className="h-8 w-64" />
+                <Skeleton className="h-10 w-full" />
+                <Skeleton className="flex-1 w-full" />
+            </div>
         )
     }
 
@@ -176,96 +169,90 @@ export const ClientsTable = () => {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.4 }}
-            className="flex h-full min-h-0 flex-col"
+            className="flex h-full min-h-0 flex-col gap-4"
         >
-            <Card className="flex min-h-0 flex-1 flex-col">
-                <CardHeader className="shrink-0">
-                    <p className="text-sm text-muted-foreground">
-                        {clients?.length ?? 0} {clients?.length === 1 ? 'cliente' : 'clientes'}
-                    </p>
-                    <div className="flex items-center space-x-2">
-                        <div className="relative flex-1 max-w-sm">
-                            <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-                            <Input
-                                placeholder="Buscar clientes..."
-                                value={globalFilter ?? ''}
-                                onChange={(event) => setGlobalFilter(String(event.target.value))}
-                                className="pl-8"
-                            />
-                        </div>
-                    </div>
-                </CardHeader>
-                <CardContent className="flex min-h-0 flex-1 flex-col">
-                    <div className="min-h-0 flex-1 overflow-auto rounded-md border">
-                        <table className="w-full text-sm">
-                            <thead className="sticky top-0 z-10 bg-card">
-                                {table.getHeaderGroups().map((headerGroup) => (
-                                    <tr key={headerGroup.id} className="border-b">
-                                        {headerGroup.headers.map((header) => (
-                                            <th key={header.id} className="h-10 px-3 text-left align-middle font-medium text-muted-foreground">
-                                                {header.isPlaceholder
-                                                    ? null
-                                                    : flexRender(
-                                                        header.column.columnDef.header,
-                                                        header.getContext()
-                                                    )}
-                                            </th>
-                                        ))}
-                                    </tr>
+            <div className="flex shrink-0 flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <p className="text-sm text-muted-foreground">
+                    {clients?.length ?? 0} {clients?.length === 1 ? 'cliente' : 'clientes'}
+                </p>
+                <div className="relative w-full sm:max-w-sm">
+                    <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                    <Input
+                        placeholder="Buscar clientes..."
+                        value={globalFilter ?? ''}
+                        onChange={(event) => setGlobalFilter(String(event.target.value))}
+                        className="pl-8"
+                    />
+                </div>
+            </div>
+            <div className="min-h-0 flex-1 overflow-auto rounded-md border">
+                <table className="w-full text-sm">
+                    <thead className="sticky top-0 z-10 bg-card">
+                        {table.getHeaderGroups().map((headerGroup) => (
+                            <tr key={headerGroup.id} className="border-b">
+                                {headerGroup.headers.map((header) => (
+                                    <th key={header.id} className="h-10 px-3 text-left align-middle font-medium text-muted-foreground">
+                                        {header.isPlaceholder
+                                            ? null
+                                            : flexRender(
+                                                header.column.columnDef.header,
+                                                header.getContext()
+                                            )}
+                                    </th>
                                 ))}
-                            </thead>
-                            <tbody>
-                                {table.getRowModel().rows?.length ? (
-                                    table.getRowModel().rows.map((row) => (
-                                        <motion.tr
-                                            key={row.id}
-                                            className="border-b transition-colors hover:bg-muted/50"
-                                            initial={{ opacity: 0 }}
-                                            animate={{ opacity: 1 }}
-                                            transition={{ duration: 0.2 }}
-                                        >
-                                            {row.getVisibleCells().map((cell) => (
-                                                <td key={cell.id} className="py-2 px-3 align-middle">
-                                                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                                                </td>
-                                            ))}
-                                        </motion.tr>
-                                    ))
-                                ) : (
-                                    <tr>
-                                        <td colSpan={columns.length} className="h-24 text-center">
-                                            No hay resultados.
+                            </tr>
+                        ))}
+                    </thead>
+                    <tbody>
+                        {table.getRowModel().rows?.length ? (
+                            table.getRowModel().rows.map((row) => (
+                                <motion.tr
+                                    key={row.id}
+                                    className="border-b transition-colors hover:bg-muted/50"
+                                    initial={{ opacity: 0 }}
+                                    animate={{ opacity: 1 }}
+                                    transition={{ duration: 0.2 }}
+                                >
+                                    {row.getVisibleCells().map((cell) => (
+                                        <td key={cell.id} className="py-2 px-3 align-middle">
+                                            {flexRender(cell.column.columnDef.cell, cell.getContext())}
                                         </td>
-                                    </tr>
-                                )}
-                            </tbody>
-                        </table>
-                    </div>
-                    <div className="flex shrink-0 items-center justify-between space-x-2 py-4">
-                        <div className="flex-1 text-sm text-muted-foreground">
-                            {table.getFilteredRowModel().rows.length} de {table.getCoreRowModel().rows.length} filas.
-                        </div>
-                        <div className="flex items-center space-x-2">
-                            <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => table.previousPage()}
-                                disabled={!table.getCanPreviousPage()}
-                            >
-                                Anterior
-                            </Button>
-                            <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => table.nextPage()}
-                                disabled={!table.getCanNextPage()}
-                            >
-                                Siguiente
-                            </Button>
-                        </div>
-                    </div>
-                </CardContent>
-            </Card>
+                                    ))}
+                                </motion.tr>
+                            ))
+                        ) : (
+                            <tr>
+                                <td colSpan={columns.length} className="h-24 text-center">
+                                    No hay resultados.
+                                </td>
+                            </tr>
+                        )}
+                    </tbody>
+                </table>
+            </div>
+            <div className="flex shrink-0 items-center justify-between space-x-2">
+                <div className="flex-1 text-sm text-muted-foreground">
+                    {table.getFilteredRowModel().rows.length} de {table.getCoreRowModel().rows.length} filas.
+                </div>
+                <div className="flex items-center space-x-2">
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => table.previousPage()}
+                        disabled={!table.getCanPreviousPage()}
+                    >
+                        Anterior
+                    </Button>
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => table.nextPage()}
+                        disabled={!table.getCanNextPage()}
+                    >
+                        Siguiente
+                    </Button>
+                </div>
+            </div>
         </motion.div>
     )
 }
