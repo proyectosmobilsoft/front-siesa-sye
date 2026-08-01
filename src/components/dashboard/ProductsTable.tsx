@@ -204,9 +204,10 @@ export const ProductsTable = () => {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.6 }}
+            className="flex h-full min-h-0 flex-col"
         >
-            <Card>
-                <CardHeader>
+            <Card className="flex min-h-0 flex-1 flex-col">
+                <CardHeader className="shrink-0">
                     <p className="text-sm text-muted-foreground">
                         {products?.length ?? 0} {products?.length === 1 ? 'producto' : 'productos'}
                     </p>
@@ -222,55 +223,53 @@ export const ProductsTable = () => {
                         </div>
                     </div>
                 </CardHeader>
-                <CardContent>
-                    <div className="rounded-md border">
-                        <div className="overflow-x-auto">
-                            <table className="w-full text-sm">
-                                <thead>
-                                    {table.getHeaderGroups().map((headerGroup) => (
-                                        <tr key={headerGroup.id} className="border-b">
-                                            {headerGroup.headers.map((header) => (
-                                                <th key={header.id} className="h-10 px-3 text-left align-middle font-medium text-muted-foreground">
-                                                    {header.isPlaceholder
-                                                        ? null
-                                                        : flexRender(
-                                                            header.column.columnDef.header,
-                                                            header.getContext()
-                                                        )}
-                                                </th>
+                <CardContent className="flex min-h-0 flex-1 flex-col">
+                    <div className="min-h-0 flex-1 overflow-auto rounded-md border">
+                        <table className="w-full text-sm">
+                            <thead className="sticky top-0 z-10 bg-card">
+                                {table.getHeaderGroups().map((headerGroup) => (
+                                    <tr key={headerGroup.id} className="border-b">
+                                        {headerGroup.headers.map((header) => (
+                                            <th key={header.id} className="h-10 px-3 text-left align-middle font-medium text-muted-foreground">
+                                                {header.isPlaceholder
+                                                    ? null
+                                                    : flexRender(
+                                                        header.column.columnDef.header,
+                                                        header.getContext()
+                                                    )}
+                                            </th>
+                                        ))}
+                                    </tr>
+                                ))}
+                            </thead>
+                            <tbody>
+                                {table.getRowModel().rows?.length ? (
+                                    table.getRowModel().rows.map((row) => (
+                                        <motion.tr
+                                            key={row.id}
+                                            className="border-b transition-colors hover:bg-muted/50"
+                                            initial={{ opacity: 0 }}
+                                            animate={{ opacity: 1 }}
+                                            transition={{ duration: 0.2 }}
+                                        >
+                                            {row.getVisibleCells().map((cell) => (
+                                                <td key={cell.id} className="py-2 px-3 align-middle">
+                                                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                                                </td>
                                             ))}
-                                        </tr>
-                                    ))}
-                                </thead>
-                                <tbody>
-                                    {table.getRowModel().rows?.length ? (
-                                        table.getRowModel().rows.map((row) => (
-                                            <motion.tr
-                                                key={row.id}
-                                                className="border-b transition-colors hover:bg-muted/50"
-                                                initial={{ opacity: 0 }}
-                                                animate={{ opacity: 1 }}
-                                                transition={{ duration: 0.2 }}
-                                            >
-                                                {row.getVisibleCells().map((cell) => (
-                                                    <td key={cell.id} className="py-2 px-3 align-middle">
-                                                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                                                    </td>
-                                                ))}
-                                            </motion.tr>
-                                        ))
-                                    ) : (
-                                        <tr>
-                                            <td colSpan={columns.length} className="h-24 text-center">
-                                                No hay resultados.
-                                            </td>
-                                        </tr>
-                                    )}
-                                </tbody>
-                            </table>
-                        </div>
+                                        </motion.tr>
+                                    ))
+                                ) : (
+                                    <tr>
+                                        <td colSpan={columns.length} className="h-24 text-center">
+                                            No hay resultados.
+                                        </td>
+                                    </tr>
+                                )}
+                            </tbody>
+                        </table>
                     </div>
-                    <div className="flex items-center justify-between space-x-2 py-4">
+                    <div className="flex shrink-0 items-center justify-between space-x-2 py-4">
                         <div className="flex-1 text-sm text-muted-foreground">
                             {table.getFilteredRowModel().rows.length} de {table.getCoreRowModel().rows.length} filas.
                         </div>

@@ -297,26 +297,25 @@ export const MaestroRolesPage = () => {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5 }}
-            className="flex-1 space-y-6 p-6"
+            className="flex h-full min-h-0 flex-col space-y-6 p-6"
         >
-            <div className="flex items-center space-x-4">
+            <div className="flex shrink-0 items-center space-x-4">
                 <Button variant="outline" size="icon" onClick={() => navigate('/configuracion')}>
                     <ArrowLeft className="h-4 w-4" />
                 </Button>
             </div>
 
-            <Card className="border-2 border-primary/20 bg-gradient-to-br from-background to-primary/5">
-                <CardHeader className="flex flex-row items-center justify-end gap-4">
+            <Card className="flex min-h-0 flex-1 flex-col border-2 border-primary/20 bg-gradient-to-br from-background to-primary/5">
+                <CardHeader className="flex shrink-0 flex-row items-center justify-end gap-4">
                     <Button onClick={handleNewRole} className="whitespace-nowrap">
                         <Plus className="mr-2 h-4 w-4" />
                         Nuevo Rol
                     </Button>
                 </CardHeader>
-                <CardContent>
-                    <div className="rounded-md border bg-card">
-                        <div className="overflow-x-auto custom-scrollbar">
-                            <table className="w-full text-sm">
-                                <thead>
+                <CardContent className="flex min-h-0 flex-1 flex-col">
+                    <div className="min-h-0 flex-1 overflow-auto rounded-md border bg-card">
+                        <table className="w-full text-sm">
+                            <thead className="sticky top-0 z-10 bg-card">
                                     {table.getHeaderGroups().map((headerGroup) => (
                                         <tr key={headerGroup.id} className="border-b bg-muted/50">
                                             {headerGroup.headers.map((header) => (
@@ -369,10 +368,9 @@ export const MaestroRolesPage = () => {
                                         </tr>
                                     )}
                                 </tbody>
-                            </table>
-                        </div>
+                        </table>
                     </div>
-                    <div className="flex items-center justify-between space-x-2 py-4">
+                    <div className="flex shrink-0 items-center justify-between space-x-2 py-4">
                         <div className="flex-1 text-sm text-muted-foreground">
                             {roles.length} rol{roles.length !== 1 ? 'es' : ''} registrado{roles.length !== 1 ? 's' : ''}.
                         </div>

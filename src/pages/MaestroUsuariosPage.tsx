@@ -91,17 +91,17 @@ export const MaestroUsuariosPage = () => {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5 }}
-            className="flex-1 space-y-6 p-6"
+            className="flex h-full min-h-0 flex-col space-y-6 p-6"
         >
-            <div className="flex items-center justify-between">
+            <div className="flex shrink-0 items-center justify-between">
                 <Button variant="outline" size="sm" onClick={() => fetchUsuarios(search)} disabled={loading} className="gap-2">
                     <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
                     Actualizar
                 </Button>
             </div>
 
-            <Card className="border-2 border-primary/20 bg-gradient-to-br from-background to-primary/5">
-                <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-4">
+            <Card className="flex min-h-0 flex-1 flex-col border-2 border-primary/20 bg-gradient-to-br from-background to-primary/5">
+                <CardHeader className="flex shrink-0 flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-4">
                     <p className="text-sm text-muted-foreground">
                         {usuarios.length} {usuarios.length === 1 ? 'usuario' : 'usuarios'}
                     </p>
@@ -122,11 +122,10 @@ export const MaestroUsuariosPage = () => {
                         </Button>
                     </div>
                 </CardHeader>
-                <CardContent>
-                    <div className="rounded-md border bg-card">
-                        <div className="overflow-x-auto custom-scrollbar">
-                            <table className="w-full text-sm">
-                                <thead>
+                <CardContent className="flex min-h-0 flex-1 flex-col">
+                    <div className="min-h-0 flex-1 overflow-auto rounded-md border bg-card">
+                        <table className="w-full text-sm">
+                            <thead className="sticky top-0 z-10 bg-card">
                                     <tr className="border-b bg-muted/50">
                                         <th className="h-11 px-4 text-left font-medium text-muted-foreground">ID</th>
                                         <th className="h-11 px-4 text-left font-medium text-muted-foreground">Usuario</th>
@@ -198,8 +197,7 @@ export const MaestroUsuariosPage = () => {
                                         </tr>
                                     )}
                                 </tbody>
-                            </table>
-                        </div>
+                        </table>
                     </div>
                 </CardContent>
             </Card>

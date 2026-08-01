@@ -333,16 +333,17 @@ export const PedidosPage = () => {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5 }}
-            className="flex-1 space-y-6 p-6"
+            className="flex h-full min-h-0 flex-col p-6"
         >
             {/* Main Table Card - Always Visible */}
             <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.5, delay: 0.2 }}
+                className="flex min-h-0 flex-1 flex-col"
             >
-                <Card className="border-2 border-primary/20 bg-gradient-to-br from-background to-primary/5">
-                    <CardHeader className="space-y-4">
+                <Card className="flex min-h-0 flex-1 flex-col border-2 border-primary/20 bg-gradient-to-br from-background to-primary/5">
+                    <CardHeader className="shrink-0 space-y-4">
                         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                             {pedidos && (
                                 <p className="text-sm text-muted-foreground">
@@ -396,7 +397,7 @@ export const PedidosPage = () => {
                         </div>
                     </CardHeader>
 
-                    <CardContent>
+                    <CardContent className="flex min-h-0 flex-1 flex-col">
                         {isLoading ? (
                             <div className="space-y-4">
                                 <Skeleton className="h-10 w-full" />
@@ -424,58 +425,56 @@ export const PedidosPage = () => {
                                 <p className="text-muted-foreground">No se encontraron pedidos con los filtros seleccionados.</p>
                             </div>
                         ) : (
-                            <>
-                                <div className="rounded-md border bg-card">
-                                    <div className="overflow-x-auto custom-scrollbar">
-                                        <table className="w-full text-sm">
-                                            <thead>
-                                                {table.getHeaderGroups().map((headerGroup) => (
-                                                    <tr key={headerGroup.id} className="border-b bg-muted/30">
-                                                        {headerGroup.headers.map((header) => (
-                                                            <th
-                                                                key={header.id}
-                                                                className="h-10 px-3 text-left align-middle font-semibold text-muted-foreground"
-                                                            >
-                                                                {header.isPlaceholder
-                                                                    ? null
-                                                                    : flexRender(
-                                                                        header.column.columnDef.header,
-                                                                        header.getContext()
-                                                                    )}
-                                                            </th>
-                                                        ))}
-                                                    </tr>
-                                                ))}
-                                            </thead>
-                                            <tbody>
-                                                {table.getRowModel().rows?.length ? (
-                                                    table.getRowModel().rows.map((row) => (
-                                                        <motion.tr
-                                                            key={row.id}
-                                                            className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted"
-                                                            initial={{ opacity: 0 }}
-                                                            animate={{ opacity: 1 }}
-                                                            transition={{ duration: 0.2 }}
+                            <div className="flex min-h-0 flex-1 flex-col">
+                                <div className="min-h-0 flex-1 overflow-auto rounded-md border bg-card">
+                                    <table className="w-full text-sm">
+                                        <thead className="sticky top-0 z-10 bg-card">
+                                            {table.getHeaderGroups().map((headerGroup) => (
+                                                <tr key={headerGroup.id} className="border-b bg-muted/30">
+                                                    {headerGroup.headers.map((header) => (
+                                                        <th
+                                                            key={header.id}
+                                                            className="h-10 px-3 text-left align-middle font-semibold text-muted-foreground"
                                                         >
-                                                            {row.getVisibleCells().map((cell) => (
-                                                                <td key={cell.id} className="py-2.5 px-3 align-middle">
-                                                                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                                                                </td>
-                                                            ))}
-                                                        </motion.tr>
-                                                    ))
-                                                ) : (
-                                                    <tr>
-                                                        <td colSpan={columns.length} className="h-24 text-center">
-                                                            No hay resultados.
-                                                        </td>
-                                                    </tr>
-                                                )}
-                                            </tbody>
-                                        </table>
-                                    </div>
+                                                            {header.isPlaceholder
+                                                                ? null
+                                                                : flexRender(
+                                                                    header.column.columnDef.header,
+                                                                    header.getContext()
+                                                                )}
+                                                        </th>
+                                                    ))}
+                                                </tr>
+                                            ))}
+                                        </thead>
+                                        <tbody>
+                                            {table.getRowModel().rows?.length ? (
+                                                table.getRowModel().rows.map((row) => (
+                                                    <motion.tr
+                                                        key={row.id}
+                                                        className="border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted"
+                                                        initial={{ opacity: 0 }}
+                                                        animate={{ opacity: 1 }}
+                                                        transition={{ duration: 0.2 }}
+                                                    >
+                                                        {row.getVisibleCells().map((cell) => (
+                                                            <td key={cell.id} className="py-2.5 px-3 align-middle">
+                                                                {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                                                            </td>
+                                                        ))}
+                                                    </motion.tr>
+                                                ))
+                                            ) : (
+                                                <tr>
+                                                    <td colSpan={columns.length} className="h-24 text-center">
+                                                        No hay resultados.
+                                                    </td>
+                                                </tr>
+                                            )}
+                                        </tbody>
+                                    </table>
                                 </div>
-                                <div className="flex items-center justify-between space-x-2 py-4">
+                                <div className="flex shrink-0 items-center justify-between space-x-2 py-4">
                                     <div className="flex-1 text-xs text-muted-foreground font-medium">
                                         Mostrando {table.getFilteredRowModel().rows.length} de {table.getCoreRowModel().rows.length} pedidos.
                                     </div>
@@ -503,7 +502,7 @@ export const PedidosPage = () => {
                                         </Button>
                                     </div>
                                 </div>
-                            </>
+                            </div>
                         )}
                     </CardContent>
                 </Card>

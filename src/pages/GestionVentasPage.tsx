@@ -143,11 +143,11 @@ export const GestionVentasPage = () => {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5 }}
-            className="flex-1 space-y-8 p-6"
+            className="flex h-full min-h-0 flex-col space-y-8 p-6"
         >
 
             {/* Filtros */}
-            <Card>
+            <Card className="shrink-0">
                 <CardHeader>
                     <CardTitle className="flex items-center gap-2">
                         <Filter className="h-5 w-5" />
@@ -219,7 +219,7 @@ export const GestionVentasPage = () => {
 
             {/* Tabla */}
             {searchParams && (
-                <>
+                <div className="flex min-h-0 flex-1 flex-col">
                     {isLoading ? (
                         <Card>
                             <CardHeader>
@@ -243,9 +243,10 @@ export const GestionVentasPage = () => {
                             initial={{ opacity: 0, y: 20 }}
                             animate={{ opacity: 1, y: 0 }}
                             transition={{ duration: 0.5, delay: 0.2 }}
+                            className="flex min-h-0 flex-1 flex-col"
                         >
-                            <Card>
-                                <CardHeader>
+                            <Card className="flex min-h-0 flex-1 flex-col">
+                                <CardHeader className="shrink-0">
                                     <CardTitle>
                                         Facturas
                                         {facturas && (
@@ -266,64 +267,62 @@ export const GestionVentasPage = () => {
                                         </div>
                                     </div>
                                 </CardHeader>
-                                <CardContent>
+                                <CardContent className="flex min-h-0 flex-1 flex-col">
                                     {!facturas || facturas.length === 0 ? (
                                         <div className="text-center py-12">
                                             <p className="text-muted-foreground">No se encontraron facturas con los filtros seleccionados.</p>
                                         </div>
                                     ) : (
-                                        <>
-                                            <div className="rounded-md border">
-                                                <div className="overflow-x-auto">
-                                                    <table className="w-full text-sm">
-                                                        <thead>
-                                                            {table.getHeaderGroups().map((headerGroup) => (
-                                                                <tr key={headerGroup.id} className="border-b">
-                                                                    {headerGroup.headers.map((header) => (
-                                                                        <th
-                                                                            key={header.id}
-                                                                            className="h-10 px-3 text-left align-middle font-medium text-muted-foreground"
-                                                                        >
-                                                                            {header.isPlaceholder
-                                                                                ? null
-                                                                                : flexRender(
-                                                                                    header.column.columnDef.header,
-                                                                                    header.getContext()
-                                                                                )}
-                                                                        </th>
-                                                                    ))}
-                                                                </tr>
-                                                            ))}
-                                                        </thead>
-                                                        <tbody>
-                                                            {table.getRowModel().rows?.length ? (
-                                                                table.getRowModel().rows.map((row) => (
-                                                                    <motion.tr
-                                                                        key={row.id}
-                                                                        className="border-b transition-colors hover:bg-muted/50"
-                                                                        initial={{ opacity: 0 }}
-                                                                        animate={{ opacity: 1 }}
-                                                                        transition={{ duration: 0.2 }}
+                                        <div className="flex min-h-0 flex-1 flex-col">
+                                            <div className="min-h-0 flex-1 overflow-auto rounded-md border">
+                                                <table className="w-full text-sm">
+                                                    <thead className="sticky top-0 z-10 bg-card">
+                                                        {table.getHeaderGroups().map((headerGroup) => (
+                                                            <tr key={headerGroup.id} className="border-b">
+                                                                {headerGroup.headers.map((header) => (
+                                                                    <th
+                                                                        key={header.id}
+                                                                        className="h-10 px-3 text-left align-middle font-medium text-muted-foreground"
                                                                     >
-                                                                        {row.getVisibleCells().map((cell) => (
-                                                                            <td key={cell.id} className="py-2 px-3 align-middle">
-                                                                                {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                                                                            </td>
-                                                                        ))}
-                                                                    </motion.tr>
-                                                                ))
-                                                            ) : (
-                                                                <tr>
-                                                                    <td colSpan={columns.length} className="h-24 text-center">
-                                                                        No hay resultados.
-                                                                    </td>
-                                                                </tr>
-                                                            )}
-                                                        </tbody>
-                                                    </table>
-                                                </div>
+                                                                        {header.isPlaceholder
+                                                                            ? null
+                                                                            : flexRender(
+                                                                                header.column.columnDef.header,
+                                                                                header.getContext()
+                                                                            )}
+                                                                    </th>
+                                                                ))}
+                                                            </tr>
+                                                        ))}
+                                                    </thead>
+                                                    <tbody>
+                                                        {table.getRowModel().rows?.length ? (
+                                                            table.getRowModel().rows.map((row) => (
+                                                                <motion.tr
+                                                                    key={row.id}
+                                                                    className="border-b transition-colors hover:bg-muted/50"
+                                                                    initial={{ opacity: 0 }}
+                                                                    animate={{ opacity: 1 }}
+                                                                    transition={{ duration: 0.2 }}
+                                                                >
+                                                                    {row.getVisibleCells().map((cell) => (
+                                                                        <td key={cell.id} className="py-2 px-3 align-middle">
+                                                                            {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                                                                        </td>
+                                                                    ))}
+                                                                </motion.tr>
+                                                            ))
+                                                        ) : (
+                                                            <tr>
+                                                                <td colSpan={columns.length} className="h-24 text-center">
+                                                                    No hay resultados.
+                                                                </td>
+                                                            </tr>
+                                                        )}
+                                                    </tbody>
+                                                </table>
                                             </div>
-                                            <div className="flex items-center justify-between space-x-2 py-4">
+                                            <div className="flex shrink-0 items-center justify-between space-x-2 py-4">
                                                 <div className="flex-1 text-sm text-muted-foreground">
                                                     {table.getFilteredRowModel().rows.length} de {table.getCoreRowModel().rows.length} filas.
                                                 </div>
@@ -346,13 +345,13 @@ export const GestionVentasPage = () => {
                                                     </Button>
                                                 </div>
                                             </div>
-                                        </>
+                                        </div>
                                     )}
                                 </CardContent>
                             </Card>
                         </motion.div>
                     )}
-                </>
+                </div>
             )}
 
             {!searchParams && (
