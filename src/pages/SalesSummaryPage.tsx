@@ -1,8 +1,10 @@
+import { useState } from 'react'
 import { motion } from 'framer-motion'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { ErrorState } from '@/components/ui/error-state'
 import { Skeleton } from '@/lib/skeleton'
 import { ErrorBoundary } from '@/components/ui/error-boundary'
+import { Modal } from '@/components/ui/modal'
 import { useSalesSummary } from '@/hooks/useReports'
 import { ResponsiveBar } from '@nivo/bar'
 import { ResponsivePie } from '@nivo/pie'
@@ -11,18 +13,21 @@ import { ResponsiveScatterPlot } from '@nivo/scatterplot'
 import { formatters } from '@/utils/formatters'
 import { CountUp } from '@/components/ui/count-up'
 import { DataTable } from '@/components/dashboard/DataTable'
-import { 
-    DollarSign, 
-    Package, 
-    FileText, 
-    Trophy, 
+import {
+    DollarSign,
+    Package,
+    FileText,
+    Trophy,
     TrendingUp,
     BarChart3,
     PieChart,
     Layers,
     LineChart,
-    Activity
+    Activity,
+    ChevronRight
 } from 'lucide-react'
+
+type ChartKey = 'vendor-bar' | 'vendor-pie' | 'stacked-units' | 'hour-evolution' | 'scatter'
 
 // Colores Tailwind para las gráficas
 const colors = {
@@ -64,6 +69,7 @@ export const SalesSummaryPage = () => {
         )
             .map(([vendor, total], index) => ({
                 vendedor: vendor.length > 25 ? vendor.substring(0, 25) + '...' : vendor,
+                vendedorFull: vendor,
                 ventas: total,
                 color: colorPalette[index % colorPalette.length]
             }))
@@ -81,10 +87,13 @@ export const SalesSummaryPage = () => {
     const totalSales = pieData.reduce((acc, item) => acc + item.value, 0)
 
     // 3. Gráfico de columnas apiladas: Vendedor vs Unidades agrupadas por tipo de documento
+    // Nota: los "top" vendedores se toman por valor total vendido (salesByVendorData ya
+    // viene ordenado desc), no por orden de aparición en el array de ventas.
     const stackedBarData = sales && Array.isArray(sales)
         ? (() => {
-            const vendors = Array.from(new Set(sales.map(s => s['Vendedor']).filter(Boolean)))
-                .slice(0, 8) // Top 8 vendedores
+            const vendors = salesByVendorData
+                .slice(0, 8) // Top 8 vendedores por valor vendido
+                .map(v => v.vendedorFull)
             const docTypes = Array.from(new Set(sales.map(s => s['Desc. grupo clase docto.']).filter(Boolean)))
             
             return vendors.map(vendor => {
@@ -134,8 +143,8 @@ export const SalesSummaryPage = () => {
     // 5. Gráfico de dispersión: Relación entre unidades y valor neto, coloreado por vendedor
     const scatterData = sales && Array.isArray(sales)
         ? (() => {
-            const vendors = Array.from(new Set(sales.map(s => s['Vendedor']).filter(Boolean)))
-                .slice(0, 5) // Top 5 vendedores para mejor visualización
+            // Top 5 vendedores por valor vendido (no por orden de aparición en los datos)
+            const vendors = salesByVendorData.slice(0, 5).map(v => v.vendedorFull)
             
             return vendors.map((vendor, index) => ({
                 id: vendor,
@@ -178,6 +187,35 @@ export const SalesSummaryPage = () => {
         )
             .sort((a, b) => b[1] - a[1])[0]
         : null
+
+    // Datos clave para las cards resumen (usadas en el grid clicable)
+    const topDocType = sales && Array.isArray(sales)
+        ? Object.entries(
+            sales.reduce((acc, sale) => {
+                const type = sale['Desc. grupo clase docto.'] || 'Sin Tipo'
+                const units = sale['Numero de unidades docto'] || 0
+                acc[type] = (acc[type] || 0) + units
+                return acc
+            }, {} as Record<string, number>)
+        ).sort((a, b) => b[1] - a[1])[0]
+        : null
+
+    const peakHour = evolutionByHourData[0]?.data.length
+        ? evolutionByHourData[0].data.reduce((max, point) =>
+            (point.y as number) > (max.y as number) ? point : max
+        )
+        : null
+
+    const topVendorAvgTicket = scatterData.length > 0
+        ? (() => {
+            const first = scatterData[0]
+            const units = first.data.reduce((sum, d) => sum + d.x, 0)
+            const total = first.data.reduce((sum, d) => sum + d.y, 0)
+            return units > 0 ? total / units : 0
+        })()
+        : 0
+
+    const [openChart, setOpenChart] = useState<ChartKey | null>(null)
 
     if (isLoading) {
         return (
@@ -353,27 +391,150 @@ export const SalesSummaryPage = () => {
                     </motion.div>
                 </motion.div>
 
-                {/* Gráficos */}
+                {/* Cards resumen clicables: cada una abre el detalle completo del gráfico */}
                 <motion.div
-                    className="grid gap-6 grid-cols-1"
+                    className="grid gap-4 grid-cols-1 md:grid-cols-2 xl:grid-cols-3"
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.5, delay: 0.3 }}
                 >
-                    {/* 1. Gráfico de barras comparativo */}
-                    <motion.div
-                        initial={{ opacity: 0, x: -20 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        transition={{ duration: 0.6, delay: 0.4 }}
+                    {/* 1. Ventas por Vendedor */}
+                    <button
+                        type="button"
+                        onClick={() => setOpenChart('vendor-bar')}
+                        className="text-left"
                     >
-                        <Card className="hover:shadow-lg transition-shadow">
-                            <CardHeader>
-                                <CardTitle className="flex items-center gap-2">
+                        <Card className="hover:shadow-lg transition-shadow cursor-pointer h-full">
+                            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                                <CardTitle className="flex items-center gap-2 text-base">
                                     <BarChart3 className="h-5 w-5 text-primary" />
                                     Ventas por Vendedor
                                 </CardTitle>
+                                <ChevronRight className="h-4 w-4 text-muted-foreground" />
                             </CardHeader>
                             <CardContent>
+                                <div className="text-sm font-bold truncate">
+                                    {topVendor ? topVendor.vendedor : 'N/A'}
+                                </div>
+                                <p className="text-xs text-muted-foreground mt-1">
+                                    Top vendedor: {topVendor ? formatters.currency(topVendor.ventas) : 'Sin datos'}
+                                </p>
+                            </CardContent>
+                        </Card>
+                    </button>
+
+                    {/* 2. Distribución de Ventas por Vendedor */}
+                    <button
+                        type="button"
+                        onClick={() => setOpenChart('vendor-pie')}
+                        className="text-left"
+                    >
+                        <Card className="hover:shadow-lg transition-shadow cursor-pointer h-full">
+                            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                                <CardTitle className="flex items-center gap-2 text-base">
+                                    <PieChart className="h-5 w-5 text-primary" />
+                                    Distribución por Vendedor
+                                </CardTitle>
+                                <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                            </CardHeader>
+                            <CardContent>
+                                <div className="text-sm font-bold truncate">
+                                    {topVendor ? topVendor.vendedor : 'N/A'}
+                                </div>
+                                <p className="text-xs text-muted-foreground mt-1">
+                                    {topVendor && totalSales > 0
+                                        ? `${((topVendor.ventas / totalSales) * 100).toFixed(1)}% del total vendido`
+                                        : 'Sin datos'}
+                                </p>
+                            </CardContent>
+                        </Card>
+                    </button>
+
+                    {/* 3. Unidades por Vendedor y Tipo de Documento */}
+                    <button
+                        type="button"
+                        onClick={() => setOpenChart('stacked-units')}
+                        className="text-left"
+                    >
+                        <Card className="hover:shadow-lg transition-shadow cursor-pointer h-full">
+                            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                                <CardTitle className="flex items-center gap-2 text-base">
+                                    <Layers className="h-5 w-5 text-primary" />
+                                    Unidades por Tipo de Documento
+                                </CardTitle>
+                                <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                            </CardHeader>
+                            <CardContent>
+                                <div className="text-sm font-bold truncate">
+                                    {topDocType ? topDocType[0] : 'N/A'}
+                                </div>
+                                <p className="text-xs text-muted-foreground mt-1">
+                                    {topDocType ? `${formatters.number(topDocType[1])} unidades (tipo top)` : 'Sin datos'}
+                                </p>
+                            </CardContent>
+                        </Card>
+                    </button>
+
+                    {/* 4. Evolución de Ventas por Hora */}
+                    <button
+                        type="button"
+                        onClick={() => setOpenChart('hour-evolution')}
+                        className="text-left"
+                    >
+                        <Card className="hover:shadow-lg transition-shadow cursor-pointer h-full">
+                            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                                <CardTitle className="flex items-center gap-2 text-base">
+                                    <LineChart className="h-5 w-5 text-primary" />
+                                    Evolución por Hora
+                                </CardTitle>
+                                <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                            </CardHeader>
+                            <CardContent>
+                                <div className="text-sm font-bold truncate">
+                                    {peakHour ? `Pico: ${peakHour.x}` : 'N/A'}
+                                </div>
+                                <p className="text-xs text-muted-foreground mt-1">
+                                    {peakHour ? formatters.currency(peakHour.y as number) : 'Sin datos'}
+                                </p>
+                            </CardContent>
+                        </Card>
+                    </button>
+
+                    {/* 5. Relación Unidades vs Valor Neto */}
+                    <button
+                        type="button"
+                        onClick={() => setOpenChart('scatter')}
+                        className="text-left"
+                    >
+                        <Card className="hover:shadow-lg transition-shadow cursor-pointer h-full">
+                            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                                <CardTitle className="flex items-center gap-2 text-base">
+                                    <Activity className="h-5 w-5 text-primary" />
+                                    Unidades vs Valor Neto
+                                </CardTitle>
+                                <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                            </CardHeader>
+                            <CardContent>
+                                <div className="text-sm font-bold truncate">
+                                    {scatterData[0]?.id ?? 'N/A'}
+                                </div>
+                                <p className="text-xs text-muted-foreground mt-1">
+                                    {scatterData.length > 0
+                                        ? `Ticket promedio: ${formatters.currency(topVendorAvgTicket)}`
+                                        : 'Sin datos'}
+                                </p>
+                            </CardContent>
+                        </Card>
+                    </button>
+                </motion.div>
+
+                {/* Modal: Ventas por Vendedor */}
+                <Modal
+                    isOpen={openChart === 'vendor-bar'}
+                    onClose={() => setOpenChart(null)}
+                    title="Ventas por Vendedor"
+                    className="max-w-6xl"
+                >
                                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                                     <div className="h-[400px]">
                                         <ResponsiveBar
@@ -471,24 +632,15 @@ export const SalesSummaryPage = () => {
                                         />
                                     </div>
                                 </div>
-                            </CardContent>
-                        </Card>
-                    </motion.div>
+                </Modal>
 
-                    {/* 2. Gráfico de pastel/donut */}
-                    <motion.div
-                        initial={{ opacity: 0, x: 20 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        transition={{ duration: 0.6, delay: 0.5 }}
-                    >
-                        <Card className="hover:shadow-lg transition-shadow">
-                            <CardHeader>
-                                <CardTitle className="flex items-center gap-2">
-                                    <PieChart className="h-5 w-5 text-primary" />
-                                    Distribución de Ventas por Vendedor
-                                </CardTitle>
-                            </CardHeader>
-                            <CardContent>
+                {/* Modal: Distribución de Ventas por Vendedor */}
+                <Modal
+                    isOpen={openChart === 'vendor-pie'}
+                    onClose={() => setOpenChart(null)}
+                    title="Distribución de Ventas por Vendedor"
+                    className="max-w-4xl"
+                >
                                 <div className="h-[400px]">
                                     <ResponsivePie
                                         data={pieData.slice(0, 8)}
@@ -591,24 +743,15 @@ export const SalesSummaryPage = () => {
                                         exportFilename="distribucion_ventas_vendedor"
                                     />
                                 </div>
-                            </CardContent>
-                        </Card>
-                    </motion.div>
+                </Modal>
 
-                    {/* 3. Gráfico de columnas apiladas */}
-                    <motion.div
-                        initial={{ opacity: 0, x: -20 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        transition={{ duration: 0.6, delay: 0.6 }}
-                    >
-                        <Card className="hover:shadow-lg transition-shadow">
-                            <CardHeader>
-                                <CardTitle className="flex items-center gap-2">
-                                    <Layers className="h-5 w-5 text-primary" />
-                                    Unidades por Vendedor y Tipo de Documento
-                                </CardTitle>
-                            </CardHeader>
-                            <CardContent>
+                {/* Modal: Unidades por Vendedor y Tipo de Documento */}
+                <Modal
+                    isOpen={openChart === 'stacked-units'}
+                    onClose={() => setOpenChart(null)}
+                    title="Unidades por Vendedor y Tipo de Documento"
+                    className="max-w-6xl"
+                >
                                 <div className="h-[400px]">
                                     <ResponsiveBar
                                         data={stackedBarData}
@@ -719,24 +862,15 @@ export const SalesSummaryPage = () => {
                                         exportFilename="unidades_por_vendedor_tipo_doc"
                                     />
                                 </div>
-                            </CardContent>
-                        </Card>
-                    </motion.div>
+                </Modal>
 
-                    {/* 4. Gráfico de líneas/área */}
-                    <motion.div
-                        initial={{ opacity: 0, x: 20 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        transition={{ duration: 0.6, delay: 0.7 }}
-                    >
-                        <Card className="hover:shadow-lg transition-shadow">
-                            <CardHeader>
-                                <CardTitle className="flex items-center gap-2">
-                                    <LineChart className="h-5 w-5 text-primary" />
-                                    Evolución de Ventas por Hora
-                                </CardTitle>
-                            </CardHeader>
-                            <CardContent>
+                {/* Modal: Evolución de Ventas por Hora */}
+                <Modal
+                    isOpen={openChart === 'hour-evolution'}
+                    onClose={() => setOpenChart(null)}
+                    title="Evolución de Ventas por Hora"
+                    className="max-w-4xl"
+                >
                                 <div className="h-[400px]">
                                     <ResponsiveLine
                                         data={evolutionByHourData}
@@ -846,24 +980,15 @@ export const SalesSummaryPage = () => {
                                         exportFilename="evolucion_ventas_hora"
                                     />
                                 </div>
-                            </CardContent>
-                        </Card>
-                    </motion.div>
+                </Modal>
 
-                    {/* 5. Gráfico de dispersión */}
-                    <motion.div
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ duration: 0.6, delay: 0.8 }}
-                    >
-                        <Card className="hover:shadow-lg transition-shadow">
-                            <CardHeader>
-                                <CardTitle className="flex items-center gap-2">
-                                    <Activity className="h-5 w-5 text-primary" />
-                                    Relación: Unidades vs Valor Neto (por Vendedor)
-                                </CardTitle>
-                            </CardHeader>
-                            <CardContent>
+                {/* Modal: Relación Unidades vs Valor Neto */}
+                <Modal
+                    isOpen={openChart === 'scatter'}
+                    onClose={() => setOpenChart(null)}
+                    title="Relación: Unidades vs Valor Neto (por Vendedor)"
+                    className="max-w-6xl"
+                >
                                 <div className="h-[400px]">
                                     <ResponsiveScatterPlot
                                         data={scatterData}
@@ -986,10 +1111,7 @@ export const SalesSummaryPage = () => {
                                         exportFilename="relacion_unidades_valor_neto"
                                     />
                                 </div>
-                            </CardContent>
-                        </Card>
-                    </motion.div>
-                </motion.div>
+                </Modal>
             </div>
         </ErrorBoundary>
     )

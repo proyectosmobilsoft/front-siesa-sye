@@ -25,7 +25,6 @@ import {
     SortingState,
 } from '@tanstack/react-table'
 import { useQuery } from '@tanstack/react-query'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { ErrorState } from '@/components/ui/error-state'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -846,25 +845,14 @@ export const EgresoPage = () => {
             initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
-            className="flex-1 space-y-6 p-6"
+            className="flex h-full min-h-0 flex-col gap-4 p-6"
         >
-            {/* Encabezado */}
-            <div className="flex items-center justify-between">
-                <Button variant="outline" size="sm" onClick={handleRefresh} disabled={isLoading} className="gap-2">
-                    <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
-                    Actualizar
-                </Button>
-            </div>
-
             {/* Tabla */}
             {isLoading ? (
-                <Card>
-                    <CardHeader><CardTitle>Anticipos Operativos</CardTitle></CardHeader>
-                    <CardContent className="space-y-4">
-                        <Skeleton className="h-10 w-full" />
-                        <Skeleton className="h-64 w-full" />
-                    </CardContent>
-                </Card>
+                <div className="flex min-h-0 flex-1 flex-col gap-4">
+                    <Skeleton className="h-10 w-full" />
+                    <Skeleton className="flex-1 w-full" />
+                </div>
             ) : error ? (
                 <ErrorState
                     title="Error al cargar las solicitudes"
@@ -877,104 +865,105 @@ export const EgresoPage = () => {
                     initial={{ opacity: 0, y: 12 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.35, delay: 0.08, ease: [0.22, 1, 0.36, 1] }}
+                    className="flex min-h-0 flex-1 flex-col gap-4"
                 >
-                    <Card className="border-2 border-primary/20 bg-gradient-to-br from-background to-primary/5">
-                        <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-4">
+                    <div className="flex shrink-0 flex-col gap-3 border-b pb-4 sm:flex-row sm:items-center sm:justify-between">
+                        <div className="relative w-full sm:w-72">
+                            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                            <Input
+                                placeholder="Buscar por número, solicitante, área..."
+                                value={globalFilter ?? ''}
+                                onChange={(e) => setGlobalFilter(e.target.value)}
+                                className="pl-9"
+                                autoComplete="off"
+                            />
+                        </div>
+                        <div className="flex shrink-0 items-center gap-3">
                             {solicitudes && (
                                 <p className="text-sm text-muted-foreground">
                                     {solicitudes.length} {solicitudes.length === 1 ? 'registro' : 'registros'}
                                 </p>
                             )}
-                            <div className="relative w-full sm:w-72">
-                                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                                <Input
-                                    placeholder="Buscar por número, solicitante, área..."
-                                    value={globalFilter ?? ''}
-                                    onChange={(e) => setGlobalFilter(e.target.value)}
-                                    className="pl-9"
-                                    autoComplete="off"
-                                />
-                            </div>
-                        </CardHeader>
-                        <CardContent>
-                            <div className="rounded-md border bg-card">
-                                <div className="overflow-x-auto custom-scrollbar">
-                                    <table className="w-full text-sm">
-                                        <thead>
-                                            {table.getHeaderGroups().map((headerGroup) => (
-                                                <tr key={headerGroup.id} className="border-b bg-muted/50">
-                                                    {headerGroup.headers.map((header) => (
-                                                        <th key={header.id} className="h-11 px-3 text-left align-middle font-medium text-muted-foreground">
-                                                            {header.isPlaceholder
-                                                                ? null
-                                                                : flexRender(header.column.columnDef.header, header.getContext())}
-                                                        </th>
-                                                    ))}
-                                                </tr>
-                                            ))}
-                                        </thead>
-                                        <tbody>
-                                            {table.getRowModel().rows.length ? (
-                                                table.getRowModel().rows.map((row) => {
-                                                    const isExpanded = expandedRowId === row.original.id
-                                                    return (
-                                                        <Fragment key={row.id}>
-                                                            <motion.tr
-                                                                className={`border-b cursor-pointer hover:bg-muted/30 ${isExpanded ? 'bg-primary/5' : ''}`}
-                                                                style={{ transition: 'background-color 0.15s ease' }}
-                                                                onClick={() => toggleRow(row.original.id)}
-                                                                initial={{ opacity: 0, y: 6 }}
-                                                                animate={{ opacity: 1, y: 0 }}
-                                                                transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
-                                                            >
-                                                                {row.getVisibleCells().map((cell) => (
-                                                                    <td key={cell.id} className="py-3 px-3 align-middle">
-                                                                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                                                                    </td>
-                                                                ))}
-                                                            </motion.tr>
-                                                            <AnimatePresence>
-                                                                {isExpanded && (
-                                                                    <DistribucionAccordion
-                                                                        anticipo={row.original}
-                                                                        totalColumnas={columns.length}
-                                                                    />
-                                                                )}
-                                                            </AnimatePresence>
-                                                        </Fragment>
-                                                    )
-                                                })
-                                            ) : (
-                                                <tr>
-                                                    <td colSpan={columns.length} className="h-24 text-center text-muted-foreground">
-                                                        No se encontraron solicitudes.
-                                                    </td>
-                                                </tr>
-                                            )}
-                                        </tbody>
-                                    </table>
-                                </div>
-                            </div>
+                            <Button variant="outline" size="icon" onClick={handleRefresh} disabled={isLoading} title="Actualizar">
+                                <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
+                            </Button>
+                        </div>
+                    </div>
 
-                            {/* Paginación */}
-                            <div className="flex items-center justify-between space-x-2 py-4">
-                                <div className="flex-1 text-sm text-muted-foreground">
-                                    {table.getFilteredRowModel().rows.length} de {table.getCoreRowModel().rows.length} registros
-                                </div>
-                                <div className="flex items-center gap-2">
-                                    <Button variant="outline" size="sm" onClick={() => table.previousPage()} disabled={!table.getCanPreviousPage()}>
-                                        Anterior
-                                    </Button>
-                                    <span className="text-sm text-muted-foreground">
-                                        Página {table.getState().pagination.pageIndex + 1} de {table.getPageCount()}
-                                    </span>
-                                    <Button variant="outline" size="sm" onClick={() => table.nextPage()} disabled={!table.getCanNextPage()}>
-                                        Siguiente
-                                    </Button>
-                                </div>
-                            </div>
-                        </CardContent>
-                    </Card>
+                    <div className="min-h-0 flex-1 overflow-auto rounded-md border">
+                        <table className="w-full text-sm">
+                            <thead className="sticky top-0 z-10 bg-card">
+                                {table.getHeaderGroups().map((headerGroup) => (
+                                    <tr key={headerGroup.id} className="border-b bg-muted/50">
+                                        {headerGroup.headers.map((header) => (
+                                            <th key={header.id} className="h-11 px-3 text-left align-middle font-medium text-muted-foreground">
+                                                {header.isPlaceholder
+                                                    ? null
+                                                    : flexRender(header.column.columnDef.header, header.getContext())}
+                                            </th>
+                                        ))}
+                                    </tr>
+                                ))}
+                            </thead>
+                            <tbody>
+                                {table.getRowModel().rows.length ? (
+                                    table.getRowModel().rows.map((row) => {
+                                        const isExpanded = expandedRowId === row.original.id
+                                        return (
+                                            <Fragment key={row.id}>
+                                                <motion.tr
+                                                    className={`border-b cursor-pointer hover:bg-muted/30 ${isExpanded ? 'bg-primary/5' : ''}`}
+                                                    style={{ transition: 'background-color 0.15s ease' }}
+                                                    onClick={() => toggleRow(row.original.id)}
+                                                    initial={{ opacity: 0, y: 6 }}
+                                                    animate={{ opacity: 1, y: 0 }}
+                                                    transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
+                                                >
+                                                    {row.getVisibleCells().map((cell) => (
+                                                        <td key={cell.id} className="py-3 px-3 align-middle">
+                                                            {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                                                        </td>
+                                                    ))}
+                                                </motion.tr>
+                                                <AnimatePresence>
+                                                    {isExpanded && (
+                                                        <DistribucionAccordion
+                                                            anticipo={row.original}
+                                                            totalColumnas={columns.length}
+                                                        />
+                                                    )}
+                                                </AnimatePresence>
+                                            </Fragment>
+                                        )
+                                    })
+                                ) : (
+                                    <tr>
+                                        <td colSpan={columns.length} className="h-24 text-center text-muted-foreground">
+                                            No se encontraron solicitudes.
+                                        </td>
+                                    </tr>
+                                )}
+                            </tbody>
+                        </table>
+                    </div>
+
+                    {/* Paginación */}
+                    <div className="flex shrink-0 items-center justify-between space-x-2">
+                        <div className="flex-1 text-sm text-muted-foreground">
+                            {table.getFilteredRowModel().rows.length} de {table.getCoreRowModel().rows.length} registros
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <Button variant="outline" size="sm" onClick={() => table.previousPage()} disabled={!table.getCanPreviousPage()}>
+                                Anterior
+                            </Button>
+                            <span className="text-sm text-muted-foreground">
+                                Página {table.getState().pagination.pageIndex + 1} de {table.getPageCount()}
+                            </span>
+                            <Button variant="outline" size="sm" onClick={() => table.nextPage()} disabled={!table.getCanNextPage()}>
+                                Siguiente
+                            </Button>
+                        </div>
+                    </div>
                 </motion.div>
             )}
 

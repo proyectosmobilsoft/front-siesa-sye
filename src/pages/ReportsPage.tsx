@@ -1,8 +1,10 @@
+import { useState } from 'react'
 import { motion } from 'framer-motion'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { ErrorState } from '@/components/ui/error-state'
 import { Skeleton } from '@/lib/skeleton'
 import { ErrorBoundary } from '@/components/ui/error-boundary'
+import { Modal } from '@/components/ui/modal'
 import { useDailyOrders } from '@/hooks/useReports'
 import { ResponsivePie } from '@nivo/pie'
 import { ResponsiveBar } from '@nivo/bar'
@@ -44,8 +46,11 @@ const nivoTheme = {
     },
 }
 
+type ChartKey = 'estados' | 'compania' | 'hora' | 'evolucion'
+
 export const ReportsPage = () => {
     const { data: orders, isLoading, error, refetch } = useDailyOrders()
+    const [openChart, setOpenChart] = useState<ChartKey | null>(null)
 
     // Datos para gráfico de distribución de estados (Pie)
     const ordersByStatusData = orders && Array.isArray(orders)
@@ -115,42 +120,33 @@ export const ReportsPage = () => {
         ]
         : []
 
+    const totalPedidos = orders?.length ?? 0
+
+    // Resúmenes para las cards compactas
+    const topStatus = [...ordersByStatusData].sort((a, b) => b.value - a.value)[0]
+    const topStatusPct = topStatus && totalPedidos > 0 ? Math.round((topStatus.value / totalPedidos) * 100) : 0
+
+    const topCompany = ordersByCompanyData[0]
+    const topCompanyPct = topCompany && totalPedidos > 0 ? Math.round((topCompany.pedidos / totalPedidos) * 100) : 0
+
+    const peakHour = [...ordersByHourData].sort((a, b) => b.pedidos - a.pedidos)[0]
+
+    const hoursWithData = ordersByHourData.length
+
     if (isLoading) {
         return (
             <div className="flex-1 space-y-6 p-6">
-                <div className="grid gap-6 md:grid-cols-2">
-                    <Card>
-                        <CardHeader>
-                            <CardTitle>Distribución de Estados</CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                            <Skeleton className="h-64 w-full" />
-                        </CardContent>
-                    </Card>
-                    <Card>
-                        <CardHeader>
-                            <CardTitle>Pedidos por Compañía</CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                            <Skeleton className="h-64 w-full" />
-                        </CardContent>
-                    </Card>
-                    <Card>
-                        <CardHeader>
-                            <CardTitle>Pedidos por Hora</CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                            <Skeleton className="h-64 w-full" />
-                        </CardContent>
-                    </Card>
-                    <Card>
-                        <CardHeader>
-                            <CardTitle>Evolución de Pedidos</CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                            <Skeleton className="h-64 w-full" />
-                        </CardContent>
-                    </Card>
+                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                    {Array.from({ length: 4 }).map((_, i) => (
+                        <Card key={i}>
+                            <CardHeader>
+                                <Skeleton className="h-5 w-32" />
+                            </CardHeader>
+                            <CardContent>
+                                <Skeleton className="h-16 w-full" />
+                            </CardContent>
+                        </Card>
+                    ))}
                 </div>
             </div>
         )
@@ -171,482 +167,565 @@ export const ReportsPage = () => {
     return (
         <ErrorBoundary>
             <div className="flex-1 space-y-6 p-6">
-                {/* Gráficas */}
+                {/* Cards resumen clicables */}
                 <motion.div
-                    className="grid gap-6 grid-cols-1"
+                    className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4"
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.5, delay: 0.2 }}
+                    transition={{ duration: 0.5, delay: 0.1 }}
                 >
-                    {/* Gráfico de Pie: Distribución de Estados */}
-                    <Card>
+                    {/* Card: Distribución de Estados */}
+                    <Card
+                        className="cursor-pointer hover:shadow-md transition-shadow"
+                        onClick={() => setOpenChart('estados')}
+                    >
                         <CardHeader>
-                            <CardTitle className="flex items-center gap-2">
+                            <CardTitle className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
                                 <PieChart className="h-5 w-5 text-primary" />
                                 Distribución de Estados
                             </CardTitle>
                         </CardHeader>
                         <CardContent>
-                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                                <div className="h-[500px] [&_svg]:overflow-visible">
-                                    <ResponsivePie
-                                        data={ordersByStatusData}
-                                        margin={{ top: 40, right: 80, bottom: 140, left: 80 }}
-                                        innerRadius={0.5}
-                                        padAngle={0.7}
-                                        cornerRadius={3}
-                                        activeOuterRadiusOffset={8}
-                                        borderWidth={1}
-                                        borderColor={{ from: 'color', modifiers: [['darker', 0.2]] }}
-                                        arcLinkLabelsSkipAngle={10}
-                                        arcLinkLabelsTextColor="hsl(var(--foreground))"
-                                        arcLinkLabelsThickness={2}
-                                        arcLinkLabelsColor={{ from: 'color' }}
-                                        arcLabelsSkipAngle={10}
-                                        arcLabelsTextColor="hsl(var(--background))"
-                                        valueFormat={(v) => formatters.abbreviate(Number(v))}
-                                        theme={nivoTheme}
-                                        defs={[
-                                            {
-                                                id: 'dots',
-                                                type: 'patternDots',
-                                                background: 'inherit',
-                                                color: 'rgba(255, 255, 255, 0.3)',
-                                                size: 4,
-                                                padding: 1,
-                                                stagger: true,
-                                            },
-                                        ]}
-                                        legends={[
-                                            {
-                                                anchor: 'bottom',
-                                                direction: 'row',
-                                                justify: false,
-                                                translateX: 0,
-                                                translateY: 70,
-                                                itemsSpacing: 8,
-                                                itemWidth: 60,
-                                                itemHeight: 16,
-                                                itemTextColor: 'hsl(var(--foreground))',
-                                                itemDirection: 'left-to-right',
-                                                itemOpacity: 1,
-                                                symbolSize: 12,
-                                                symbolShape: 'circle',
-                                                effects: [
-                                                    {
-                                                        on: 'hover',
-                                                        style: {
-                                                            itemTextColor: 'hsl(var(--foreground))',
-                                                            itemOpacity: 1,
-                                                        },
-                                                    },
-                                                ],
-                                            },
-                                        ]}
-                                        tooltip={({ datum }) => (
-                                            <div
-                                                style={{
-                                                    display: 'flex',
-                                                    alignItems: 'center',
-                                                    gap: 8,
-                                                    padding: '8px 12px',
-                                                    background: 'hsl(var(--card))',
-                                                    border: '1px solid hsl(var(--border))',
-                                                    borderRadius: 6,
-                                                    boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
-                                                    color: 'hsl(var(--foreground))',
-                                                }}
-                                            >
-                                                <div
-                                                    style={{
-                                                        width: 12,
-                                                        height: 12,
-                                                        backgroundColor: datum.color,
-                                                        borderRadius: 2,
-                                                    }}
-                                                />
-                                                <span style={{ fontSize: 14, fontWeight: 500 }}>
-                                                    {datum.label}: {datum.value}
-                                                </span>
-                                            </div>
-                                        )}
-                                    />
-                                </div>
-                                {/* Tabla de datos: Distribución de Estados */}
-                                <div className="h-[500px] flex flex-col">
-                                    <DataTable
-                                        title="Datos base: Distribución de Estados"
-                                        columns={[
-                                            { header: 'Estado', accessor: 'label', align: 'left' },
-                                            { header: 'Cantidad', accessor: 'value', align: 'right', format: (v) => formatters.abbreviate(Number(v)) },
-                                        ]}
-                                        data={ordersByStatusData}
-                                        showTotalRow={true}
-                                        totalLabel="Total Pedidos"
-                                        totalAccessor="value"
-                                        exportFilename="distribucion_estados"
-                                    />
-                                </div>
-                            </div>
+                            {topStatus ? (
+                                <>
+                                    <div className="text-2xl font-bold">{topStatus.label}</div>
+                                    <p className="text-xs text-muted-foreground">
+                                        {formatters.abbreviate(topStatus.value)} pedidos · {topStatusPct}% del total
+                                    </p>
+                                </>
+                            ) : (
+                                <p className="text-sm text-muted-foreground">Sin datos</p>
+                            )}
                         </CardContent>
                     </Card>
 
-                    {/* Gráfico de Barras: Pedidos por Compañía (Top 5) */}
-                    <Card>
+                    {/* Card: Pedidos por Compañía */}
+                    <Card
+                        className="cursor-pointer hover:shadow-md transition-shadow"
+                        onClick={() => setOpenChart('compania')}
+                    >
                         <CardHeader>
-                            <CardTitle className="flex items-center gap-2">
+                            <CardTitle className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
                                 <BarChart3 className="h-5 w-5 text-primary" />
-                                Pedidos por Compañía (Top 5)
+                                Pedidos por Compañía
                             </CardTitle>
                         </CardHeader>
                         <CardContent>
-                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                                <div className="h-[500px]">
-                                    <ResponsiveBar
-                                        data={ordersByCompanyData}
-                                        keys={['pedidos']}
-                                        indexBy="compañía"
-                                        margin={{ top: 50, right: 50, bottom: 80, left: 60 }}
-                                        padding={0.3}
-                                        valueScale={{ type: 'linear' }}
-                                        indexScale={{ type: 'band', round: true }}
-                                        colors={{ scheme: 'category10' }}
-                                        borderColor={{ from: 'color', modifiers: [['darker', 1.6]] }}
-                                        axisTop={null}
-                                        axisRight={null}
-                                        axisBottom={{
-                                            tickSize: 5,
-                                            tickPadding: 5,
-                                            tickRotation: -45,
-                                            legend: 'Compañía',
-                                            legendPosition: 'middle',
-                                            legendOffset: 60,
-                                        }}
-                                        axisLeft={{
-                                            tickSize: 5,
-                                            tickPadding: 5,
-                                            tickRotation: 0,
-                                            legend: 'Cantidad de Pedidos',
-                                            legendPosition: 'middle',
-                                            legendOffset: -40,
-                                        }}
-                                        theme={nivoTheme}
-                                        labelSkipWidth={12}
-                                        labelSkipHeight={12}
-                                        labelTextColor={{ from: 'color', modifiers: [['darker', 1.8]] }}
-                                        animate={true}
-                                        motionConfig="gentle"
-                                        tooltip={({ value, indexValue, color }) => (
-                                            <div
-                                                style={{
-                                                    display: 'flex',
-                                                    alignItems: 'center',
-                                                    gap: 8,
-                                                    padding: '8px 12px',
-                                                    background: 'hsl(var(--card))',
-                                                    border: '1px solid hsl(var(--border))',
-                                                    borderRadius: 6,
-                                                    boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
-                                                    color: 'hsl(var(--foreground))',
-                                                }}
-                                            >
-                                                <div
-                                                    style={{
-                                                        width: 12,
-                                                        height: 12,
-                                                        backgroundColor: color,
-                                                        borderRadius: 2,
-                                                    }}
-                                                />
-                                                <span style={{ fontSize: 14, fontWeight: 500 }}>
-                                                    {indexValue}: {value} pedidos
-                                                </span>
-                                            </div>
-                                        )}
-                                    />
-                                </div>
-                                {/* Tabla de datos: Pedidos por Compañía */}
-                                <div className="h-[500px] flex flex-col">
-                                    <DataTable
-                                        title="Datos base: Pedidos por Compañía"
-                                        columns={[
-                                            { header: 'ID. CO', accessor: (row) => {
-                                                const fullCompanyName = orders?.find(o => {
-                                                    const desc = o['Desc. CO'] || ''
-                                                    return desc === row.compañía || (desc.length > 20 && desc.substring(0, 20) + '...' === row.compañía)
-                                                })
-                                                return fullCompanyName?.['ID. CO'] || 'N/A'
-                                            }, align: 'left' },
-                                            { header: 'Compañía', accessor: 'compañía', align: 'left' },
-                                            { header: 'Cantidad Pedidos', accessor: 'pedidos', align: 'right', format: (v) => formatters.abbreviate(Number(v)) },
-                                        ]}
-                                        data={ordersByCompanyData}
-                                        showTotalRow={true}
-                                        totalLabel="Total Pedidos"
-                                        totalAccessor="pedidos"
-                                        exportFilename="pedidos_por_compania"
-                                    />
-                                </div>
-                            </div>
+                            {topCompany ? (
+                                <>
+                                    <div className="text-2xl font-bold truncate" title={topCompany.compañía}>
+                                        {topCompany.compañía}
+                                    </div>
+                                    <p className="text-xs text-muted-foreground">
+                                        {formatters.abbreviate(topCompany.pedidos)} pedidos · {topCompanyPct}% del total
+                                    </p>
+                                </>
+                            ) : (
+                                <p className="text-sm text-muted-foreground">Sin datos</p>
+                            )}
                         </CardContent>
                     </Card>
 
-                    {/* Gráfico de Barras Horizontal: Pedidos por Hora */}
-                    <Card>
+                    {/* Card: Pedidos por Hora */}
+                    <Card
+                        className="cursor-pointer hover:shadow-md transition-shadow"
+                        onClick={() => setOpenChart('hora')}
+                    >
                         <CardHeader>
-                            <CardTitle className="flex items-center gap-2">
+                            <CardTitle className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
                                 <Clock className="h-5 w-5 text-primary" />
-                                Pedidos por Hora del Día
+                                Pedidos por Hora
                             </CardTitle>
                         </CardHeader>
                         <CardContent>
-                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                                <div className="h-[500px]">
-                                <ResponsiveBar
-                                    data={ordersByHourData}
-                                    keys={['pedidos']}
-                                    indexBy="hora"
-                                    margin={{ top: 50, right: 50, bottom: 50, left: 60 }}
-                                    padding={0.3}
-                                    layout="horizontal"
-                                    valueScale={{ type: 'linear' }}
-                                    indexScale={{ type: 'band', round: true }}
-                                    colors={{ scheme: 'nivo' }}
-                                    borderColor={{ from: 'color', modifiers: [['darker', 1.6]] }}
-                                    axisTop={null}
-                                    axisRight={null}
-                                    axisBottom={{
-                                        tickSize: 5,
-                                        tickPadding: 5,
-                                        tickRotation: 0,
-                                        legend: 'Cantidad de Pedidos',
-                                        legendPosition: 'middle',
-                                        legendOffset: 40,
-                                        format: (v) => formatters.abbreviate(Number(v))
-                                    }}
-                                    axisLeft={{
-                                        tickSize: 5,
-                                        tickPadding: 5,
-                                        tickRotation: 0,
-                                        legend: 'Hora',
-                                        legendPosition: 'middle',
-                                        legendOffset: -50,
-                                    }}
-                                    theme={nivoTheme}
-                                    labelSkipWidth={12}
-                                    labelSkipHeight={12}
-                                    labelTextColor={{ from: 'color', modifiers: [['darker', 1.8]] }}
-                                    animate={true}
-                                    motionConfig="gentle"
-                                    tooltip={({ value, indexValue, color }) => (
-                                        <div
-                                            style={{
-                                                display: 'flex',
-                                                alignItems: 'center',
-                                                gap: 8,
-                                                padding: '8px 12px',
-                                                background: 'hsl(var(--card))',
-                                                border: '1px solid hsl(var(--border))',
-                                                borderRadius: 6,
-                                                boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
-                                                color: 'hsl(var(--foreground))',
-                                            }}
-                                        >
-                                            <div
-                                                style={{
-                                                    width: 12,
-                                                    height: 12,
-                                                    backgroundColor: color,
-                                                    borderRadius: 2,
-                                                }}
-                                            />
-                                            <span style={{ fontSize: 14, fontWeight: 500 }}>
-                                                {indexValue}: {value} pedidos
-                                            </span>
-                                        </div>
-                                    )}
-                                />
-                                </div>
-                                {/* Tabla de datos: Pedidos por Hora */}
-                                <div className="h-[500px] flex flex-col">
-                                    <DataTable
-                                        title="Datos base: Pedidos por Hora del Día"
-                                        columns={[
-                                            { header: 'Hora', accessor: 'hora', align: 'left' },
-                                            { header: 'Fecha Documento', accessor: (row) => {
-                                                const order = orders?.find(o => o['Hora creacion'] === row.hora)
-                                                return order?.['Fecha docto'] ? formatters.date(order['Fecha docto']) : 'N/A'
-                                            }, align: 'left' },
-                                            { header: 'ID. CO', accessor: (row) => {
-                                                const order = orders?.find(o => o['Hora creacion'] === row.hora)
-                                                return order?.['ID. CO'] || 'N/A'
-                                            }, align: 'left' },
-                                            { header: 'Desc. CO', accessor: (row) => {
-                                                const order = orders?.find(o => o['Hora creacion'] === row.hora)
-                                                return order?.['Desc. CO'] || 'N/A'
-                                            }, align: 'left' },
-                                            { header: 'Estado', accessor: (row) => {
-                                                const order = orders?.find(o => o['Hora creacion'] === row.hora)
-                                                return order?.Estado || 'N/A'
-                                            }, align: 'left' },
-                                            { header: 'Cantidad Pedidos', accessor: 'pedidos', align: 'right', format: (v) => formatters.abbreviate(Number(v)) },
-                                        ]}
-                                        data={ordersByHourData}
-                                        showTotalRow={true}
-                                        totalLabel="Total Pedidos"
-                                        totalAccessor="pedidos"
-                                        exportFilename="pedidos_por_hora"
-                                    />
-                                </div>
-                            </div>
+                            {peakHour ? (
+                                <>
+                                    <div className="text-2xl font-bold">{peakHour.hora}</div>
+                                    <p className="text-xs text-muted-foreground">
+                                        Hora pico · {formatters.abbreviate(peakHour.pedidos)} pedidos
+                                    </p>
+                                </>
+                            ) : (
+                                <p className="text-sm text-muted-foreground">Sin datos</p>
+                            )}
                         </CardContent>
                     </Card>
 
-                    {/* Gráfico de Líneas: Evolución de Pedidos */}
-                    <Card>
+                    {/* Card: Evolución de Pedidos */}
+                    <Card
+                        className="cursor-pointer hover:shadow-md transition-shadow"
+                        onClick={() => setOpenChart('evolucion')}
+                    >
                         <CardHeader>
-                            <CardTitle className="flex items-center gap-2">
+                            <CardTitle className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
                                 <LineChart className="h-5 w-5 text-primary" />
-                                Evolución de Pedidos por Hora
+                                Evolución de Pedidos
                             </CardTitle>
                         </CardHeader>
                         <CardContent>
-                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                                <div className="h-[500px]">
-                                <ResponsiveLine
-                                    data={evolutionByHourData}
-                                    margin={{ top: 50, right: 110, bottom: 50, left: 60 }}
-                                    xScale={{ type: 'point' }}
-                                    yScale={{
-                                        type: 'linear',
-                                        min: 'auto',
-                                        max: 'auto',
-                                        stacked: false,
-                                        reverse: false,
-                                    }}
-                                    yFormat=" >-.2f"
-                                    axisTop={null}
-                                    axisRight={null}
-                                    axisBottom={{
-                                        tickSize: 5,
-                                        tickPadding: 5,
-                                        tickRotation: -45,
-                                        legend: 'Hora',
-                                        legendOffset: 36,
-                                        legendPosition: 'middle',
-                                    }}
-                                    axisLeft={{
-                                        tickSize: 5,
-                                        tickPadding: 5,
-                                        tickRotation: 0,
-                                        legend: 'Cantidad',
-                                        legendOffset: -40,
-                                        legendPosition: 'middle',
-                                        format: (v) => formatters.abbreviate(Number(v))
-                                        }}
-                                    theme={nivoTheme}
-                                    pointSize={10}
-                                    pointColor={{ theme: 'background' }}
-                                    pointBorderWidth={2}
-                                    pointBorderColor={{ from: 'serieColor' }}
-                                    pointLabelYOffset={-12}
-                                    useMesh={true}
-                                    colors={{ scheme: 'category10' }}
-                                    lineWidth={3}
-                                    layers={['grid', 'markers', 'axes', 'areas', 'crosshair', 'lines', 'points', 'slices', 'mesh', 'legends']}
-                                    curve="monotoneX"
-                                    enableGridX={true}
-                                    enableGridY={true}
-                                    enablePoints={true}
-                                    enablePointLabel={false}
-                                    pointLabel={(point) => `${point.yFormatted}`}
-                                    enableArea={false}
-                                    areaOpacity={0.1}
-                                    areaBlendMode="normal"
-                                    areaBaselineValue={0}
-                                    legends={[]}
-                                    isInteractive={true}
-                                    debugMesh={false}
-                                    tooltip={({ point }) => (
-                                        <div
-                                            style={{
-                                                padding: 12,
-                                                color: 'hsl(var(--foreground))',
-                                                background: 'hsl(var(--background))',
-                                                borderRadius: 4,
-                                                boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
-                                            }}
-                                        >
-                                            <strong>Hora:</strong> {point.data.xFormatted}
-                                            <br />
-                                            <strong>Pedidos:</strong> {point.data.yFormatted}
-                                        </div>
-                                    )}
-                                    enableSlices={false}
-                                    debugSlices={false}
-                                    sliceTooltip={({ slice }) => (
-                                        <div
-                                            style={{
-                                                padding: 12,
-                                                color: 'hsl(var(--foreground))',
-                                                background: 'hsl(var(--background))',
-                                                borderRadius: 4,
-                                                boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
-                                            }}
-                                        >
-                                            {slice.points.map((point) => (
-                                                <div key={point.id}>
-                                                    <strong>{point.data.xFormatted}:</strong> {point.data.yFormatted}
-                                                </div>
-                                            ))}
-                                        </div>
-                                    )}
-                                    enableCrosshair={true}
-                                    crosshairType="x"
-                                    role="application"
-                                    defs={[]}
-                                    fill={[]}
-                                    animate={true}
-                                    motionConfig="gentle"
-                                />
-                                </div>
-                                {/* Tabla de datos: Evolución de Pedidos */}
-                                <div className="h-[500px] flex flex-col">
-                                    <DataTable
-                                        title="Datos base: Evolución de Pedidos por Hora"
-                                        columns={[
-                                            { header: 'Hora', accessor: 'hora', align: 'left' },
-                                            { header: 'Fecha Documento', accessor: (row) => {
-                                                const order = orders?.find(o => o['Hora creacion'] === row.hora)
-                                                return order?.['Fecha docto'] ? formatters.date(order['Fecha docto']) : 'N/A'
-                                            }, align: 'left' },
-                                            { header: 'ID. CO', accessor: (row) => {
-                                                const order = orders?.find(o => o['Hora creacion'] === row.hora)
-                                                return order?.['ID. CO'] || 'N/A'
-                                            }, align: 'left' },
-                                            { header: 'Desc. CO', accessor: (row) => {
-                                                const order = orders?.find(o => o['Hora creacion'] === row.hora)
-                                                return order?.['Desc. CO'] || 'N/A'
-                                            }, align: 'left' },
-                                            { header: 'Estado', accessor: (row) => {
-                                                const order = orders?.find(o => o['Hora creacion'] === row.hora)
-                                                return order?.Estado || 'N/A'
-                                            }, align: 'left' },
-                                            { header: 'Cantidad Pedidos', accessor: 'pedidos', align: 'right', format: (v) => formatters.abbreviate(Number(v)) },
-                                        ]}
-                                        data={ordersByHourData}
-                                        showTotalRow={true}
-                                        totalLabel="Total Pedidos"
-                                        totalAccessor="pedidos"
-                                        exportFilename="evolucion_pedidos_hora"
-                                    />
-                                </div>
-                            </div>
+                            <div className="text-2xl font-bold">{formatters.abbreviate(totalPedidos)}</div>
+                            <p className="text-xs text-muted-foreground">
+                                Total del día · {hoursWithData} franjas horarias
+                            </p>
                         </CardContent>
                     </Card>
                 </motion.div>
+
+                {/* Modal: Distribución de Estados */}
+                <Modal
+                    isOpen={openChart === 'estados'}
+                    onClose={() => setOpenChart(null)}
+                    title="Distribución de Estados"
+                    className="max-w-6xl"
+                >
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                        <div className="h-[500px] [&_svg]:overflow-visible">
+                            <ResponsivePie
+                                data={ordersByStatusData}
+                                margin={{ top: 40, right: 80, bottom: 140, left: 80 }}
+                                innerRadius={0.5}
+                                padAngle={0.7}
+                                cornerRadius={3}
+                                activeOuterRadiusOffset={8}
+                                borderWidth={1}
+                                borderColor={{ from: 'color', modifiers: [['darker', 0.2]] }}
+                                arcLinkLabelsSkipAngle={10}
+                                arcLinkLabelsTextColor="hsl(var(--foreground))"
+                                arcLinkLabelsThickness={2}
+                                arcLinkLabelsColor={{ from: 'color' }}
+                                arcLabelsSkipAngle={10}
+                                arcLabelsTextColor="hsl(var(--background))"
+                                valueFormat={(v) => formatters.abbreviate(Number(v))}
+                                theme={nivoTheme}
+                                defs={[
+                                    {
+                                        id: 'dots',
+                                        type: 'patternDots',
+                                        background: 'inherit',
+                                        color: 'rgba(255, 255, 255, 0.3)',
+                                        size: 4,
+                                        padding: 1,
+                                        stagger: true,
+                                    },
+                                ]}
+                                legends={[
+                                    {
+                                        anchor: 'bottom',
+                                        direction: 'row',
+                                        justify: false,
+                                        translateX: 0,
+                                        translateY: 70,
+                                        itemsSpacing: 8,
+                                        itemWidth: 60,
+                                        itemHeight: 16,
+                                        itemTextColor: 'hsl(var(--foreground))',
+                                        itemDirection: 'left-to-right',
+                                        itemOpacity: 1,
+                                        symbolSize: 12,
+                                        symbolShape: 'circle',
+                                        effects: [
+                                            {
+                                                on: 'hover',
+                                                style: {
+                                                    itemTextColor: 'hsl(var(--foreground))',
+                                                    itemOpacity: 1,
+                                                },
+                                            },
+                                        ],
+                                    },
+                                ]}
+                                tooltip={({ datum }) => (
+                                    <div
+                                        style={{
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            gap: 8,
+                                            padding: '8px 12px',
+                                            background: 'hsl(var(--card))',
+                                            border: '1px solid hsl(var(--border))',
+                                            borderRadius: 6,
+                                            boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+                                            color: 'hsl(var(--foreground))',
+                                        }}
+                                    >
+                                        <div
+                                            style={{
+                                                width: 12,
+                                                height: 12,
+                                                backgroundColor: datum.color,
+                                                borderRadius: 2,
+                                            }}
+                                        />
+                                        <span style={{ fontSize: 14, fontWeight: 500 }}>
+                                            {datum.label}: {datum.value}
+                                        </span>
+                                    </div>
+                                )}
+                            />
+                        </div>
+                        {/* Tabla de datos: Distribución de Estados */}
+                        <div className="h-[500px] flex flex-col">
+                            <DataTable
+                                title="Datos base: Distribución de Estados"
+                                columns={[
+                                    { header: 'Estado', accessor: 'label', align: 'left' },
+                                    { header: 'Cantidad', accessor: 'value', align: 'right', format: (v) => formatters.abbreviate(Number(v)) },
+                                ]}
+                                data={ordersByStatusData}
+                                showTotalRow={true}
+                                totalLabel="Total Pedidos"
+                                totalAccessor="value"
+                                exportFilename="distribucion_estados"
+                            />
+                        </div>
+                    </div>
+                </Modal>
+
+                {/* Modal: Pedidos por Compañía */}
+                <Modal
+                    isOpen={openChart === 'compania'}
+                    onClose={() => setOpenChart(null)}
+                    title="Pedidos por Compañía (Top 5)"
+                    className="max-w-6xl"
+                >
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                        <div className="h-[500px]">
+                            <ResponsiveBar
+                                data={ordersByCompanyData}
+                                keys={['pedidos']}
+                                indexBy="compañía"
+                                margin={{ top: 50, right: 50, bottom: 80, left: 60 }}
+                                padding={0.3}
+                                valueScale={{ type: 'linear' }}
+                                indexScale={{ type: 'band', round: true }}
+                                colors={{ scheme: 'category10' }}
+                                borderColor={{ from: 'color', modifiers: [['darker', 1.6]] }}
+                                axisTop={null}
+                                axisRight={null}
+                                axisBottom={{
+                                    tickSize: 5,
+                                    tickPadding: 5,
+                                    tickRotation: -45,
+                                    legend: 'Compañía',
+                                    legendPosition: 'middle',
+                                    legendOffset: 60,
+                                }}
+                                axisLeft={{
+                                    tickSize: 5,
+                                    tickPadding: 5,
+                                    tickRotation: 0,
+                                    legend: 'Cantidad de Pedidos',
+                                    legendPosition: 'middle',
+                                    legendOffset: -40,
+                                }}
+                                theme={nivoTheme}
+                                labelSkipWidth={12}
+                                labelSkipHeight={12}
+                                labelTextColor={{ from: 'color', modifiers: [['darker', 1.8]] }}
+                                animate={true}
+                                motionConfig="gentle"
+                                tooltip={({ value, indexValue, color }) => (
+                                    <div
+                                        style={{
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            gap: 8,
+                                            padding: '8px 12px',
+                                            background: 'hsl(var(--card))',
+                                            border: '1px solid hsl(var(--border))',
+                                            borderRadius: 6,
+                                            boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+                                            color: 'hsl(var(--foreground))',
+                                        }}
+                                    >
+                                        <div
+                                            style={{
+                                                width: 12,
+                                                height: 12,
+                                                backgroundColor: color,
+                                                borderRadius: 2,
+                                            }}
+                                        />
+                                        <span style={{ fontSize: 14, fontWeight: 500 }}>
+                                            {indexValue}: {value} pedidos
+                                        </span>
+                                    </div>
+                                )}
+                            />
+                        </div>
+                        {/* Tabla de datos: Pedidos por Compañía */}
+                        <div className="h-[500px] flex flex-col">
+                            <DataTable
+                                title="Datos base: Pedidos por Compañía"
+                                columns={[
+                                    { header: 'ID. CO', accessor: (row) => {
+                                        const fullCompanyName = orders?.find(o => {
+                                            const desc = o['Desc. CO'] || ''
+                                            return desc === row.compañía || (desc.length > 20 && desc.substring(0, 20) + '...' === row.compañía)
+                                        })
+                                        return fullCompanyName?.['ID. CO'] || 'N/A'
+                                    }, align: 'left' },
+                                    { header: 'Compañía', accessor: 'compañía', align: 'left' },
+                                    { header: 'Cantidad Pedidos', accessor: 'pedidos', align: 'right', format: (v) => formatters.abbreviate(Number(v)) },
+                                ]}
+                                data={ordersByCompanyData}
+                                showTotalRow={true}
+                                totalLabel="Total Pedidos"
+                                totalAccessor="pedidos"
+                                exportFilename="pedidos_por_compania"
+                            />
+                        </div>
+                    </div>
+                </Modal>
+
+                {/* Modal: Pedidos por Hora */}
+                <Modal
+                    isOpen={openChart === 'hora'}
+                    onClose={() => setOpenChart(null)}
+                    title="Pedidos por Hora del Día"
+                    className="max-w-6xl"
+                >
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                        <div className="h-[500px]">
+                        <ResponsiveBar
+                            data={ordersByHourData}
+                            keys={['pedidos']}
+                            indexBy="hora"
+                            margin={{ top: 50, right: 50, bottom: 50, left: 60 }}
+                            padding={0.3}
+                            layout="horizontal"
+                            valueScale={{ type: 'linear' }}
+                            indexScale={{ type: 'band', round: true }}
+                            colors={{ scheme: 'nivo' }}
+                            borderColor={{ from: 'color', modifiers: [['darker', 1.6]] }}
+                            axisTop={null}
+                            axisRight={null}
+                            axisBottom={{
+                                tickSize: 5,
+                                tickPadding: 5,
+                                tickRotation: 0,
+                                legend: 'Cantidad de Pedidos',
+                                legendPosition: 'middle',
+                                legendOffset: 40,
+                                format: (v) => formatters.abbreviate(Number(v))
+                            }}
+                            axisLeft={{
+                                tickSize: 5,
+                                tickPadding: 5,
+                                tickRotation: 0,
+                                legend: 'Hora',
+                                legendPosition: 'middle',
+                                legendOffset: -50,
+                            }}
+                            theme={nivoTheme}
+                            labelSkipWidth={12}
+                            labelSkipHeight={12}
+                            labelTextColor={{ from: 'color', modifiers: [['darker', 1.8]] }}
+                            animate={true}
+                            motionConfig="gentle"
+                            tooltip={({ value, indexValue, color }) => (
+                                <div
+                                    style={{
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: 8,
+                                        padding: '8px 12px',
+                                        background: 'hsl(var(--card))',
+                                        border: '1px solid hsl(var(--border))',
+                                        borderRadius: 6,
+                                        boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+                                        color: 'hsl(var(--foreground))',
+                                    }}
+                                >
+                                    <div
+                                        style={{
+                                            width: 12,
+                                            height: 12,
+                                            backgroundColor: color,
+                                            borderRadius: 2,
+                                        }}
+                                    />
+                                    <span style={{ fontSize: 14, fontWeight: 500 }}>
+                                        {indexValue}: {value} pedidos
+                                    </span>
+                                </div>
+                            )}
+                        />
+                        </div>
+                        {/* Tabla de datos: Pedidos por Hora */}
+                        <div className="h-[500px] flex flex-col">
+                            <DataTable
+                                title="Datos base: Pedidos por Hora del Día"
+                                columns={[
+                                    { header: 'Hora', accessor: 'hora', align: 'left' },
+                                    { header: 'Fecha Documento', accessor: (row) => {
+                                        const order = orders?.find(o => o['Hora creacion'] === row.hora)
+                                        return order?.['Fecha docto'] ? formatters.date(order['Fecha docto']) : 'N/A'
+                                    }, align: 'left' },
+                                    { header: 'ID. CO', accessor: (row) => {
+                                        const order = orders?.find(o => o['Hora creacion'] === row.hora)
+                                        return order?.['ID. CO'] || 'N/A'
+                                    }, align: 'left' },
+                                    { header: 'Desc. CO', accessor: (row) => {
+                                        const order = orders?.find(o => o['Hora creacion'] === row.hora)
+                                        return order?.['Desc. CO'] || 'N/A'
+                                    }, align: 'left' },
+                                    { header: 'Estado', accessor: (row) => {
+                                        const order = orders?.find(o => o['Hora creacion'] === row.hora)
+                                        return order?.Estado || 'N/A'
+                                    }, align: 'left' },
+                                    { header: 'Cantidad Pedidos', accessor: 'pedidos', align: 'right', format: (v) => formatters.abbreviate(Number(v)) },
+                                ]}
+                                data={ordersByHourData}
+                                showTotalRow={true}
+                                totalLabel="Total Pedidos"
+                                totalAccessor="pedidos"
+                                exportFilename="pedidos_por_hora"
+                            />
+                        </div>
+                    </div>
+                </Modal>
+
+                {/* Modal: Evolución de Pedidos */}
+                <Modal
+                    isOpen={openChart === 'evolucion'}
+                    onClose={() => setOpenChart(null)}
+                    title="Evolución de Pedidos por Hora"
+                    className="max-w-6xl"
+                >
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                        <div className="h-[500px]">
+                        <ResponsiveLine
+                            data={evolutionByHourData}
+                            margin={{ top: 50, right: 110, bottom: 50, left: 60 }}
+                            xScale={{ type: 'point' }}
+                            yScale={{
+                                type: 'linear',
+                                min: 'auto',
+                                max: 'auto',
+                                stacked: false,
+                                reverse: false,
+                            }}
+                            yFormat=" >-.2f"
+                            axisTop={null}
+                            axisRight={null}
+                            axisBottom={{
+                                tickSize: 5,
+                                tickPadding: 5,
+                                tickRotation: -45,
+                                legend: 'Hora',
+                                legendOffset: 36,
+                                legendPosition: 'middle',
+                            }}
+                            axisLeft={{
+                                tickSize: 5,
+                                tickPadding: 5,
+                                tickRotation: 0,
+                                legend: 'Cantidad',
+                                legendOffset: -40,
+                                legendPosition: 'middle',
+                                format: (v) => formatters.abbreviate(Number(v))
+                                }}
+                            theme={nivoTheme}
+                            pointSize={10}
+                            pointColor={{ theme: 'background' }}
+                            pointBorderWidth={2}
+                            pointBorderColor={{ from: 'serieColor' }}
+                            pointLabelYOffset={-12}
+                            useMesh={true}
+                            colors={{ scheme: 'category10' }}
+                            lineWidth={3}
+                            layers={['grid', 'markers', 'axes', 'areas', 'crosshair', 'lines', 'points', 'slices', 'mesh', 'legends']}
+                            curve="monotoneX"
+                            enableGridX={true}
+                            enableGridY={true}
+                            enablePoints={true}
+                            enablePointLabel={false}
+                            pointLabel={(point) => `${point.yFormatted}`}
+                            enableArea={false}
+                            areaOpacity={0.1}
+                            areaBlendMode="normal"
+                            areaBaselineValue={0}
+                            legends={[]}
+                            isInteractive={true}
+                            debugMesh={false}
+                            tooltip={({ point }) => (
+                                <div
+                                    style={{
+                                        padding: 12,
+                                        color: 'hsl(var(--foreground))',
+                                        background: 'hsl(var(--background))',
+                                        borderRadius: 4,
+                                        boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+                                    }}
+                                >
+                                    <strong>Hora:</strong> {point.data.xFormatted}
+                                    <br />
+                                    <strong>Pedidos:</strong> {point.data.yFormatted}
+                                </div>
+                            )}
+                            enableSlices={false}
+                            debugSlices={false}
+                            sliceTooltip={({ slice }) => (
+                                <div
+                                    style={{
+                                        padding: 12,
+                                        color: 'hsl(var(--foreground))',
+                                        background: 'hsl(var(--background))',
+                                        borderRadius: 4,
+                                        boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+                                    }}
+                                >
+                                    {slice.points.map((point) => (
+                                        <div key={point.id}>
+                                            <strong>{point.data.xFormatted}:</strong> {point.data.yFormatted}
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                            enableCrosshair={true}
+                            crosshairType="x"
+                            role="application"
+                            defs={[]}
+                            fill={[]}
+                            animate={true}
+                            motionConfig="gentle"
+                        />
+                        </div>
+                        {/* Tabla de datos: Evolución de Pedidos */}
+                        <div className="h-[500px] flex flex-col">
+                            <DataTable
+                                title="Datos base: Evolución de Pedidos por Hora"
+                                columns={[
+                                    { header: 'Hora', accessor: 'hora', align: 'left' },
+                                    { header: 'Fecha Documento', accessor: (row) => {
+                                        const order = orders?.find(o => o['Hora creacion'] === row.hora)
+                                        return order?.['Fecha docto'] ? formatters.date(order['Fecha docto']) : 'N/A'
+                                    }, align: 'left' },
+                                    { header: 'ID. CO', accessor: (row) => {
+                                        const order = orders?.find(o => o['Hora creacion'] === row.hora)
+                                        return order?.['ID. CO'] || 'N/A'
+                                    }, align: 'left' },
+                                    { header: 'Desc. CO', accessor: (row) => {
+                                        const order = orders?.find(o => o['Hora creacion'] === row.hora)
+                                        return order?.['Desc. CO'] || 'N/A'
+                                    }, align: 'left' },
+                                    { header: 'Estado', accessor: (row) => {
+                                        const order = orders?.find(o => o['Hora creacion'] === row.hora)
+                                        return order?.Estado || 'N/A'
+                                    }, align: 'left' },
+                                    { header: 'Cantidad Pedidos', accessor: 'pedidos', align: 'right', format: (v) => formatters.abbreviate(Number(v)) },
+                                ]}
+                                data={ordersByHourData}
+                                showTotalRow={true}
+                                totalLabel="Total Pedidos"
+                                totalAccessor="pedidos"
+                                exportFilename="evolucion_pedidos_hora"
+                            />
+                        </div>
+                    </div>
+                </Modal>
             </div>
         </ErrorBoundary>
     )
 }
-

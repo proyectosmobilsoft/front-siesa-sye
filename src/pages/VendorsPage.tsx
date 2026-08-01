@@ -1,22 +1,23 @@
-import { motion, AnimatePresence } from 'framer-motion'
-import { useState, useMemo } from 'react'
+import { motion } from 'framer-motion'
+import { useMemo, useState } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/lib/skeleton'
 import { ErrorBoundary } from '@/components/ui/error-boundary'
 import { ErrorState } from '@/components/ui/error-state'
-import { useVendors } from '@/hooks/useReports'
+import { Modal } from '@/components/ui/modal'
+import { useSalesSummary } from '@/hooks/useReports'
 import { ResponsiveBar } from '@nivo/bar'
 import { ResponsivePie } from '@nivo/pie'
 import { formatters } from '@/utils/formatters'
 import { CountUp } from '@/components/ui/count-up'
 import { DataTable } from '@/components/dashboard/DataTable'
-import { 
-    DollarSign, 
+import {
+    DollarSign,
     TrendingUp,
     FileText,
     BarChart3,
     PieChart,
-    Layers,
+    Package,
     Filter,
     X
 } from 'lucide-react'
@@ -46,62 +47,72 @@ const colorPalette = [
     vibrantColors.neonLime,
 ]
 
+type DetailChart = 'ventas' | 'tipoDocumento' | 'unidades' | null
+
 export const VendorsPage = () => {
-    const { data: vendors, isLoading, error, refetch } = useVendors()
+    // Nota: /reports/vendors está vacío en el backend actualmente
+    // ({"success":true,"data":[]}). El dato real de ventas por vendedor
+    // viene de /reports/sales-summary (mismo patrón que VendorsChart y
+    // SalesSummaryPage), por lo que esta página agrega sobre esa fuente.
+    const { data: sales, isLoading, error, refetch } = useSalesSummary()
     const [selectedCenter, setSelectedCenter] = useState<string>('all')
     const [selectedCompany, setSelectedCompany] = useState<number | 'all'>('all')
+    const [openDetail, setOpenDetail] = useState<DetailChart>(null)
 
     // Filtrar datos según selección
-    const filteredVendors = useMemo(() => {
-        if (!vendors || !Array.isArray(vendors)) return []
-        
-        return vendors.filter(vendor => {
-            const centerMatch = selectedCenter === 'all' || vendor['centro de op'] === selectedCenter
-            const companyMatch = selectedCompany === 'all' || vendor.compania === selectedCompany
+    const filteredSales = useMemo(() => {
+        if (!sales || !Array.isArray(sales)) return []
+
+        return sales.filter(sale => {
+            const centerMatch = selectedCenter === 'all' || sale['Centro de OP'] === selectedCenter
+            const companyMatch = selectedCompany === 'all' || sale['Compania'] === selectedCompany
             return centerMatch && companyMatch
         })
-    }, [vendors, selectedCenter, selectedCompany])
+    }, [sales, selectedCenter, selectedCompany])
 
     // Obtener opciones únicas para filtros
     const centers = useMemo(() => {
-        if (!vendors || !Array.isArray(vendors)) return []
-        return Array.from(new Set(vendors.map(v => v['centro de op']).filter(Boolean))).sort()
-    }, [vendors])
+        if (!sales || !Array.isArray(sales)) return []
+        return Array.from(new Set(sales.map(s => s['Centro de OP']).filter(Boolean))).sort()
+    }, [sales])
 
     const companies = useMemo(() => {
-        if (!vendors || !Array.isArray(vendors)) return []
-        return Array.from(new Set(vendors.map(v => v.compania).filter(Boolean))).sort((a, b) => a - b)
-    }, [vendors])
+        if (!sales || !Array.isArray(sales)) return []
+        return Array.from(new Set(sales.map(s => s['Compania']).filter(Boolean))).sort((a, b) => a - b)
+    }, [sales])
 
     // 1. Gráfica de barras: Valor neto total por vendedor
     const salesByVendorData = useMemo(() => {
-        if (!filteredVendors.length) return []
-        
+        if (!filteredSales.length) return []
+
         return Object.entries(
-            filteredVendors.reduce((acc, vendor) => {
-                const nombre = vendor['Nombre vendedor'] || 'Sin Nombre'
-                const valor = vendor['Valor neto'] || 0
+            filteredSales.reduce((acc, sale) => {
+                const nombre = sale['Vendedor'] || 'Sin Nombre'
+                const valor = sale['Vlr. Neto documento'] || 0
                 acc[nombre] = (acc[nombre] || 0) + valor
                 return acc
             }, {} as Record<string, number>)
         )
             .map(([nombre, total], index) => ({
                 vendedor: nombre.length > 25 ? nombre.substring(0, 25) + '...' : nombre,
+                nombreCompleto: nombre,
                 ventas: total,
                 color: colorPalette[index % colorPalette.length]
             }))
             .sort((a, b) => b.ventas - a.ventas)
             .slice(0, 15) // Top 15
-    }, [filteredVendors])
+    }, [filteredSales])
 
-    // 2. Gráfica circular: Distribución por tipo de entrega
-    const deliveryTypeData = useMemo(() => {
-        if (!filteredVendors.length) return []
-        
+    const topVendor = salesByVendorData[0]
+
+    // 2. Gráfica circular: Distribución por tipo de documento
+    const documentTypeData = useMemo(() => {
+        if (!filteredSales.length) return []
+
         return Object.entries(
-            filteredVendors.reduce((acc, vendor) => {
-                const tipo = vendor['Tipo de entrega'] || 'Sin Tipo'
-                const valor = vendor['Valor neto'] || 0
+            filteredSales.reduce((acc, sale) => {
+                const tipo = sale['Desc. grupo clase docto.'] || 'Sin Tipo'
+                const valor = sale['Vlr. Neto documento'] || 0
                 acc[tipo] = (acc[tipo] || 0) + valor
                 return acc
             }, {} as Record<string, number>)
@@ -111,62 +122,73 @@ export const VendorsPage = () => {
             value: total,
             color: colorPalette[index % colorPalette.length]
         }))
-    }, [filteredVendors])
+    }, [filteredSales])
 
-    const totalDeliverySales = deliveryTypeData.reduce((acc, item) => acc + item.value, 0)
+    const totalDocTypeSales = documentTypeData.reduce((acc, item) => acc + item.value, 0)
+    const topDocType = [...documentTypeData].sort((a, b) => b.value - a.value)[0]
 
-    // 3. Gráfico combinado: Subtotal vs Valor Neto por vendedor
-    const combinedChartData = useMemo(() => {
-        if (!filteredVendors.length) return { bars: [], lines: [] }
-        
-        const vendorTotals = filteredVendors.reduce((acc, vendor) => {
-            const nombre = vendor['Nombre vendedor'] || 'Sin Nombre'
-            if (!acc[nombre]) {
-                acc[nombre] = { subtotal: 0, neto: 0 }
-            }
-            acc[nombre].subtotal += vendor['Valor subtotal'] || 0
-            acc[nombre].neto += vendor['Valor neto'] || 0
-            return acc
-        }, {} as Record<string, { subtotal: number; neto: number }>)
+    // 3. Gráfico de barras: Unidades vendidas por vendedor
+    const unitsByVendorData = useMemo(() => {
+        if (!filteredSales.length) return []
 
-        const sorted = Object.entries(vendorTotals)
-            .map(([nombre, valores]) => ({
-                vendedor: nombre.length > 20 ? nombre.substring(0, 20) + '...' : nombre,
-                subtotal: valores.subtotal,
-                neto: valores.neto,
-                margen: valores.neto - valores.subtotal
+        return Object.entries(
+            filteredSales.reduce((acc, sale) => {
+                const nombre = sale['Vendedor'] || 'Sin Nombre'
+                const unidades = sale['Numero de unidades docto'] || 0
+                acc[nombre] = (acc[nombre] || 0) + unidades
+                return acc
+            }, {} as Record<string, number>)
+        )
+            .map(([nombre, total], index) => ({
+                vendedor: nombre.length > 25 ? nombre.substring(0, 25) + '...' : nombre,
+                nombreCompleto: nombre,
+                unidades: total,
+                color: colorPalette[index % colorPalette.length]
             }))
-            .sort((a, b) => b.neto - a.neto)
-            .slice(0, 10)
+            .sort((a, b) => b.unidades - a.unidades)
+            .slice(0, 15)
+    }, [filteredSales])
 
-        return {
-            bars: sorted.map(item => ({
-                vendedor: item.vendedor,
-                'Valor Subtotal': item.subtotal,
-                'Valor Neto': item.neto
-            })),
-            lines: [{
-                id: 'Margen',
-                data: sorted.map(item => ({
-                    x: item.vendedor,
-                    y: item.margen
-                }))
-            }]
-        }
-    }, [filteredVendors])
-
+    const topUnitsVendor = unitsByVendorData[0]
 
     // Calcular estadísticas
     const totalSales = useMemo(() => {
-        return filteredVendors.reduce((acc, v) => acc + (v['Valor neto'] || 0), 0)
-    }, [filteredVendors])
+        return filteredSales.reduce((acc, s) => acc + (s['Vlr. Neto documento'] || 0), 0)
+    }, [filteredSales])
 
     const avgSalePerVendor = useMemo(() => {
-        const uniqueVendors = new Set(filteredVendors.map(v => v['Codigo vendedor'])).size
+        const uniqueVendors = new Set(filteredSales.map(s => s['Vendedor'])).size
         return uniqueVendors > 0 ? totalSales / uniqueVendors : 0
-    }, [filteredVendors, totalSales])
+    }, [filteredSales, totalSales])
 
-    const totalOperations = filteredVendors.length
+    const totalOperations = filteredSales.length
+
+    const chartTheme = {
+        axis: {
+            ticks: {
+                text: { fill: 'hsl(var(--muted-foreground))', fontSize: 11 }
+            },
+            legend: {
+                text: { fill: 'hsl(var(--foreground))', fontSize: 12, fontWeight: 600 }
+            },
+        },
+        grid: {
+            line: {
+                stroke: 'hsl(var(--border))',
+                strokeWidth: 1,
+                opacity: 0.5,
+            }
+        },
+        tooltip: {
+            container: {
+                background: 'hsl(var(--card))',
+                color: 'hsl(var(--foreground))',
+                border: '1px solid hsl(var(--border))',
+                borderRadius: 8,
+                boxShadow: '0 8px 16px rgba(0,0,0,0.2)',
+            }
+        }
+    }
 
     if (isLoading) {
         return (
@@ -179,6 +201,18 @@ export const VendorsPage = () => {
                             </CardHeader>
                             <CardContent>
                                 <Skeleton className="h-8 w-24" />
+                            </CardContent>
+                        </Card>
+                    ))}
+                </div>
+                <div className="grid gap-4 md:grid-cols-3">
+                    {[1, 2, 3].map((i) => (
+                        <Card key={`chart-${i}`}>
+                            <CardHeader>
+                                <Skeleton className="h-6 w-40" />
+                            </CardHeader>
+                            <CardContent>
+                                <Skeleton className="h-32 w-full" />
                             </CardContent>
                         </Card>
                     ))}
@@ -202,15 +236,13 @@ export const VendorsPage = () => {
     return (
         <ErrorBoundary>
             <div className="flex-1 space-y-6 p-6">
-                {/* Header */}
+                {/* Filtros */}
                 <motion.div
                     initial={{ opacity: 0, y: -20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.5 }}
-                    className="flex flex-col md:flex-row md:items-center md:justify-between gap-4"
+                    className="flex flex-col md:flex-row md:items-center md:justify-end gap-4"
                 >
-
-                    {/* Filtros */}
                     <motion.div
                         initial={{ opacity: 0, x: 20 }}
                         animate={{ opacity: 1, x: 0 }}
@@ -268,544 +300,448 @@ export const VendorsPage = () => {
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.5, delay: 0.3 }}
                 >
-                    <motion.div
-                        initial={{ opacity: 0, scale: 0.9 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        transition={{ duration: 0.5, delay: 0.4 }}
-                    >
-                        <Card className="hover:shadow-lg transition-all">
-                            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                                <CardTitle className="text-sm font-medium text-muted-foreground">
-                                    Total General de Ventas
-                                </CardTitle>
-                                <DollarSign className="h-5 w-5 text-primary" />
-                            </CardHeader>
-                            <CardContent>
-                                <div className="text-3xl font-bold">
-                                    {formatters.currency(totalSales)}
-                                </div>
-                                <p className="text-xs text-muted-foreground mt-2">
-                                    Suma de todos los valores netos
-                                </p>
-                            </CardContent>
-                        </Card>
-                    </motion.div>
+                    <Card className="hover:shadow-lg transition-all">
+                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                            <CardTitle className="text-sm font-medium text-muted-foreground">
+                                Total General de Ventas
+                            </CardTitle>
+                            <DollarSign className="h-5 w-5 text-primary" />
+                        </CardHeader>
+                        <CardContent>
+                            <div className="text-3xl font-bold">
+                                {formatters.currency(totalSales)}
+                            </div>
+                            <p className="text-xs text-muted-foreground mt-2">
+                                Suma de todos los valores netos
+                            </p>
+                        </CardContent>
+                    </Card>
 
-                    <motion.div
-                        initial={{ opacity: 0, scale: 0.9 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        transition={{ duration: 0.5, delay: 0.5 }}
-                    >
-                        <Card className="hover:shadow-lg transition-all">
-                            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                                <CardTitle className="text-sm font-medium text-muted-foreground">
-                                    Promedio por Vendedor
-                                </CardTitle>
-                                <TrendingUp className="h-5 w-5 text-primary" />
-                            </CardHeader>
-                            <CardContent>
-                                <div className="text-3xl font-bold">
-                                    {formatters.currency(avgSalePerVendor)}
-                                </div>
-                                <p className="text-xs text-muted-foreground mt-2">
-                                    {new Set(filteredVendors.map(v => v['Codigo vendedor'])).size} vendedores únicos
-                                </p>
-                            </CardContent>
-                        </Card>
-                    </motion.div>
+                    <Card className="hover:shadow-lg transition-all">
+                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                            <CardTitle className="text-sm font-medium text-muted-foreground">
+                                Promedio por Vendedor
+                            </CardTitle>
+                            <TrendingUp className="h-5 w-5 text-primary" />
+                        </CardHeader>
+                        <CardContent>
+                            <div className="text-3xl font-bold">
+                                {formatters.currency(avgSalePerVendor)}
+                            </div>
+                            <p className="text-xs text-muted-foreground mt-2">
+                                {new Set(filteredSales.map(s => s['Vendedor'])).size} vendedores únicos
+                            </p>
+                        </CardContent>
+                    </Card>
 
-                    <motion.div
-                        initial={{ opacity: 0, scale: 0.9 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        transition={{ duration: 0.5, delay: 0.6 }}
-                    >
-                        <Card className="hover:shadow-lg transition-all">
-                            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                                <CardTitle className="text-sm font-medium text-muted-foreground">
-                                    Número de Operaciones
-                                </CardTitle>
-                                <FileText className="h-5 w-5 text-primary" />
-                            </CardHeader>
-                            <CardContent>
-                                <div className="text-3xl font-bold">
-                                    <CountUp end={totalOperations} />
-                                </div>
-                                <p className="text-xs text-muted-foreground mt-2">
-                                    Total de registros procesados
-                                </p>
-                            </CardContent>
-                        </Card>
-                    </motion.div>
+                    <Card className="hover:shadow-lg transition-all">
+                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                            <CardTitle className="text-sm font-medium text-muted-foreground">
+                                Número de Operaciones
+                            </CardTitle>
+                            <FileText className="h-5 w-5 text-primary" />
+                        </CardHeader>
+                        <CardContent>
+                            <div className="text-3xl font-bold">
+                                <CountUp end={totalOperations} />
+                            </div>
+                            <p className="text-xs text-muted-foreground mt-2">
+                                Total de registros procesados
+                            </p>
+                        </CardContent>
+                    </Card>
                 </motion.div>
 
-                {/* Gráficos */}
+                {/* Cards resumen clicables */}
                 <motion.div
-                    className="grid gap-6 grid-cols-1"
+                    className="grid gap-4 md:grid-cols-3"
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.5, delay: 0.4 }}
                 >
-                    {/* 1. Gráfico de barras: Valor neto por vendedor */}
-                    <motion.div
-                        initial={{ opacity: 0, x: -20 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        transition={{ duration: 0.6, delay: 0.5 }}
+                    <button
+                        type="button"
+                        onClick={() => setOpenDetail('ventas')}
+                        className="text-left"
+                        disabled={!salesByVendorData.length}
                     >
-                        <Card className="hover:shadow-lg transition-all">
-                            <CardHeader>
-                                <CardTitle className="flex items-center gap-2">
-                                    <BarChart3 className="h-5 w-5 text-primary" />
-                                    Valor Neto Total por Vendedor
+                        <Card className="hover:shadow-lg hover:border-primary/50 transition-all cursor-pointer h-full">
+                            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                                <CardTitle className="text-sm font-medium text-muted-foreground">
+                                    Valor Neto por Vendedor
                                 </CardTitle>
-                                <p className="text-sm text-muted-foreground">
-                                    Top 15 vendedores con mayor facturación
-                                </p>
+                                <div className="rounded-md bg-primary/10 p-2">
+                                    <BarChart3 className="h-4 w-4 text-primary" />
+                                </div>
                             </CardHeader>
                             <CardContent>
-                                <div className="h-[450px]">
-                                    <AnimatePresence mode="wait">
-                                        <ResponsiveBar
-                                            key={`${selectedCenter}-${selectedCompany}`}
-                                            data={salesByVendorData}
-                                            keys={['ventas']}
-                                            indexBy="vendedor"
-                                            margin={{ top: 50, right: 50, bottom: 120, left: 90 }}
-                                            padding={0.4}
-                                            valueScale={{ type: 'linear' }}
-                                            indexScale={{ type: 'band', round: true }}
-                                            colors={(d) => d.data.color}
-                                            borderColor={{ from: 'color', modifiers: [['darker', 0.5]] }}
-                                            borderWidth={2}
-                                            axisTop={null}
-                                            axisRight={null}
-                                            axisBottom={{
-                                                tickSize: 5,
-                                                tickPadding: 5,
-                                                tickRotation: -45,
-                                                legend: 'Vendedor',
-                                                legendPosition: 'middle',
-                                                legendOffset: 95,
-                                            }}
-                                            axisLeft={{
-                                                tickSize: 5,
-                                                tickPadding: 5,
-                                                tickRotation: 0,
-                                                legend: 'Valor Neto',
-                                                legendPosition: 'middle',
-                                                legendOffset: -70,
-                                                format: (value) => formatters.compactCurrency(value),
-                                            }}
-                                            theme={{
-                                                axis: {
-                                                    ticks: {
-                                                        text: { fill: 'hsl(var(--muted-foreground))', fontSize: 11 }
-                                                    },
-                                                    legend: {
-                                                        text: { fill: 'hsl(var(--foreground))', fontSize: 12, fontWeight: 600 }
-                                                    },
-                                                },
-                                                grid: {
-                                                    line: {
-                                                        stroke: 'hsl(var(--border))',
-                                                        strokeWidth: 1,
-                                                        opacity: 0.5,
-                                                    }
-                                                },
-                                                tooltip: {
-                                                    container: {
-                                                        background: 'hsl(var(--card))',
-                                                        color: 'hsl(var(--foreground))',
-                                                        border: '1px solid hsl(var(--border))',
-                                                        borderRadius: 8,
-                                                        boxShadow: '0 8px 16px rgba(0,0,0,0.2)',
-                                                    }
-                                                }
-                                            }}
-                                            labelSkipWidth={12}
-                                            labelSkipHeight={12}
-                                            labelTextColor={{ from: 'color', modifiers: [['darker', 2]] }}
-                                            label={(d) => {
-                                                return formatters.compactCurrency(d.value)
-                                            }}
-                                            animate={true}
-                                            motionConfig={{
-                                                tension: 90,
-                                                damping: 15,
-                                            }}
-                                            tooltip={(tooltip) => (
-                                                <div
-                                                    style={{
-                                                        padding: 12,
-                                                        background: 'hsl(var(--card))',
-                                                        border: '1px solid hsl(var(--border))',
-                                                        borderRadius: 8,
-                                                        boxShadow: '0 8px 16px rgba(0,0,0,0.2)',
-                                                        color: 'hsl(var(--foreground))',
-                                                    }}
-                                                >
-                                                    <div className="font-bold text-base">{tooltip.indexValue}</div>
-                                                    <div className="text-sm mt-1 font-semibold">
-                                                        {formatters.currency(tooltip.value as number)}
-                                                    </div>
-                                                </div>
-                                            )}
-                                        />
-                                    </AnimatePresence>
-                                </div>
-                                {/* Tabla de datos: Valor Neto por Vendedor */}
-                                <div className="mt-6">
-                                    <DataTable
-                                        title="Datos base: Valor Neto Total por Vendedor"
-                                        columns={[
-                                            { header: 'Código Vendedor', accessor: (row) => {
-                                                const vendor = filteredVendors.find(v => {
-                                                    const nombre = v['Nombre vendedor'] || ''
-                                                    const shortName = nombre.length > 25 ? nombre.substring(0, 25) + '...' : nombre
-                                                    return shortName === row.vendedor || nombre === row.vendedor
-                                                })
-                                                return vendor?.['Codigo vendedor'] || 'N/A'
-                                            }, align: 'left' },
-                                            { header: 'Nombre Vendedor', accessor: 'vendedor', align: 'left' },
-                                            { header: 'Centro de OP', accessor: (row) => {
-                                                const vendor = filteredVendors.find(v => {
-                                                    const nombre = v['Nombre vendedor'] || ''
-                                                    const shortName = nombre.length > 25 ? nombre.substring(0, 25) + '...' : nombre
-                                                    return shortName === row.vendedor || nombre === row.vendedor
-                                                })
-                                                return vendor?.['centro de op'] || 'N/A'
-                                            }, align: 'left' },
-                                            { header: 'Compañía', accessor: (row) => {
-                                                const vendor = filteredVendors.find(v => {
-                                                    const nombre = v['Nombre vendedor'] || ''
-                                                    const shortName = nombre.length > 25 ? nombre.substring(0, 25) + '...' : nombre
-                                                    return shortName === row.vendedor || nombre === row.vendedor
-                                                })
-                                                return vendor?.compania || 'N/A'
-                                            }, align: 'right' },
-                                            { header: 'Valor Neto Total', accessor: 'ventas', align: 'right', format: (v) => formatters.currency(v) },
-                                        ]}
-                                        data={salesByVendorData}
-                                        showTotalRow={true}
-                                        totalLabel="Total Ventas"
-                                        totalAccessor="ventas"
-                                        exportFilename="valor_neto_por_vendedor"
-                                    />
-                                </div>
+                                {topVendor ? (
+                                    <>
+                                        <div className="text-lg font-bold truncate">
+                                            {topVendor.nombreCompleto}
+                                        </div>
+                                        <p className="text-sm text-muted-foreground mt-1">
+                                            Top vendedor · {formatters.currency(topVendor.ventas)}
+                                        </p>
+                                    </>
+                                ) : (
+                                    <p className="text-sm text-muted-foreground">Sin datos disponibles</p>
+                                )}
+                                <p className="text-xs text-primary mt-3">Ver detalle completo →</p>
                             </CardContent>
                         </Card>
-                    </motion.div>
+                    </button>
 
-                    {/* 2. Gráfica circular: Distribución por tipo de entrega */}
-                    <motion.div
-                        initial={{ opacity: 0, x: 20 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        transition={{ duration: 0.6, delay: 0.6 }}
+                    <button
+                        type="button"
+                        onClick={() => setOpenDetail('tipoDocumento')}
+                        className="text-left"
+                        disabled={!documentTypeData.length}
                     >
-                        <Card className="hover:shadow-lg transition-all">
-                            <CardHeader>
-                                <CardTitle className="flex items-center gap-2">
-                                    <PieChart className="h-5 w-5 text-primary" />
-                                    Distribución por Tipo de Entrega
+                        <Card className="hover:shadow-lg hover:border-primary/50 transition-all cursor-pointer h-full">
+                            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                                <CardTitle className="text-sm font-medium text-muted-foreground">
+                                    Distribución por Tipo de Documento
                                 </CardTitle>
-                                <p className="text-sm text-muted-foreground">
-                                    Porcentaje de ventas según tipo de entrega
-                                </p>
+                                <div className="rounded-md bg-primary/10 p-2">
+                                    <PieChart className="h-4 w-4 text-primary" />
+                                </div>
                             </CardHeader>
                             <CardContent>
-                                <div className="h-[450px]">
-                                    <AnimatePresence mode="wait">
-                                        <ResponsivePie
-                                            key={`pie-${selectedCenter}-${selectedCompany}`}
-                                            data={deliveryTypeData}
-                                            margin={{ top: 40, right: 80, bottom: 120, left: 80 }}
-                                            innerRadius={0.65}
-                                            padAngle={3}
-                                            cornerRadius={6}
-                                            activeOuterRadiusOffset={12}
-                                            borderWidth={2}
-                                            borderColor={{ from: 'color', modifiers: [['darker', 0.3]] }}
-                                            arcLinkLabelsSkipAngle={10}
-                                            arcLinkLabelsTextColor="hsl(var(--foreground))"
-                                            arcLinkLabelsThickness={3}
-                                            arcLinkLabelsColor={{ from: 'color' }}
-                                            arcLabelsSkipAngle={10}
-                                            arcLabelsTextColor="hsl(var(--background))"
-                                            arcLabel={(d) => {
-                                                const percentage = ((d.value / totalDeliverySales) * 100).toFixed(1)
-                                                return `${percentage}%`
-                                            }}
-                                            valueFormat={(value) => formatters.compactCurrency(value)}
-                                            colors={(d) => d.data.color}
-                                            legends={[
-                                                {
-                                                    anchor: 'bottom',
-                                                    direction: 'row',
-                                                    justify: false,
-                                                    translateX: 0,
-                                                    translateY: 80,
-                                                    itemsSpacing: 15,
-                                                    itemWidth: 90,
-                                                    itemHeight: 20,
-                                                    itemTextColor: 'hsl(var(--foreground))',
-                                                    itemDirection: 'left-to-right',
-                                                    itemOpacity: 1,
-                                                    symbolSize: 16,
-                                                    symbolShape: 'circle',
-                                                    effects: [
-                                                        {
-                                                            on: 'hover',
-                                                            style: {
-                                                                itemTextColor: 'hsl(var(--foreground))',
-                                                                itemOpacity: 1,
-                                                            },
-                                                        },
-                                                    ],
-                                                },
-                                            ]}
-                                            theme={{
-                                                labels: {
-                                                    text: {
-                                                        fontSize: 12,
-                                                        fontWeight: 600,
-                                                    }
-                                                },
-                                                legends: {
-                                                    text: {
-                                                        fontSize: 11,
-                                                    }
-                                                }
-                                            }}
-                                            tooltip={({ datum }) => {
-                                                const percentage = (datum.value / totalDeliverySales * 100).toFixed(2)
-                                                return (
-                                                    <div
-                                                        style={{
-                                                            padding: 14,
-                                                            background: 'hsl(var(--card))',
-                                                            border: '2px solid hsl(var(--border))',
-                                                            borderRadius: 10,
-                                                            boxShadow: '0 8px 16px rgba(0,0,0,0.2)',
-                                                            color: 'hsl(var(--foreground))',
-                                                        }}
-                                                    >
-                                                        <div className="font-bold text-base">{datum.label}</div>
-                                                        <div className="text-sm mt-2 font-semibold">
-                                                            {formatters.currency(datum.value)}
-                                                        </div>
-                                                        <div className="text-xs text-muted-foreground mt-1">
-                                                            {percentage}% del total
-                                                        </div>
-                                                    </div>
-                                                )
-                                            }}
-                                            animate={true}
-                                            motionConfig={{
-                                                tension: 90,
-                                                damping: 15,
-                                            }}
-                                        />
-                                    </AnimatePresence>
-                                </div>
-                                {/* Tabla de datos: Distribución por Tipo de Entrega */}
-                                <div className="mt-6">
-                                    <DataTable
-                                        title="Datos base: Distribución por Tipo de Entrega"
-                                        columns={[
-                                            { header: 'Tipo de Entrega', accessor: 'label', align: 'left' },
-                                            { header: 'Valor Neto', accessor: 'value', align: 'right', format: (v) => formatters.currency(v) },
-                                            { header: 'Porcentaje', accessor: (row) => {
-                                                const percent = ((row.value / totalDeliverySales) * 100).toFixed(2)
-                                                return `${percent}%`
-                                            }, align: 'right' },
-                                        ]}
-                                        data={deliveryTypeData}
-                                        showTotalRow={true}
-                                        totalLabel="Total Ventas"
-                                        totalAccessor="value"
-                                        exportFilename="distribucion_tipo_entrega"
-                                    />
-                                </div>
+                                {topDocType ? (
+                                    <>
+                                        <div className="text-lg font-bold truncate">
+                                            {topDocType.label}
+                                        </div>
+                                        <p className="text-sm text-muted-foreground mt-1">
+                                            Principal ·{' '}
+                                            {totalDocTypeSales > 0
+                                                ? `${((topDocType.value / totalDocTypeSales) * 100).toFixed(1)}%`
+                                                : '0%'}{' '}
+                                            del total
+                                        </p>
+                                    </>
+                                ) : (
+                                    <p className="text-sm text-muted-foreground">Sin datos disponibles</p>
+                                )}
+                                <p className="text-xs text-primary mt-3">Ver detalle completo →</p>
                             </CardContent>
                         </Card>
-                    </motion.div>
+                    </button>
 
-                    {/* 3. Gráfico combinado: Subtotal vs Neto con línea de margen */}
-                    <motion.div
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ duration: 0.6, delay: 0.7 }}
+                    <button
+                        type="button"
+                        onClick={() => setOpenDetail('unidades')}
+                        className="text-left"
+                        disabled={!unitsByVendorData.length}
                     >
-                        <Card className="hover:shadow-lg transition-all">
-                            <CardHeader>
-                                <CardTitle className="flex items-center gap-2">
-                                    <Layers className="h-5 w-5 text-primary" />
-                                    Relación Subtotal vs Valor Neto (con Margen)
+                        <Card className="hover:shadow-lg hover:border-primary/50 transition-all cursor-pointer h-full">
+                            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                                <CardTitle className="text-sm font-medium text-muted-foreground">
+                                    Unidades Vendidas por Vendedor
                                 </CardTitle>
-                                <p className="text-sm text-muted-foreground">
-                                    Comparativa de valores y cálculo de márgenes por vendedor
-                                </p>
+                                <div className="rounded-md bg-primary/10 p-2">
+                                    <Package className="h-4 w-4 text-primary" />
+                                </div>
                             </CardHeader>
                             <CardContent>
-                                <div className="h-[500px]">
-                                    <AnimatePresence mode="wait">
-                                        <ResponsiveBar
-                                            key={`combined-${selectedCenter}-${selectedCompany}`}
-                                            data={combinedChartData.bars}
-                                            keys={['Valor Subtotal', 'Valor Neto']}
-                                            indexBy="vendedor"
-                                            margin={{ top: 50, right: 130, bottom: 100, left: 80 }}
-                                            padding={0.3}
-                                            valueScale={{ type: 'linear' }}
-                                            indexScale={{ type: 'band', round: true }}
-                                            colors={[vibrantColors.neonBlue, vibrantColors.neonGreen]}
-                                            borderColor={{ from: 'color', modifiers: [['darker', 0.5]] }}
-                                            borderWidth={2}
-                                            axisTop={null}
-                                            axisRight={null}
-                                            axisBottom={{
-                                                tickSize: 5,
-                                                tickPadding: 5,
-                                                tickRotation: -45,
-                                                legend: 'Vendedor',
-                                                legendPosition: 'middle',
-                                                legendOffset: 90,
-                                            }}
-                                            axisLeft={{
-                                                tickSize: 5,
-                                                tickPadding: 5,
-                                                tickRotation: 0,
-                                                legend: 'Valor',
-                                                legendPosition: 'middle',
-                                                legendOffset: -60,
-                                                format: (value) => formatters.compactCurrency(value),
-                                            }}
-                                            theme={{
-                                                axis: {
-                                                    ticks: {
-                                                        text: { fill: 'hsl(var(--muted-foreground))', fontSize: 11 }
-                                                    },
-                                                    legend: {
-                                                        text: { fill: 'hsl(var(--foreground))', fontSize: 12, fontWeight: 600 }
-                                                    },
-                                                },
-                                                grid: {
-                                                    line: {
-                                                        stroke: 'hsl(var(--border))',
-                                                        strokeWidth: 1,
-                                                        opacity: 0.5,
-                                                    }
-                                                },
-                                                tooltip: {
-                                                    container: {
-                                                        background: 'hsl(var(--card))',
-                                                        color: 'hsl(var(--foreground))',
-                                                        border: '1px solid hsl(var(--border))',
-                                                        borderRadius: 8,
-                                                        boxShadow: '0 8px 16px rgba(0,0,0,0.2)',
-                                                    }
-                                                }
-                                            }}
-                                            labelSkipWidth={12}
-                                            labelSkipHeight={12}
-                                            animate={true}
-                                            motionConfig={{
-                                                tension: 90,
-                                                damping: 15,
-                                            }}
-                                            tooltip={(tooltip) => {
-                                                const data = combinedChartData.bars.find(d => d.vendedor === tooltip.indexValue)
-                                                const margen = data ? (data['Valor Neto'] - data['Valor Subtotal']) : 0
-                                                return (
-                                                    <div
-                                                        style={{
-                                                            padding: 14,
-                                                            background: 'hsl(var(--card))',
-                                                            border: '2px solid hsl(var(--border))',
-                                                            borderRadius: 10,
-                                                            boxShadow: '0 8px 16px rgba(0,0,0,0.2)',
-                                                            color: 'hsl(var(--foreground))',
-                                                        }}
-                                                    >
-                                                        <div className="font-bold text-base">{tooltip.id}</div>
-                                                        <div className="text-sm mt-1 font-semibold">
-                                                            {formatters.currency(tooltip.value as number)}
-                                                        </div>
-                                                        <div className="text-xs text-muted-foreground mt-2">
-                                                            {tooltip.indexValue}
-                                                        </div>
-                                                        {tooltip.id === 'Valor Neto' && (
-                                                            <div className="text-xs mt-2 pt-2 border-t border-border">
-                                                                <span style={{ color: vibrantColors.neonOrange }} className="font-semibold">
-                                                                    Margen: {formatters.currency(margen)}
-                                                                </span>
-                                                            </div>
-                                                        )}
-                                                    </div>
-                                                )
-                                            }}
-                                            legends={[
-                                                {
-                                                    dataFrom: 'keys',
-                                                    anchor: 'top-right',
-                                                    direction: 'row',
-                                                    justify: false,
-                                                    translateX: 120,
-                                                    translateY: -20,
-                                                    itemsSpacing: 15,
-                                                    itemWidth: 100,
-                                                    itemHeight: 20,
-                                                    itemDirection: 'left-to-right',
-                                                    itemOpacity: 0.85,
-                                                    symbolSize: 16,
-                                                    itemTextColor: 'hsl(var(--foreground))',
-                                                }
-                                            ]}
-                                        />
-                                    </AnimatePresence>
-                                </div>
-                                {/* Tabla de datos: Subtotal vs Valor Neto */}
-                                <div className="mt-6">
-                                    <DataTable
-                                        title="Datos base: Subtotal vs Valor Neto por Vendedor"
-                                        columns={[
-                                            { header: 'Código Vendedor', accessor: (row) => {
-                                                const vendor = filteredVendors.find(v => {
-                                                    const nombre = v['Nombre vendedor'] || ''
-                                                    const shortName = nombre.length > 25 ? nombre.substring(0, 25) + '...' : nombre
-                                                    return shortName === row.vendedor || nombre === row.vendedor
-                                                })
-                                                return vendor?.['Codigo vendedor'] || 'N/A'
-                                            }, align: 'left' },
-                                            { header: 'Nombre Vendedor', accessor: 'vendedor', align: 'left' },
-                                            { header: 'Valor Subtotal', accessor: 'Valor Subtotal', align: 'right', format: (v) => formatters.currency(v) },
-                                            { header: 'Valor Neto', accessor: 'Valor Neto', align: 'right', format: (v) => formatters.currency(v) },
-                                            { header: 'Margen', accessor: (row) => {
-                                                const subtotal = row['Valor Subtotal'] || 0
-                                                const neto = row['Valor Neto'] || 0
-                                                return neto - subtotal
-                                            }, align: 'right', format: (v) => formatters.currency(v) },
-                                            { header: 'Porcentaje Margen', accessor: (row) => {
-                                                const subtotal = row['Valor Subtotal'] || 0
-                                                const neto = row['Valor Neto'] || 0
-                                                const margen = neto - subtotal
-                                                if (subtotal === 0) return '0%'
-                                                const percent = ((margen / subtotal) * 100).toFixed(2)
-                                                return `${percent}%`
-                                            }, align: 'right' },
-                                        ]}
-                                        data={combinedChartData.bars}
-                                        showTotalRow={true}
-                                        totalLabel="Totales"
-                                        totalAccessor={(row) => row['Valor Neto']}
-                                        exportFilename="subtotal_vs_valor_neto"
-                                    />
-                                </div>
+                                {topUnitsVendor ? (
+                                    <>
+                                        <div className="text-lg font-bold truncate">
+                                            {topUnitsVendor.nombreCompleto}
+                                        </div>
+                                        <p className="text-sm text-muted-foreground mt-1">
+                                            Top vendedor · {topUnitsVendor.unidades.toLocaleString('es-CO')} unidades
+                                        </p>
+                                    </>
+                                ) : (
+                                    <p className="text-sm text-muted-foreground">Sin datos disponibles</p>
+                                )}
+                                <p className="text-xs text-primary mt-3">Ver detalle completo →</p>
                             </CardContent>
                         </Card>
-                    </motion.div>
+                    </button>
                 </motion.div>
+
+                {/* Modal: Valor Neto por Vendedor */}
+                <Modal
+                    isOpen={openDetail === 'ventas'}
+                    onClose={() => setOpenDetail(null)}
+                    title="Valor Neto Total por Vendedor"
+                    className="max-w-6xl"
+                >
+                    <p className="text-sm text-muted-foreground mb-4">
+                        Top 15 vendedores con mayor facturación
+                    </p>
+                    <div className="h-[450px]">
+                        <ResponsiveBar
+                            data={salesByVendorData}
+                            keys={['ventas']}
+                            indexBy="vendedor"
+                            margin={{ top: 50, right: 50, bottom: 120, left: 90 }}
+                            padding={0.4}
+                            valueScale={{ type: 'linear' }}
+                            indexScale={{ type: 'band', round: true }}
+                            colors={(d) => d.data.color}
+                            borderColor={{ from: 'color', modifiers: [['darker', 0.5]] }}
+                            borderWidth={2}
+                            axisTop={null}
+                            axisRight={null}
+                            axisBottom={{
+                                tickSize: 5,
+                                tickPadding: 5,
+                                tickRotation: -45,
+                                legend: 'Vendedor',
+                                legendPosition: 'middle',
+                                legendOffset: 95,
+                            }}
+                            axisLeft={{
+                                tickSize: 5,
+                                tickPadding: 5,
+                                tickRotation: 0,
+                                legend: 'Valor Neto',
+                                legendPosition: 'middle',
+                                legendOffset: -70,
+                                format: (value) => formatters.compactCurrency(value),
+                            }}
+                            theme={chartTheme}
+                            labelSkipWidth={12}
+                            labelSkipHeight={12}
+                            labelTextColor={{ from: 'color', modifiers: [['darker', 2]] }}
+                            label={(d) => formatters.compactCurrency(d.value)}
+                            animate={true}
+                            motionConfig={{ tension: 90, damping: 15 }}
+                            tooltip={(tooltip) => (
+                                <div
+                                    style={{
+                                        padding: 12,
+                                        background: 'hsl(var(--card))',
+                                        border: '1px solid hsl(var(--border))',
+                                        borderRadius: 8,
+                                        boxShadow: '0 8px 16px rgba(0,0,0,0.2)',
+                                        color: 'hsl(var(--foreground))',
+                                    }}
+                                >
+                                    <div className="font-bold text-base">{tooltip.indexValue}</div>
+                                    <div className="text-sm mt-1 font-semibold">
+                                        {formatters.currency(tooltip.value as number)}
+                                    </div>
+                                </div>
+                            )}
+                        />
+                    </div>
+                    <div className="mt-6">
+                        <DataTable
+                            title="Datos base: Valor Neto Total por Vendedor"
+                            columns={[
+                                { header: 'Vendedor', accessor: 'nombreCompleto', align: 'left' },
+                                { header: 'Valor Neto Total', accessor: 'ventas', align: 'right', format: (v) => formatters.currency(v) },
+                            ]}
+                            data={salesByVendorData}
+                            showTotalRow={true}
+                            totalLabel="Total Ventas"
+                            totalAccessor="ventas"
+                            exportFilename="valor_neto_por_vendedor"
+                        />
+                    </div>
+                </Modal>
+
+                {/* Modal: Distribución por Tipo de Documento */}
+                <Modal
+                    isOpen={openDetail === 'tipoDocumento'}
+                    onClose={() => setOpenDetail(null)}
+                    title="Distribución por Tipo de Documento"
+                    className="max-w-6xl"
+                >
+                    <p className="text-sm text-muted-foreground mb-4">
+                        Porcentaje de ventas según tipo de documento (Desc. grupo clase docto.)
+                    </p>
+                    <div className="h-[450px]">
+                        <ResponsivePie
+                            data={documentTypeData}
+                            margin={{ top: 40, right: 80, bottom: 120, left: 80 }}
+                            innerRadius={0.65}
+                            padAngle={3}
+                            cornerRadius={6}
+                            activeOuterRadiusOffset={12}
+                            borderWidth={2}
+                            borderColor={{ from: 'color', modifiers: [['darker', 0.3]] }}
+                            arcLinkLabelsSkipAngle={10}
+                            arcLinkLabelsTextColor="hsl(var(--foreground))"
+                            arcLinkLabelsThickness={3}
+                            arcLinkLabelsColor={{ from: 'color' }}
+                            arcLabelsSkipAngle={10}
+                            arcLabelsTextColor="hsl(var(--background))"
+                            arcLabel={(d) => {
+                                const percentage = totalDocTypeSales > 0 ? ((d.value / totalDocTypeSales) * 100).toFixed(1) : '0'
+                                return `${percentage}%`
+                            }}
+                            valueFormat={(value) => formatters.compactCurrency(value)}
+                            colors={(d) => d.data.color}
+                            legends={[
+                                {
+                                    anchor: 'bottom',
+                                    direction: 'row',
+                                    justify: false,
+                                    translateX: 0,
+                                    translateY: 80,
+                                    itemsSpacing: 15,
+                                    itemWidth: 90,
+                                    itemHeight: 20,
+                                    itemTextColor: 'hsl(var(--foreground))',
+                                    itemDirection: 'left-to-right',
+                                    itemOpacity: 1,
+                                    symbolSize: 16,
+                                    symbolShape: 'circle',
+                                    effects: [
+                                        {
+                                            on: 'hover',
+                                            style: {
+                                                itemTextColor: 'hsl(var(--foreground))',
+                                                itemOpacity: 1,
+                                            },
+                                        },
+                                    ],
+                                },
+                            ]}
+                            theme={{
+                                labels: {
+                                    text: { fontSize: 12, fontWeight: 600 }
+                                },
+                                legends: {
+                                    text: { fontSize: 11 }
+                                }
+                            }}
+                            tooltip={({ datum }) => {
+                                const percentage = totalDocTypeSales > 0 ? (datum.value / totalDocTypeSales * 100).toFixed(2) : '0'
+                                return (
+                                    <div
+                                        style={{
+                                            padding: 14,
+                                            background: 'hsl(var(--card))',
+                                            border: '2px solid hsl(var(--border))',
+                                            borderRadius: 10,
+                                            boxShadow: '0 8px 16px rgba(0,0,0,0.2)',
+                                            color: 'hsl(var(--foreground))',
+                                        }}
+                                    >
+                                        <div className="font-bold text-base">{datum.label}</div>
+                                        <div className="text-sm mt-2 font-semibold">
+                                            {formatters.currency(datum.value)}
+                                        </div>
+                                        <div className="text-xs text-muted-foreground mt-1">
+                                            {percentage}% del total
+                                        </div>
+                                    </div>
+                                )
+                            }}
+                            animate={true}
+                            motionConfig={{ tension: 90, damping: 15 }}
+                        />
+                    </div>
+                    <div className="mt-6">
+                        <DataTable
+                            title="Datos base: Distribución por Tipo de Documento"
+                            columns={[
+                                { header: 'Tipo de Documento', accessor: 'label', align: 'left' },
+                                { header: 'Valor Neto', accessor: 'value', align: 'right', format: (v) => formatters.currency(v) },
+                                {
+                                    header: 'Porcentaje', accessor: (row) => {
+                                        const percent = totalDocTypeSales > 0 ? ((row.value / totalDocTypeSales) * 100).toFixed(2) : '0'
+                                        return `${percent}%`
+                                    }, align: 'right'
+                                },
+                            ]}
+                            data={documentTypeData}
+                            showTotalRow={true}
+                            totalLabel="Total Ventas"
+                            totalAccessor="value"
+                            exportFilename="distribucion_tipo_documento"
+                        />
+                    </div>
+                </Modal>
+
+                {/* Modal: Unidades Vendidas por Vendedor */}
+                <Modal
+                    isOpen={openDetail === 'unidades'}
+                    onClose={() => setOpenDetail(null)}
+                    title="Unidades Vendidas por Vendedor"
+                    className="max-w-6xl"
+                >
+                    <p className="text-sm text-muted-foreground mb-4">
+                        Top 15 vendedores por número de unidades vendidas
+                    </p>
+                    <div className="h-[450px]">
+                        <ResponsiveBar
+                            data={unitsByVendorData}
+                            keys={['unidades']}
+                            indexBy="vendedor"
+                            margin={{ top: 50, right: 50, bottom: 120, left: 90 }}
+                            padding={0.4}
+                            valueScale={{ type: 'linear' }}
+                            indexScale={{ type: 'band', round: true }}
+                            colors={(d) => d.data.color}
+                            borderColor={{ from: 'color', modifiers: [['darker', 0.5]] }}
+                            borderWidth={2}
+                            axisTop={null}
+                            axisRight={null}
+                            axisBottom={{
+                                tickSize: 5,
+                                tickPadding: 5,
+                                tickRotation: -45,
+                                legend: 'Vendedor',
+                                legendPosition: 'middle',
+                                legendOffset: 95,
+                            }}
+                            axisLeft={{
+                                tickSize: 5,
+                                tickPadding: 5,
+                                tickRotation: 0,
+                                legend: 'Unidades',
+                                legendPosition: 'middle',
+                                legendOffset: -60,
+                            }}
+                            theme={chartTheme}
+                            labelSkipWidth={12}
+                            labelSkipHeight={12}
+                            labelTextColor={{ from: 'color', modifiers: [['darker', 2]] }}
+                            animate={true}
+                            motionConfig={{ tension: 90, damping: 15 }}
+                            tooltip={(tooltip) => (
+                                <div
+                                    style={{
+                                        padding: 12,
+                                        background: 'hsl(var(--card))',
+                                        border: '1px solid hsl(var(--border))',
+                                        borderRadius: 8,
+                                        boxShadow: '0 8px 16px rgba(0,0,0,0.2)',
+                                        color: 'hsl(var(--foreground))',
+                                    }}
+                                >
+                                    <div className="font-bold text-base">{tooltip.indexValue}</div>
+                                    <div className="text-sm mt-1 font-semibold">
+                                        {(tooltip.value as number).toLocaleString('es-CO')} unidades
+                                    </div>
+                                </div>
+                            )}
+                        />
+                    </div>
+                    <div className="mt-6">
+                        <DataTable
+                            title="Datos base: Unidades Vendidas por Vendedor"
+                            columns={[
+                                { header: 'Vendedor', accessor: 'nombreCompleto', align: 'left' },
+                                { header: 'Unidades', accessor: 'unidades', align: 'right', format: (v) => v.toLocaleString('es-CO') },
+                            ]}
+                            data={unitsByVendorData}
+                            showTotalRow={true}
+                            totalLabel="Total Unidades"
+                            totalAccessor="unidades"
+                            exportFilename="unidades_por_vendedor"
+                        />
+                    </div>
+                </Modal>
             </div>
         </ErrorBoundary>
     )
 }
-
