@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { motion } from 'framer-motion'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { ErrorState } from '@/components/ui/error-state'
@@ -59,162 +59,191 @@ export const SalesSummaryPage = () => {
     }
 
     // 1. Gráfico de barras comparativo: Vendedor vs Valor total vendido
-    const salesByVendorData = sales && Array.isArray(sales)
-        ? Object.entries(
-            sales.reduce((acc, sale) => {
-                const vendor = sale['Vendedor'] || 'Sin Vendedor'
-                const value = sale['Vlr. Neto documento'] || 0
-                acc[vendor] = (acc[vendor] || 0) + value
-                return acc
-            }, {} as Record<string, number>)
-        )
-            .map(([vendor, total], index) => ({
-                vendedor: vendor.length > 25 ? vendor.substring(0, 25) + '...' : vendor,
-                vendedorFull: vendor,
-                ventas: total,
-                color: colorPalette[index % colorPalette.length]
-            }))
-            .sort((a, b) => b.ventas - a.ventas)
-        : []
+    const salesByVendorData = useMemo(() => (
+        sales && Array.isArray(sales)
+            ? Object.entries(
+                sales.reduce((acc, sale) => {
+                    const vendor = sale['Vendedor'] || 'Sin Vendedor'
+                    const value = sale['Vlr. Neto documento'] || 0
+                    acc[vendor] = (acc[vendor] || 0) + value
+                    return acc
+                }, {} as Record<string, number>)
+            )
+                .map(([vendor, total], index) => ({
+                    vendedor: vendor.length > 25 ? vendor.substring(0, 25) + '...' : vendor,
+                    vendedorFull: vendor,
+                    ventas: total,
+                    color: colorPalette[index % colorPalette.length]
+                }))
+                .sort((a, b) => b.ventas - a.ventas)
+            : []
+    ), [sales])
 
     // 2. Gráfico de pastel/donut: Distribución del total de ventas por vendedor
-    const pieData = salesByVendorData.map((item) => ({
-        id: item.vendedor,
-        label: item.vendedor,
-        value: item.ventas,
-        color: item.color
-    }))
+    const pieData = useMemo(() => (
+        salesByVendorData.map((item) => ({
+            id: item.vendedor,
+            label: item.vendedor,
+            value: item.ventas,
+            color: item.color
+        }))
+    ), [salesByVendorData])
 
-    const totalSales = pieData.reduce((acc, item) => acc + item.value, 0)
+    const totalSales = useMemo(() => (
+        pieData.reduce((acc, item) => acc + item.value, 0)
+    ), [pieData])
 
     // 3. Gráfico de columnas apiladas: Vendedor vs Unidades agrupadas por tipo de documento
     // Nota: los "top" vendedores se toman por valor total vendido (salesByVendorData ya
     // viene ordenado desc), no por orden de aparición en el array de ventas.
-    const stackedBarData = sales && Array.isArray(sales)
-        ? (() => {
-            const vendors = salesByVendorData
-                .slice(0, 8) // Top 8 vendedores por valor vendido
-                .map(v => v.vendedorFull)
-            const docTypes = Array.from(new Set(sales.map(s => s['Desc. grupo clase docto.']).filter(Boolean)))
-            
-            return vendors.map(vendor => {
-                const vendorSales = sales.filter(s => s['Vendedor'] === vendor)
-                const result: Record<string, number | string> = {
-                    vendedor: vendor.length > 20 ? vendor.substring(0, 20) + '...' : vendor
-                }
-                
-                docTypes.forEach(type => {
-                    const typeSales = vendorSales.filter(s => s['Desc. grupo clase docto.'] === type)
-                    result[type] = typeSales.reduce((acc, s) => acc + (s['Numero de unidades docto'] || 0), 0)
+    const stackedBarData = useMemo(() => (
+        sales && Array.isArray(sales)
+            ? (() => {
+                const vendors = salesByVendorData
+                    .slice(0, 8) // Top 8 vendedores por valor vendido
+                    .map(v => v.vendedorFull)
+                const docTypes = Array.from(new Set(sales.map(s => s['Desc. grupo clase docto.']).filter(Boolean)))
+
+                return vendors.map(vendor => {
+                    const vendorSales = sales.filter(s => s['Vendedor'] === vendor)
+                    const result: Record<string, number | string> = {
+                        vendedor: vendor.length > 20 ? vendor.substring(0, 20) + '...' : vendor
+                    }
+
+                    docTypes.forEach(type => {
+                        const typeSales = vendorSales.filter(s => s['Desc. grupo clase docto.'] === type)
+                        result[type] = typeSales.reduce((acc, s) => acc + (s['Numero de unidades docto'] || 0), 0)
+                    })
+
+                    return result
                 })
+            })()
+            : []
+    ), [sales, salesByVendorData])
 
-                return result
-            })
-        })()
-        : []
-
-    const docTypesKeys = sales && Array.isArray(sales)
-        ? Array.from(new Set(sales.map(s => s['Desc. grupo clase docto.']).filter(Boolean)))
-        : []
+    const docTypesKeys = useMemo(() => (
+        sales && Array.isArray(sales)
+            ? Array.from(new Set(sales.map(s => s['Desc. grupo clase docto.']).filter(Boolean)))
+            : []
+    ), [sales])
 
     // 4. Gráfico de líneas/área: Evolución del valor neto por hora
-    const evolutionByHourData = sales && Array.isArray(sales)
-        ? (() => {
-            const hourSales: Record<string, number> = {}
-            
-            sales.forEach((sale) => {
-                const hour = getHourOnly(sale['Fecha documento'])
-                if (hour) {
-                    hourSales[hour] = (hourSales[hour] || 0) + (sale['Vlr. Neto documento'] || 0)
-                }
-            })
+    const evolutionByHourData = useMemo(() => (
+        sales && Array.isArray(sales)
+            ? (() => {
+                const hourSales: Record<string, number> = {}
 
-            const sortedHours = Object.keys(hourSales).sort()
+                sales.forEach((sale) => {
+                    const hour = getHourOnly(sale['Fecha documento'])
+                    if (hour) {
+                        hourSales[hour] = (hourSales[hour] || 0) + (sale['Vlr. Neto documento'] || 0)
+                    }
+                })
 
-            return [{
-                id: 'Ventas por Hora',
-                data: sortedHours.map(hour => ({
-                    x: hour,
-                    y: hourSales[hour]
-                }))
-            }]
-        })()
-        : []
+                const sortedHours = Object.keys(hourSales).sort()
+
+                return [{
+                    id: 'Ventas por Hora',
+                    data: sortedHours.map(hour => ({
+                        x: hour,
+                        y: hourSales[hour]
+                    }))
+                }]
+            })()
+            : []
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    ), [sales])
 
     // 5. Gráfico de dispersión: Relación entre unidades y valor neto, coloreado por vendedor
-    const scatterData = sales && Array.isArray(sales)
-        ? (() => {
-            // Top 5 vendedores por valor vendido (no por orden de aparición en los datos)
-            const vendors = salesByVendorData.slice(0, 5).map(v => v.vendedorFull)
-            
-            return vendors.map((vendor, index) => ({
-                id: vendor,
-                data: sales
-                    .filter(s => s['Vendedor'] === vendor)
-                    .map(sale => ({
-                        x: sale['Numero de unidades docto'] || 0,
-                        y: sale['Vlr. Neto documento'] || 0,
-                        product: sale['Item resumen'] || 'Sin Producto'
-                    }))
-                    .filter(point => point.x > 0 && point.y > 0),
-                color: colorPalette[index % colorPalette.length]
-            }))
-        })()
-        : []
+    const scatterData = useMemo(() => (
+        sales && Array.isArray(sales)
+            ? (() => {
+                // Top 5 vendedores por valor vendido (no por orden de aparición en los datos)
+                const vendors = salesByVendorData.slice(0, 5).map(v => v.vendedorFull)
+
+                return vendors.map((vendor, index) => ({
+                    id: vendor,
+                    data: sales
+                        .filter(s => s['Vendedor'] === vendor)
+                        .map(sale => ({
+                            x: sale['Numero de unidades docto'] || 0,
+                            y: sale['Vlr. Neto documento'] || 0,
+                            product: sale['Item resumen'] || 'Sin Producto'
+                        }))
+                        .filter(point => point.x > 0 && point.y > 0),
+                    color: colorPalette[index % colorPalette.length]
+                }))
+            })()
+            : []
+    ), [sales, salesByVendorData])
 
     // Calcular estadísticas para las cards
-    const totalSalesAmount = sales && Array.isArray(sales)
-        ? sales.reduce((acc, sale) => acc + (sale['Vlr. Neto documento'] || 0), 0)
-        : 0
-    
-    const totalUnitsSold = sales && Array.isArray(sales)
-        ? sales.reduce((acc, sale) => acc + (sale['Numero de unidades docto'] || 0), 0)
-        : 0
-    
-    const uniqueDocuments = sales && Array.isArray(sales)
-        ? new Set(sales.map(s => s['Guid documento'])).size
-        : 0
-    
+    const totalSalesAmount = useMemo(() => (
+        sales && Array.isArray(sales)
+            ? sales.reduce((acc, sale) => acc + (sale['Vlr. Neto documento'] || 0), 0)
+            : 0
+    ), [sales])
+
+    const totalUnitsSold = useMemo(() => (
+        sales && Array.isArray(sales)
+            ? sales.reduce((acc, sale) => acc + (sale['Numero de unidades docto'] || 0), 0)
+            : 0
+    ), [sales])
+
+    const uniqueDocuments = useMemo(() => (
+        sales && Array.isArray(sales)
+            ? new Set(sales.map(s => s['Guid documento'])).size
+            : 0
+    ), [sales])
+
     const topVendor = salesByVendorData.length > 0 ? salesByVendorData[0] : null
-    
-    const topProduct = sales && Array.isArray(sales)
-        ? Object.entries(
-            sales.reduce((acc, sale) => {
-                const product = sale['Item resumen'] || 'Sin Producto'
-                const units = sale['Numero de unidades docto'] || 0
-                acc[product] = (acc[product] || 0) + units
-                return acc
-            }, {} as Record<string, number>)
-        )
-            .sort((a, b) => b[1] - a[1])[0]
-        : null
+
+    const topProduct = useMemo(() => (
+        sales && Array.isArray(sales)
+            ? Object.entries(
+                sales.reduce((acc, sale) => {
+                    const product = sale['Item resumen'] || 'Sin Producto'
+                    const units = sale['Numero de unidades docto'] || 0
+                    acc[product] = (acc[product] || 0) + units
+                    return acc
+                }, {} as Record<string, number>)
+            )
+                .sort((a, b) => b[1] - a[1])[0]
+            : null
+    ), [sales])
 
     // Datos clave para las cards resumen (usadas en el grid clicable)
-    const topDocType = sales && Array.isArray(sales)
-        ? Object.entries(
-            sales.reduce((acc, sale) => {
-                const type = sale['Desc. grupo clase docto.'] || 'Sin Tipo'
-                const units = sale['Numero de unidades docto'] || 0
-                acc[type] = (acc[type] || 0) + units
-                return acc
-            }, {} as Record<string, number>)
-        ).sort((a, b) => b[1] - a[1])[0]
-        : null
+    const topDocType = useMemo(() => (
+        sales && Array.isArray(sales)
+            ? Object.entries(
+                sales.reduce((acc, sale) => {
+                    const type = sale['Desc. grupo clase docto.'] || 'Sin Tipo'
+                    const units = sale['Numero de unidades docto'] || 0
+                    acc[type] = (acc[type] || 0) + units
+                    return acc
+                }, {} as Record<string, number>)
+            ).sort((a, b) => b[1] - a[1])[0]
+            : null
+    ), [sales])
 
-    const peakHour = evolutionByHourData[0]?.data.length
-        ? evolutionByHourData[0].data.reduce((max, point) =>
-            (point.y as number) > (max.y as number) ? point : max
-        )
-        : null
+    const peakHour = useMemo(() => (
+        evolutionByHourData[0]?.data.length
+            ? evolutionByHourData[0].data.reduce((max, point) =>
+                (point.y as number) > (max.y as number) ? point : max
+            )
+            : null
+    ), [evolutionByHourData])
 
-    const topVendorAvgTicket = scatterData.length > 0
-        ? (() => {
-            const first = scatterData[0]
-            const units = first.data.reduce((sum, d) => sum + d.x, 0)
-            const total = first.data.reduce((sum, d) => sum + d.y, 0)
-            return units > 0 ? total / units : 0
-        })()
-        : 0
+    const topVendorAvgTicket = useMemo(() => (
+        scatterData.length > 0
+            ? (() => {
+                const first = scatterData[0]
+                const units = first.data.reduce((sum, d) => sum + d.x, 0)
+                const total = first.data.reduce((sum, d) => sum + d.y, 0)
+                return units > 0 ? total / units : 0
+            })()
+            : 0
+    ), [scatterData])
 
     const [openChart, setOpenChart] = useState<ChartKey | null>(null)
 
@@ -702,8 +731,7 @@ export const SalesSummaryPage = () => {
                                             labelSkipHeight={12}
                                             labelTextColor={{ from: 'color', modifiers: [['darker', 1.6]] }}
                                             label={(d) => formatters.compactCurrency(d.value)}
-                                            animate={true}
-                                            motionConfig="gentle"
+                                            animate={false}
                                             tooltip={(tooltip) => (
                                                 <div
                                                     style={{
@@ -827,8 +855,7 @@ export const SalesSummaryPage = () => {
                                                 </div>
                                             )
                                         }}
-                                        animate={true}
-                                        motionConfig="gentle"
+                                        animate={false}
                                     />
                                 </div>
                                 {/* Tabla de datos: Distribución de Ventas por Vendedor */}
@@ -914,8 +941,7 @@ export const SalesSummaryPage = () => {
                                         }}
                                         labelSkipWidth={12}
                                         labelSkipHeight={12}
-                                        animate={true}
-                                        motionConfig="gentle"
+                                        animate={false}
                                         tooltip={(tooltip) => (
                                             <div
                                                 style={{
@@ -1051,8 +1077,7 @@ export const SalesSummaryPage = () => {
                                         areaOpacity={0.3}
                                         areaBlendMode="normal"
                                         areaBaselineValue={0}
-                                        animate={true}
-                                        motionConfig="gentle"
+                                        animate={false}
                                         tooltip={({ point }) => (
                                             <div
                                                 style={{
@@ -1173,8 +1198,7 @@ export const SalesSummaryPage = () => {
                                                 }
                                             }
                                         }}
-                                        animate={true}
-                                        motionConfig="gentle"
+                                        animate={false}
                                         tooltip={({ node }) => (
                                             <div
                                                 style={{

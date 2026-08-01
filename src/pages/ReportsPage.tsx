@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { motion } from 'framer-motion'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { ErrorState } from '@/components/ui/error-state'
@@ -53,72 +53,83 @@ export const ReportsPage = () => {
     const [openChart, setOpenChart] = useState<ChartKey | null>(null)
 
     // Datos para gráfico de distribución de estados (Pie)
-    const ordersByStatusData = orders && Array.isArray(orders)
-        ? Object.entries(
-            orders.reduce((acc, order) => {
-                const estado = order.Estado || 'Sin Estado'
-                acc[estado] = (acc[estado] || 0) + 1
-                return acc
-            }, {} as Record<string, number>)
-        ).map(([estado, cantidad]) => ({
-            id: estado,
-            label: estado,
-            value: cantidad,
-        }))
-        : []
+    // Memoizado: abrir un Modal cambia `openChart` y re-renderiza el
+    // componente, pero eso no debe disparar de nuevo este reduce/map sobre
+    // las ~800+ filas de `orders` si los datos crudos no cambiaron.
+    const ordersByStatusData = useMemo(() => (
+        orders && Array.isArray(orders)
+            ? Object.entries(
+                orders.reduce((acc, order) => {
+                    const estado = order.Estado || 'Sin Estado'
+                    acc[estado] = (acc[estado] || 0) + 1
+                    return acc
+                }, {} as Record<string, number>)
+            ).map(([estado, cantidad]) => ({
+                id: estado,
+                label: estado,
+                value: cantidad,
+            }))
+            : []
+    ), [orders])
 
     // Datos para gráfico de pedidos por compañía (Bar - Top 5)
-    const ordersByCompanyData = orders && Array.isArray(orders)
-        ? Object.entries(
-            orders.reduce((acc, order) => {
-                const company = order['Desc. CO'] || 'Sin Compañía'
-                acc[company] = (acc[company] || 0) + 1
-                return acc
-            }, {} as Record<string, number>)
-        )
-            .map(([company, count]) => ({ company, count }))
-            .sort((a, b) => b.count - a.count)
-            .slice(0, 5)
-            .map((item) => ({
-                compañía: item.company.length > 20 ? item.company.substring(0, 20) + '...' : item.company,
-                pedidos: item.count,
-            }))
-        : []
+    const ordersByCompanyData = useMemo(() => (
+        orders && Array.isArray(orders)
+            ? Object.entries(
+                orders.reduce((acc, order) => {
+                    const company = order['Desc. CO'] || 'Sin Compañía'
+                    acc[company] = (acc[company] || 0) + 1
+                    return acc
+                }, {} as Record<string, number>)
+            )
+                .map(([company, count]) => ({ company, count }))
+                .sort((a, b) => b.count - a.count)
+                .slice(0, 5)
+                .map((item) => ({
+                    compañía: item.company.length > 20 ? item.company.substring(0, 20) + '...' : item.company,
+                    pedidos: item.count,
+                }))
+            : []
+    ), [orders])
 
     // Datos para gráfico de pedidos por hora (Bar)
-    const ordersByHourData = orders && Array.isArray(orders)
-        ? Object.entries(
-            orders.reduce((acc, order) => {
-                const hour = order['Hora creacion'] || 'Sin Hora'
-                acc[hour] = (acc[hour] || 0) + 1
-                return acc
-            }, {} as Record<string, number>)
-        )
-            .map(([hour, count]) => ({ hour, count }))
-            .sort((a, b) => {
-                // Ordenar por hora (convertir "10 AM" a número para ordenar)
-                const aNum = parseInt(a.hour) || 0
-                const bNum = parseInt(b.hour) || 0
-                return aNum - bNum
-            })
-            .map((item) => ({
-                hora: item.hour,
-                pedidos: item.count,
-            }))
-        : []
+    const ordersByHourData = useMemo(() => (
+        orders && Array.isArray(orders)
+            ? Object.entries(
+                orders.reduce((acc, order) => {
+                    const hour = order['Hora creacion'] || 'Sin Hora'
+                    acc[hour] = (acc[hour] || 0) + 1
+                    return acc
+                }, {} as Record<string, number>)
+            )
+                .map(([hour, count]) => ({ hour, count }))
+                .sort((a, b) => {
+                    // Ordenar por hora (convertir "10 AM" a número para ordenar)
+                    const aNum = parseInt(a.hour) || 0
+                    const bNum = parseInt(b.hour) || 0
+                    return aNum - bNum
+                })
+                .map((item) => ({
+                    hora: item.hour,
+                    pedidos: item.count,
+                }))
+            : []
+    ), [orders])
 
     // Datos para gráfico de evolución por hora (Line)
-    const evolutionByHourData = orders && Array.isArray(orders)
-        ? [
-            {
-                id: 'Pedidos',
-                data: ordersByHourData.map((item) => ({
-                    x: item.hora,
-                    y: item.pedidos,
-                })),
-            },
-        ]
-        : []
+    const evolutionByHourData = useMemo(() => (
+        orders && Array.isArray(orders)
+            ? [
+                {
+                    id: 'Pedidos',
+                    data: ordersByHourData.map((item) => ({
+                        x: item.hora,
+                        y: item.pedidos,
+                    })),
+                },
+            ]
+            : []
+    ), [orders, ordersByHourData])
 
     const totalPedidos = orders?.length ?? 0
 
@@ -391,6 +402,7 @@ export const ReportsPage = () => {
                                 arcLabelsTextColor="hsl(var(--background))"
                                 valueFormat={(v) => formatters.abbreviate(Number(v))}
                                 theme={nivoTheme}
+                                animate={false}
                                 defs={[
                                     {
                                         id: 'dots',
@@ -516,8 +528,7 @@ export const ReportsPage = () => {
                                 labelSkipWidth={12}
                                 labelSkipHeight={12}
                                 labelTextColor={{ from: 'color', modifiers: [['darker', 1.8]] }}
-                                animate={true}
-                                motionConfig="gentle"
+                                animate={false}
                                 tooltip={({ value, indexValue, color }) => (
                                     <div
                                         style={{
@@ -615,8 +626,7 @@ export const ReportsPage = () => {
                             labelSkipWidth={12}
                             labelSkipHeight={12}
                             labelTextColor={{ from: 'color', modifiers: [['darker', 1.8]] }}
-                            animate={true}
-                            motionConfig="gentle"
+                            animate={false}
                             tooltip={({ value, indexValue, color }) => (
                                 <div
                                     style={{
@@ -782,8 +792,7 @@ export const ReportsPage = () => {
                             role="application"
                             defs={[]}
                             fill={[]}
-                            animate={true}
-                            motionConfig="gentle"
+                            animate={false}
                         />
                         </div>
                         {/* Tabla de datos: Evolución de Pedidos */}

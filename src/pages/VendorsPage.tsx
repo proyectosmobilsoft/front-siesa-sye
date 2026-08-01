@@ -125,8 +125,14 @@ export const VendorsPage = () => {
         }))
     }, [filteredSales])
 
-    const totalDocTypeSales = documentTypeData.reduce((acc, item) => acc + item.value, 0)
-    const topDocType = [...documentTypeData].sort((a, b) => b.value - a.value)[0]
+    const totalDocTypeSales = useMemo(
+        () => documentTypeData.reduce((acc, item) => acc + item.value, 0),
+        [documentTypeData]
+    )
+    const topDocType = useMemo(
+        () => [...documentTypeData].sort((a, b) => b.value - a.value)[0],
+        [documentTypeData]
+    )
 
     // 3. Gráfico de barras: Unidades vendidas por vendedor
     const unitsByVendorData = useMemo(() => {
@@ -580,8 +586,7 @@ export const VendorsPage = () => {
                             labelSkipHeight={12}
                             labelTextColor={{ from: 'color', modifiers: [['darker', 2]] }}
                             label={(d) => formatters.compactCurrency(d.value)}
-                            animate={true}
-                            motionConfig={{ tension: 90, damping: 15 }}
+                            animate={false}
                             tooltip={(tooltip) => (
                                 <div
                                     style={{
@@ -706,8 +711,7 @@ export const VendorsPage = () => {
                                     </div>
                                 )
                             }}
-                            animate={true}
-                            motionConfig={{ tension: 90, damping: 15 }}
+                            animate={false}
                         />
                     </div>
                     <div className="mt-6">
@@ -776,8 +780,7 @@ export const VendorsPage = () => {
                             labelSkipWidth={12}
                             labelSkipHeight={12}
                             labelTextColor={{ from: 'color', modifiers: [['darker', 2]] }}
-                            animate={true}
-                            motionConfig={{ tension: 90, damping: 15 }}
+                            animate={false}
                             tooltip={(tooltip) => (
                                 <div
                                     style={{
