@@ -96,7 +96,9 @@ const navigation: NavItem[] = [
         subItems: [
             { name: 'Recibo de Caja', href: '/tesoreria/recibo-caja', icon: Receipt },
             { name: 'Entrega de Recaudo', href: '/tesoreria/entrega-recaudo', icon: Banknote },
-            { name: 'Traslado de Fondos', href: '/tesoreria/traslado-fondos', icon: ArrowRightLeft, permiso: PERMISOS.TRASLADO_FONDOS },
+            // Sin permiso todavía en backend (ver docs/traslado-fondos.md): visible para
+            // cualquier autenticado, igual que el resto de módulos sin permiso aún.
+            { name: 'Traslado de Fondos', href: '/tesoreria/traslado-fondos', icon: ArrowRightLeft },
         ]
     },
     { name: 'Configuración', href: '/configuracion', icon: Settings },

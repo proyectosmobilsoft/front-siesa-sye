@@ -76,11 +76,6 @@ function AppLayout() {
                                 <ProtectedRoute permiso={PERMISOS.GESTION_VENTAS}><GestionVentasPage /></ProtectedRoute>
                             } />
 
-                            {/* Traslado de Fondos: solo Administrador (permiso asignado exclusivamente a ese rol en backend) */}
-                            <Route path="/tesoreria/traslado-fondos" element={
-                                <ProtectedRoute permiso={PERMISOS.TRASLADO_FONDOS}><TrasladoFondosPage /></ProtectedRoute>
-                            } />
-
                             {/* Rutas sin permiso aún en backend — accesibles a cualquier usuario autenticado */}
                             <Route path="/clientes"                          element={<ClientsPage />} />
                             <Route path="/companias"                         element={<CompaniesPage />} />
@@ -91,6 +86,12 @@ function AppLayout() {
                             <Route path="/reportes"                          element={<ReportsPage />} />
                             <Route path="/reportes/ventas"                   element={<SalesSummaryPage />} />
                             <Route path="/reportes/vendedores"               element={<VendorsPage />} />
+                            {/* Traslado de Fondos: permiso TRASLADO_FONDOS aún no existe en backend, así que
+                                queda visible para cualquier autenticado (igual que las rutas de arriba) hasta
+                                que backend lo cree y lo asigne SOLO al rol Administrador — ver
+                                docs/traslado-fondos.md. Cuando eso pase, envolver de nuevo en
+                                <ProtectedRoute permiso={PERMISOS.TRASLADO_FONDOS}>. */}
+                            <Route path="/tesoreria/traslado-fondos"         element={<TrasladoFondosPage />} />
                             <Route path="/maestro/roles"                     element={<MaestroRolesPage />} />
                             <Route path="/maestro/usuarios"                  element={<MaestroUsuariosPage />} />
                             <Route path="/maestro/descuentos-financieros"    element={<MaestroDescuentosFinancierosPage />} />
