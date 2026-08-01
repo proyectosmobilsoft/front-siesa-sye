@@ -14,7 +14,7 @@ import {
 import { ArrowUpDown, Search } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { ErrorState } from '@/components/ui/error-state'
 import { Skeleton } from '@/lib/skeleton'
 import { useClients } from '@/hooks/useClients'
@@ -28,7 +28,7 @@ export const ClientsTable = () => {
 
     const columns: ColumnDef<Client>[] = [
         {
-            accessorKey: 'id',
+            accessorKey: 'f9740_id',
             header: ({ column }) => {
                 return (
                     <Button
@@ -41,10 +41,10 @@ export const ClientsTable = () => {
                     </Button>
                 )
             },
-            cell: ({ row }) => <div className="font-medium">{row.getValue('id')}</div>,
+            cell: ({ row }) => <div className="font-medium">{row.getValue('f9740_id')}</div>,
         },
         {
-            accessorKey: 'nombre',
+            accessorKey: 'f9740_nombre',
             header: ({ column }) => {
                 return (
                     <Button
@@ -58,7 +58,7 @@ export const ClientsTable = () => {
                 )
             },
             cell: ({ row }) => {
-                const value = row.getValue('nombre') as string
+                const value = row.getValue('f9740_nombre') as string
                 return (
                     <div className="font-medium">
                         {value && String(value).trim() ? value : <span className="text-muted-foreground italic">Sin valor</span>}
@@ -67,10 +67,10 @@ export const ClientsTable = () => {
             },
         },
         {
-            accessorKey: 'apellido',
-            header: 'Apellido',
+            accessorKey: 'f9740_razon_social',
+            header: 'Razón Social',
             cell: ({ row }) => {
-                const value = row.getValue('apellido') as string
+                const value = row.getValue('f9740_razon_social') as string
                 return (
                     <div className="text-sm text-muted-foreground">
                         {value && String(value).trim() ? value : <span className="italic">Sin valor</span>}
@@ -79,10 +79,22 @@ export const ClientsTable = () => {
             },
         },
         {
-            accessorKey: 'email',
+            accessorKey: 'f9740_nit',
+            header: 'NIT',
+            cell: ({ row }) => {
+                const value = row.getValue('f9740_nit') as string
+                return (
+                    <div className="text-sm font-mono">
+                        {value && String(value).trim() ? value : <span className="text-muted-foreground italic">Sin valor</span>}
+                    </div>
+                )
+            },
+        },
+        {
+            accessorKey: 'f9740_email',
             header: 'Email',
             cell: ({ row }) => {
-                const value = row.getValue('email') as string
+                const value = row.getValue('f9740_email') as string
                 return (
                     <div className="text-sm">
                         {value && String(value).trim() ? (
@@ -97,10 +109,10 @@ export const ClientsTable = () => {
             },
         },
         {
-            accessorKey: 'telefono',
+            accessorKey: 'f9740_telefono',
             header: 'Teléfono',
             cell: ({ row }) => {
-                const value = row.getValue('telefono') as string
+                const value = row.getValue('f9740_telefono') as string
                 return (
                     <div className="text-sm font-mono">
                         {value && String(value).trim() ? value : <span className="text-muted-foreground italic">Sin valor</span>}
@@ -109,26 +121,14 @@ export const ClientsTable = () => {
             },
         },
         {
-            accessorKey: 'direccion',
+            accessorKey: 'f9740_direccion1',
             header: 'Dirección',
             cell: ({ row }) => {
-                const value = row.getValue('direccion') as string
+                const value = row.getValue('f9740_direccion1') as string
                 return (
                     <div className="text-sm text-muted-foreground max-w-[200px] truncate">
                         {value && String(value).trim() ? value : <span className="italic">Sin valor</span>}
                     </div>
-                )
-            },
-        },
-        {
-            accessorKey: 'estado',
-            header: 'Estado',
-            cell: ({ row }) => {
-                const value = row.getValue('estado') as string
-                return (
-                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 capitalize">
-                        {value}
-                    </span>
                 )
             },
         },
@@ -155,7 +155,7 @@ export const ClientsTable = () => {
         return (
             <Card>
                 <CardHeader>
-                    <CardTitle>Clientes</CardTitle>
+                    <Skeleton className="h-5 w-24" />
                 </CardHeader>
                 <CardContent>
                     <div className="space-y-4">
@@ -179,7 +179,9 @@ export const ClientsTable = () => {
         >
             <Card>
                 <CardHeader>
-                    <CardTitle>Clientes</CardTitle>
+                    <p className="text-sm text-muted-foreground">
+                        {clients?.length ?? 0} {clients?.length === 1 ? 'cliente' : 'clientes'}
+                    </p>
                     <div className="flex items-center space-x-2">
                         <div className="relative flex-1 max-w-sm">
                             <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />

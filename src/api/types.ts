@@ -1,14 +1,12 @@
 export interface Client {
-  id: number
-  nombre: string
-  apellido: string
-  email: string
-  telefono: string
-  direccion: string
-  fecha_registro: string
-  ultima_compra: string
-  total_compras: number
-  estado: 'activo' | 'inactivo' | 'suspendido'
+  f9740_id: number
+  f9740_nit: string
+  f9740_razon_social: string
+  f9740_nombre: string
+  f9740_email: string | null
+  f9740_telefono: string | null
+  f9740_celular: string | null
+  f9740_direccion1: string | null
 }
 
 export interface Company {
@@ -25,20 +23,17 @@ export interface Company {
 }
 
 export interface Product {
-  id: number
-  referencia: string
-  descripcion: string
-  precio: number
-  stock: number
-  categoria: string
-  ind_compra: boolean
-  ind_venta: boolean
-  ind_manufactura: boolean
-  maneja_lotes: boolean
-  maneja_serial: boolean
-  controlado: boolean
-  fecha_creacion: string
-  ultima_actualizacion: string
+  f120_id: number
+  f120_referencia: string
+  f120_descripcion: string
+  f120_ind_compra: number
+  f120_ind_venta: number
+  f120_ind_manufactura: number
+  f120_ind_lote: number
+  f120_ind_serial: number
+  f120_ind_controlado: number
+  f120_fecha_creacion: string
+  f120_fecha_actualizacion: string
 }
 
 export interface ClientsResponse {

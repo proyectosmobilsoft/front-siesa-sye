@@ -14,7 +14,7 @@ import {
 import { ArrowUpDown, Search } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { ErrorState } from '@/components/ui/error-state'
 import { Skeleton } from '@/lib/skeleton'
 import { useProducts } from '@/hooks/useProducts'
@@ -29,7 +29,7 @@ export const ProductsTable = () => {
 
     const columns: ColumnDef<Product>[] = [
         {
-            accessorKey: 'id',
+            accessorKey: 'f120_id',
             header: ({ column }) => {
                 return (
                     <Button
@@ -42,10 +42,10 @@ export const ProductsTable = () => {
                     </Button>
                 )
             },
-            cell: ({ row }) => <div className="font-medium">{row.getValue('id')}</div>,
+            cell: ({ row }) => <div className="font-medium">{row.getValue('f120_id')}</div>,
         },
         {
-            accessorKey: 'referencia',
+            accessorKey: 'f120_referencia',
             header: ({ column }) => {
                 return (
                     <Button
@@ -59,19 +59,19 @@ export const ProductsTable = () => {
                 )
             },
             cell: ({ row }) => {
-                const value = row.getValue('referencia') as string
+                const value = row.getValue('f120_referencia') as string
                 return (
                     <div className="font-medium font-mono">
-                        {value && String(value).trim() ? value : <span className="text-muted-foreground italic">Sin valor</span>}
+                        {value && String(value).trim() ? String(value).trim() : <span className="text-muted-foreground italic">Sin valor</span>}
                     </div>
                 )
             },
         },
         {
-            accessorKey: 'descripcion',
+            accessorKey: 'f120_descripcion',
             header: 'Descripción',
             cell: ({ row }) => {
-                const value = row.getValue('descripcion') as string
+                const value = row.getValue('f120_descripcion') as string
                 return (
                     <div className="text-sm">
                         {value && String(value).trim() ? formatters.truncate(value, 40) : <span className="text-muted-foreground italic">Sin valor</span>}
@@ -80,73 +80,13 @@ export const ProductsTable = () => {
             },
         },
         {
-            accessorKey: 'precio',
-            header: ({ column }) => {
-                return (
-                    <Button
-                        variant="ghost"
-                        onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
-                        className="h-8 px-2"
-                    >
-                        Precio
-                        <ArrowUpDown className="ml-2 h-4 w-4" />
-                    </Button>
-                )
-            },
-            cell: ({ row }) => {
-                const precio = row.getValue('precio') as number | null | undefined
-                return (
-                    <div className="text-sm font-medium">
-                        {precio !== null && precio !== undefined && precio !== 0 ? formatters.currency(precio) : <span className="text-muted-foreground italic">Sin valor</span>}
-                    </div>
-                )
-            },
-        },
-        {
-            accessorKey: 'stock',
-            header: ({ column }) => {
-                return (
-                    <Button
-                        variant="ghost"
-                        onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
-                        className="h-8 px-2"
-                    >
-                        Stock
-                        <ArrowUpDown className="ml-2 h-4 w-4" />
-                    </Button>
-                )
-            },
-            cell: ({ row }) => {
-                const stock = row.getValue('stock') as number | null | undefined
-                return (
-                    <div className="text-sm">
-                        {stock !== null && stock !== undefined ? formatters.number(stock) : <span className="text-muted-foreground italic">Sin valor</span>}
-                    </div>
-                )
-            },
-        },
-        {
-            accessorKey: 'categoria',
-            header: 'Categoría',
-            cell: ({ row }) => {
-                const categoria = row.getValue('categoria') as string
-                return categoria ? (
-                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                        {categoria}
-                    </span>
-                ) : (
-                    <span className="text-muted-foreground text-xs">N/A</span>
-                )
-            },
-        },
-        {
             id: 'indicators',
             header: 'Indicadores',
             cell: ({ row }) => {
                 const hasIndicators =
-                    row.original.ind_compra ||
-                    row.original.ind_venta ||
-                    row.original.ind_manufactura
+                    row.original.f120_ind_compra === 1 ||
+                    row.original.f120_ind_venta === 1 ||
+                    row.original.f120_ind_manufactura === 1
 
                 if (!hasIndicators) {
                     return <span className="text-muted-foreground italic text-xs">Sin valor</span>
@@ -154,17 +94,17 @@ export const ProductsTable = () => {
 
                 return (
                     <div className="flex space-x-1">
-                        {row.original.ind_compra && (
+                        {row.original.f120_ind_compra === 1 && (
                             <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-green-100 text-green-800">
                                 Compra
                             </span>
                         )}
-                        {row.original.ind_venta && (
+                        {row.original.f120_ind_venta === 1 && (
                             <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-blue-100 text-blue-800">
                                 Venta
                             </span>
                         )}
-                        {row.original.ind_manufactura && (
+                        {row.original.f120_ind_manufactura === 1 && (
                             <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-purple-100 text-purple-800">
                                 Manufactura
                             </span>
@@ -178,9 +118,9 @@ export const ProductsTable = () => {
             header: 'Controles',
             cell: ({ row }) => {
                 const hasControls =
-                    row.original.maneja_lotes ||
-                    row.original.maneja_serial ||
-                    row.original.controlado
+                    row.original.f120_ind_lote === 1 ||
+                    row.original.f120_ind_serial === 1 ||
+                    row.original.f120_ind_controlado === 1
 
                 if (!hasControls) {
                     return <span className="text-muted-foreground italic text-xs">Sin valor</span>
@@ -188,17 +128,17 @@ export const ProductsTable = () => {
 
                 return (
                     <div className="flex space-x-2">
-                        {row.original.maneja_lotes && (
+                        {row.original.f120_ind_lote === 1 && (
                             <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-orange-100 text-orange-800">
                                 Lotes
                             </span>
                         )}
-                        {row.original.maneja_serial && (
+                        {row.original.f120_ind_serial === 1 && (
                             <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-yellow-100 text-yellow-800">
                                 Serial
                             </span>
                         )}
-                        {row.original.controlado && (
+                        {row.original.f120_ind_controlado === 1 && (
                             <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-red-100 text-red-800">
                                 Controlado
                             </span>
@@ -208,10 +148,10 @@ export const ProductsTable = () => {
             },
         },
         {
-            accessorKey: 'fecha_creacion',
+            accessorKey: 'f120_fecha_creacion',
             header: 'Fecha Creación',
             cell: ({ row }) => {
-                const value = row.getValue('fecha_creacion') as string
+                const value = row.getValue('f120_fecha_creacion') as string
                 const formatted = formatters.date(value)
                 return (
                     <div className="text-sm text-muted-foreground">
@@ -243,7 +183,7 @@ export const ProductsTable = () => {
         return (
             <Card>
                 <CardHeader>
-                    <CardTitle>Productos</CardTitle>
+                    <Skeleton className="h-5 w-24" />
                 </CardHeader>
                 <CardContent>
                     <div className="space-y-4">
@@ -267,7 +207,9 @@ export const ProductsTable = () => {
         >
             <Card>
                 <CardHeader>
-                    <CardTitle>Productos</CardTitle>
+                    <p className="text-sm text-muted-foreground">
+                        {products?.length ?? 0} {products?.length === 1 ? 'producto' : 'productos'}
+                    </p>
                     <div className="flex items-center space-x-2">
                         <div className="relative flex-1 max-w-sm">
                             <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />

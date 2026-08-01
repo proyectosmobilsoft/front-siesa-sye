@@ -14,7 +14,7 @@ import {
 import { ArrowUpDown, Search } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Skeleton } from '@/lib/skeleton'
 import { ErrorBoundary } from '@/components/ui/error-boundary'
 import { useCompanies } from '@/hooks/useCompanies'
@@ -195,7 +195,7 @@ const CompaniesTableContent = () => {
         return (
             <Card>
                 <CardHeader>
-                    <CardTitle>Compañías</CardTitle>
+                    <Skeleton className="h-5 w-24" />
                 </CardHeader>
                 <CardContent>
                     <div className="space-y-4">
@@ -230,7 +230,9 @@ const CompaniesTableContent = () => {
         >
             <Card>
                 <CardHeader>
-                    <CardTitle>Compañías</CardTitle>
+                    <p className="text-sm text-muted-foreground">
+                        {companies?.length ?? 0} {companies?.length === 1 ? 'compañía' : 'compañías'}
+                    </p>
                     <div className="flex items-center space-x-2">
                         <div className="relative flex-1 max-w-sm">
                             <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
