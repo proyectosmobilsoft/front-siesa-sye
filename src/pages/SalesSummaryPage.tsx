@@ -1,5 +1,6 @@
 import { motion } from 'framer-motion'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { ErrorState } from '@/components/ui/error-state'
 import { Skeleton } from '@/lib/skeleton'
 import { ErrorBoundary } from '@/components/ui/error-boundary'
 import { useSalesSummary } from '@/hooks/useReports'
@@ -218,23 +219,7 @@ export const SalesSummaryPage = () => {
     if (error) {
         return (
             <div className="flex-1 space-y-6 p-6">
-                <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.5 }}
-                >
-                </motion.div>
-                <Card className="border-red-200 bg-red-50 dark:bg-red-950/20 dark:border-red-800">
-                    <CardHeader>
-                        <CardTitle className="text-red-800 dark:text-red-400">Error al cargar resumen de ventas</CardTitle>
-                    </CardHeader>
-                    <CardContent className="flex items-center justify-center h-64">
-                        <div className="text-center text-red-600 dark:text-red-400">
-                            <p className="text-lg font-medium">No se pudieron obtener los datos</p>
-                            <p className="text-sm mt-2">Error: {error.message}</p>
-                        </div>
-                    </CardContent>
-                </Card>
+                <ErrorState title="Error al cargar resumen de ventas" message={`No se pudieron obtener los datos. Error: ${error.message}`} />
             </div>
         )
     }

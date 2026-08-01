@@ -15,6 +15,7 @@ import { ArrowUpDown, Search } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { ErrorState } from '@/components/ui/error-state'
 import { Skeleton } from '@/lib/skeleton'
 import { useClients } from '@/hooks/useClients'
 import { Client } from '@/api/types'
@@ -167,19 +168,7 @@ export const ClientsTable = () => {
     }
 
     if (error) {
-        return (
-            <Card className="border-red-200 bg-red-50">
-                <CardHeader>
-                    <CardTitle className="text-red-800">Clientes</CardTitle>
-                </CardHeader>
-                <CardContent className="flex items-center justify-center h-64">
-                    <div className="text-center text-red-600">
-                        <p className="text-lg font-medium">Error al cargar clientes</p>
-                        <p className="text-sm">No se pudieron obtener los datos</p>
-                    </div>
-                </CardContent>
-            </Card>
-        )
+        return <ErrorState title="Error al cargar clientes" />
     }
 
     return (

@@ -15,6 +15,7 @@ import { ArrowUpDown, Search, Filter, Download } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { ErrorState } from '@/components/ui/error-state'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Skeleton } from '@/lib/skeleton'
 import { MonthYearPicker } from '@/components/ui/month-year-picker'
@@ -600,20 +601,11 @@ export const AnalisisFinancieroPage = () => {
                                 </CardContent>
                             </Card>
                         ) : errorEstados ? (
-                            <Card className="border-red-200 bg-red-50">
-                                <CardHeader>
-                                    <CardTitle className="text-red-800">Error al cargar estados financieros</CardTitle>
-                                </CardHeader>
-                                <CardContent className="flex items-center justify-center h-64">
-                                    <div className="text-center text-red-600">
-                                        <p className="text-lg font-medium">No se pudieron obtener los datos</p>
-                                        <p className="text-sm mt-2">Error: {errorEstados instanceof Error ? errorEstados.message : 'Error desconocido'}</p>
-                                        <Button onClick={() => refetchEstados()} className="mt-4" variant="outline">
-                                            Reintentar
-                                        </Button>
-                                    </div>
-                                </CardContent>
-                            </Card>
+                            <ErrorState
+                                title="Error al cargar estados financieros"
+                                message={`No se pudieron obtener los datos. Error: ${errorEstados instanceof Error ? errorEstados.message : 'Error desconocido'}`}
+                                onRetry={() => refetchEstados()}
+                            />
                         ) : (
                             <motion.div
                                 initial={{ opacity: 0, y: 20 }}
@@ -1070,20 +1062,11 @@ export const AnalisisFinancieroPage = () => {
                                 </CardContent>
                             </Card>
                         ) : errorPG ? (
-                            <Card className="border-red-200 bg-red-50">
-                                <CardHeader>
-                                    <CardTitle className="text-red-800">Error al cargar pérdidas y ganancias</CardTitle>
-                                </CardHeader>
-                                <CardContent className="flex items-center justify-center h-64">
-                                    <div className="text-center text-red-600">
-                                        <p className="text-lg font-medium">No se pudieron obtener los datos</p>
-                                        <p className="text-sm mt-2">Error: {errorPG instanceof Error ? errorPG.message : 'Error desconocido'}</p>
-                                        <Button onClick={() => refetchPG()} className="mt-4" variant="outline">
-                                            Reintentar
-                                        </Button>
-                                    </div>
-                                </CardContent>
-                            </Card>
+                            <ErrorState
+                                title="Error al cargar pérdidas y ganancias"
+                                message={`No se pudieron obtener los datos. Error: ${errorPG instanceof Error ? errorPG.message : 'Error desconocido'}`}
+                                onRetry={() => refetchPG()}
+                            />
                         ) : (
                             <motion.div
                                 initial={{ opacity: 0, y: 20 }}
@@ -1235,20 +1218,11 @@ export const AnalisisFinancieroPage = () => {
                                 </CardContent>
                             </Card>
                         ) : errorTM ? (
-                            <Card className="border-red-200 bg-red-50">
-                                <CardHeader>
-                                    <CardTitle className="text-red-800">Error al cargar tendencia mensual</CardTitle>
-                                </CardHeader>
-                                <CardContent className="flex items-center justify-center h-64">
-                                    <div className="text-center text-red-600">
-                                        <p className="text-lg font-medium">No se pudieron obtener los datos</p>
-                                        <p className="text-sm mt-2">Error: {errorTM instanceof Error ? errorTM.message : 'Error desconocido'}</p>
-                                        <Button onClick={() => refetchTM()} className="mt-4" variant="outline">
-                                            Reintentar
-                                        </Button>
-                                    </div>
-                                </CardContent>
-                            </Card>
+                            <ErrorState
+                                title="Error al cargar tendencia mensual"
+                                message={`No se pudieron obtener los datos. Error: ${errorTM instanceof Error ? errorTM.message : 'Error desconocido'}`}
+                                onRetry={() => refetchTM()}
+                            />
                         ) : (
                             <motion.div
                                 initial={{ opacity: 0, y: 20 }}

@@ -404,11 +404,11 @@ export const PedidosPage = () => {
                             </div>
                         ) : error ? (
                             <div className="flex flex-col items-center justify-center py-12 text-center">
-                                <div className="bg-red-100 p-3 rounded-full mb-4">
-                                    <AlertCircle className="h-6 w-6 text-red-600" />
+                                <div className="mb-4 rounded-full bg-destructive/10 p-3">
+                                    <AlertCircle className="h-6 w-6 text-destructive" />
                                 </div>
-                                <p className="text-lg font-medium text-red-800">Error al cargar pedidos</p>
-                                <p className="text-sm text-red-600 mt-1">{error instanceof Error ? error.message : 'Error desconocido'}</p>
+                                <p className="text-lg font-medium text-destructive">Error al cargar pedidos</p>
+                                <p className="mt-1 text-sm text-muted-foreground">{error instanceof Error ? error.message : 'Error desconocido'}</p>
                                 <Button onClick={() => refetch()} className="mt-4" variant="outline">
                                     Reintentar
                                 </Button>

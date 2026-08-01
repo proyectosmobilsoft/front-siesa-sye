@@ -18,6 +18,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/lib/skeleton'
 import { ErrorBoundary } from '@/components/ui/error-boundary'
 import { useCompanies } from '@/hooks/useCompanies'
+import { ErrorState } from '@/components/ui/error-state'
+import { badgeClass } from '@/utils/badges'
 import { Company } from '@/api/types'
 import { formatters } from '@/utils/formatters'
 
@@ -97,8 +99,7 @@ const CompaniesTableContent = () => {
                 }
                 const isActive = estado === 1
                 return (
-                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${isActive ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                        }`}>
+                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${badgeClass(isActive ? 'green' : 'red')}`}>
                         {isActive ? 'Activa' : 'Inactiva'}
                     </span>
                 )
@@ -213,18 +214,10 @@ const CompaniesTableContent = () => {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.5 }}
             >
-                <Card className="border-red-200 bg-red-50">
-                    <CardHeader>
-                        <CardTitle className="text-red-800">Error al cargar compañías</CardTitle>
-                    </CardHeader>
-                    <CardContent className="flex items-center justify-center h-64">
-                        <div className="text-center text-red-600">
-                            <p className="text-lg font-medium">No se pudieron obtener los datos</p>
-                            <p className="text-sm mt-2">Error: {error.message}</p>
-                            <p className="text-xs mt-1">Verifique la conexión con el servidor</p>
-                        </div>
-                    </CardContent>
-                </Card>
+                <ErrorState
+                    title="Error al cargar compañías"
+                    message={`No se pudieron obtener los datos. Error: ${error.message}. Verifique la conexión con el servidor.`}
+                />
             </motion.div>
         )
     }

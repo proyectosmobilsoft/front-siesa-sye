@@ -14,6 +14,7 @@ import { Input } from '@/components/ui/input'
 import { Modal } from '@/components/ui/modal'
 import { useNavigate } from 'react-router-dom'
 import { seguridadApi, AuthRole, Permiso } from '@/api/seguridad'
+import { badgeClass } from '@/utils/badges'
 
 export const MaestroRolesPage = () => {
     const navigate = useNavigate()
@@ -225,7 +226,7 @@ export const MaestroRolesPage = () => {
             cell: ({ row }) => {
                 const activo = !!row.getValue('estado')
                 return (
-                    <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${activo ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'}`}>
+                    <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${badgeClass(activo ? 'green' : 'red')}`}>
                         {activo ? 'Activo' : 'Inactivo'}
                     </span>
                 )
@@ -572,9 +573,9 @@ export const MaestroRolesPage = () => {
             >
                 <div className="flex flex-col items-center text-center py-4">
                     <div className="relative mb-6">
-                        <div className="absolute inset-0 bg-red-500/20 rounded-full blur-xl animate-pulse" />
+                        <div className="absolute inset-0 bg-destructive/20 rounded-full blur-xl animate-pulse" />
                         <div className="relative h-20 w-20 rounded-full bg-gradient-to-br from-red-50 to-red-100 dark:from-red-950/50 dark:to-red-900/30 border-2 border-red-200 dark:border-red-800 flex items-center justify-center">
-                            <AlertTriangle className="h-10 w-10 text-red-500" />
+                            <AlertTriangle className="h-10 w-10 text-destructive" />
                         </div>
                     </div>
 

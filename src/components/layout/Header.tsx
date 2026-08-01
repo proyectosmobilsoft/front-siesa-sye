@@ -1,5 +1,5 @@
 import { motion, AnimatePresence } from 'framer-motion'
-import { LogOut, PanelLeftClose, PanelLeftOpen, LayoutDashboard } from 'lucide-react'
+import { LogOut, PanelLeftClose, PanelLeftOpen } from 'lucide-react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { ThemeToggle } from './ThemeToggle'
@@ -42,7 +42,6 @@ export const Header = () => {
 
     const { nombre, inicial } = getUsuarioFromToken()
     const pagina = getPageMeta(location.pathname)
-    const Icon = pagina?.icon ?? LayoutDashboard
 
     const handleLogout = () => {
         localStorage.removeItem('auth_token')
@@ -83,9 +82,6 @@ export const Header = () => {
                             transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
                             className="flex min-w-0 items-center gap-2.5"
                         >
-                            <div className="hidden h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-primary/10 sm:flex">
-                                <Icon className="h-4 w-4 text-primary" />
-                            </div>
                             <div className="min-w-0 leading-tight">
                                 <p className="truncate text-sm font-bold text-foreground">
                                     {pagina?.name ?? 'Dashboard'}

@@ -8,6 +8,7 @@ import { CondicionPagoModal } from '@/components/financiero/CondicionPagoModal'
 import { Modal } from '@/components/ui/modal'
 import { AlertTriangle } from 'lucide-react'
 import { financieroApi, CondicionPago } from '@/api/financiero'
+import { badgeClass } from '@/utils/badges'
 
 export const MaestroDescuentosFinancierosPage = () => {
     const [search, setSearch] = useState('')
@@ -159,7 +160,7 @@ export const MaestroDescuentosFinancierosPage = () => {
                                                 <td className="py-3 px-4">{c.name}</td>
                                                 <td className="py-3 px-4">
                                                     <span
-                                                        className={`px-2.5 py-1 rounded-full text-xs font-semibold ${c.status === 1 || c.status === true ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'}`}
+                                                        className={`px-2.5 py-1 rounded-full text-xs font-semibold ${badgeClass(c.status === 1 || c.status === true ? 'green' : 'red')}`}
                                                     >
                                                         {c.status === 1 || c.status === true ? 'Activo' : 'Inactivo'}
                                                     </span>
@@ -223,9 +224,9 @@ export const MaestroDescuentosFinancierosPage = () => {
             >
                 <div className="flex flex-col items-center text-center py-4">
                     <div className="relative mb-4">
-                        <div className="absolute inset-0 bg-red-500/20 rounded-full blur-xl" />
-                        <div className="relative h-16 w-16 rounded-full bg-red-50 dark:bg-red-950/30 border-2 border-red-200 dark:border-red-800 flex items-center justify-center">
-                            <AlertTriangle className="h-8 w-8 text-red-500" />
+                        <div className="absolute inset-0 bg-destructive/20 rounded-full blur-xl" />
+                        <div className="relative h-16 w-16 rounded-full bg-destructive/10 border-2 border-destructive/30 flex items-center justify-center">
+                            <AlertTriangle className="h-8 w-8 text-destructive" />
                         </div>
                     </div>
                     <h3 className="text-lg font-bold mb-2">¿Eliminar esta condición de pago?</h3>
@@ -233,7 +234,7 @@ export const MaestroDescuentosFinancierosPage = () => {
                         Se eliminará la condición y todos sus descuentos asociados: <strong>{deletingCondicion?.name}</strong>
                     </p>
                     {errorDelete && (
-                        <div className="w-full mb-4 p-3 text-sm text-red-600 bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 rounded-lg">
+                        <div className="w-full mb-4 p-3 text-sm text-destructive bg-destructive/10 border border-destructive/30 rounded-lg">
                             {errorDelete}
                         </div>
                     )}

@@ -15,6 +15,7 @@ import { ArrowUpDown, Search, Filter } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { ErrorState } from '@/components/ui/error-state'
 import { Skeleton } from '@/lib/skeleton'
 import { useFacturas } from '@/hooks/useFacturas'
 import { Factura, FacturasParams } from '@/api/types'
@@ -232,20 +233,11 @@ export const GestionVentasPage = () => {
                             </CardContent>
                         </Card>
                     ) : error ? (
-                        <Card className="border-red-200 bg-red-50">
-                            <CardHeader>
-                                <CardTitle className="text-red-800">Error al cargar facturas</CardTitle>
-                            </CardHeader>
-                            <CardContent className="flex items-center justify-center h-64">
-                                <div className="text-center text-red-600">
-                                    <p className="text-lg font-medium">No se pudieron obtener los datos</p>
-                                    <p className="text-sm mt-2">Error: {error instanceof Error ? error.message : 'Error desconocido'}</p>
-                                    <Button onClick={() => refetch()} className="mt-4" variant="outline">
-                                        Reintentar
-                                    </Button>
-                                </div>
-                            </CardContent>
-                        </Card>
+                        <ErrorState
+                            title="Error al cargar facturas"
+                            message={`No se pudieron obtener los datos. Error: ${error instanceof Error ? error.message : 'Error desconocido'}`}
+                            onRetry={() => refetch()}
+                        />
                     ) : (
                         <motion.div
                             initial={{ opacity: 0, y: 20 }}

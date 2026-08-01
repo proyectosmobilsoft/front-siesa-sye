@@ -3,6 +3,7 @@ import { useState, useMemo } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/lib/skeleton'
 import { ErrorBoundary } from '@/components/ui/error-boundary'
+import { ErrorState } from '@/components/ui/error-state'
 import { useVendors } from '@/hooks/useReports'
 import { ResponsiveBar } from '@nivo/bar'
 import { ResponsivePie } from '@nivo/pie'
@@ -201,17 +202,7 @@ export const VendorsPage = () => {
                     transition={{ duration: 0.5 }}
                 >
                 </motion.div>
-                <Card className="border-red-200 bg-red-50 dark:bg-red-950/20 dark:border-red-800">
-                    <CardHeader>
-                        <CardTitle className="text-red-800 dark:text-red-400">Error al cargar datos</CardTitle>
-                    </CardHeader>
-                    <CardContent className="flex items-center justify-center h-64">
-                        <div className="text-center text-red-600 dark:text-red-400">
-                            <p className="text-lg font-medium">No se pudieron obtener los datos</p>
-                            <p className="text-sm mt-2">Error: {error.message}</p>
-                        </div>
-                    </CardContent>
-                </Card>
+                <ErrorState message={`No se pudieron obtener los datos. Error: ${error.message}`} />
             </div>
         )
     }

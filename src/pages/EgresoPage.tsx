@@ -26,6 +26,7 @@ import {
 } from '@tanstack/react-table'
 import { useQuery } from '@tanstack/react-query'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { ErrorState } from '@/components/ui/error-state'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Modal } from '@/components/ui/modal'
@@ -404,7 +405,7 @@ const DistribucionAccordion = ({ anticipo, totalColumnas }: DistribucionAccordio
                                 Cargando distribución...
                             </div>
                         ) : error ? (
-                            <div className="flex items-center gap-2 py-3 text-sm text-red-600">
+                            <div className="flex items-center gap-2 py-3 text-sm text-destructive">
                                 <AlertCircle className="h-4 w-4" />
                                 No se pudo cargar la distribución
                             </div>
@@ -651,7 +652,7 @@ const EditModal = ({ anticipo, onClose, onSaved }: EditModalProps) => {
                 </div>
 
                 {error && (
-                    <div className="p-3 text-sm text-red-600 bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 rounded-lg">
+                    <div className="rounded-lg border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
                         {error}
                     </div>
                 )}
@@ -865,17 +866,12 @@ export const EgresoPage = () => {
                     </CardContent>
                 </Card>
             ) : error ? (
-                <Card className="border-red-200 bg-red-50 dark:bg-red-950/10">
-                    <CardContent className="flex items-center justify-center h-48">
-                        <div className="text-center text-red-600">
-                            <p className="text-lg font-medium">Error al cargar las solicitudes</p>
-                            <p className="text-sm text-muted-foreground mt-1">Verifica la conexión e intenta de nuevo</p>
-                            <Button variant="outline" size="sm" onClick={handleRefresh} className="mt-4 gap-2">
-                                <RefreshCw className="h-4 w-4" />Reintentar
-                            </Button>
-                        </div>
-                    </CardContent>
-                </Card>
+                <ErrorState
+                    title="Error al cargar las solicitudes"
+                    message="Verifica la conexión e intenta de nuevo"
+                    minHeight="h-48"
+                    onRetry={handleRefresh}
+                />
             ) : (
                 <motion.div
                     initial={{ opacity: 0, y: 12 }}
