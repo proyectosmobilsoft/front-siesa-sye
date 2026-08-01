@@ -93,9 +93,6 @@ export const MaestroUsuariosPage = () => {
             className="flex h-full min-h-0 flex-col gap-4 p-6"
         >
             <div className="flex shrink-0 flex-col gap-3 border-b pb-4 sm:flex-row sm:items-center sm:justify-between">
-                <p className="text-sm text-muted-foreground">
-                    {usuarios.length} {usuarios.length === 1 ? 'usuario' : 'usuarios'}
-                </p>
                 <div className="flex w-full items-center gap-3 sm:w-auto">
                     <div className="relative flex-1 sm:w-64">
                         <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
@@ -115,6 +112,9 @@ export const MaestroUsuariosPage = () => {
                         Nuevo Usuario
                     </Button>
                 </div>
+                <p className="shrink-0 text-sm text-muted-foreground">
+                    {usuarios.length} {usuarios.length === 1 ? 'usuario' : 'usuarios'}
+                </p>
             </div>
 
             <div className="min-h-0 flex-1 overflow-auto rounded-md border">

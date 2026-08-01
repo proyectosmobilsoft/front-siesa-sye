@@ -200,9 +200,6 @@ export const ProductsTable = () => {
             className="flex h-full min-h-0 flex-col gap-4"
         >
             <div className="flex shrink-0 flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                <p className="text-sm text-muted-foreground">
-                    {products?.length ?? 0} {products?.length === 1 ? 'producto' : 'productos'}
-                </p>
                 <div className="relative w-full sm:max-w-sm">
                     <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
                     <Input
@@ -212,6 +209,9 @@ export const ProductsTable = () => {
                         className="pl-8"
                     />
                 </div>
+                <p className="shrink-0 text-sm text-muted-foreground">
+                    {products?.length ?? 0} {products?.length === 1 ? 'producto' : 'productos'}
+                </p>
             </div>
             <div className="min-h-0 flex-1 overflow-auto rounded-md border">
                 <table className="w-full text-sm">

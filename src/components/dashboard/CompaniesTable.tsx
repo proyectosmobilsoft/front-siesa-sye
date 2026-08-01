@@ -223,9 +223,6 @@ const CompaniesTableContent = () => {
             className="flex h-full min-h-0 flex-col gap-4"
         >
             <div className="flex shrink-0 flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                <p className="text-sm text-muted-foreground">
-                    {companies?.length ?? 0} {companies?.length === 1 ? 'compañía' : 'compañías'}
-                </p>
                 <div className="relative w-full sm:max-w-sm">
                     <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
                     <Input
@@ -235,6 +232,9 @@ const CompaniesTableContent = () => {
                         className="pl-8"
                     />
                 </div>
+                <p className="shrink-0 text-sm text-muted-foreground">
+                    {companies?.length ?? 0} {companies?.length === 1 ? 'compañía' : 'compañías'}
+                </p>
             </div>
             <div className="min-h-0 flex-1 overflow-auto rounded-md border">
                 <table className="w-full text-sm">

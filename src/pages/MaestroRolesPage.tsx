@@ -299,18 +299,18 @@ export const MaestroRolesPage = () => {
             className="flex h-full min-h-0 flex-col gap-4 p-6"
         >
             <div className="flex shrink-0 items-center justify-between border-b pb-4">
+                <Button variant="outline" size="icon" onClick={() => navigate('/configuracion')}>
+                    <ArrowLeft className="h-4 w-4" />
+                </Button>
                 <div className="flex items-center gap-4">
-                    <Button variant="outline" size="icon" onClick={() => navigate('/configuracion')}>
-                        <ArrowLeft className="h-4 w-4" />
-                    </Button>
-                    <p className="text-sm text-muted-foreground">
+                    <p className="shrink-0 text-sm text-muted-foreground">
                         {roles.length} rol{roles.length !== 1 ? 'es' : ''} registrado{roles.length !== 1 ? 's' : ''}
                     </p>
+                    <Button onClick={handleNewRole} className="whitespace-nowrap">
+                        <Plus className="mr-2 h-4 w-4" />
+                        Nuevo Rol
+                    </Button>
                 </div>
-                <Button onClick={handleNewRole} className="whitespace-nowrap">
-                    <Plus className="mr-2 h-4 w-4" />
-                    Nuevo Rol
-                </Button>
             </div>
 
             <div className="min-h-0 flex-1 overflow-auto rounded-md border">

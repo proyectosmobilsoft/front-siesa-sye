@@ -231,9 +231,6 @@ export const GestionVentasPage = () => {
                     className="flex min-h-0 flex-1 flex-col gap-4"
                 >
                     <div className="flex shrink-0 flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                        <p className="text-sm text-muted-foreground">
-                            {facturas?.length ?? 0} {facturas?.length === 1 ? 'registro' : 'registros'}
-                        </p>
                         <div className="relative w-full sm:max-w-sm">
                             <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
                             <Input
@@ -243,6 +240,9 @@ export const GestionVentasPage = () => {
                                 className="pl-8"
                             />
                         </div>
+                        <p className="shrink-0 text-sm text-muted-foreground">
+                            {facturas?.length ?? 0} {facturas?.length === 1 ? 'registro' : 'registros'}
+                        </p>
                     </div>
                     {!facturas || facturas.length === 0 ? (
                         <div className="text-center py-12">

@@ -337,12 +337,6 @@ export const PedidosPage = () => {
             {/* Filtros */}
             <div className="flex shrink-0 flex-col gap-4 border-b pb-4">
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                    {pedidos && (
-                        <p className="text-sm text-muted-foreground">
-                            {pedidos.length} {pedidos.length === 1 ? 'registro' : 'registros'}
-                        </p>
-                    )}
-
                     <div className="flex flex-col sm:flex-row items-end gap-3">
                         <div className="min-w-[150px]">
                             <label className="text-[10px] font-bold text-muted-foreground uppercase mb-1 block">Desde</label>
@@ -372,6 +366,10 @@ export const PedidosPage = () => {
                             Buscar
                         </Button>
                     </div>
+
+                    <p className="shrink-0 text-sm text-muted-foreground">
+                        {pedidos ? `${pedidos.length} ${pedidos.length === 1 ? 'registro' : 'registros'}` : ''}
+                    </p>
                 </div>
 
                 <div className="relative max-w-sm">
