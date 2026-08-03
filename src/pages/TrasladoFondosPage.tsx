@@ -13,45 +13,22 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Select } from '@/components/ui/select'
-import { useTrasladosFondos, useCrearTrasladoFondos } from '@/hooks/useTrasladoFondos'
+import { useCajasTraspaso, useTrasladosFondos, useCrearTrasladoFondos } from '@/hooks/useTrasladoFondos'
 import { formatters } from '@/utils/formatters'
-import { badgeClass, Tono } from '@/utils/badges'
-import { TrasladoFondosEstado } from '@/api/types'
-import { cn } from '@/lib/utils'
-
-// Catálogo de cajas: por ahora es la misma lista fija que usa ReciboCajaPage,
-// no existe un endpoint de catálogo de cajas en backend todavía.
-// Ver docs/traslado-fondos.md — idealmente esto debería venir de un
-// GET /cajas real en vez de estar hardcodeado en dos lugares del front.
-const CAJAS = [
-    { id: 'CAJA_SUCURSAL_PORTAL_SOLEDAD', nombre: 'CAJA SUCURSAL PORTAL DE SOLEDAD' },
-    { id: 'CAJA_PRINCIPAL', nombre: 'CAJA PRINCIPAL' },
-]
-
-const nombreCaja = (id: string) => CAJAS.find((c) => c.id === id)?.nombre ?? id
-
-const ESTADO_TONO: Record<TrasladoFondosEstado, Tono> = {
-    PENDIENTE: 'amber',
-    CONFIRMADO: 'green',
-    RECHAZADO: 'red',
-}
-
-const ESTADO_LABEL: Record<TrasladoFondosEstado, string> = {
-    PENDIENTE: 'Pendiente',
-    CONFIRMADO: 'Confirmado',
-    RECHAZADO: 'Rechazado',
-}
+import { CajaTraspaso } from '@/api/types'
 
 const CajaSelector = ({
     label,
     value,
     onChange,
     disabledValue,
+    cajas,
 }: {
     label: string
     value: string
     onChange: (v: string) => void
     disabledValue?: string
+    cajas: CajaTraspaso[]
 }) => (
     <div className="flex-1 space-y-1.5">
         <label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
@@ -61,9 +38,9 @@ const CajaSelector = ({
             <Landmark className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Select value={value} onChange={(e) => onChange(e.target.value)} className="pl-9">
                 <option value="">Selecciona una caja</option>
-                {CAJAS.map((c) => (
-                    <option key={c.id} value={c.id} disabled={c.id === disabledValue}>
-                        {c.nombre}
+                {cajas.map((c) => (
+                    <option key={c.id_caja} value={c.id_caja} disabled={c.id_caja === disabledValue}>
+                        {c.nombre ?? c.id_caja}
                     </option>
                 ))}
             </Select>
@@ -75,15 +52,18 @@ export const TrasladoFondosPage = () => {
     const [cajaOrigen, setCajaOrigen] = useState('')
     const [cajaDestino, setCajaDestino] = useState('')
     const [valor, setValor] = useState('')
-    const [referencia, setReferencia] = useState('')
+    const [notas, setNotas] = useState('')
     const [exito, setExito] = useState(false)
 
+    const { data: cajas, isLoading: cargandoCajas, error: errorCajas } = useCajasTraspaso()
     const { data: historial, isLoading: cargandoHistorial, error: errorHistorial } = useTrasladosFondos()
     const crearTraslado = useCrearTrasladoFondos()
 
+    const nombreCaja = (id: string) => cajas?.find((c) => c.id_caja === id)?.nombre ?? id
+
     const valorNumerico = Number(valor)
     const mismasCajas = cajaOrigen !== '' && cajaOrigen === cajaDestino
-    const formularioValido = !!cajaOrigen && !!cajaDestino && !mismasCajas && valorNumerico > 0
+    const formularioValido = !!cajaOrigen && !!cajaDestino && !mismasCajas && valorNumerico > 0 && !cargandoCajas
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
@@ -91,16 +71,16 @@ export const TrasladoFondosPage = () => {
         setExito(false)
         try {
             await crearTraslado.mutateAsync({
-                caja_origen_id: cajaOrigen,
-                caja_destino_id: cajaDestino,
+                id_caja_origen: cajaOrigen,
+                id_caja_destino: cajaDestino,
                 valor: valorNumerico,
-                referencia: referencia.trim() || undefined,
+                notas: notas.trim() || undefined,
             })
             setExito(true)
             setCajaOrigen('')
             setCajaDestino('')
             setValor('')
-            setReferencia('')
+            setNotas('')
         } catch {
             // El estado de error lo expone crearTraslado.error, se muestra abajo.
         }
@@ -123,10 +103,16 @@ export const TrasladoFondosPage = () => {
                         <CardTitle className="text-base">Nuevo traslado</CardTitle>
                     </CardHeader>
                     <CardContent>
+                        {errorCajas && (
+                            <div className="mb-4 flex items-center gap-2 rounded-lg border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
+                                <AlertCircle className="h-4 w-4 flex-shrink-0" />
+                                No se pudo cargar el catálogo de cajas.
+                            </div>
+                        )}
                         <form onSubmit={handleSubmit} className="space-y-5">
                             {/* Flujo origen -> destino */}
                             <div className="flex flex-col items-center gap-3 rounded-xl border border-border bg-muted/20 p-4 sm:flex-row">
-                                <CajaSelector label="Caja origen" value={cajaOrigen} onChange={setCajaOrigen} disabledValue={cajaDestino} />
+                                <CajaSelector label="Caja origen" value={cajaOrigen} onChange={setCajaOrigen} disabledValue={cajaDestino} cajas={cajas ?? []} />
 
                                 <motion.div
                                     animate={{ rotate: [0, 8, -8, 0] }}
@@ -137,7 +123,7 @@ export const TrasladoFondosPage = () => {
                                     <ArrowRightLeft className="h-4 w-4 sm:hidden" />
                                 </motion.div>
 
-                                <CajaSelector label="Caja destino" value={cajaDestino} onChange={setCajaDestino} disabledValue={cajaOrigen} />
+                                <CajaSelector label="Caja destino" value={cajaDestino} onChange={setCajaDestino} disabledValue={cajaOrigen} cajas={cajas ?? []} />
                             </div>
 
                             {mismasCajas && (
@@ -166,16 +152,16 @@ export const TrasladoFondosPage = () => {
                                 </div>
                             </div>
 
-                            {/* Referencia */}
+                            {/* Notas */}
                             <div className="space-y-1.5">
                                 <label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                                    Referencia (opcional)
+                                    Notas (opcional)
                                 </label>
                                 <Input
                                     type="text"
                                     placeholder="Motivo o nota del traslado"
-                                    value={referencia}
-                                    onChange={(e) => setReferencia(e.target.value)}
+                                    value={notas}
+                                    onChange={(e) => setNotas(e.target.value)}
                                 />
                             </div>
 
@@ -211,7 +197,7 @@ export const TrasladoFondosPage = () => {
                             {exito && !crearTraslado.isError && (
                                 <div className="flex items-center gap-2 rounded-lg border border-green-300 bg-green-50 p-3 text-sm font-medium text-green-700 dark:border-green-900 dark:bg-green-950/30 dark:text-green-400">
                                     <CheckCircle2 className="h-4 w-4 flex-shrink-0" />
-                                    Traslado registrado correctamente.
+                                    Traslado registrado. Queda pendiente de aprobar en SIESA escritorio.
                                 </div>
                             )}
 
@@ -266,9 +252,6 @@ export const TrasladoFondosPage = () => {
                                     <AlertCircle className="h-5 w-5 text-destructive" />
                                 </div>
                                 <p className="text-sm font-semibold text-destructive">No se pudo cargar el historial de traslados.</p>
-                                <p className="max-w-sm text-xs text-muted-foreground">
-                                    Este módulo aún no tiene el endpoint de backend conectado.
-                                </p>
                             </div>
                         ) : !historial || historial.length === 0 ? (
                             <div className="flex flex-col items-center gap-3 py-16">
@@ -289,30 +272,22 @@ export const TrasladoFondosPage = () => {
                                         transition={{ duration: 0.2, delay: idx * 0.03 }}
                                         className="flex items-center gap-3 px-4 py-3.5 transition-colors hover:bg-muted/30"
                                     >
-                                        <div className={cn(
-                                            'flex h-10 w-10 shrink-0 items-center justify-center rounded-full',
-                                            t.estado === 'CONFIRMADO' ? 'bg-emerald-500/10 text-emerald-600' :
-                                                t.estado === 'RECHAZADO' ? 'bg-red-500/10 text-red-600' :
-                                                    'bg-amber-500/10 text-amber-600'
-                                        )}>
+                                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
                                             <ArrowRightLeft className="h-4 w-4" />
                                         </div>
                                         <div className="min-w-0 flex-1">
                                             <p className="flex flex-wrap items-center gap-1.5 truncate text-sm font-semibold">
-                                                {t.caja_origen_nombre}
+                                                {nombreCaja(t.id_caja_origen)}
                                                 <ArrowRight className="h-3 w-3 text-muted-foreground" />
-                                                {t.caja_destino_nombre}
+                                                {nombreCaja(t.id_caja_destino)}
                                             </p>
                                             <p className="mt-0.5 text-xs text-muted-foreground">
-                                                {formatters.dateTime(t.fecha)} · {t.usuario_registro_nombre || 'Administrador'}
-                                                {t.referencia ? ` · ${t.referencia}` : ''}
+                                                {formatters.dateTime(t.fecha)} · {t.usuario_nombre || 'Administrador'}
+                                                {t.motivo ? ` · ${t.motivo}` : ''}
                                             </p>
                                         </div>
                                         <div className="text-right">
                                             <p className="text-sm font-bold tabular-nums">{formatters.currency(t.valor)}</p>
-                                            <span className={`mt-0.5 inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-bold uppercase ${badgeClass(ESTADO_TONO[t.estado])}`}>
-                                                {ESTADO_LABEL[t.estado]}
-                                            </span>
                                         </div>
                                     </motion.div>
                                 ))}

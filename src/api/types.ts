@@ -296,36 +296,57 @@ export interface MovimientosEfectivoResponse {
 }
 
 /**
- * Traslado de Fondos: movimiento manual entre dos cajas (caja origen -> caja
- * destino), solo disponible para el rol Administrador. Ver
- * docs/traslado-fondos.md para el contrato completo con backend.
+ * Traslado de Fondos: mueve efectivo entre 2 cajas físicas de SIESA. Crea un
+ * documento contable TC real (borrador, pendiente de aprobar en SIESA
+ * escritorio) y actualiza el saldo operativo de ambas cajas en el mismo
+ * paso. Ver POST /api/caja-traspaso/simple en el backend.
  */
-export type TrasladoFondosEstado = 'PENDIENTE' | 'CONFIRMADO' | 'RECHAZADO'
+export interface CajaTraspaso {
+  id_caja: string
+  id_co: string
+  rowid_auxiliar: number
+  nombre: string | null
+}
 
-export interface TrasladoFondos {
+export interface CajasTraspasoResponse {
+  success: boolean
+  total: number
+  data: CajaTraspaso[]
+}
+
+export interface TrasladoFondosCreado {
+  rowid_docto: number
+  consec_docto: number
+  periodo: number
+}
+
+export interface TrasladoFondosCreadoResponse {
+  success: boolean
+  data: TrasladoFondosCreado
+  message: string
+}
+
+export interface TrasladoFondosMov {
   id: number
-  caja_origen_id: string
-  caja_origen_nombre: string
-  caja_destino_id: string
-  caja_destino_nombre: string
+  id_cia: number
+  id_co_origen: string
+  id_co_destino: string
+  id_un: string
+  id_moneda: string
+  id_caja_origen: string
+  id_caja_destino: string
   valor: number
-  referencia: string | null
-  estado: TrasladoFondosEstado
-  usuario_registro: number
-  usuario_registro_nombre?: string
+  motivo: string | null
+  usuario_id: number
+  usuario_nombre?: string
   fecha: string
   created_at: string
 }
 
-export interface TrasladoFondosResponse {
-  success: boolean
-  data: TrasladoFondos
-}
-
-export interface TrasladosFondosResponse {
+export interface TrasladosFondosMovResponse {
   success: boolean
   total: number
-  data: TrasladoFondos[]
+  data: TrasladoFondosMov[]
 }
 
 export interface FacturaAfectadaRC {

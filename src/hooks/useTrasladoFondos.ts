@@ -5,6 +5,15 @@ import {
   CrearTrasladoFondosPayload,
 } from '@/api/trasladoFondos'
 
+export const useCajasTraspaso = () => {
+  return useQuery({
+    queryKey: ['caja-traspaso', 'cajas'],
+    queryFn: () => trasladoFondosApi.listarCajas(),
+    staleTime: 5 * 60 * 1000,
+    retry: 3,
+  })
+}
+
 export const useTrasladosFondos = (rango?: RangoFechasTraslado) => {
   return useQuery({
     queryKey: ['traslado-fondos', rango?.fechaInicial, rango?.fechaFinal],

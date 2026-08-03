@@ -1,15 +1,17 @@
 import { apiClient } from './client'
 import {
-  TrasladoFondos,
-  TrasladoFondosResponse,
-  TrasladosFondosResponse,
+  CajaTraspaso,
+  CajasTraspasoResponse,
+  TrasladoFondosCreado,
+  TrasladoFondosCreadoResponse,
+  TrasladoFondosMov,
+  TrasladosFondosMovResponse,
 } from './types'
 import { withRetry } from '@/utils/retry'
 
 /**
- * Traslado de Fondos entre cajas — contrato pendiente de implementar en backend.
- * Ver docs/traslado-fondos.md para el detalle completo (payloads, validaciones,
- * permiso requerido).
+ * Traslado de Fondos entre cajas — conectado a POST /api/caja-traspaso/*.
+ * Ver docs/traslado-fondos.md para el detalle histórico de la maqueta previa.
  */
 export interface RangoFechasTraslado {
   fechaInicial?: string
@@ -17,33 +19,37 @@ export interface RangoFechasTraslado {
 }
 
 export interface CrearTrasladoFondosPayload {
-  caja_origen_id: string
-  caja_destino_id: string
+  id_caja_origen: string
+  id_caja_destino: string
   valor: number
-  referencia?: string
+  notas?: string
 }
 
 export const trasladoFondosApi = {
-  listar: async (rango?: RangoFechasTraslado): Promise<TrasladoFondos[]> => {
+  listarCajas: async (): Promise<CajaTraspaso[]> => {
     return withRetry(async () => {
-      const response = await apiClient.get<TrasladosFondosResponse>(
-        '/traslado-fondos',
-        {
-          params: {
-            fecha_inicial: rango?.fechaInicial,
-            fecha_final: rango?.fechaFinal,
-          },
-        }
-      )
+      const response = await apiClient.get<CajasTraspasoResponse>('/caja-traspaso/cajas')
       return response.data.data
     })
   },
 
-  crear: async (payload: CrearTrasladoFondosPayload): Promise<TrasladoFondos> => {
+  listar: async (rango?: RangoFechasTraslado): Promise<TrasladoFondosMov[]> => {
+    return withRetry(async () => {
+      const response = await apiClient.get<TrasladosFondosMovResponse>('/caja-traspaso', {
+        params: {
+          fecha_inicial: rango?.fechaInicial,
+          fecha_final: rango?.fechaFinal,
+        },
+      })
+      return response.data.data
+    })
+  },
+
+  crear: async (payload: CrearTrasladoFondosPayload): Promise<TrasladoFondosCreado> => {
     // Sin reintentos a propósito: es una operación de dinero que no debe
     // reenviarse sola ante un timeout (mismo criterio que conductorEfectivoApi).
-    const response = await apiClient.post<TrasladoFondosResponse>(
-      '/traslado-fondos',
+    const response = await apiClient.post<TrasladoFondosCreadoResponse>(
+      '/caja-traspaso/simple',
       payload
     )
     return response.data.data
