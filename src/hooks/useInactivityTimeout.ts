@@ -8,7 +8,7 @@ const LAST_ACTIVITY_KEY = 'last_activity'
  * Solo se activa si hay un token de autenticación
  */
 export const useInactivityTimeout = (onTimeout: () => void) => {
-    const timeoutRef = useRef<NodeJS.Timeout | null>(null)
+    const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
     const lastActivityRef = useRef<number>(Date.now())
     
     const hasToken = () => {
@@ -39,7 +39,18 @@ export const useInactivityTimeout = (onTimeout: () => void) => {
         }, INACTIVITY_TIMEOUT)
     }, [onTimeout])
 
+    // 'mousemove' y 'scroll' disparan decenas de eventos por segundo. Sin
+    // throttle, cada uno ejecutaba resetTimer() de forma síncrona
+    // (localStorage.setItem + clearTimeout + setTimeout) en cada evento.
+    // Con el mouse en movimiento durante cualquier animación/interacción
+    // esto se acumulaba en trabajo síncrono real. Se throttlea a 1 reset
+    // cada 5s, más que suficiente para un timeout de 30 minutos.
+    const THROTTLE_MS = 5000
     const handleActivity = useCallback(() => {
+        const now = Date.now()
+        if (now - lastActivityRef.current < THROTTLE_MS) {
+            return
+        }
         resetTimer()
     }, [resetTimer])
 

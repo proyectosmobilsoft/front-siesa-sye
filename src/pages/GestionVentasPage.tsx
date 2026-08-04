@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion'
-import { useState } from 'react'
+import { useState, ReactNode } from 'react'
 import {
     ColumnDef,
     flexRender,
@@ -14,7 +14,7 @@ import {
 import { ArrowUpDown, Search, Filter } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { ErrorState } from '@/components/ui/error-state'
 import { Skeleton } from '@/lib/skeleton'
 import { useFacturas } from '@/hooks/useFacturas'
 import { Factura, FacturasParams } from '@/api/types'
@@ -84,7 +84,7 @@ export const GestionVentasPage = () => {
                 if (typeof value === 'string' && value.length > 50) {
                     return <div className="text-sm text-muted-foreground max-w-[200px] truncate" title={value}>{value}</div>
                 }
-                return <div className="text-sm">{value ?? <span className="text-muted-foreground italic">N/A</span>}</div>
+                return <div className="text-sm">{(value as ReactNode) ?? <span className="text-muted-foreground italic">N/A</span>}</div>
             },
         }))
     }
@@ -142,237 +142,188 @@ export const GestionVentasPage = () => {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5 }}
-            className="flex-1 space-y-8 p-6"
+            className="flex h-full min-h-0 flex-col gap-4 p-6"
         >
-
             {/* Filtros */}
-            <Card>
-                <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                        <Filter className="h-5 w-5" />
-                        Filtros de Búsqueda
-                    </CardTitle>
-                </CardHeader>
-                <CardContent>
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                        <div className="space-y-2">
-                            <label className="text-sm font-medium">Periodo Inicial (YYYYMM)</label>
-                            <Input
-                                type="text"
-                                placeholder="202401"
-                                value={filtros.periodoInicial || ''}
-                                onChange={handlePeriodoInicialChange}
-                                maxLength={6}
-                            />
-                            {filtros.periodoInicial && (
-                                <p className="text-xs text-muted-foreground">
-                                    {formatPeriodo(filtros.periodoInicial)}
-                                </p>
-                            )}
-                        </div>
-                        <div className="space-y-2">
-                            <label className="text-sm font-medium">Periodo Final (YYYYMM)</label>
-                            <Input
-                                type="text"
-                                placeholder="202412"
-                                value={filtros.periodoFinal || ''}
-                                onChange={handlePeriodoFinalChange}
-                                maxLength={6}
-                            />
-                            {filtros.periodoFinal && (
-                                <p className="text-xs text-muted-foreground">
-                                    {formatPeriodo(filtros.periodoFinal)}
-                                </p>
-                            )}
-                        </div>
-                        <div className="space-y-2">
-                            <label className="text-sm font-medium">Página</label>
-                            <Input
-                                type="number"
-                                placeholder="1"
-                                value={filtros.page || 1}
-                                onChange={handlePageChange}
-                                min={1}
-                            />
-                        </div>
-                        <div className="space-y-2">
-                            <label className="text-sm font-medium">Registros por página (Máx. 5000)</label>
-                            <Input
-                                type="number"
-                                placeholder="1000"
-                                value={filtros.pageSize || 1000}
-                                onChange={handlePageSizeChange}
-                                min={1}
-                                max={5000}
-                            />
-                        </div>
+            <div className="flex shrink-0 flex-col gap-4 border-b pb-4">
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5 lg:items-end">
+                    <div className="space-y-1.5">
+                        <label className="block text-[10px] font-bold uppercase tracking-wide text-muted-foreground">Periodo Inicial (YYYYMM)</label>
+                        <Input
+                            type="text"
+                            placeholder="202401"
+                            value={filtros.periodoInicial || ''}
+                            onChange={handlePeriodoInicialChange}
+                            maxLength={6}
+                        />
+                        <p className="h-4 text-xs text-muted-foreground">
+                            {filtros.periodoInicial ? formatPeriodo(filtros.periodoInicial) : ''}
+                        </p>
                     </div>
-                    <div className="mt-6">
-                        <Button onClick={handleBuscar} className="w-full md:w-auto">
-                            <Search className="mr-2 h-4 w-4" />
-                            Buscar Facturas
-                        </Button>
+                    <div className="space-y-1.5">
+                        <label className="block text-[10px] font-bold uppercase tracking-wide text-muted-foreground">Periodo Final (YYYYMM)</label>
+                        <Input
+                            type="text"
+                            placeholder="202412"
+                            value={filtros.periodoFinal || ''}
+                            onChange={handlePeriodoFinalChange}
+                            maxLength={6}
+                        />
+                        <p className="h-4 text-xs text-muted-foreground">
+                            {filtros.periodoFinal ? formatPeriodo(filtros.periodoFinal) : ''}
+                        </p>
                     </div>
-                </CardContent>
-            </Card>
+                    <div className="space-y-1.5">
+                        <label className="block text-[10px] font-bold uppercase tracking-wide text-muted-foreground">Página</label>
+                        <Input
+                            type="number"
+                            placeholder="1"
+                            value={filtros.page || 1}
+                            onChange={handlePageChange}
+                            min={1}
+                        />
+                        <p className="h-4" />
+                    </div>
+                    <div className="space-y-1.5">
+                        <label className="block text-[10px] font-bold uppercase tracking-wide text-muted-foreground">Registros por página (Máx. 5000)</label>
+                        <Input
+                            type="number"
+                            placeholder="1000"
+                            value={filtros.pageSize || 1000}
+                            onChange={handlePageSizeChange}
+                            min={1}
+                            max={5000}
+                        />
+                        <p className="h-4" />
+                    </div>
+                    <Button onClick={handleBuscar} className="h-10 w-full">
+                        <Search className="mr-2 h-4 w-4" />
+                        Buscar Facturas
+                    </Button>
+                </div>
+            </div>
 
             {/* Tabla */}
-            {searchParams && (
-                <>
-                    {isLoading ? (
-                        <Card>
-                            <CardHeader>
-                                <CardTitle>Facturas</CardTitle>
-                            </CardHeader>
-                            <CardContent>
-                                <div className="space-y-4">
-                                    <Skeleton className="h-10 w-full" />
-                                    <Skeleton className="h-64 w-full" />
+            {!searchParams ? (
+                <div className="flex flex-1 flex-col items-center justify-center text-center text-muted-foreground">
+                    <Filter className="h-12 w-12 mb-4 opacity-50" />
+                    <p className="text-lg font-medium text-foreground">Selecciona los filtros y haz clic en "Buscar Facturas"</p>
+                    <p className="text-sm mt-2">Los valores por defecto son: Periodo Inicial 202401, Periodo Final 202412</p>
+                </div>
+            ) : isLoading ? (
+                <div className="flex min-h-0 flex-1 flex-col gap-4">
+                    <Skeleton className="h-10 w-full" />
+                    <Skeleton className="flex-1 w-full" />
+                </div>
+            ) : error ? (
+                <ErrorState
+                    title="Error al cargar facturas"
+                    message={`No se pudieron obtener los datos. Error: ${error instanceof Error ? error.message : 'Error desconocido'}`}
+                    onRetry={() => refetch()}
+                />
+            ) : (
+                <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.5, delay: 0.2 }}
+                    className="flex min-h-0 flex-1 flex-col gap-4"
+                >
+                    <div className="flex shrink-0 flex-col gap-3 border-b pb-3 sm:flex-row sm:items-center sm:justify-between">
+                        <div className="relative w-full sm:max-w-sm">
+                            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                            <Input
+                                placeholder="Buscar en facturas..."
+                                value={globalFilter ?? ''}
+                                onChange={(event) => setGlobalFilter(String(event.target.value))}
+                                className="pl-9"
+                            />
+                        </div>
+                        <p className="shrink-0 text-sm text-muted-foreground">
+                            {facturas?.length ?? 0} {facturas?.length === 1 ? 'registro' : 'registros'}
+                        </p>
+                    </div>
+                    {!facturas || facturas.length === 0 ? (
+                        <div className="text-center py-12">
+                            <p className="text-muted-foreground">No se encontraron facturas con los filtros seleccionados.</p>
+                        </div>
+                    ) : (
+                        <>
+                            <div className="min-h-0 flex-1 overflow-auto rounded-md border">
+                                <table className="w-full text-sm">
+                                    <thead className="sticky top-0 z-10 bg-card">
+                                        {table.getHeaderGroups().map((headerGroup) => (
+                                            <tr key={headerGroup.id} className="border-b bg-muted/30">
+                                                {headerGroup.headers.map((header) => (
+                                                    <th
+                                                        key={header.id}
+                                                        className="h-10 px-3 text-left align-middle font-semibold text-muted-foreground"
+                                                    >
+                                                        {header.isPlaceholder
+                                                            ? null
+                                                            : flexRender(
+                                                                header.column.columnDef.header,
+                                                                header.getContext()
+                                                            )}
+                                                    </th>
+                                                ))}
+                                            </tr>
+                                        ))}
+                                    </thead>
+                                    <tbody>
+                                        {table.getRowModel().rows?.length ? (
+                                            table.getRowModel().rows.map((row) => (
+                                                <motion.tr
+                                                    key={row.id}
+                                                    className="border-b transition-colors hover:bg-muted/50"
+                                                    initial={{ opacity: 0 }}
+                                                    animate={{ opacity: 1 }}
+                                                    transition={{ duration: 0.2 }}
+                                                >
+                                                    {row.getVisibleCells().map((cell) => (
+                                                        <td key={cell.id} className="py-2.5 px-3 align-middle">
+                                                            {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                                                        </td>
+                                                    ))}
+                                                </motion.tr>
+                                            ))
+                                        ) : (
+                                            <tr>
+                                                <td colSpan={columns.length} className="h-24 text-center">
+                                                    No hay resultados.
+                                                </td>
+                                            </tr>
+                                        )}
+                                    </tbody>
+                                </table>
+                            </div>
+                            <div className="flex shrink-0 items-center justify-between space-x-2">
+                                <div className="flex-1 text-xs font-medium text-muted-foreground">
+                                    Mostrando {table.getFilteredRowModel().rows.length} de {table.getCoreRowModel().rows.length} filas.
                                 </div>
-                            </CardContent>
-                        </Card>
-                    ) : error ? (
-                        <Card className="border-red-200 bg-red-50">
-                            <CardHeader>
-                                <CardTitle className="text-red-800">Error al cargar facturas</CardTitle>
-                            </CardHeader>
-                            <CardContent className="flex items-center justify-center h-64">
-                                <div className="text-center text-red-600">
-                                    <p className="text-lg font-medium">No se pudieron obtener los datos</p>
-                                    <p className="text-sm mt-2">Error: {error instanceof Error ? error.message : 'Error desconocido'}</p>
-                                    <Button onClick={() => refetch()} className="mt-4" variant="outline">
-                                        Reintentar
+                                <div className="flex items-center space-x-2">
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        className="h-8 text-xs"
+                                        onClick={() => table.previousPage()}
+                                        disabled={!table.getCanPreviousPage()}
+                                    >
+                                        Anterior
+                                    </Button>
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        className="h-8 text-xs"
+                                        onClick={() => table.nextPage()}
+                                        disabled={!table.getCanNextPage()}
+                                    >
+                                        Siguiente
                                     </Button>
                                 </div>
-                            </CardContent>
-                        </Card>
-                    ) : (
-                        <motion.div
-                            initial={{ opacity: 0, y: 20 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ duration: 0.5, delay: 0.2 }}
-                        >
-                            <Card>
-                                <CardHeader>
-                                    <CardTitle>
-                                        Facturas
-                                        {facturas && (
-                                            <span className="ml-2 text-sm font-normal text-muted-foreground">
-                                                ({facturas.length} {facturas.length === 1 ? 'registro' : 'registros'})
-                                            </span>
-                                        )}
-                                    </CardTitle>
-                                    <div className="flex items-center space-x-2 mt-4">
-                                        <div className="relative flex-1 max-w-sm">
-                                            <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-                                            <Input
-                                                placeholder="Buscar en facturas..."
-                                                value={globalFilter ?? ''}
-                                                onChange={(event) => setGlobalFilter(String(event.target.value))}
-                                                className="pl-8"
-                                            />
-                                        </div>
-                                    </div>
-                                </CardHeader>
-                                <CardContent>
-                                    {!facturas || facturas.length === 0 ? (
-                                        <div className="text-center py-12">
-                                            <p className="text-muted-foreground">No se encontraron facturas con los filtros seleccionados.</p>
-                                        </div>
-                                    ) : (
-                                        <>
-                                            <div className="rounded-md border">
-                                                <div className="overflow-x-auto">
-                                                    <table className="w-full text-sm">
-                                                        <thead>
-                                                            {table.getHeaderGroups().map((headerGroup) => (
-                                                                <tr key={headerGroup.id} className="border-b">
-                                                                    {headerGroup.headers.map((header) => (
-                                                                        <th
-                                                                            key={header.id}
-                                                                            className="h-10 px-3 text-left align-middle font-medium text-muted-foreground"
-                                                                        >
-                                                                            {header.isPlaceholder
-                                                                                ? null
-                                                                                : flexRender(
-                                                                                    header.column.columnDef.header,
-                                                                                    header.getContext()
-                                                                                )}
-                                                                        </th>
-                                                                    ))}
-                                                                </tr>
-                                                            ))}
-                                                        </thead>
-                                                        <tbody>
-                                                            {table.getRowModel().rows?.length ? (
-                                                                table.getRowModel().rows.map((row) => (
-                                                                    <motion.tr
-                                                                        key={row.id}
-                                                                        className="border-b transition-colors hover:bg-muted/50"
-                                                                        initial={{ opacity: 0 }}
-                                                                        animate={{ opacity: 1 }}
-                                                                        transition={{ duration: 0.2 }}
-                                                                    >
-                                                                        {row.getVisibleCells().map((cell) => (
-                                                                            <td key={cell.id} className="py-2 px-3 align-middle">
-                                                                                {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                                                                            </td>
-                                                                        ))}
-                                                                    </motion.tr>
-                                                                ))
-                                                            ) : (
-                                                                <tr>
-                                                                    <td colSpan={columns.length} className="h-24 text-center">
-                                                                        No hay resultados.
-                                                                    </td>
-                                                                </tr>
-                                                            )}
-                                                        </tbody>
-                                                    </table>
-                                                </div>
-                                            </div>
-                                            <div className="flex items-center justify-between space-x-2 py-4">
-                                                <div className="flex-1 text-sm text-muted-foreground">
-                                                    {table.getFilteredRowModel().rows.length} de {table.getCoreRowModel().rows.length} filas.
-                                                </div>
-                                                <div className="flex items-center space-x-2">
-                                                    <Button
-                                                        variant="outline"
-                                                        size="sm"
-                                                        onClick={() => table.previousPage()}
-                                                        disabled={!table.getCanPreviousPage()}
-                                                    >
-                                                        Anterior
-                                                    </Button>
-                                                    <Button
-                                                        variant="outline"
-                                                        size="sm"
-                                                        onClick={() => table.nextPage()}
-                                                        disabled={!table.getCanNextPage()}
-                                                    >
-                                                        Siguiente
-                                                    </Button>
-                                                </div>
-                                            </div>
-                                        </>
-                                    )}
-                                </CardContent>
-                            </Card>
-                        </motion.div>
+                            </div>
+                        </>
                     )}
-                </>
-            )}
-
-            {!searchParams && (
-                <Card>
-                    <CardContent className="flex items-center justify-center h-64">
-                        <div className="text-center text-muted-foreground">
-                            <Filter className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                            <p className="text-lg font-medium">Selecciona los filtros y haz clic en "Buscar Facturas"</p>
-                            <p className="text-sm mt-2">Los valores por defecto son: Periodo Inicial 202401, Periodo Final 202412</p>
-                        </div>
-                    </CardContent>
-                </Card>
+                </motion.div>
             )}
         </motion.div>
     )

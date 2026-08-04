@@ -9,11 +9,11 @@ import {
 } from '@tanstack/react-table'
 import { ArrowLeft, Plus, Edit, Shield, Loader2, Trash2, AlertTriangle, Key, Lock, Search, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Modal } from '@/components/ui/modal'
 import { useNavigate } from 'react-router-dom'
 import { seguridadApi, AuthRole, Permiso } from '@/api/seguridad'
+import { badgeClass } from '@/utils/badges'
 
 export const MaestroRolesPage = () => {
     const navigate = useNavigate()
@@ -225,7 +225,8 @@ export const MaestroRolesPage = () => {
             cell: ({ row }) => {
                 const activo = !!row.getValue('estado')
                 return (
-                    <span className={`px-2.5 py-1 rounded-full text-xs font-medium ${activo ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'}`}>
+                    <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold ${badgeClass(activo ? 'green' : 'red')}`}>
+                        <span className="h-1.5 w-1.5 rounded-full bg-current" />
                         {activo ? 'Activo' : 'Inactivo'}
                     </span>
                 )
@@ -296,94 +297,80 @@ export const MaestroRolesPage = () => {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5 }}
-            className="flex-1 space-y-6 p-6"
+            className="flex h-full min-h-0 flex-col gap-4 p-6"
         >
-            <div className="flex items-center space-x-4">
-                <Button variant="outline" size="icon" onClick={() => navigate('/configuracion')}>
-                    <ArrowLeft className="h-4 w-4" />
+            <div className="flex shrink-0 items-center justify-between border-b pb-4">
+                <div className="flex items-center gap-3">
+                    <Button variant="outline" size="icon" onClick={() => navigate('/configuracion')}>
+                        <ArrowLeft className="h-4 w-4" />
+                    </Button>
+                    <span className="inline-flex shrink-0 items-center rounded-full bg-muted px-3 py-1 text-xs font-medium text-muted-foreground">
+                        {roles.length} rol{roles.length !== 1 ? 'es' : ''} registrado{roles.length !== 1 ? 's' : ''}
+                    </span>
+                </div>
+                <Button onClick={handleNewRole} className="whitespace-nowrap">
+                    <Plus className="mr-2 h-4 w-4" />
+                    Nuevo Rol
                 </Button>
             </div>
 
-            <Card className="border-2 border-primary/20 bg-gradient-to-br from-background to-primary/5">
-                <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                    <div>
-                        <CardTitle className="flex items-center gap-2">
-                            <Shield className="h-5 w-5 text-primary" />
-                            Lista de Roles
-                        </CardTitle>
-                    </div>
-                    <Button onClick={handleNewRole} className="whitespace-nowrap">
-                        <Plus className="mr-2 h-4 w-4" />
-                        Nuevo Rol
-                    </Button>
-                </CardHeader>
-                <CardContent>
-                    <div className="rounded-md border bg-card">
-                        <div className="overflow-x-auto custom-scrollbar">
-                            <table className="w-full text-sm">
-                                <thead>
-                                    {table.getHeaderGroups().map((headerGroup) => (
-                                        <tr key={headerGroup.id} className="border-b bg-muted/50">
-                                            {headerGroup.headers.map((header) => (
-                                                <th
-                                                    key={header.id}
-                                                    className="h-11 px-4 text-left align-middle font-medium text-muted-foreground"
-                                                >
-                                                    {header.isPlaceholder
-                                                        ? null
-                                                        : flexRender(
-                                                            header.column.columnDef.header,
-                                                            header.getContext()
-                                                        )}
-                                                </th>
-                                            ))}
-                                        </tr>
+            <div className="min-h-0 flex-1 overflow-auto rounded-md border">
+                <table className="w-full text-sm">
+                    <thead className="sticky top-0 z-10 bg-card">
+                        {table.getHeaderGroups().map((headerGroup) => (
+                            <tr key={headerGroup.id} className="border-b bg-muted/50">
+                                {headerGroup.headers.map((header) => (
+                                    <th
+                                        key={header.id}
+                                        className="h-11 px-4 text-left align-middle text-xs font-semibold uppercase tracking-wide text-muted-foreground"
+                                    >
+                                        {header.isPlaceholder
+                                            ? null
+                                            : flexRender(
+                                                header.column.columnDef.header,
+                                                header.getContext()
+                                            )}
+                                    </th>
+                                ))}
+                            </tr>
+                        ))}
+                    </thead>
+                    <tbody>
+                        {loading ? (
+                            <tr>
+                                <td colSpan={columns.length} className="h-32 text-center">
+                                    <div className="flex items-center justify-center gap-2 text-muted-foreground">
+                                        <Loader2 className="h-5 w-5 animate-spin" />
+                                        Cargando roles...
+                                    </div>
+                                </td>
+                            </tr>
+                        ) : table.getRowModel().rows?.length ? (
+                            table.getRowModel().rows.map((row) => (
+                                <motion.tr
+                                    key={row.id}
+                                    className="border-b transition-colors hover:bg-muted/40"
+                                    initial={{ opacity: 0 }}
+                                    animate={{ opacity: 1 }}
+                                    transition={{ duration: 0.2 }}
+                                >
+                                    {row.getVisibleCells().map((cell) => (
+                                        <td key={cell.id} className="py-3.5 px-4 align-middle">
+                                            {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                                        </td>
                                     ))}
-                                </thead>
-                                <tbody>
-                                    {loading ? (
-                                        <tr>
-                                            <td colSpan={columns.length} className="h-32 text-center">
-                                                <div className="flex items-center justify-center gap-2 text-muted-foreground">
-                                                    <Loader2 className="h-5 w-5 animate-spin" />
-                                                    Cargando roles...
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    ) : table.getRowModel().rows?.length ? (
-                                        table.getRowModel().rows.map((row) => (
-                                            <motion.tr
-                                                key={row.id}
-                                                className="border-b transition-colors hover:bg-muted/30"
-                                                initial={{ opacity: 0 }}
-                                                animate={{ opacity: 1 }}
-                                                transition={{ duration: 0.2 }}
-                                            >
-                                                {row.getVisibleCells().map((cell) => (
-                                                    <td key={cell.id} className="py-3 px-4 align-middle">
-                                                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                                                    </td>
-                                                ))}
-                                            </motion.tr>
-                                        ))
-                                    ) : (
-                                        <tr>
-                                            <td colSpan={columns.length} className="h-24 text-center text-muted-foreground">
-                                                No se encontraron roles.
-                                            </td>
-                                        </tr>
-                                    )}
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                    <div className="flex items-center justify-between space-x-2 py-4">
-                        <div className="flex-1 text-sm text-muted-foreground">
-                            {roles.length} rol{roles.length !== 1 ? 'es' : ''} registrado{roles.length !== 1 ? 's' : ''}.
-                        </div>
-                    </div>
-                </CardContent>
-            </Card>
+                                </motion.tr>
+                            ))
+                        ) : (
+                            <tr>
+                                <td colSpan={columns.length} className="h-24 text-center text-muted-foreground">
+                                    No se encontraron roles.
+                                </td>
+                            </tr>
+                        )}
+                    </tbody>
+                </table>
+            </div>
 
             {/* Modal Crear / Editar Rol */}
             <Modal
@@ -394,7 +381,7 @@ export const MaestroRolesPage = () => {
             >
                 <div className="mt-4 space-y-5">
                     <div className="space-y-2">
-                        <label className="text-sm font-medium">Nombre del Rol</label>
+                        <label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Nombre del Rol</label>
                         <Input
                             placeholder="Ej. SUPERVISOR"
                             value={formNombre}
@@ -406,7 +393,7 @@ export const MaestroRolesPage = () => {
                     {/* Tipo de Autenticación + Estado en una sola fila compacta */}
                     <div className="flex flex-wrap items-end gap-4">
                         <div className="flex-1 min-w-[140px] space-y-1">
-                            <label className="text-xs font-medium text-muted-foreground">Autenticación</label>
+                            <label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Autenticación</label>
                             <div className="flex gap-1.5">
                                 <button
                                     type="button"
@@ -436,7 +423,7 @@ export const MaestroRolesPage = () => {
                         </div>
                         {editingRole && (
                             <div className="flex-1 min-w-[120px] space-y-1">
-                                <label className="text-xs font-medium text-muted-foreground">Estado</label>
+                                <label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Estado</label>
                                 <div className="flex gap-1.5">
                                     <button
                                         type="button"
@@ -469,7 +456,7 @@ export const MaestroRolesPage = () => {
 
                     {/* Permisos: multiselect con search + tabla */}
                     <div className="space-y-2">
-                        <label className="text-sm font-medium">Permisos del Rol</label>
+                        <label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Permisos del Rol</label>
                         <div ref={permisosDropdownRef} className="relative">
                             <div
                                 onClick={() => setPermisosDropdownOpen(!permisosDropdownOpen)}
@@ -578,9 +565,8 @@ export const MaestroRolesPage = () => {
             >
                 <div className="flex flex-col items-center text-center py-4">
                     <div className="relative mb-6">
-                        <div className="absolute inset-0 bg-red-500/20 rounded-full blur-xl animate-pulse" />
                         <div className="relative h-20 w-20 rounded-full bg-gradient-to-br from-red-50 to-red-100 dark:from-red-950/50 dark:to-red-900/30 border-2 border-red-200 dark:border-red-800 flex items-center justify-center">
-                            <AlertTriangle className="h-10 w-10 text-red-500" />
+                            <AlertTriangle className="h-10 w-10 text-destructive" />
                         </div>
                     </div>
 

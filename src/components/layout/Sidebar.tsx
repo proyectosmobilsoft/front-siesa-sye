@@ -1,104 +1,13 @@
-import { motion, AnimatePresence } from 'framer-motion'
+import { motion } from 'framer-motion'
 import { Link, useLocation } from 'react-router-dom'
 import { useEffect, useState } from 'react'
-import {
-    BarChart3,
-    Users,
-    Package,
-    FileText,
-    Settings,
-    X,
-    ChevronDown,
-    ChevronRight,
-    ClipboardList,
-    TrendingUp,
-    UserCircle,
-    Receipt,
-    ShoppingCart,
-    ShoppingBag,
-    Ticket,
-    TrendingDown,
-    Shield,
-    UserPlus,
-    Percent,
-    Wallet,
-    User,
-    Landmark,
-    Banknote,
-} from 'lucide-react'
+import { BarChart3, X, ChevronDown, ChevronRight } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useUIStore } from '@/store/uiStore'
 import { useAuthStore } from '@/store/authStore'
 import { useMediaQuery } from '@/hooks/useMediaQuery'
 import { cn } from '@/lib/utils'
-import { PERMISOS } from '@/config/permisos'
-
-interface SubNavItem {
-    name: string
-    href: string
-    icon: React.ComponentType<{ className?: string }>
-    permiso?: string
-}
-
-interface NavItem {
-    name: string
-    href?: string
-    icon: React.ComponentType<{ className?: string }>
-    permiso?: string
-    subItems?: SubNavItem[]
-}
-
-const navigation: NavItem[] = [
-    // Dashboard: siempre visible para usuarios autenticados
-    { name: 'Dashboard', href: '/', icon: BarChart3 },
-
-    // Módulos sin permiso aún en backend → visibles para todos los autenticados
-    { name: 'Clientes',  href: '/clientes',  icon: User },
-    { name: 'Productos', href: '/productos', icon: Package },
-    { name: 'Pedidos',   href: '/pedidos',   icon: ShoppingBag },
-    { name: 'Ferreganga', href: '/ferreganga', icon: Ticket },
-
-    // Egreso/Anticipos: requiere VER_ANTICIPO
-    { name: 'Egreso', href: '/egreso', icon: Wallet, permiso: PERMISOS.EGRESO },
-
-    {
-        name: 'Facturas',
-        icon: Receipt,
-        subItems: [
-            // Gestión de Ventas (recibos): requiere VER_RECIBO
-            { name: 'Gestión de Ventas',   href: '/facturas/gestion-ventas',    icon: ShoppingCart, permiso: PERMISOS.GESTION_VENTAS },
-            // Análisis Financiero: sin permiso aún en backend
-            { name: 'Análisis Financiero', href: '/facturas/analisis-financiero', icon: TrendingDown },
-        ]
-    },
-    {
-        name: 'Reportes',
-        icon: FileText,
-        subItems: [
-            { name: 'Pedidos Diarios', href: '/reportes',           icon: ClipboardList },
-            { name: 'Resumen Ventas',  href: '/reportes/ventas',    icon: TrendingUp },
-            { name: 'Vendedores',      href: '/reportes/vendedores', icon: UserCircle },
-        ]
-    },
-    {
-        name: 'Maestro',
-        icon: Users,
-        subItems: [
-            { name: 'Maestro de Roles',        href: '/maestro/roles',                    icon: Shield },
-            { name: 'Maestro de Usuarios',     href: '/maestro/usuarios',                 icon: UserPlus },
-            { name: 'Descuentos Financieros',  href: '/maestro/descuentos-financieros',   icon: Percent },
-        ]
-    },
-    {
-        name: 'Tesorería',
-        icon: Landmark,
-        subItems: [
-            { name: 'Recibo de Caja', href: '/tesoreria/recibo-caja', icon: Receipt },
-            { name: 'Entrega de Recaudo', href: '/tesoreria/entrega-recaudo', icon: Banknote },
-        ]
-    },
-    { name: 'Configuración', href: '/configuracion', icon: Settings },
-]
+import { navigation, getPageMeta, NavItem } from '@/config/navigation'
 
 export const Sidebar = () => {
     const { sidebarOpen, setSidebarOpen } = useUIStore()
@@ -141,19 +50,7 @@ export const Sidebar = () => {
         })
     }, [location.pathname]) // eslint-disable-line react-hooks/exhaustive-deps
 
-    const getCurrentPageInfo = () => {
-        for (const item of navFiltrado) {
-            if (item.subItems) {
-                const sub = item.subItems.find((s) => s.href === location.pathname)
-                if (sub) return { name: sub.name, icon: sub.icon }
-            } else if (item.href === location.pathname) {
-                return { name: item.name, icon: item.icon }
-            }
-        }
-        return { name: 'Dashboard', icon: BarChart3 }
-    }
-
-    const currentPage = getCurrentPageInfo()
+    const currentPage = getPageMeta(location.pathname) ?? { name: 'Dashboard', icon: BarChart3 }
 
     const toggleExpanded = (itemName: string) => {
         setExpandedItems((prev) => {
@@ -179,22 +76,28 @@ export const Sidebar = () => {
                 />
             )}
 
-            {/* Sidebar */}
-            <motion.div
-                initial={false}
-                animate={{
-                    width: isMobile ? 256 : sidebarOpen ? 256 : 76,
-                    x: isMobile && !sidebarOpen ? '-100%' : 0,
-                }}
-                transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+            {/* Sidebar
+                'width' NO se anima: en escritorio el sidebar es hermano flex del contenido
+                principal, así que cada cambio de width redimensiona el <main> donde viven
+                las gráficas Nivo. Los componentes ResponsiveLine/ResponsiveBar de Nivo usan
+                un ResizeObserver interno sin debounce — si el ancho cambia en cada frame de
+                una transición, Nivo recalcula escalas y re-renderiza el SVG completo en cada
+                tick, saturando el hilo principal hasta colgar la pestaña. El colapso queda
+                instantáneo (sin transición de layout); solo se anima 'transform' para el
+                drawer mobile, que es compuesto por GPU y no dispara resize de contenido. */}
+            <div
                 className={cn(
-                    'fixed left-0 top-0 z-50 h-full overflow-hidden bg-card border-r border-border shadow-xl shadow-black/5',
-                    'lg:relative lg:z-auto lg:shadow-none'
+                    'fixed left-0 top-0 z-50 h-full overflow-hidden bg-card',
+                    'transition-transform duration-200 ease-out',
+                    'lg:relative lg:z-auto',
+                    isMobile
+                        ? cn('w-64', sidebarOpen ? 'translate-x-0' : '-translate-x-full')
+                        : cn(sidebarOpen ? 'w-64' : 'w-[76px]', 'translate-x-0')
                 )}
             >
                 <div className="flex h-full flex-col">
                     {/* Header */}
-                    <div className={cn('flex h-16 items-center border-b border-border', sidebarOpen ? 'justify-between px-6' : 'justify-center px-3')}>
+                    <div className={cn('flex h-16 items-center', sidebarOpen ? 'justify-between px-6' : 'justify-center px-3')}>
                         <div className={cn('flex min-w-0 items-center space-x-2', !sidebarOpen && 'justify-center')}>
                             <div className="h-8 w-8 rounded-lg bg-primary flex items-center justify-center">
                                 <currentPage.icon className="h-5 w-5 text-primary-foreground" />
@@ -219,7 +122,7 @@ export const Sidebar = () => {
                     </div>
 
                     {/* Navigation */}
-                    <nav className={cn('flex-1 space-y-2 overflow-y-auto py-6 custom-scrollbar', sidebarOpen ? 'px-4' : 'px-3')}>
+                    <nav className={cn('flex-1 space-y-2 overflow-y-auto py-6 no-scrollbar', sidebarOpen ? 'px-4' : 'px-3')}>
                         {navFiltrado.map((item) => {
                             const hasSubItems = item.subItems && item.subItems.length > 0
                             const isExpanded = isItemExpanded(item.name)
@@ -235,104 +138,79 @@ export const Sidebar = () => {
                                 <div key={item.name} className="space-y-1">
                                     {hasSubItems ? (
                                         <>
-                                            <motion.div
-                                                whileHover={{ scale: 1.02 }}
-                                                whileTap={{ scale: 0.98 }}
-                                            >
-                                                <button
-                                                    onClick={() => sidebarOpen ? toggleExpanded(item.name) : setSidebarOpen(true)}
-                                                    title={!sidebarOpen ? item.name : undefined}
-                                                    className={cn(
-                                                        'w-full flex items-center rounded-xl py-2 text-sm font-medium transition-colors',
-                                                        sidebarOpen ? 'justify-between px-3' : 'justify-center px-2',
-                                                        'hover:bg-accent hover:text-accent-foreground',
-                                                        isSubItemActive || isExpanded
-                                                            ? 'bg-accent text-accent-foreground'
-                                                            : 'text-muted-foreground'
-                                                    )}
-                                                >
-                                                    <div className={cn('flex items-center', sidebarOpen ? 'space-x-3' : 'justify-center')}>
-                                                        <item.icon className="h-4 w-4" />
-                                                        {sidebarOpen && <span>{item.name}</span>}
-                                                    </div>
-                                                    {sidebarOpen && (isExpanded ? (
-                                                        <ChevronDown className="h-4 w-4" />
-                                                    ) : (
-                                                        <ChevronRight className="h-4 w-4" />
-                                                    ))}
-                                                </button>
-                                            </motion.div>
-                                            <AnimatePresence>
-                                                {sidebarOpen && isExpanded && (
-                                                    <motion.div
-                                                        initial={{ height: 0, opacity: 0 }}
-                                                        animate={{ height: 'auto', opacity: 1 }}
-                                                        exit={{ height: 0, opacity: 0 }}
-                                                        transition={{ duration: 0.2 }}
-                                                        className="overflow-hidden"
-                                                    >
-                                                        <div className="pl-4 space-y-1">
-                                                            {item.subItems!.map((subItem) => {
-                                                                const isSubActive = subItem.href === location.pathname
-                                                                return (
-                                                                    <motion.div
-                                                                        key={subItem.href}
-                                                                        whileHover={{ scale: 1.02 }}
-                                                                        whileTap={{ scale: 0.98 }}
-                                                                    >
-                                                                        <Link
-                                                                            to={subItem.href}
-                                                                            className={cn(
-                                                                                'flex items-center rounded-xl px-3 py-2 text-sm transition-colors',
-                                                                                'hover:bg-accent hover:text-accent-foreground',
-                                                                                isSubActive
-                                                                                    ? 'bg-accent text-accent-foreground font-medium'
-                                                                                    : 'text-muted-foreground'
-                                                                            )}
-                                                                            onClick={() => {
-                                                                                if (isMobile) {
-                                                                                    setSidebarOpen(false)
-                                                                                }
-                                                                            }}
-                                                                            title={!sidebarOpen ? subItem.name : undefined}
-                                                                        >
-                                                                            <subItem.icon className="h-4 w-4" />
-                                                                            {sidebarOpen && <span>{subItem.name}</span>}
-                                                                        </Link>
-                                                                    </motion.div>
-                                                                )
-                                                            })}
-                                                        </div>
-                                                    </motion.div>
-                                                )}
-                                            </AnimatePresence>
-                                        </>
-                                    ) : (
-                                        <motion.div
-                                            whileHover={{ scale: 1.02 }}
-                                            whileTap={{ scale: 0.98 }}
-                                        >
-                                            <Link
-                                                to={item.href!}
-                                                    title={!sidebarOpen ? item.name : undefined}
-                                                    className={cn(
-                                                        'flex items-center rounded-xl py-2 text-sm font-medium transition-colors',
-                                                        sidebarOpen ? 'space-x-3 px-3' : 'justify-center px-2',
+                                            <button
+                                                onClick={() => sidebarOpen ? toggleExpanded(item.name) : setSidebarOpen(true)}
+                                                title={!sidebarOpen ? item.name : undefined}
+                                                className={cn(
+                                                    'w-full flex items-center rounded-xl py-2 text-sm font-medium transition-colors active:scale-[0.98]',
+                                                    sidebarOpen ? 'justify-between px-3' : 'justify-center px-2',
                                                     'hover:bg-accent hover:text-accent-foreground',
-                                                    isActive
+                                                    isSubItemActive || isExpanded
                                                         ? 'bg-accent text-accent-foreground'
                                                         : 'text-muted-foreground'
                                                 )}
-                                                onClick={() => {
-                                                    if (isMobile) {
-                                                        setSidebarOpen(false)
-                                                    }
-                                                }}
                                             >
-                                                <item.icon className="h-4 w-4" />
-                                                {sidebarOpen && <span>{item.name}</span>}
-                                            </Link>
-                                        </motion.div>
+                                                <div className={cn('flex items-center', sidebarOpen ? 'space-x-3' : 'justify-center')}>
+                                                    <item.icon className="h-4 w-4" />
+                                                    {sidebarOpen && <span>{item.name}</span>}
+                                                </div>
+                                                {sidebarOpen && (isExpanded ? (
+                                                    <ChevronDown className="h-4 w-4" />
+                                                ) : (
+                                                    <ChevronRight className="h-4 w-4" />
+                                                ))}
+                                            </button>
+                                            {sidebarOpen && isExpanded && (
+                                                <div className="pl-4 space-y-1">
+                                                    {item.subItems!.map((subItem) => {
+                                                        const isSubActive = subItem.href === location.pathname
+                                                        return (
+                                                            <Link
+                                                                key={subItem.href}
+                                                                to={subItem.href}
+                                                                className={cn(
+                                                                    'flex items-center rounded-xl px-3 py-2 text-sm transition-colors active:scale-[0.98]',
+                                                                    'hover:bg-accent hover:text-accent-foreground',
+                                                                    isSubActive
+                                                                        ? 'bg-accent text-accent-foreground font-medium'
+                                                                        : 'text-muted-foreground'
+                                                                )}
+                                                                onClick={() => {
+                                                                    if (isMobile) {
+                                                                        setSidebarOpen(false)
+                                                                    }
+                                                                }}
+                                                                title={!sidebarOpen ? subItem.name : undefined}
+                                                            >
+                                                                <subItem.icon className="h-4 w-4" />
+                                                                {sidebarOpen && <span>{subItem.name}</span>}
+                                                            </Link>
+                                                        )
+                                                    })}
+                                                </div>
+                                            )}
+                                        </>
+                                    ) : (
+                                        <Link
+                                            to={item.href!}
+                                            title={!sidebarOpen ? item.name : undefined}
+                                            className={cn(
+                                                'flex items-center rounded-xl py-2 text-sm font-medium transition-colors active:scale-[0.98]',
+                                                sidebarOpen ? 'space-x-3 px-3' : 'justify-center px-2',
+                                                'hover:bg-accent hover:text-accent-foreground',
+                                                isActive
+                                                    ? 'bg-accent text-accent-foreground'
+                                                    : 'text-muted-foreground'
+                                            )}
+                                            onClick={() => {
+                                                if (isMobile) {
+                                                    setSidebarOpen(false)
+                                                }
+                                            }}
+                                        >
+                                            <item.icon className="h-4 w-4" />
+                                            {sidebarOpen && <span>{item.name}</span>}
+                                        </Link>
                                     )}
                                 </div>
                             )
@@ -350,7 +228,7 @@ export const Sidebar = () => {
                     )}
 
                 </div>
-            </motion.div>
+            </div>
         </>
     )
 }

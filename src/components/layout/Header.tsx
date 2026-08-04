@@ -4,6 +4,7 @@ import { useNavigate, useLocation } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { ThemeToggle } from './ThemeToggle'
 import { useUIStore } from '@/store/uiStore'
+import { getPageMeta } from '@/config/navigation'
 
 // Decodifica el payload del JWT sin librerías externas
 const decodeJwtPayload = (token: string): Record<string, string> | null => {
@@ -34,34 +35,13 @@ const getUsuarioFromToken = (): { nombre: string; inicial: string } => {
     return { nombre, inicial: nombre.charAt(0).toUpperCase() }
 }
 
-// Subtítulo dinámico por ruta — mismo texto que aparece en cada página
-const PAGE_SUBTITLES: Record<string, string> = {
-    '/': 'Resumen de clientes, productos y estado del inventario',
-    '/clientes': 'Gestión y visualización de clientes',
-    '/companias': 'Gestión y visualización de compañías',
-    '/productos': 'Gestión y visualización de productos',
-    '/egreso': 'Gestión de anticipos operativos',
-    '/pedidos': 'Historial y seguimiento de pedidos',
-    '/facturas/gestion-ventas': 'Documentos y gestión de ventas',
-    '/facturas/analisis-financiero': 'Análisis financiero por periodo',
-    '/reportes': 'Pedidos diarios consolidados',
-    '/reportes/ventas': 'Resumen de ventas por periodo',
-    '/reportes/vendedores': 'Rendimiento por vendedor',
-    '/maestro/roles': 'Administración de roles y permisos',
-    '/maestro/usuarios': 'Administración de usuarios del sistema',
-    '/maestro/descuentos-financieros': 'Condiciones y descuentos de pago',
-    '/configuracion': 'Preferencias del sistema',
-    '/configuracion/seguridad': 'Configuración de seguridad',
-    '/ayuda': 'Documentación y soporte',
-}
-
 export const Header = () => {
     const { sidebarOpen, setSidebarOpen } = useUIStore()
     const navigate = useNavigate()
     const location = useLocation()
 
     const { nombre, inicial } = getUsuarioFromToken()
-    const subtitle = PAGE_SUBTITLES[location.pathname] ?? ''
+    const pagina = getPageMeta(location.pathname)
 
     const handleLogout = () => {
         localStorage.removeItem('auth_token')
@@ -70,9 +50,17 @@ export const Header = () => {
     }
 
     return (
-        <header className="sticky top-0 z-40 w-full border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+        <header className="relative sticky top-0 z-40 w-full bg-card">
+            {/* Curvatura de unión con el sidebar (esquina cóncava, arco pegado a la esquina superior izquierda) */}
+            <div
+                className="hidden lg:block absolute left-0 top-full h-6 w-6 pointer-events-none"
+                style={{
+                    background:
+                        'radial-gradient(circle at 100% 100%, transparent 24px, hsl(var(--card)) 25px)'
+                }}
+            />
             <div className="flex h-16 items-center justify-between px-4 lg:px-6">
-                {/* Left — control retráctil del menú + subtítulo de página */}
+                {/* Left — control retráctil del menú + título/subtítulo de página */}
                 <div className="flex items-center gap-3 min-w-0">
                     <Button
                         variant="ghost"
@@ -86,16 +74,23 @@ export const Header = () => {
                     </Button>
 
                     <AnimatePresence mode="wait">
-                        <motion.p
+                        <motion.div
                             key={location.pathname}
                             initial={{ opacity: 0, y: 4 }}
                             animate={{ opacity: 1, y: 0 }}
                             exit={{ opacity: 0, y: -4 }}
                             transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
-                            className="hidden md:block text-sm text-muted-foreground truncate"
+                            className="flex min-w-0 items-center gap-2.5"
                         >
-                            {subtitle}
-                        </motion.p>
+                            <div className="min-w-0 leading-tight">
+                                <p className="truncate text-sm font-bold text-foreground">
+                                    {pagina?.name ?? 'Dashboard'}
+                                </p>
+                                <p className="hidden truncate text-xs text-muted-foreground md:block">
+                                    {pagina?.subtitle}
+                                </p>
+                            </div>
+                        </motion.div>
                     </AnimatePresence>
                 </div>
 

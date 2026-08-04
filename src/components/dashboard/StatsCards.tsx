@@ -1,127 +1,63 @@
-import { motion } from 'framer-motion'
-import { Users, Building2, Package, AlertTriangle } from 'lucide-react'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Skeleton } from '@/lib/skeleton'
+import { User, Package, ShoppingBag, DollarSign } from 'lucide-react'
 import { ErrorBoundary } from '@/components/ui/error-boundary'
-import { useClients, useClientsActivos } from '@/hooks/useClients'
-import { useCompanies } from '@/hooks/useCompanies'
-import { useProducts } from '@/hooks/useProducts'
+import { StatCard } from '@/components/dashboard/StatCard'
+import { useClientsCount } from '@/hooks/useClients'
+import { useProductsCount } from '@/hooks/useProducts'
+import { useDailyOrders, useSalesSummary } from '@/hooks/useReports'
 import { formatters } from '@/utils/formatters'
 
-interface StatCardProps {
-    title: string
-    value: string | number
-    subtitle: string
-    icon: React.ComponentType<{ className?: string }>
-    accent?: string
-    isLoading?: boolean
-    hasError?: boolean
-}
+const StatsCardsContent = () => {
+    const { data: clientsCount, isLoading: loadingClients, error: errorClients } = useClientsCount()
+    const { data: productsCount, isLoading: loadingProducts, error: errorProducts } = useProductsCount()
+    const { data: orders, isLoading: loadingOrders, error: errorOrders } = useDailyOrders()
+    const { data: sales, isLoading: loadingSales, error: errorSales } = useSalesSummary()
 
-const StatCard = ({ title, value, subtitle, icon: Icon, accent = 'text-muted-foreground', isLoading, hasError }: StatCardProps) => {
-    if (isLoading) {
-        return (
-            <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <Skeleton className="h-4 w-28" />
-                    <Skeleton className="h-4 w-4" />
-                </CardHeader>
-                <CardContent>
-                    <Skeleton className="h-8 w-16 mb-1" />
-                    <Skeleton className="h-3 w-32" />
-                </CardContent>
-            </Card>
-        )
-    }
-
-    if (hasError) {
-        return (
-            <Card className="border-red-200 bg-red-50 dark:bg-red-950/10">
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium text-red-800">{title}</CardTitle>
-                    <Icon className="h-4 w-4 text-red-500" />
-                </CardHeader>
-                <CardContent>
-                    <div className="text-2xl font-bold text-red-500">—</div>
-                    <p className="text-xs text-red-500 mt-1">No se pudo cargar</p>
-                </CardContent>
-            </Card>
-        )
-    }
+    const totalVentas = Array.isArray(sales)
+        ? sales.reduce((acc, s) => acc + (s['Vlr. Neto documento'] || 0), 0)
+        : 0
 
     return (
-        <Card className="hover:shadow-md transition-shadow duration-200">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">{title}</CardTitle>
-                <Icon className={`h-4 w-4 ${accent}`} />
-            </CardHeader>
-            <CardContent>
-                <div className="text-2xl font-bold">{value}</div>
-                <p className="text-xs text-muted-foreground mt-1">{subtitle}</p>
-            </CardContent>
-        </Card>
+        <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+            <StatCard
+                label="Pedidos Hoy"
+                value={formatters.number(Array.isArray(orders) ? orders.length : 0)}
+                icon={ShoppingBag}
+                isLoading={loadingOrders}
+                hasError={!!errorOrders}
+                delay={0}
+            />
+            <StatCard
+                label="Ventas Totales"
+                value={formatters.compactCurrency(totalVentas)}
+                icon={DollarSign}
+                isLoading={loadingSales}
+                hasError={!!errorSales}
+                delay={0.05}
+            />
+            <StatCard
+                label="Clientes"
+                value={formatters.number(clientsCount ?? 0)}
+                icon={User}
+                isLoading={loadingClients}
+                hasError={!!errorClients}
+                delay={0.1}
+            />
+            <StatCard
+                label="Productos"
+                value={formatters.number(productsCount ?? 0)}
+                icon={Package}
+                isLoading={loadingProducts}
+                hasError={!!errorProducts}
+                delay={0.15}
+            />
+        </div>
     )
 }
 
 export const StatsCards = () => {
-    const { data: clients, isLoading: clientsLoading, error: clientsError } = useClients()
-    const { data: clientsActivos, isLoading: clientsActivosLoading, error: clientsActivosError } = useClientsActivos()
-    const { data: companies, isLoading: companiesLoading, error: companiesError } = useCompanies()
-    const { data: products, isLoading: productsLoading, error: productsError } = useProducts()
-
-    const totalClients = clients && Array.isArray(clients) ? clients.length : 0
-    const countClientsActivos = clientsActivos?.activos_anio ?? 0
-
-    const activeCompanies = companies && Array.isArray(companies) ? companies.filter(c => c.f010_ind_estado === 1).length : 0
-    const totalCompanies = companies && Array.isArray(companies) ? companies.length : 0
-
-    const totalProducts = products && Array.isArray(products) ? products.length : 0
-    const productsInStock = products && Array.isArray(products) ? products.filter(p => (p.stock ?? 0) > 0).length : 0
-
-    const outOfStock = products && Array.isArray(products) ? products.filter(p => (p.stock ?? 0) === 0).length : 0
-
-    const stats: StatCardProps[] = [
-        {
-            title: 'Total Clientes',
-            value: formatters.number(totalClients),
-            subtitle: `${countClientsActivos} activos en el último año`,
-            icon: Users,
-            isLoading: clientsLoading || clientsActivosLoading,
-            hasError: !!clientsError || !!clientsActivosError,
-        },
-        {
-            title: 'Total Productos',
-            value: formatters.number(totalProducts),
-            subtitle: `${productsInStock} con stock disponible`,
-            icon: Package,
-            isLoading: productsLoading,
-            hasError: !!productsError,
-        },
-        {
-            title: 'Sin Stock',
-            value: formatters.number(outOfStock),
-            subtitle: outOfStock > 0 ? 'productos agotados' : 'todos con stock',
-            icon: AlertTriangle,
-            accent: outOfStock > 0 ? 'text-amber-500' : 'text-green-500',
-            isLoading: productsLoading,
-            hasError: !!productsError,
-        },
-    ]
-
     return (
         <ErrorBoundary>
-            <div className="grid gap-4 md:grid-cols-1 lg:grid-cols-3">
-                {stats.map((stat, index) => (
-                    <motion.div
-                        key={stat.title}
-                        initial={{ opacity: 0, y: 16 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ duration: 0.35, delay: index * 0.07, ease: [0.22, 1, 0.36, 1] }}
-                    >
-                        <StatCard {...stat} />
-                    </motion.div>
-                ))}
-            </div>
+            <StatsCardsContent />
         </ErrorBoundary>
     )
 }

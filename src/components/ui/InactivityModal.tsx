@@ -1,6 +1,7 @@
 import { motion } from 'framer-motion'
-import { AlertCircle, X } from 'lucide-react'
+import { AlertCircle } from 'lucide-react'
 import { useEffect } from 'react'
+import { Button } from '@/components/ui/button'
 
 interface InactivityModalProps {
     isOpen: boolean
@@ -24,32 +25,27 @@ export const InactivityModal = ({ isOpen, onClose }: InactivityModalProps) => {
     if (!isOpen) return null
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
             <motion.div
                 initial={{ opacity: 0, scale: 0.9 }}
                 animate={{ opacity: 1, scale: 1 }}
                 exit={{ opacity: 0, scale: 0.9 }}
-                className="bg-white rounded-2xl shadow-2xl max-w-md w-full mx-4 p-6 relative"
+                className="w-full max-w-md rounded-2xl border bg-card p-6 shadow-2xl mx-4"
             >
                 <div className="flex items-start gap-4">
-                    <div className="flex-shrink-0">
-                        <div className="w-12 h-12 rounded-full bg-red-100 flex items-center justify-center">
-                            <AlertCircle className="h-6 w-6 text-red-600" />
-                        </div>
+                    <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-destructive/10">
+                        <AlertCircle className="h-6 w-6 text-destructive" />
                     </div>
                     <div className="flex-1">
-                        <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                        <h3 className="mb-2 text-lg font-semibold text-foreground">
                             Sesión Expirada
                         </h3>
-                        <p className="text-sm text-gray-600 mb-4">
+                        <p className="mb-4 text-sm text-muted-foreground">
                             El tiempo de inactividad ha sido superado. Por favor, inicie sesión nuevamente.
                         </p>
-                        <button
-                            onClick={onClose}
-                            className="w-full bg-[#B71C1C] hover:bg-[#8B0000] text-white font-semibold py-2.5 px-4 rounded-lg transition-colors"
-                        >
+                        <Button onClick={onClose} className="w-full">
                             Ir al Login
-                        </button>
+                        </Button>
                     </div>
                 </div>
             </motion.div>

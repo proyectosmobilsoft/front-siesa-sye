@@ -1,4 +1,4 @@
-import axios, { AxiosError, AxiosRequestConfig, InternalAxiosRequestConfig } from 'axios'
+import axios, { AxiosError, InternalAxiosRequestConfig } from 'axios'
 import { API_CONFIG } from '@/config/api'
 
 /**

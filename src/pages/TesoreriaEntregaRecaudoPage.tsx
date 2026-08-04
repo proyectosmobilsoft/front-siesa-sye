@@ -16,6 +16,9 @@ import {
     ShieldCheck,
     TriangleAlert,
     Users,
+    Search,
+    Download,
+    Wallet,
 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -24,8 +27,9 @@ import { Modal } from '@/components/ui/modal'
 import { useEntregasPorEstado } from '@/hooks/useConductorEfectivo'
 import { conductorEfectivoApi } from '@/api/conductorEfectivo'
 import { reciboCajaApi } from '@/api/reciboCaja'
-import { MovimientoEfectivo } from '@/api/types'
+import { MovimientoEfectivo, ReciboCajaUsuario } from '@/api/types'
 import { formatters } from '@/utils/formatters'
+import { estadoRCBadge, estadoRCLabel } from '@/utils/badges'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { cn } from '@/lib/utils'
 
@@ -97,10 +101,13 @@ const ConciliarConductorModal = ({
                         {conductor.diferencia === 0 ? 'Diferencias por resolver' : esFaltante ? 'Faltante por resolver' : 'Sobrante por resolver'}
                     </p>
                     <p className={cn('mt-1 text-3xl font-extrabold tabular-nums', esFaltante ? 'text-red-600' : 'text-blue-600')}>
-                        {formatters.currency(conductor.montoPendiente)}
+                        {formatters.currency(conductor.diferencia !== 0 ? Math.abs(conductor.diferencia) : conductor.montoPendiente)}
                     </p>
                     <p className="mt-2 text-xs text-muted-foreground">
-                        Corresponde a {conductor.movimientosConDiferencia} entrega{conductor.movimientosConDiferencia !== 1 ? 's' : ''} con diferencia.
+                        Corresponde a {conductor.movimientosConDiferencia} entrega{conductor.movimientosConDiferencia !== 1 ? 's' : ''} con diferencia
+                        {conductor.diferencia !== 0 && conductor.montoPendiente !== Math.abs(conductor.diferencia)
+                            ? ` (neto; monto bruto ${formatters.currency(conductor.montoPendiente)})`
+                            : '.'}
                     </p>
                 </div>
 
@@ -116,8 +123,8 @@ const ConciliarConductorModal = ({
                 )}
 
                 <div className="flex justify-end gap-2 pt-1">
-                    <Button variant="outline" className="rounded-full" onClick={onClose} disabled={loading}>Cancelar</Button>
-                    <Button className="gap-2 rounded-full" onClick={() => onConciliar(conductor)} disabled={loading}>
+                    <Button variant="outline" onClick={onClose} disabled={loading}>Cancelar</Button>
+                    <Button className="gap-2" onClick={() => onConciliar(conductor)} disabled={loading}>
                         {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <ShieldCheck className="h-4 w-4" />}
                         Confirmar conciliación
                     </Button>
@@ -231,6 +238,17 @@ const TableroConciliacion = ({ movimientos, onResuelto }: { movimientos: Movimie
                                                         <div>
                                                             <p className="font-semibold">{conductor.conductorNombre}</p>
                                                             <p className="text-[11px] text-muted-foreground">{conductor.entregas.length} entregas revisadas</p>
+                                                            {(() => {
+                                                                const ultimaResuelta = conductor.entregas
+                                                                    .filter((mov) => mov.diferencia_resuelta && mov.fecha_resolucion)
+                                                                    .sort((a, b) => (b.fecha_resolucion ?? '').localeCompare(a.fecha_resolucion ?? ''))[0]
+                                                                if (!ultimaResuelta) return null
+                                                                return (
+                                                                    <p className="text-[10px] text-muted-foreground">
+                                                                        Última conciliación: {ultimaResuelta.usuario_resuelve_nombre ?? '—'} · {formatters.dateTime(ultimaResuelta.fecha_resolucion!)}
+                                                                    </p>
+                                                                )
+                                                            })()}
                                                         </div>
                                                     </div>
                                                 </td>
@@ -263,7 +281,7 @@ const TableroConciliacion = ({ movimientos, onResuelto }: { movimientos: Movimie
                                                         variant={alDia ? 'ghost' : 'default'}
                                                         size="sm"
                                                         disabled={alDia}
-                                                        className="gap-1.5 rounded-full text-xs"
+                                                        className="gap-1.5 text-xs"
                                                         onClick={() => setSeleccionado(conductor)}
                                                     >
                                                         {alDia ? <CheckCircle2 className="h-3.5 w-3.5" /> : <Scale className="h-3.5 w-3.5" />}
@@ -375,8 +393,8 @@ const ValidarEntregaModal = ({ entrega, onClose, onConfirmado }: ValidarEntregaM
                 )}
 
                 <div className="flex justify-end gap-2 pt-2">
-                    <Button variant="outline" className="rounded-full" onClick={onClose} disabled={loading}>Cancelar</Button>
-                    <Button onClick={handleConfirmar} disabled={loading} className="gap-2 rounded-full">
+                    <Button variant="outline" onClick={onClose} disabled={loading}>Cancelar</Button>
+                    <Button onClick={handleConfirmar} disabled={loading} className="gap-2">
                         {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
                         Confirmar recepción
                     </Button>
@@ -521,7 +539,7 @@ const ConductorGrupoRow = ({ grupo, idx, onValidar, onVerRC, etiqueta }: { grupo
                     <Button
                         variant="outline"
                         size="sm"
-                        className="h-7 gap-1.5 rounded-full text-xs"
+                        className="h-7 gap-1.5 text-xs"
                         onClick={(e) => { e.stopPropagation(); onVerRC(grupo) }}
                     >
                         <Receipt className="h-3 w-3" /> Ver recibos
@@ -537,33 +555,48 @@ const ConductorGrupoRow = ({ grupo, idx, onValidar, onVerRC, etiqueta }: { grupo
 
 // ─── Modal: recibos de caja del conductor ────────────────────────────────────
 
-const estadoRCBadge = (estado: number) => estado === 3
-    ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
-    : estado === 2
-        ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
-        : 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400'
+const exportarRecibosCSV = (recibos: ReciboCajaUsuario[], conductorNombre: string) => {
+    const encabezados = ['Fecha', 'Numero', 'Tercero', 'Efectivo', 'Transferencia', 'Total', 'Estado']
+    const filas = recibos.map((r) => [
+        r.Fecha?.slice(0, 10) ?? '',
+        r.Numero,
+        r.Tercero_Nombre || r.Id_tercero,
+        r.efectivo ?? 0,
+        r.consignacion ?? 0,
+        (r.efectivo ?? 0) + (r.consignacion ?? 0),
+        estadoRCLabel(r.Estado),
+    ])
+    const csv = [encabezados, ...filas].map((fila) => fila.join(';')).join('\n')
+    const blob = new Blob([`\uFEFF${csv}`], { type: 'text/csv;charset=utf-8;' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `recibos-${conductorNombre.replace(/\s+/g, '_').toLowerCase()}.csv`
+    a.click()
+    URL.revokeObjectURL(url)
+}
 
-const estadoRCLabel = (estado: number) => estado === 3 ? 'Aprobado' : estado === 2 ? 'Anulado' : 'En proceso'
-
-const RecibosConductorModal = ({ grupo, onClose }: { grupo: GrupoConductor | null; onClose: () => void }) => {
+const RecibosConductorModal = ({ grupo, onClose, rango }: { grupo: GrupoConductor | null; onClose: () => void; rango: { fechaInicial?: string; fechaFinal?: string } | undefined }) => {
     const siesaNombre = grupo?.conductorSiesaNombre
-    const hoy = new Date().toISOString().slice(0, 10)
+    const fechaInicial = rango?.fechaInicial
+    const fechaFinal = rango?.fechaFinal ?? rango?.fechaInicial
     const { data, isLoading, error } = useQuery({
-        queryKey: ['recibo-caja', 'por-usuario', siesaNombre, hoy],
-        queryFn: () => reciboCajaApi.getPorUsuario(siesaNombre as string, { fechaInicial: hoy, fechaFinal: hoy, tipo: 'RC' }),
+        queryKey: ['recibo-caja', 'por-usuario', siesaNombre, fechaInicial, fechaFinal],
+        queryFn: () => reciboCajaApi.getPorUsuario(siesaNombre as string, { fechaInicial, fechaFinal, tipo: 'RC' }),
         enabled: !!siesaNombre,
     })
 
     if (!grupo) return null
 
-    // Solo lo que realmente respalda la entrega de hoy: RC de hoy, no anulados.
+    // Solo lo que realmente respalda la entrega del periodo: RC del rango, no anulados.
     const recibos = (data ?? []).filter((r) => r.Estado !== 2)
     const totalEfectivo = recibos.reduce((sum, r) => sum + (r.efectivo ?? 0), 0)
     const totalConsignacion = recibos.reduce((sum, r) => sum + (r.consignacion ?? 0), 0)
     const totalGeneral = totalEfectivo + totalConsignacion
+    const etiquetaPeriodo = fechaInicial === fechaFinal ? `del ${fechaInicial}` : `${fechaInicial} — ${fechaFinal}`
 
     return (
-        <Modal isOpen onClose={onClose} title={`Recibos de caja de hoy — ${grupo.conductorNombre}`} className="max-w-5xl">
+        <Modal isOpen onClose={onClose} title={`Recibos de caja ${etiquetaPeriodo} — ${grupo.conductorNombre}`} className="max-w-5xl">
             {!siesaNombre ? (
                 <p className="rounded-lg border border-yellow-300 bg-yellow-50 p-3 text-sm font-semibold text-yellow-700 dark:border-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-400">
                     Este conductor no tiene usuario SIESA vinculado (siesa_nombre), no se puede consultar sus recibos.
@@ -576,10 +609,20 @@ const RecibosConductorModal = ({ grupo, onClose }: { grupo: GrupoConductor | nul
                 <p className="text-sm font-semibold text-red-600 dark:text-red-400">Error al cargar los recibos.</p>
             ) : recibos.length === 0 ? (
                 <p className="py-10 text-center text-xs font-bold uppercase tracking-widest text-muted-foreground">
-                    Este conductor no tiene recibos de caja hoy
+                    Este conductor no tiene recibos de caja en el periodo
                 </p>
             ) : (
                 <div className="space-y-3">
+                    <div className="flex justify-end">
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            className="gap-1.5 text-xs"
+                            onClick={() => exportarRecibosCSV(recibos, grupo.conductorNombre)}
+                        >
+                            <Download className="h-3.5 w-3.5" /> Exportar CSV
+                        </Button>
+                    </div>
                     <div className="grid gap-3 sm:grid-cols-3">
                         <div className="flex items-center gap-3 rounded-xl border border-border bg-muted/30 px-4 py-3">
                             <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-emerald-500/10">
@@ -685,15 +728,21 @@ interface EntregasPanelProps {
 }
 
 const EntregasPanel = ({ esPendiente, data, isLoading, error, onValidar, onVerRC }: EntregasPanelProps) => {
+    const [busqueda, setBusqueda] = useState('')
     const grupos = useMemo(() => agruparPorConductor(data ?? []), [data])
     const total = useMemo(() => grupos.reduce((sum, g) => sum + g.total, 0), [grupos])
+    const gruposFiltrados = useMemo(() => {
+        const q = busqueda.trim().toLowerCase()
+        if (!q) return grupos
+        return grupos.filter((g) => g.conductorNombre.toLowerCase().includes(q))
+    }, [grupos, busqueda])
 
     return (
         <div className="flex min-w-0 flex-1 flex-col gap-4">
             <Card className={cn('overflow-hidden border-l-4', esPendiente ? 'border-l-amber-500' : 'border-l-emerald-500')}>
                 <CardHeader className="flex flex-row items-center justify-between gap-3 pb-2">
                     <div className="flex items-center gap-3">
-                        <div className={cn('flex h-9 w-9 items-center justify-center rounded-full', esPendiente ? 'bg-amber-500/10' : 'bg-emerald-500/10')}>
+                        <div className={cn('flex h-10 w-10 items-center justify-center rounded-xl', esPendiente ? 'bg-amber-500/10' : 'bg-emerald-500/10')}>
                             {esPendiente ? <Hourglass className="h-4 w-4 text-amber-600" /> : <CheckCircle2 className="h-4 w-4 text-emerald-600" />}
                         </div>
                         <CardTitle className="text-sm font-bold">
@@ -705,9 +754,21 @@ const EntregasPanel = ({ esPendiente, data, isLoading, error, onValidar, onVerRC
                     </span>
                 </CardHeader>
                 <CardContent>
-                    <p className="text-2xl font-bold tabular-nums text-foreground">{formatters.currency(total)}</p>
+                    <p className={cn('text-2xl font-extrabold tabular-nums', esPendiente ? 'text-amber-600' : 'text-emerald-600')}>{formatters.currency(total)}</p>
                 </CardContent>
             </Card>
+
+            {grupos.length > 0 && (
+                <div className="relative">
+                    <Search className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+                    <Input
+                        value={busqueda}
+                        onChange={(e) => setBusqueda(e.target.value)}
+                        placeholder="Buscar conductor..."
+                        className="h-8 pl-8 text-xs"
+                    />
+                </div>
+            )}
 
             <Card className="flex-1 overflow-hidden">
                 <CardContent className="p-0">
@@ -738,6 +799,15 @@ const EntregasPanel = ({ esPendiente, data, isLoading, error, onValidar, onVerRC
                                 {esPendiente ? 'No hay entregas pendientes' : 'No hay entregas validadas'}
                             </p>
                         </div>
+                    ) : gruposFiltrados.length === 0 ? (
+                        <div className="flex flex-col items-center gap-3 py-16">
+                            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-muted">
+                                <Search className="h-5 w-5 text-muted-foreground" />
+                            </div>
+                            <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
+                                Sin coincidencias para "{busqueda}"
+                            </p>
+                        </div>
                     ) : (
                         <table className="w-full text-sm">
                             <thead>
@@ -748,7 +818,7 @@ const EntregasPanel = ({ esPendiente, data, isLoading, error, onValidar, onVerRC
                                 </tr>
                             </thead>
                             <tbody>
-                                {grupos.map((grupo, idx) => (
+                                {gruposFiltrados.map((grupo, idx) => (
                                     <ConductorGrupoRow
                                         key={grupo.conductorId}
                                         grupo={grupo}
@@ -763,6 +833,55 @@ const EntregasPanel = ({ esPendiente, data, isLoading, error, onValidar, onVerRC
                     )}
                 </CardContent>
             </Card>
+        </div>
+    )
+}
+
+// ─── Resumen KPI del periodo ─────────────────────────────────────────────────
+
+const ResumenPeriodo = ({ pendientes, confirmadas }: { pendientes: MovimientoEfectivo[] | undefined; confirmadas: MovimientoEfectivo[] | undefined }) => {
+    const totalPendiente = useMemo(() => (pendientes ?? []).reduce((sum, m) => sum + m.valor, 0), [pendientes])
+    const totalConfirmado = useMemo(() => (confirmadas ?? []).reduce((sum, m) => sum + m.valor, 0), [confirmadas])
+    const totalGeneral = totalPendiente + totalConfirmado
+    // "Conciliado" = confirmado sin diferencia abierta (resuelta o nunca la tuvo).
+    // No es lo mismo que "confirmado": una entrega puede estar validada y aun así
+    // tener una diferencia pendiente de resolver (ver TableroConciliacion).
+    const montoConciliado = useMemo(
+        () => (confirmadas ?? []).reduce(
+            (sum, m) => sum + (m.diferencia_resuelta || (m.diferencia ?? 0) === 0 ? m.valor : 0),
+            0
+        ),
+        [confirmadas]
+    )
+    const pctConciliado = totalConfirmado > 0 ? Math.round((montoConciliado / totalConfirmado) * 100) : 0
+    const conductoresActivos = useMemo(() => {
+        const ids = new Set<number>()
+        for (const m of [...(pendientes ?? []), ...(confirmadas ?? [])]) ids.add(m.conductor_id)
+        return ids.size
+    }, [pendientes, confirmadas])
+
+    const items = [
+        { label: 'Total del periodo', value: formatters.currency(totalGeneral), icon: Wallet, tono: 'text-primary bg-primary/10', borde: 'border-l-primary' },
+        { label: 'Pendiente por validar', value: formatters.currency(totalPendiente), icon: Hourglass, tono: 'text-amber-600 bg-amber-500/10', borde: 'border-l-amber-500' },
+        { label: '% conciliado', value: `${pctConciliado}%`, icon: ShieldCheck, tono: 'text-emerald-600 bg-emerald-500/10', borde: 'border-l-emerald-500' },
+        { label: 'Conductores activos', value: String(conductoresActivos), icon: Users, tono: 'text-blue-600 bg-blue-500/10', borde: 'border-l-blue-500' },
+    ]
+
+    return (
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+            {items.map(({ label, value, icon: Icon, tono, borde }) => (
+                <Card key={label} className={cn('overflow-hidden border-l-4 transition-shadow hover:shadow-md', borde)}>
+                    <CardContent className="flex items-center gap-3 p-4">
+                        <div className={cn('flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-xl', tono)}>
+                            <Icon className="h-5 w-5" />
+                        </div>
+                        <div className="min-w-0">
+                            <p className="truncate text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">{label}</p>
+                            <p className="truncate text-xl font-extrabold tabular-nums text-foreground">{value}</p>
+                        </div>
+                    </CardContent>
+                </Card>
+            ))}
         </div>
     )
 }
@@ -797,55 +916,50 @@ export const TesoreriaEntregaRecaudoPage = () => {
 
     return (
         <div className="mx-auto max-w-7xl space-y-5 p-4 sm:p-6">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-                <div className="flex items-center gap-3">
-                    <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br from-primary to-primary/70 shadow-sm">
-                        <Landmark className="h-5 w-5 text-primary-foreground" />
+            <ResumenPeriodo pendientes={pendientesQuery.data} confirmadas={confirmadasQuery.data} />
+
+            <div className="flex flex-wrap items-center gap-x-5 gap-y-3 rounded-xl border border-border bg-muted/30 px-4 py-3">
+                <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
+                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10">
+                        <CalendarRange className="h-4 w-4 text-primary" />
                     </div>
-                    <div>
-                        <h1 className="text-xl font-bold tracking-tight">Entrega de Recaudo</h1>
-                        <p className="text-sm text-muted-foreground">Valida el efectivo entregado físicamente por los conductores</p>
-                    </div>
+                    Periodo
                 </div>
-                <Button variant="outline" size="sm" className="gap-2 rounded-full" onClick={refrescarTodo} disabled={refrescando}>
+                <div className="flex flex-wrap items-center gap-3">
+                    <label className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
+                        Desde
+                        <Input
+                            type="date"
+                            value={fechaDesde}
+                            onChange={(e) => setFechaDesde(e.target.value)}
+                            className="h-8 w-auto text-xs"
+                        />
+                    </label>
+                    <label className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
+                        Hasta
+                        <Input
+                            type="date"
+                            value={fechaHasta}
+                            onChange={(e) => setFechaHasta(e.target.value)}
+                            min={fechaDesde}
+                            className="h-8 w-auto text-xs"
+                            placeholder="Hoy"
+                        />
+                    </label>
+                    {filtroActivo && (
+                        <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-8 gap-1.5 text-xs text-muted-foreground"
+                            onClick={() => { setFechaDesde(hoyISO()); setFechaHasta('') }}
+                        >
+                            <RefreshCw className="h-3 w-3" /> Volver a hoy
+                        </Button>
+                    )}
+                </div>
+                <Button variant="outline" size="sm" className="ml-auto h-8 gap-2 text-xs" onClick={refrescarTodo} disabled={refrescando}>
                     <RefreshCw className={cn('h-3.5 w-3.5', refrescando && 'animate-spin')} /> Actualizar
                 </Button>
-            </div>
-
-            <div className="flex flex-wrap items-center gap-3 rounded-xl border border-border bg-muted/30 px-4 py-3">
-                <div className="flex items-center gap-2 text-sm font-semibold text-muted-foreground">
-                    <CalendarRange className="h-4 w-4" /> Rango de fechas
-                </div>
-                <label className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
-                    Desde
-                    <Input
-                        type="date"
-                        value={fechaDesde}
-                        onChange={(e) => setFechaDesde(e.target.value)}
-                        className="h-8 w-auto text-xs"
-                    />
-                </label>
-                <label className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
-                    Hasta
-                    <Input
-                        type="date"
-                        value={fechaHasta}
-                        onChange={(e) => setFechaHasta(e.target.value)}
-                        min={fechaDesde}
-                        className="h-8 w-auto text-xs"
-                        placeholder="Hoy"
-                    />
-                </label>
-                {filtroActivo && (
-                    <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-8 text-xs text-muted-foreground"
-                        onClick={() => { setFechaDesde(hoyISO()); setFechaHasta('') }}
-                    >
-                        Volver a hoy
-                    </Button>
-                )}
             </div>
 
             <div className="grid items-start gap-5 lg:grid-cols-2">
@@ -872,7 +986,7 @@ export const TesoreriaEntregaRecaudoPage = () => {
             />
 
             <ValidarEntregaModal entrega={movValidando} onClose={() => setMovValidando(null)} onConfirmado={handleConfirmado} />
-            <RecibosConductorModal grupo={grupoViendoRC} onClose={() => setGrupoViendoRC(null)} />
+            <RecibosConductorModal grupo={grupoViendoRC} onClose={() => setGrupoViendoRC(null)} rango={rango} />
         </div>
     )
 }

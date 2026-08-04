@@ -1,29 +1,34 @@
+import { useMemo, useState } from 'react'
 import { motion } from 'framer-motion'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { ErrorState } from '@/components/ui/error-state'
 import { Skeleton } from '@/lib/skeleton'
 import { ErrorBoundary } from '@/components/ui/error-boundary'
+import { Modal } from '@/components/ui/modal'
 import { useSalesSummary } from '@/hooks/useReports'
 import { ResponsiveBar } from '@nivo/bar'
 import { ResponsivePie } from '@nivo/pie'
 import { ResponsiveLine } from '@nivo/line'
 import { ResponsiveScatterPlot } from '@nivo/scatterplot'
-import { SalesSummary } from '@/api/types'
 import { formatters } from '@/utils/formatters'
 import { CountUp } from '@/components/ui/count-up'
 import { DataTable } from '@/components/dashboard/DataTable'
-import { 
-    DollarSign, 
-    Package, 
-    FileText, 
-    Trophy, 
+import {
+    DollarSign,
+    Package,
+    FileText,
+    Trophy,
     TrendingUp,
-    Users,
     BarChart3,
     PieChart,
     Layers,
     LineChart,
-    Activity
+    Activity,
+    ChevronRight,
+    ArrowRight
 } from 'lucide-react'
+
+type ChartKey = 'vendor-bar' | 'vendor-pie' | 'stacked-units' | 'hour-evolution' | 'scatter'
 
 // Colores Tailwind para las gráficas
 const colors = {
@@ -40,18 +45,7 @@ const colors = {
 const colorPalette = [colors.indigo, colors.emerald, colors.rose, colors.amber, colors.violet, colors.cyan, colors.orange, colors.pink]
 
 export const SalesSummaryPage = () => {
-    const { data: sales, isLoading, error } = useSalesSummary()
-
-    // Función helper para obtener hora de la fecha
-    const getHour = (dateString: string): string => {
-        if (!dateString) return ''
-        try {
-            const date = new Date(dateString)
-            return `${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}`
-        } catch {
-            return ''
-        }
-    }
+    const { data: sales, isLoading, error, refetch } = useSalesSummary()
 
     // Función helper para obtener solo la hora (HH:00)
     const getHourOnly = (dateString: string): string => {
@@ -65,141 +59,197 @@ export const SalesSummaryPage = () => {
     }
 
     // 1. Gráfico de barras comparativo: Vendedor vs Valor total vendido
-    const salesByVendorData = sales && Array.isArray(sales)
-        ? Object.entries(
-            sales.reduce((acc, sale) => {
-                const vendor = sale['Vendedor'] || 'Sin Vendedor'
-                const value = sale['Vlr. Neto documento'] || 0
-                acc[vendor] = (acc[vendor] || 0) + value
-                return acc
-            }, {} as Record<string, number>)
-        )
-            .map(([vendor, total], index) => ({
-                vendedor: vendor.length > 25 ? vendor.substring(0, 25) + '...' : vendor,
-                ventas: total,
-                color: colorPalette[index % colorPalette.length]
-            }))
-            .sort((a, b) => b.ventas - a.ventas)
-        : []
+    const salesByVendorData = useMemo(() => (
+        sales && Array.isArray(sales)
+            ? Object.entries(
+                sales.reduce((acc, sale) => {
+                    const vendor = sale['Vendedor'] || 'Sin Vendedor'
+                    const value = sale['Vlr. Neto documento'] || 0
+                    acc[vendor] = (acc[vendor] || 0) + value
+                    return acc
+                }, {} as Record<string, number>)
+            )
+                .map(([vendor, total], index) => ({
+                    vendedor: vendor.length > 25 ? vendor.substring(0, 25) + '...' : vendor,
+                    vendedorFull: vendor,
+                    ventas: total,
+                    color: colorPalette[index % colorPalette.length]
+                }))
+                .sort((a, b) => b.ventas - a.ventas)
+            : []
+    ), [sales])
 
     // 2. Gráfico de pastel/donut: Distribución del total de ventas por vendedor
-    const pieData = salesByVendorData.map((item, index) => ({
-        id: item.vendedor,
-        label: item.vendedor,
-        value: item.ventas,
-        color: item.color
-    }))
+    const pieData = useMemo(() => (
+        salesByVendorData.map((item) => ({
+            id: item.vendedor,
+            label: item.vendedor,
+            value: item.ventas,
+            color: item.color
+        }))
+    ), [salesByVendorData])
 
-    const totalSales = pieData.reduce((acc, item) => acc + item.value, 0)
+    const totalSales = useMemo(() => (
+        pieData.reduce((acc, item) => acc + item.value, 0)
+    ), [pieData])
 
     // 3. Gráfico de columnas apiladas: Vendedor vs Unidades agrupadas por tipo de documento
-    const stackedBarData = sales && Array.isArray(sales)
-        ? (() => {
-            const vendors = Array.from(new Set(sales.map(s => s['Vendedor']).filter(Boolean)))
-                .slice(0, 8) // Top 8 vendedores
-            const docTypes = Array.from(new Set(sales.map(s => s['Desc. grupo clase docto.']).filter(Boolean)))
-            
-            return vendors.map(vendor => {
-                const vendorSales = sales.filter(s => s['Vendedor'] === vendor)
-                const result: Record<string, number | string> = {
-                    vendedor: vendor.length > 20 ? vendor.substring(0, 20) + '...' : vendor
-                }
-                
-                docTypes.forEach(type => {
-                    const typeSales = vendorSales.filter(s => s['Desc. grupo clase docto.'] === type)
-                    result[type] = typeSales.reduce((acc, s) => acc + (s['Numero de unidades docto'] || 0), 0)
+    // Nota: los "top" vendedores se toman por valor total vendido (salesByVendorData ya
+    // viene ordenado desc), no por orden de aparición en el array de ventas.
+    const stackedBarData = useMemo(() => (
+        sales && Array.isArray(sales)
+            ? (() => {
+                const vendors = salesByVendorData
+                    .slice(0, 8) // Top 8 vendedores por valor vendido
+                    .map(v => v.vendedorFull)
+                const docTypes = Array.from(new Set(sales.map(s => s['Desc. grupo clase docto.']).filter(Boolean)))
+
+                return vendors.map(vendor => {
+                    const vendorSales = sales.filter(s => s['Vendedor'] === vendor)
+                    const result: Record<string, number | string> = {
+                        vendedor: vendor.length > 20 ? vendor.substring(0, 20) + '...' : vendor
+                    }
+
+                    docTypes.forEach(type => {
+                        const typeSales = vendorSales.filter(s => s['Desc. grupo clase docto.'] === type)
+                        result[type] = typeSales.reduce((acc, s) => acc + (s['Numero de unidades docto'] || 0), 0)
+                    })
+
+                    return result
                 })
+            })()
+            : []
+    ), [sales, salesByVendorData])
 
-                return result
-            })
-        })()
-        : []
-
-    const docTypesKeys = sales && Array.isArray(sales)
-        ? Array.from(new Set(sales.map(s => s['Desc. grupo clase docto.']).filter(Boolean)))
-        : []
+    const docTypesKeys = useMemo(() => (
+        sales && Array.isArray(sales)
+            ? Array.from(new Set(sales.map(s => s['Desc. grupo clase docto.']).filter(Boolean)))
+            : []
+    ), [sales])
 
     // 4. Gráfico de líneas/área: Evolución del valor neto por hora
-    const evolutionByHourData = sales && Array.isArray(sales)
-        ? (() => {
-            const hourSales: Record<string, number> = {}
-            
-            sales.forEach((sale) => {
-                const hour = getHourOnly(sale['Fecha documento'])
-                if (hour) {
-                    hourSales[hour] = (hourSales[hour] || 0) + (sale['Vlr. Neto documento'] || 0)
-                }
-            })
+    const evolutionByHourData = useMemo(() => (
+        sales && Array.isArray(sales)
+            ? (() => {
+                const hourSales: Record<string, number> = {}
 
-            const sortedHours = Object.keys(hourSales).sort()
+                sales.forEach((sale) => {
+                    const hour = getHourOnly(sale['Fecha documento'])
+                    if (hour) {
+                        hourSales[hour] = (hourSales[hour] || 0) + (sale['Vlr. Neto documento'] || 0)
+                    }
+                })
 
-            return [{
-                id: 'Ventas por Hora',
-                data: sortedHours.map(hour => ({
-                    x: hour,
-                    y: hourSales[hour]
-                }))
-            }]
-        })()
-        : []
+                const sortedHours = Object.keys(hourSales).sort()
+
+                return [{
+                    id: 'Ventas por Hora',
+                    data: sortedHours.map(hour => ({
+                        x: hour,
+                        y: hourSales[hour]
+                    }))
+                }]
+            })()
+            : []
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    ), [sales])
 
     // 5. Gráfico de dispersión: Relación entre unidades y valor neto, coloreado por vendedor
-    const scatterData = sales && Array.isArray(sales)
-        ? (() => {
-            const vendors = Array.from(new Set(sales.map(s => s['Vendedor']).filter(Boolean)))
-                .slice(0, 5) // Top 5 vendedores para mejor visualización
-            
-            return vendors.map((vendor, index) => ({
-                id: vendor,
-                data: sales
-                    .filter(s => s['Vendedor'] === vendor)
-                    .map(sale => ({
-                        x: sale['Numero de unidades docto'] || 0,
-                        y: sale['Vlr. Neto documento'] || 0,
-                        product: sale['Item resumen'] || 'Sin Producto'
-                    }))
-                    .filter(point => point.x > 0 && point.y > 0),
-                color: colorPalette[index % colorPalette.length]
-            }))
-        })()
-        : []
+    const scatterData = useMemo(() => (
+        sales && Array.isArray(sales)
+            ? (() => {
+                // Top 5 vendedores por valor vendido (no por orden de aparición en los datos)
+                const vendors = salesByVendorData.slice(0, 5).map(v => v.vendedorFull)
+
+                return vendors.map((vendor, index) => ({
+                    id: vendor,
+                    data: sales
+                        .filter(s => s['Vendedor'] === vendor)
+                        .map(sale => ({
+                            x: sale['Numero de unidades docto'] || 0,
+                            y: sale['Vlr. Neto documento'] || 0,
+                            product: sale['Item resumen'] || 'Sin Producto'
+                        }))
+                        .filter(point => point.x > 0 && point.y > 0),
+                    color: colorPalette[index % colorPalette.length]
+                }))
+            })()
+            : []
+    ), [sales, salesByVendorData])
 
     // Calcular estadísticas para las cards
-    const totalSalesAmount = sales && Array.isArray(sales)
-        ? sales.reduce((acc, sale) => acc + (sale['Vlr. Neto documento'] || 0), 0)
-        : 0
-    
-    const totalUnitsSold = sales && Array.isArray(sales)
-        ? sales.reduce((acc, sale) => acc + (sale['Numero de unidades docto'] || 0), 0)
-        : 0
-    
-    const uniqueDocuments = sales && Array.isArray(sales)
-        ? new Set(sales.map(s => s['Guid documento'])).size
-        : 0
-    
+    const totalSalesAmount = useMemo(() => (
+        sales && Array.isArray(sales)
+            ? sales.reduce((acc, sale) => acc + (sale['Vlr. Neto documento'] || 0), 0)
+            : 0
+    ), [sales])
+
+    const totalUnitsSold = useMemo(() => (
+        sales && Array.isArray(sales)
+            ? sales.reduce((acc, sale) => acc + (sale['Numero de unidades docto'] || 0), 0)
+            : 0
+    ), [sales])
+
+    const uniqueDocuments = useMemo(() => (
+        sales && Array.isArray(sales)
+            ? new Set(sales.map(s => s['Guid documento'])).size
+            : 0
+    ), [sales])
+
     const topVendor = salesByVendorData.length > 0 ? salesByVendorData[0] : null
-    
-    const topProduct = sales && Array.isArray(sales)
-        ? Object.entries(
-            sales.reduce((acc, sale) => {
-                const product = sale['Item resumen'] || 'Sin Producto'
-                const units = sale['Numero de unidades docto'] || 0
-                acc[product] = (acc[product] || 0) + units
-                return acc
-            }, {} as Record<string, number>)
-        )
-            .sort((a, b) => b[1] - a[1])[0]
-        : null
+
+    const topProduct = useMemo(() => (
+        sales && Array.isArray(sales)
+            ? Object.entries(
+                sales.reduce((acc, sale) => {
+                    const product = sale['Item resumen'] || 'Sin Producto'
+                    const units = sale['Numero de unidades docto'] || 0
+                    acc[product] = (acc[product] || 0) + units
+                    return acc
+                }, {} as Record<string, number>)
+            )
+                .sort((a, b) => b[1] - a[1])[0]
+            : null
+    ), [sales])
+
+    // Datos clave para las cards resumen (usadas en el grid clicable)
+    const topDocType = useMemo(() => (
+        sales && Array.isArray(sales)
+            ? Object.entries(
+                sales.reduce((acc, sale) => {
+                    const type = sale['Desc. grupo clase docto.'] || 'Sin Tipo'
+                    const units = sale['Numero de unidades docto'] || 0
+                    acc[type] = (acc[type] || 0) + units
+                    return acc
+                }, {} as Record<string, number>)
+            ).sort((a, b) => b[1] - a[1])[0]
+            : null
+    ), [sales])
+
+    const peakHour = useMemo(() => (
+        evolutionByHourData[0]?.data.length
+            ? evolutionByHourData[0].data.reduce((max, point) =>
+                (point.y as number) > (max.y as number) ? point : max
+            )
+            : null
+    ), [evolutionByHourData])
+
+    const topVendorAvgTicket = useMemo(() => (
+        scatterData.length > 0
+            ? (() => {
+                const first = scatterData[0]
+                const units = first.data.reduce((sum, d) => sum + d.x, 0)
+                const total = first.data.reduce((sum, d) => sum + d.y, 0)
+                return units > 0 ? total / units : 0
+            })()
+            : 0
+    ), [scatterData])
+
+    const [openChart, setOpenChart] = useState<ChartKey | null>(null)
 
     if (isLoading) {
         return (
             <div className="flex-1 space-y-6 p-6">
-                <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.5 }}
-                >
-                </motion.div>
                 <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-5">
                     {[1, 2, 3, 4, 5].map((i) => (
                         <Card key={i}>
@@ -231,23 +281,11 @@ export const SalesSummaryPage = () => {
     if (error) {
         return (
             <div className="flex-1 space-y-6 p-6">
-                <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.5 }}
-                >
-                </motion.div>
-                <Card className="border-red-200 bg-red-50 dark:bg-red-950/20 dark:border-red-800">
-                    <CardHeader>
-                        <CardTitle className="text-red-800 dark:text-red-400">Error al cargar resumen de ventas</CardTitle>
-                    </CardHeader>
-                    <CardContent className="flex items-center justify-center h-64">
-                        <div className="text-center text-red-600 dark:text-red-400">
-                            <p className="text-lg font-medium">No se pudieron obtener los datos</p>
-                            <p className="text-sm mt-2">Error: {error.message}</p>
-                        </div>
-                    </CardContent>
-                </Card>
+                <ErrorState
+                    title="Error al cargar resumen de ventas"
+                    message={`No se pudieron obtener los datos. Error: ${error.message}`}
+                    onRetry={() => refetch()}
+                />
             </div>
         )
     }
@@ -255,14 +293,6 @@ export const SalesSummaryPage = () => {
     return (
         <ErrorBoundary>
             <div className="flex-1 space-y-6 p-6">
-                {/* Header */}
-                <motion.div
-                    initial={{ opacity: 0, y: -20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.5 }}
-                >
-                </motion.div>
-
                 {/* Cards de Estadísticas */}
                 <motion.div
                     className="grid gap-4 md:grid-cols-2 lg:grid-cols-5"
@@ -276,15 +306,15 @@ export const SalesSummaryPage = () => {
                         animate={{ opacity: 1, scale: 1 }}
                         transition={{ duration: 0.5, delay: 0.2 }}
                     >
-                        <Card className="border-indigo-200 dark:border-indigo-800 bg-indigo-50/50 dark:bg-indigo-950/20 hover:shadow-lg transition-shadow">
+                        <Card className="hover:shadow-lg transition-shadow">
                             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                                <CardTitle className="text-sm font-medium text-indigo-700 dark:text-indigo-300">
+                                <CardTitle className="text-sm font-medium text-muted-foreground">
                                     Total Vendido
                                 </CardTitle>
-                                <DollarSign className="h-4 w-4 text-indigo-600 dark:text-indigo-400" />
+                                <DollarSign className="h-4 w-4 text-primary" />
                             </CardHeader>
                             <CardContent>
-                                <div className="text-2xl font-bold text-indigo-900 dark:text-indigo-100">
+                                <div className="text-2xl font-bold">
                                     <CountUp end={totalSalesAmount} />
                                 </div>
                                 <p className="text-xs text-muted-foreground mt-1">
@@ -300,15 +330,15 @@ export const SalesSummaryPage = () => {
                         animate={{ opacity: 1, scale: 1 }}
                         transition={{ duration: 0.5, delay: 0.3 }}
                     >
-                        <Card className="border-emerald-200 dark:border-emerald-800 bg-emerald-50/50 dark:bg-emerald-950/20 hover:shadow-lg transition-shadow">
+                        <Card className="hover:shadow-lg transition-shadow">
                             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                                <CardTitle className="text-sm font-medium text-emerald-700 dark:text-emerald-300">
+                                <CardTitle className="text-sm font-medium text-muted-foreground">
                                     Unidades Vendidas
                                 </CardTitle>
-                                <Package className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+                                <Package className="h-4 w-4 text-primary" />
                             </CardHeader>
                             <CardContent>
-                                <div className="text-2xl font-bold text-emerald-900 dark:text-emerald-100">
+                                <div className="text-2xl font-bold">
                                     <CountUp end={totalUnitsSold} />
                                 </div>
                                 <p className="text-xs text-muted-foreground mt-1">
@@ -324,15 +354,15 @@ export const SalesSummaryPage = () => {
                         animate={{ opacity: 1, scale: 1 }}
                         transition={{ duration: 0.5, delay: 0.4 }}
                     >
-                        <Card className="border-rose-200 dark:border-rose-800 bg-rose-50/50 dark:bg-rose-950/20 hover:shadow-lg transition-shadow">
+                        <Card className="hover:shadow-lg transition-shadow">
                             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                                <CardTitle className="text-sm font-medium text-rose-700 dark:text-rose-300">
+                                <CardTitle className="text-sm font-medium text-muted-foreground">
                                     Documentos Únicos
                                 </CardTitle>
-                                <FileText className="h-4 w-4 text-rose-600 dark:text-rose-400" />
+                                <FileText className="h-4 w-4 text-primary" />
                             </CardHeader>
                             <CardContent>
-                                <div className="text-2xl font-bold text-rose-900 dark:text-rose-100">
+                                <div className="text-2xl font-bold">
                                     <CountUp end={uniqueDocuments} />
                                 </div>
                                 <p className="text-xs text-muted-foreground mt-1">
@@ -348,15 +378,15 @@ export const SalesSummaryPage = () => {
                         animate={{ opacity: 1, scale: 1 }}
                         transition={{ duration: 0.5, delay: 0.5 }}
                     >
-                        <Card className="border-amber-200 dark:border-amber-800 bg-amber-50/50 dark:bg-amber-950/20 hover:shadow-lg transition-shadow">
+                        <Card className="hover:shadow-lg transition-shadow">
                             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                                <CardTitle className="text-sm font-medium text-amber-700 dark:text-amber-300">
+                                <CardTitle className="text-sm font-medium text-muted-foreground">
                                     Top Vendedor
                                 </CardTitle>
-                                <Trophy className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+                                <Trophy className="h-4 w-4 text-primary" />
                             </CardHeader>
                             <CardContent>
-                                <div className="text-sm font-bold text-amber-900 dark:text-amber-100 truncate">
+                                <div className="text-sm font-bold truncate">
                                     {topVendor ? topVendor.vendedor : 'N/A'}
                                 </div>
                                 <p className="text-xs text-muted-foreground mt-1">
@@ -372,15 +402,15 @@ export const SalesSummaryPage = () => {
                         animate={{ opacity: 1, scale: 1 }}
                         transition={{ duration: 0.5, delay: 0.6 }}
                     >
-                        <Card className="border-violet-200 dark:border-violet-800 bg-violet-50/50 dark:bg-violet-950/20 hover:shadow-lg transition-shadow">
+                        <Card className="hover:shadow-lg transition-shadow">
                             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                                <CardTitle className="text-sm font-medium text-violet-700 dark:text-violet-300">
+                                <CardTitle className="text-sm font-medium text-muted-foreground">
                                     Producto Top
                                 </CardTitle>
-                                <TrendingUp className="h-4 w-4 text-violet-600 dark:text-violet-400" />
+                                <TrendingUp className="h-4 w-4 text-primary" />
                             </CardHeader>
                             <CardContent>
-                                <div className="text-sm font-bold text-violet-900 dark:text-violet-100 truncate">
+                                <div className="text-sm font-bold truncate">
                                     {topProduct ? (topProduct[0].length > 20 ? topProduct[0].substring(0, 20) + '...' : topProduct[0]) : 'N/A'}
                                 </div>
                                 <p className="text-xs text-muted-foreground mt-1">
@@ -391,27 +421,256 @@ export const SalesSummaryPage = () => {
                     </motion.div>
                 </motion.div>
 
-                {/* Gráficos */}
+                {/* Cards resumen clicables: cada una abre el detalle completo del gráfico */}
                 <motion.div
-                    className="grid gap-6 grid-cols-1"
+                    className="grid gap-4 grid-cols-1 md:grid-cols-2"
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.5, delay: 0.3 }}
                 >
-                    {/* 1. Gráfico de barras comparativo */}
-                    <motion.div
-                        initial={{ opacity: 0, x: -20 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        transition={{ duration: 0.6, delay: 0.4 }}
+                    {/* 1. Ventas por Vendedor */}
+                    <button
+                        type="button"
+                        onClick={() => setOpenChart('vendor-bar')}
+                        className="text-left"
                     >
-                        <Card className="hover:shadow-lg transition-shadow rounded-xl border">
-                            <CardHeader>
-                                <CardTitle className="flex items-center gap-2">
-                                    <BarChart3 className="h-5 w-5 text-indigo-600" />
+                        <Card className="hover:shadow-lg transition-shadow cursor-pointer h-full">
+                            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                                <CardTitle className="flex items-center gap-2 text-base">
+                                    <BarChart3 className="h-5 w-5 text-primary" />
                                     Ventas por Vendedor
                                 </CardTitle>
+                                <ChevronRight className="h-4 w-4 text-muted-foreground" />
                             </CardHeader>
                             <CardContent>
+                                <div className="text-sm font-bold truncate">
+                                    {topVendor ? topVendor.vendedor : 'N/A'}
+                                </div>
+                                <p className="text-xs text-muted-foreground mt-1">
+                                    Top vendedor: {topVendor ? formatters.currency(topVendor.ventas) : 'Sin datos'}
+                                </p>
+                                <div className="h-24 mt-2">
+                                    <ResponsiveBar
+                                        data={salesByVendorData.slice(0, 10)}
+                                        keys={['ventas']}
+                                        indexBy="vendedor"
+                                        margin={{ top: 2, right: 2, bottom: 2, left: 2 }}
+                                        padding={0.3}
+                                        colors={(d) => d.data.color}
+                                        axisTop={null}
+                                        axisRight={null}
+                                        axisBottom={null}
+                                        axisLeft={null}
+                                        enableLabel={false}
+                                        enableGridX={false}
+                                        enableGridY={false}
+                                        isInteractive={false}
+                                        animate={false}
+                                    />
+                                </div>
+                                <p className="text-xs font-medium text-primary mt-2 flex items-center gap-1">
+                                    Abrir Detalle <ArrowRight className="h-3 w-3" />
+                                </p>
+                            </CardContent>
+                        </Card>
+                    </button>
+
+                    {/* 2. Distribución de Ventas por Vendedor */}
+                    <button
+                        type="button"
+                        onClick={() => setOpenChart('vendor-pie')}
+                        className="text-left"
+                    >
+                        <Card className="hover:shadow-lg transition-shadow cursor-pointer h-full">
+                            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                                <CardTitle className="flex items-center gap-2 text-base">
+                                    <PieChart className="h-5 w-5 text-primary" />
+                                    Distribución por Vendedor
+                                </CardTitle>
+                                <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                            </CardHeader>
+                            <CardContent>
+                                <div className="text-sm font-bold truncate">
+                                    {topVendor ? topVendor.vendedor : 'N/A'}
+                                </div>
+                                <p className="text-xs text-muted-foreground mt-1">
+                                    {topVendor && totalSales > 0
+                                        ? `${((topVendor.ventas / totalSales) * 100).toFixed(1)}% del total vendido`
+                                        : 'Sin datos'}
+                                </p>
+                                <div className="h-24 mt-2">
+                                    <ResponsivePie
+                                        data={pieData.slice(0, 8)}
+                                        margin={{ top: 2, right: 2, bottom: 2, left: 2 }}
+                                        innerRadius={0.6}
+                                        padAngle={2}
+                                        cornerRadius={2}
+                                        colors={(d) => d.data.color}
+                                        enableArcLinkLabels={false}
+                                        enableArcLabels={false}
+                                        isInteractive={false}
+                                        animate={false}
+                                    />
+                                </div>
+                                <p className="text-xs font-medium text-primary mt-2 flex items-center gap-1">
+                                    Abrir Detalle <ArrowRight className="h-3 w-3" />
+                                </p>
+                            </CardContent>
+                        </Card>
+                    </button>
+
+                    {/* 3. Unidades por Vendedor y Tipo de Documento */}
+                    <button
+                        type="button"
+                        onClick={() => setOpenChart('stacked-units')}
+                        className="text-left"
+                    >
+                        <Card className="hover:shadow-lg transition-shadow cursor-pointer h-full">
+                            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                                <CardTitle className="flex items-center gap-2 text-base">
+                                    <Layers className="h-5 w-5 text-primary" />
+                                    Unidades por Tipo de Documento
+                                </CardTitle>
+                                <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                            </CardHeader>
+                            <CardContent>
+                                <div className="text-sm font-bold truncate">
+                                    {topDocType ? topDocType[0] : 'N/A'}
+                                </div>
+                                <p className="text-xs text-muted-foreground mt-1">
+                                    {topDocType ? `${formatters.number(topDocType[1])} unidades (tipo top)` : 'Sin datos'}
+                                </p>
+                                <div className="h-24 mt-2">
+                                    <ResponsiveBar
+                                        data={stackedBarData}
+                                        keys={docTypesKeys}
+                                        indexBy="vendedor"
+                                        margin={{ top: 2, right: 2, bottom: 2, left: 2 }}
+                                        padding={0.3}
+                                        colors={colorPalette}
+                                        axisTop={null}
+                                        axisRight={null}
+                                        axisBottom={null}
+                                        axisLeft={null}
+                                        enableLabel={false}
+                                        enableGridX={false}
+                                        enableGridY={false}
+                                        isInteractive={false}
+                                        animate={false}
+                                    />
+                                </div>
+                                <p className="text-xs font-medium text-primary mt-2 flex items-center gap-1">
+                                    Abrir Detalle <ArrowRight className="h-3 w-3" />
+                                </p>
+                            </CardContent>
+                        </Card>
+                    </button>
+
+                    {/* 4. Evolución de Ventas por Hora */}
+                    <button
+                        type="button"
+                        onClick={() => setOpenChart('hour-evolution')}
+                        className="text-left"
+                    >
+                        <Card className="hover:shadow-lg transition-shadow cursor-pointer h-full">
+                            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                                <CardTitle className="flex items-center gap-2 text-base">
+                                    <LineChart className="h-5 w-5 text-primary" />
+                                    Evolución por Hora
+                                </CardTitle>
+                                <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                            </CardHeader>
+                            <CardContent>
+                                <div className="text-sm font-bold truncate">
+                                    {peakHour ? `Pico: ${peakHour.x}` : 'N/A'}
+                                </div>
+                                <p className="text-xs text-muted-foreground mt-1">
+                                    {peakHour ? formatters.currency(peakHour.y as number) : 'Sin datos'}
+                                </p>
+                                <div className="h-24 mt-2">
+                                    <ResponsiveLine
+                                        data={evolutionByHourData}
+                                        margin={{ top: 4, right: 4, bottom: 4, left: 4 }}
+                                        xScale={{ type: 'point' }}
+                                        yScale={{ type: 'linear', min: 'auto', max: 'auto', stacked: false, reverse: false }}
+                                        axisTop={null}
+                                        axisRight={null}
+                                        axisBottom={null}
+                                        axisLeft={null}
+                                        colors={[colors.indigo]}
+                                        lineWidth={2}
+                                        curve="monotoneX"
+                                        enableGridX={false}
+                                        enableGridY={false}
+                                        enablePoints={false}
+                                        enableArea={true}
+                                        areaOpacity={0.25}
+                                        isInteractive={false}
+                                        animate={false}
+                                        useMesh={false}
+                                    />
+                                </div>
+                                <p className="text-xs font-medium text-primary mt-2 flex items-center gap-1">
+                                    Abrir Detalle <ArrowRight className="h-3 w-3" />
+                                </p>
+                            </CardContent>
+                        </Card>
+                    </button>
+
+                    {/* 5. Relación Unidades vs Valor Neto */}
+                    <button
+                        type="button"
+                        onClick={() => setOpenChart('scatter')}
+                        className="text-left"
+                    >
+                        <Card className="hover:shadow-lg transition-shadow cursor-pointer h-full">
+                            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                                <CardTitle className="flex items-center gap-2 text-base">
+                                    <Activity className="h-5 w-5 text-primary" />
+                                    Unidades vs Valor Neto
+                                </CardTitle>
+                                <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                            </CardHeader>
+                            <CardContent>
+                                <div className="text-sm font-bold truncate">
+                                    {scatterData[0]?.id ?? 'N/A'}
+                                </div>
+                                <p className="text-xs text-muted-foreground mt-1">
+                                    {scatterData.length > 0
+                                        ? `Ticket promedio: ${formatters.currency(topVendorAvgTicket)}`
+                                        : 'Sin datos'}
+                                </p>
+                                <div className="h-24 mt-2">
+                                    <ResponsiveScatterPlot
+                                        data={scatterData}
+                                        margin={{ top: 4, right: 4, bottom: 4, left: 4 }}
+                                        xScale={{ type: 'linear', min: 'auto', max: 'auto' }}
+                                        yScale={{ type: 'linear', min: 'auto', max: 'auto' }}
+                                        colors={(d) => scatterData.find((s) => s.id === d.serieId)?.color ?? colorPalette[0]}
+                                        nodeSize={6}
+                                        axisTop={null}
+                                        axisRight={null}
+                                        axisBottom={null}
+                                        axisLeft={null}
+                                        isInteractive={false}
+                                        animate={false}
+                                    />
+                                </div>
+                                <p className="text-xs font-medium text-primary mt-2 flex items-center gap-1">
+                                    Abrir Detalle <ArrowRight className="h-3 w-3" />
+                                </p>
+                            </CardContent>
+                        </Card>
+                    </button>
+                </motion.div>
+
+                {/* Modal: Ventas por Vendedor */}
+                <Modal
+                    isOpen={openChart === 'vendor-bar'}
+                    onClose={() => setOpenChart(null)}
+                    title="Ventas por Vendedor"
+                    className="max-w-6xl"
+                >
                                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                                     <div className="h-[400px]">
                                         <ResponsiveBar
@@ -433,8 +692,6 @@ export const SalesSummaryPage = () => {
                                                 legend: 'Vendedor',
                                                 legendPosition: 'middle',
                                                 legendOffset: 80,
-                                                tickColor: 'hsl(var(--muted-foreground))',
-                                                legendColor: 'hsl(var(--foreground))',
                                             }}
                                             axisLeft={{
                                                 tickSize: 5,
@@ -444,8 +701,6 @@ export const SalesSummaryPage = () => {
                                                 legendPosition: 'middle',
                                                 legendOffset: -60,
                                                 format: (value) => formatters.compactCurrency(value),
-                                                tickColor: 'hsl(var(--muted-foreground))',
-                                                legendColor: 'hsl(var(--foreground))',
                                             }}
                                             theme={{
                                                 axis: {
@@ -455,11 +710,11 @@ export const SalesSummaryPage = () => {
                                                     legend: {
                                                         text: { fill: 'hsl(var(--foreground))' }
                                                     },
-                                                    grid: {
-                                                        line: {
-                                                            stroke: 'hsl(var(--border))',
-                                                            strokeWidth: 1,
-                                                        }
+                                                },
+                                                grid: {
+                                                    line: {
+                                                        stroke: 'hsl(var(--border))',
+                                                        strokeWidth: 1,
                                                     }
                                                 },
                                                 tooltip: {
@@ -476,8 +731,7 @@ export const SalesSummaryPage = () => {
                                             labelSkipHeight={12}
                                             labelTextColor={{ from: 'color', modifiers: [['darker', 1.6]] }}
                                             label={(d) => formatters.compactCurrency(d.value)}
-                                            animate={true}
-                                            motionConfig="gentle"
+                                            animate={false}
                                             tooltip={(tooltip) => (
                                                 <div
                                                     style={{
@@ -513,24 +767,15 @@ export const SalesSummaryPage = () => {
                                         />
                                     </div>
                                 </div>
-                            </CardContent>
-                        </Card>
-                    </motion.div>
+                </Modal>
 
-                    {/* 2. Gráfico de pastel/donut */}
-                    <motion.div
-                        initial={{ opacity: 0, x: 20 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        transition={{ duration: 0.6, delay: 0.5 }}
-                    >
-                        <Card className="hover:shadow-lg transition-shadow rounded-xl border">
-                            <CardHeader>
-                                <CardTitle className="flex items-center gap-2">
-                                    <PieChart className="h-5 w-5 text-emerald-600" />
-                                    Distribución de Ventas por Vendedor
-                                </CardTitle>
-                            </CardHeader>
-                            <CardContent>
+                {/* Modal: Distribución de Ventas por Vendedor */}
+                <Modal
+                    isOpen={openChart === 'vendor-pie'}
+                    onClose={() => setOpenChart(null)}
+                    title="Distribución de Ventas por Vendedor"
+                    className="max-w-4xl"
+                >
                                 <div className="h-[400px]">
                                     <ResponsivePie
                                         data={pieData.slice(0, 8)}
@@ -587,8 +832,8 @@ export const SalesSummaryPage = () => {
                                                 }
                                             }
                                         }}
-                                        tooltip={(tooltip) => {
-                                            const percentage = ((tooltip.value as number) / totalSales * 100).toFixed(2)
+                                        tooltip={({ datum }) => {
+                                            const percentage = (datum.value / totalSales * 100).toFixed(2)
                                             return (
                                                 <div
                                                     style={{
@@ -600,9 +845,9 @@ export const SalesSummaryPage = () => {
                                                         color: 'hsl(var(--foreground))',
                                                     }}
                                                 >
-                                                    <div className="font-semibold">{tooltip.label}</div>
+                                                    <div className="font-semibold">{datum.label}</div>
                                                     <div className="text-sm mt-1">
-                                                        {formatters.currency(tooltip.value as number)}
+                                                        {formatters.currency(datum.value)}
                                                     </div>
                                                     <div className="text-xs text-muted-foreground mt-1">
                                                         {percentage}% del total
@@ -610,8 +855,7 @@ export const SalesSummaryPage = () => {
                                                 </div>
                                             )
                                         }}
-                                        animate={true}
-                                        motionConfig="gentle"
+                                        animate={false}
                                     />
                                 </div>
                                 {/* Tabla de datos: Distribución de Ventas por Vendedor */}
@@ -633,24 +877,15 @@ export const SalesSummaryPage = () => {
                                         exportFilename="distribucion_ventas_vendedor"
                                     />
                                 </div>
-                            </CardContent>
-                        </Card>
-                    </motion.div>
+                </Modal>
 
-                    {/* 3. Gráfico de columnas apiladas */}
-                    <motion.div
-                        initial={{ opacity: 0, x: -20 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        transition={{ duration: 0.6, delay: 0.6 }}
-                    >
-                        <Card className="hover:shadow-lg transition-shadow rounded-xl border">
-                            <CardHeader>
-                                <CardTitle className="flex items-center gap-2">
-                                    <Layers className="h-5 w-5 text-rose-600" />
-                                    Unidades por Vendedor y Tipo de Documento
-                                </CardTitle>
-                            </CardHeader>
-                            <CardContent>
+                {/* Modal: Unidades por Vendedor y Tipo de Documento */}
+                <Modal
+                    isOpen={openChart === 'stacked-units'}
+                    onClose={() => setOpenChart(null)}
+                    title="Unidades por Vendedor y Tipo de Documento"
+                    className="max-w-6xl"
+                >
                                 <div className="h-[400px]">
                                     <ResponsiveBar
                                         data={stackedBarData}
@@ -671,8 +906,6 @@ export const SalesSummaryPage = () => {
                                             legend: 'Vendedor',
                                             legendPosition: 'middle',
                                             legendOffset: 80,
-                                            tickColor: 'hsl(var(--muted-foreground))',
-                                            legendColor: 'hsl(var(--foreground))',
                                         }}
                                         axisLeft={{
                                             tickSize: 5,
@@ -681,8 +914,6 @@ export const SalesSummaryPage = () => {
                                             legend: 'Total de Unidades',
                                             legendPosition: 'middle',
                                             legendOffset: -50,
-                                            tickColor: 'hsl(var(--muted-foreground))',
-                                            legendColor: 'hsl(var(--foreground))',
                                         }}
                                         theme={{
                                             axis: {
@@ -692,11 +923,11 @@ export const SalesSummaryPage = () => {
                                                 legend: {
                                                     text: { fill: 'hsl(var(--foreground))' }
                                                 },
-                                                grid: {
-                                                    line: {
-                                                        stroke: 'hsl(var(--border))',
-                                                        strokeWidth: 1,
-                                                    }
+                                            },
+                                            grid: {
+                                                line: {
+                                                    stroke: 'hsl(var(--border))',
+                                                    strokeWidth: 1,
                                                 }
                                             },
                                             tooltip: {
@@ -710,8 +941,7 @@ export const SalesSummaryPage = () => {
                                         }}
                                         labelSkipWidth={12}
                                         labelSkipHeight={12}
-                                        animate={true}
-                                        motionConfig="gentle"
+                                        animate={false}
                                         tooltip={(tooltip) => (
                                             <div
                                                 style={{
@@ -765,24 +995,15 @@ export const SalesSummaryPage = () => {
                                         exportFilename="unidades_por_vendedor_tipo_doc"
                                     />
                                 </div>
-                            </CardContent>
-                        </Card>
-                    </motion.div>
+                </Modal>
 
-                    {/* 4. Gráfico de líneas/área */}
-                    <motion.div
-                        initial={{ opacity: 0, x: 20 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        transition={{ duration: 0.6, delay: 0.7 }}
-                    >
-                        <Card className="hover:shadow-lg transition-shadow rounded-xl border">
-                            <CardHeader>
-                                <CardTitle className="flex items-center gap-2">
-                                    <LineChart className="h-5 w-5 text-amber-600" />
-                                    Evolución de Ventas por Hora
-                                </CardTitle>
-                            </CardHeader>
-                            <CardContent>
+                {/* Modal: Evolución de Ventas por Hora */}
+                <Modal
+                    isOpen={openChart === 'hour-evolution'}
+                    onClose={() => setOpenChart(null)}
+                    title="Evolución de Ventas por Hora"
+                    className="max-w-4xl"
+                >
                                 <div className="h-[400px]">
                                     <ResponsiveLine
                                         data={evolutionByHourData}
@@ -805,8 +1026,6 @@ export const SalesSummaryPage = () => {
                                             legend: 'Hora del Día',
                                             legendOffset: 36,
                                             legendPosition: 'middle',
-                                            tickColor: 'hsl(var(--muted-foreground))',
-                                            legendColor: 'hsl(var(--foreground))',
                                         }}
                                         axisLeft={{
                                             tickSize: 5,
@@ -816,8 +1035,6 @@ export const SalesSummaryPage = () => {
                                             legendOffset: -60,
                                             legendPosition: 'middle',
                                             format: (value) => formatters.currency(Number(value)),
-                                            tickColor: 'hsl(var(--muted-foreground))',
-                                            legendColor: 'hsl(var(--foreground))',
                                         }}
                                         theme={{
                                             axis: {
@@ -827,11 +1044,11 @@ export const SalesSummaryPage = () => {
                                                 legend: {
                                                     text: { fill: 'hsl(var(--foreground))' }
                                                 },
-                                                grid: {
-                                                    line: {
-                                                        stroke: 'hsl(var(--border))',
-                                                        strokeWidth: 1,
-                                                    }
+                                            },
+                                            grid: {
+                                                line: {
+                                                    stroke: 'hsl(var(--border))',
+                                                    strokeWidth: 1,
                                                 }
                                             },
                                             tooltip: {
@@ -860,8 +1077,7 @@ export const SalesSummaryPage = () => {
                                         areaOpacity={0.3}
                                         areaBlendMode="normal"
                                         areaBaselineValue={0}
-                                        animate={true}
-                                        motionConfig="gentle"
+                                        animate={false}
                                         tooltip={({ point }) => (
                                             <div
                                                 style={{
@@ -896,24 +1112,15 @@ export const SalesSummaryPage = () => {
                                         exportFilename="evolucion_ventas_hora"
                                     />
                                 </div>
-                            </CardContent>
-                        </Card>
-                    </motion.div>
+                </Modal>
 
-                    {/* 5. Gráfico de dispersión */}
-                    <motion.div
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ duration: 0.6, delay: 0.8 }}
-                    >
-                        <Card className="hover:shadow-lg transition-shadow rounded-xl border">
-                            <CardHeader>
-                                <CardTitle className="flex items-center gap-2">
-                                    <Activity className="h-5 w-5 text-violet-600" />
-                                    Relación: Unidades vs Valor Neto (por Vendedor)
-                                </CardTitle>
-                            </CardHeader>
-                            <CardContent>
+                {/* Modal: Relación Unidades vs Valor Neto */}
+                <Modal
+                    isOpen={openChart === 'scatter'}
+                    onClose={() => setOpenChart(null)}
+                    title="Relación: Unidades vs Valor Neto (por Vendedor)"
+                    className="max-w-6xl"
+                >
                                 <div className="h-[400px]">
                                     <ResponsiveScatterPlot
                                         data={scatterData}
@@ -922,12 +1129,9 @@ export const SalesSummaryPage = () => {
                                         xFormat={(value) => `${value} unidades`}
                                         yScale={{ type: 'linear', min: 'auto', max: 'auto' }}
                                         yFormat={(value) => formatters.compactCurrency(Number(value))}
-                                        colors={(d) => d.color}
+                                        colors={(d) => scatterData.find((s) => s.id === d.serieId)?.color ?? colorPalette[0]}
                                         blendMode="normal"
                                         nodeSize={14}
-                                        nodeOpacity={0.9}
-                                        nodeBorderWidth={2}
-                                        nodeBorderColor={{ from: 'color', modifiers: [['darker', 0.3]] }}
                                         axisTop={null}
                                         axisRight={null}
                                         axisBottom={{
@@ -938,8 +1142,6 @@ export const SalesSummaryPage = () => {
                                             legendPosition: 'middle',
                                             legendOffset: 46,
                                             format: (value) => formatters.number(value),
-                                            tickColor: 'hsl(var(--muted-foreground))',
-                                            legendColor: 'hsl(var(--foreground))',
                                         }}
                                         axisLeft={{
                                             tickSize: 5,
@@ -949,8 +1151,6 @@ export const SalesSummaryPage = () => {
                                             legendPosition: 'middle',
                                             legendOffset: -70,
                                             format: (value) => formatters.compactCurrency(value),
-                                            tickColor: 'hsl(var(--muted-foreground))',
-                                            legendColor: 'hsl(var(--foreground))',
                                         }}
                                         legends={[
                                             {
@@ -976,11 +1176,11 @@ export const SalesSummaryPage = () => {
                                                 legend: {
                                                     text: { fill: 'hsl(var(--foreground))' }
                                                 },
-                                                grid: {
-                                                    line: {
-                                                        stroke: 'hsl(var(--border))',
-                                                        strokeWidth: 1,
-                                                    }
+                                            },
+                                            grid: {
+                                                line: {
+                                                    stroke: 'hsl(var(--border))',
+                                                    strokeWidth: 1,
                                                 }
                                             },
                                             tooltip: {
@@ -998,8 +1198,7 @@ export const SalesSummaryPage = () => {
                                                 }
                                             }
                                         }}
-                                        animate={true}
-                                        motionConfig="gentle"
+                                        animate={false}
                                         tooltip={({ node }) => (
                                             <div
                                                 style={{
@@ -1043,10 +1242,7 @@ export const SalesSummaryPage = () => {
                                         exportFilename="relacion_unidades_valor_neto"
                                     />
                                 </div>
-                            </CardContent>
-                        </Card>
-                    </motion.div>
-                </motion.div>
+                </Modal>
             </div>
         </ErrorBoundary>
     )

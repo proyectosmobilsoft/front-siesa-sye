@@ -1,14 +1,12 @@
 export interface Client {
-  id: number
-  nombre: string
-  apellido: string
-  email: string
-  telefono: string
-  direccion: string
-  fecha_registro: string
-  ultima_compra: string
-  total_compras: number
-  estado: 'activo' | 'inactivo' | 'suspendido'
+  f9740_id: number
+  f9740_nit: string
+  f9740_razon_social: string
+  f9740_nombre: string
+  f9740_email: string | null
+  f9740_telefono: string | null
+  f9740_celular: string | null
+  f9740_direccion1: string | null
 }
 
 export interface Company {
@@ -25,20 +23,17 @@ export interface Company {
 }
 
 export interface Product {
-  id: number
-  referencia: string
-  descripcion: string
-  precio: number
-  stock: number
-  categoria: string
-  ind_compra: boolean
-  ind_venta: boolean
-  ind_manufactura: boolean
-  maneja_lotes: boolean
-  maneja_serial: boolean
-  controlado: boolean
-  fecha_creacion: string
-  ultima_actualizacion: string
+  f120_id: number
+  f120_referencia: string
+  f120_descripcion: string
+  f120_ind_compra: number
+  f120_ind_venta: number
+  f120_ind_manufactura: number
+  f120_ind_lote: number
+  f120_ind_serial: number
+  f120_ind_controlado: number
+  f120_fecha_creacion: string
+  f120_fecha_actualizacion: string
 }
 
 export interface ClientsResponse {
@@ -298,6 +293,60 @@ export interface MovimientosEfectivoResponse {
   success: boolean
   total: number
   data: MovimientoEfectivo[]
+}
+
+/**
+ * Traslado de Fondos: mueve efectivo entre 2 cajas físicas de SIESA. Crea un
+ * documento contable TC real (borrador, pendiente de aprobar en SIESA
+ * escritorio) y actualiza el saldo operativo de ambas cajas en el mismo
+ * paso. Ver POST /api/caja-traspaso/simple en el backend.
+ */
+export interface CajaTraspaso {
+  id_caja: string
+  id_co: string
+  rowid_auxiliar: number
+  nombre: string | null
+}
+
+export interface CajasTraspasoResponse {
+  success: boolean
+  total: number
+  data: CajaTraspaso[]
+}
+
+export interface TrasladoFondosCreado {
+  rowid_docto: number
+  consec_docto: number
+  periodo: number
+}
+
+export interface TrasladoFondosCreadoResponse {
+  success: boolean
+  data: TrasladoFondosCreado
+  message: string
+}
+
+export interface TrasladoFondosMov {
+  id: number
+  id_cia: number
+  id_co_origen: string
+  id_co_destino: string
+  id_un: string
+  id_moneda: string
+  id_caja_origen: string
+  id_caja_destino: string
+  valor: number
+  motivo: string | null
+  usuario_id: number
+  usuario_nombre?: string
+  fecha: string
+  created_at: string
+}
+
+export interface TrasladosFondosMovResponse {
+  success: boolean
+  total: number
+  data: TrasladoFondosMov[]
 }
 
 export interface FacturaAfectadaRC {

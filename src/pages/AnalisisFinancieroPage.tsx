@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion'
-import { useState } from 'react'
+import { useState, ReactNode } from 'react'
 import {
     ColumnDef,
     flexRender,
@@ -15,6 +15,7 @@ import { ArrowUpDown, Search, Filter, Download } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { ErrorState } from '@/components/ui/error-state'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Skeleton } from '@/lib/skeleton'
 import { MonthYearPicker } from '@/components/ui/month-year-picker'
@@ -123,7 +124,7 @@ export const AnalisisFinancieroPage = () => {
                 } else {
                     // Columnas normales
                     columns.push({
-                        accessorKey: key,
+                        accessorKey: key as keyof EstadoFinanciero,
                         header: ({ column }) => {
                             return (
                                 <Button
@@ -141,7 +142,7 @@ export const AnalisisFinancieroPage = () => {
 
                             // Formateo especial para "Nombre Compañía"
                             if (key === 'Nombre Compañía') {
-                                return <div className="font-medium">{value ?? <span className="text-muted-foreground italic">N/A</span>}</div>
+                                return <div className="font-medium">{(value as ReactNode) ?? <span className="text-muted-foreground italic">N/A</span>}</div>
                             }
 
                             // Formateo especial para "Total Cuenta"
@@ -165,7 +166,7 @@ export const AnalisisFinancieroPage = () => {
                                 const trimmedValue = value.trim()
                                 return <div className="text-sm">{trimmedValue || <span className="text-muted-foreground italic">N/A</span>}</div>
                             }
-                            return <div className="text-sm">{value ?? <span className="text-muted-foreground italic">N/A</span>}</div>
+                            return <div className="text-sm">{(value as ReactNode) ?? <span className="text-muted-foreground italic">N/A</span>}</div>
                         },
                     })
                 }
@@ -314,7 +315,7 @@ export const AnalisisFinancieroPage = () => {
             },
             cell: ({ row }) => {
                 const value = row.getValue('Ingresos') as number
-                return <div className="text-right font-semibold text-green-600">{formatters.currency(value)}</div>
+                return <div className="text-right font-semibold text-emerald-600 dark:text-emerald-400">{formatters.currency(value)}</div>
             },
         },
         {
@@ -333,7 +334,7 @@ export const AnalisisFinancieroPage = () => {
             },
             cell: ({ row }) => {
                 const value = row.getValue('Costos') as number
-                return <div className="text-right font-semibold text-red-600">{formatters.currency(value)}</div>
+                return <div className="text-right font-semibold text-red-600 dark:text-red-400">{formatters.currency(value)}</div>
             },
         },
         {
@@ -352,7 +353,7 @@ export const AnalisisFinancieroPage = () => {
             },
             cell: ({ row }) => {
                 const value = row.getValue('Gastos') as number
-                return <div className="text-right font-semibold text-orange-600">{formatters.currency(value)}</div>
+                return <div className="text-right font-semibold text-amber-600 dark:text-amber-400">{formatters.currency(value)}</div>
             },
         },
         {
@@ -371,7 +372,7 @@ export const AnalisisFinancieroPage = () => {
             },
             cell: ({ row }) => {
                 const value = row.getValue('Utilidad') as number
-                const colorClass = value >= 0 ? 'text-green-600' : 'text-red-600'
+                const colorClass = value >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'
                 return <div className={`text-right font-bold ${colorClass}`}>{formatters.currency(value)}</div>
             },
         },
@@ -413,7 +414,7 @@ export const AnalisisFinancieroPage = () => {
             if (col.id === 'Cuenta') {
                 excelColumns.push({ header: 'Código Cuenta', key: 'CodigoCuenta', width: 20 })
                 excelColumns.push({ header: 'Nombre de la Cuenta', key: 'NombreCuenta', width: 40 })
-            } else if (col.accessorKey) {
+            } else if ('accessorKey' in col && col.accessorKey) {
                 const key = col.accessorKey as string
                 let width = 15
                 if (key === 'Total Cuenta') width = 18
@@ -434,7 +435,7 @@ export const AnalisisFinancieroPage = () => {
                 if (col.id === 'Cuenta') {
                     excelRow['CodigoCuenta'] = row['Código Cuenta']?.toString().trim() || ''
                     excelRow['NombreCuenta'] = row['Nombre de la Cuenta']?.toString().trim() || ''
-                } else if (col.accessorKey) {
+                } else if ('accessorKey' in col && col.accessorKey) {
                     const key = col.accessorKey as string
                     const value = row[key]
 
@@ -546,35 +547,28 @@ export const AnalisisFinancieroPage = () => {
             transition={{ duration: 0.5 }}
             className="flex-1 space-y-6 p-6"
         >
-            {/* Header con título y filtros */}
-            <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-
-                {/* Filtros al lado del título */}
-                <div className="flex flex-col sm:flex-row gap-3 items-end">
-                    <div className="min-w-[180px]">
-                        <label className="text-xs font-medium text-muted-foreground mb-1.5 block">Periodo Inicial</label>
-                        <MonthYearPicker
-                            value={filtros.periodoInicial}
-                            onChange={(value) => setFiltros({ ...filtros, periodoInicial: value })}
-                            placeholder="Periodo inicial"
-                        />
-                    </div>
-                    <div className="min-w-[180px]">
-                        <label className="text-xs font-medium text-muted-foreground mb-1.5 block">Periodo Final</label>
-                        <MonthYearPicker
-                            value={filtros.periodoFinal}
-                            onChange={(value) => setFiltros({ ...filtros, periodoFinal: value })}
-                            placeholder="Periodo final"
-                        />
-                    </div>
-                    <div className="min-w-[140px]">
-                        <label className="text-xs font-medium text-muted-foreground mb-1.5 block opacity-0">Buscar</label>
-                        <Button onClick={handleBuscar} size="sm" className="w-full h-9 text-xs">
-                            <Search className="mr-1.5 h-3.5 w-3.5" />
-                            Buscar Análisis
-                        </Button>
-                    </div>
+            {/* Filtros de periodo */}
+            <div className="flex flex-col gap-3 border-b pb-4 sm:flex-row sm:items-end">
+                <div className="min-w-[180px] space-y-1.5">
+                    <label className="block text-[10px] font-bold uppercase tracking-wide text-muted-foreground">Periodo Inicial</label>
+                    <MonthYearPicker
+                        value={filtros.periodoInicial}
+                        onChange={(value) => setFiltros({ ...filtros, periodoInicial: value })}
+                        placeholder="Periodo inicial"
+                    />
                 </div>
+                <div className="min-w-[180px] space-y-1.5">
+                    <label className="block text-[10px] font-bold uppercase tracking-wide text-muted-foreground">Periodo Final</label>
+                    <MonthYearPicker
+                        value={filtros.periodoFinal}
+                        onChange={(value) => setFiltros({ ...filtros, periodoFinal: value })}
+                        placeholder="Periodo final"
+                    />
+                </div>
+                <Button onClick={handleBuscar} size="sm" className="h-9 text-xs">
+                    <Search className="mr-1.5 h-3.5 w-3.5" />
+                    Buscar Análisis
+                </Button>
             </div>
 
             {/* Tablas */}
@@ -586,167 +580,138 @@ export const AnalisisFinancieroPage = () => {
                         <TabsTrigger value="tendencia-mensual">Tendencia Mensual</TabsTrigger>
                     </TabsList>
 
-                    <TabsContent value="estados-financieros" className="mt-6">
+                    <TabsContent value="estados-financieros" className="mt-6 space-y-6">
                         {isLoadingEstados ? (
-                            <Card>
-                                <CardHeader>
-                                    <CardTitle>Estados Financieros</CardTitle>
-                                </CardHeader>
-                                <CardContent>
-                                    <div className="space-y-4">
-                                        <Skeleton className="h-10 w-full" />
-                                        <Skeleton className="h-64 w-full" />
-                                    </div>
-                                </CardContent>
-                            </Card>
+                            <div className="space-y-4">
+                                <Skeleton className="h-10 w-full" />
+                                <Skeleton className="h-64 w-full" />
+                            </div>
                         ) : errorEstados ? (
-                            <Card className="border-red-200 bg-red-50">
-                                <CardHeader>
-                                    <CardTitle className="text-red-800">Error al cargar estados financieros</CardTitle>
-                                </CardHeader>
-                                <CardContent className="flex items-center justify-center h-64">
-                                    <div className="text-center text-red-600">
-                                        <p className="text-lg font-medium">No se pudieron obtener los datos</p>
-                                        <p className="text-sm mt-2">Error: {errorEstados instanceof Error ? errorEstados.message : 'Error desconocido'}</p>
-                                        <Button onClick={() => refetchEstados()} className="mt-4" variant="outline">
-                                            Reintentar
-                                        </Button>
-                                    </div>
-                                </CardContent>
-                            </Card>
+                            <ErrorState
+                                title="Error al cargar estados financieros"
+                                message={`No se pudieron obtener los datos. Error: ${errorEstados instanceof Error ? errorEstados.message : 'Error desconocido'}`}
+                                onRetry={() => refetchEstados()}
+                            />
                         ) : (
                             <motion.div
                                 initial={{ opacity: 0, y: 20 }}
                                 animate={{ opacity: 1, y: 0 }}
                                 transition={{ duration: 0.5, delay: 0.2 }}
+                                className="flex flex-col gap-3"
                             >
-                                <Card className="border-2 border-primary/20 bg-gradient-to-br from-background to-primary/5">
-                                    <CardHeader>
-                                        <div className="flex items-start justify-between gap-4">
-                                            <div>
-                                                <CardTitle className="flex items-center gap-2">
-                                                    <span className="text-primary">Estados Financieros</span>
-                                                    {estadosFinancieros && (
-                                                        <span className="ml-2 text-sm font-normal text-muted-foreground">
-                                                            ({estadosFinancieros.length} {estadosFinancieros.length === 1 ? 'registro' : 'registros'})
-                                                        </span>
-                                                    )}
-                                                </CardTitle>
+                                <div>
+                                    <p className="text-xs italic text-muted-foreground/80">
+                                        Retorna el reporte de estados financieros agrupado por cuenta auxiliar, sumando los valores netos del periodo especificado, ordenados por el total de cuenta de forma descendente.
+                                    </p>
+                                </div>
+                                <div className="flex flex-col gap-3 border-b pb-3 sm:flex-row sm:items-center sm:justify-between">
+                                    <div className="flex flex-1 flex-col gap-3 sm:flex-row sm:items-center">
+                                        <div className="relative w-full max-w-sm">
+                                            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                                            <Input
+                                                placeholder="Buscar en estados financieros..."
+                                                value={globalFilter ?? ''}
+                                                onChange={(event) => setGlobalFilter(String(event.target.value))}
+                                                className="pl-9"
+                                            />
+                                        </div>
+                                        <Button
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={handleExportToExcel}
+                                            className="h-9 shrink-0"
+                                        >
+                                            <Download className="h-4 w-4 mr-2" />
+                                            Exportar Excel
+                                        </Button>
+                                    </div>
+                                    <p className="shrink-0 text-sm text-muted-foreground">
+                                        {estadosFinancieros ? `${estadosFinancieros.length} ${estadosFinancieros.length === 1 ? 'registro' : 'registros'}` : ''}
+                                    </p>
+                                </div>
+                                {!estadosFinancieros || estadosFinancieros.length === 0 ? (
+                                    <div className="text-center py-12">
+                                        <p className="text-muted-foreground">No se encontraron estados financieros con los filtros seleccionados.</p>
+                                    </div>
+                                ) : (
+                                    <>
+                                        <div className="rounded-md border">
+                                            <div className="overflow-x-auto custom-scrollbar">
+                                                <table className="w-full text-sm">
+                                                    <thead>
+                                                        {table.getHeaderGroups().map((headerGroup) => (
+                                                            <tr key={headerGroup.id} className="border-b bg-muted/30">
+                                                                {headerGroup.headers.map((header) => (
+                                                                    <th
+                                                                        key={header.id}
+                                                                        className="h-10 px-3 text-left align-middle font-semibold text-muted-foreground"
+                                                                    >
+                                                                        {header.isPlaceholder
+                                                                            ? null
+                                                                            : flexRender(
+                                                                                header.column.columnDef.header,
+                                                                                header.getContext()
+                                                                            )}
+                                                                    </th>
+                                                                ))}
+                                                            </tr>
+                                                        ))}
+                                                    </thead>
+                                                    <tbody>
+                                                        {table.getRowModel().rows?.length ? (
+                                                            table.getRowModel().rows.map((row) => (
+                                                                <motion.tr
+                                                                    key={row.id}
+                                                                    className="border-b transition-colors hover:bg-muted/50"
+                                                                    initial={{ opacity: 0 }}
+                                                                    animate={{ opacity: 1 }}
+                                                                    transition={{ duration: 0.2 }}
+                                                                >
+                                                                    {row.getVisibleCells().map((cell) => (
+                                                                        <td key={cell.id} className="py-2.5 px-3 align-middle">
+                                                                            {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                                                                        </td>
+                                                                    ))}
+                                                                </motion.tr>
+                                                            ))
+                                                        ) : (
+                                                            <tr>
+                                                                <td colSpan={columns.length} className="h-24 text-center">
+                                                                    No hay resultados.
+                                                                </td>
+                                                            </tr>
+                                                        )}
+                                                    </tbody>
+                                                </table>
                                             </div>
                                         </div>
-                                        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 mt-4">
-                                            <div className="relative flex-1 max-w-sm">
-                                                <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-                                                <Input
-                                                    placeholder="Buscar en estados financieros..."
-                                                    value={globalFilter ?? ''}
-                                                    onChange={(event) => setGlobalFilter(String(event.target.value))}
-                                                    className="pl-8"
-                                                />
+                                        <div className="flex items-center justify-between space-x-2">
+                                            <div className="flex-1 text-xs font-medium text-muted-foreground">
+                                                Mostrando {table.getFilteredRowModel().rows.length} de {table.getCoreRowModel().rows.length} filas.
                                             </div>
-                                            <div className="flex items-center gap-2">
+                                            <div className="flex items-center space-x-2">
                                                 <Button
                                                     variant="outline"
                                                     size="sm"
-                                                    onClick={handleExportToExcel}
-                                                    className="h-9"
+                                                    className="h-8 text-xs"
+                                                    onClick={() => table.previousPage()}
+                                                    disabled={!table.getCanPreviousPage()}
                                                 >
-                                                    <Download className="h-4 w-4 mr-2" />
-                                                    Exportar Excel
+                                                    Anterior
                                                 </Button>
-                                                <p className="text-xs text-muted-foreground/80 italic max-w-md hidden lg:block">
-                                                    Retorna el reporte de estados financieros agrupado por cuenta auxiliar, sumando los valores netos del periodo especificado, ordenados por el total de cuenta de forma descendente.
-                                                </p>
+                                                <Button
+                                                    variant="outline"
+                                                    size="sm"
+                                                    className="h-8 text-xs"
+                                                    onClick={() => table.nextPage()}
+                                                    disabled={!table.getCanNextPage()}
+                                                >
+                                                    Siguiente
+                                                </Button>
                                             </div>
                                         </div>
-                                        <p className="text-xs text-muted-foreground/80 italic lg:hidden mt-2">
-                                            Retorna el reporte de estados financieros agrupado por cuenta auxiliar, sumando los valores netos del periodo especificado, ordenados por el total de cuenta de forma descendente.
-                                        </p>
-                                    </CardHeader>
-                                    <CardContent>
-                                        {!estadosFinancieros || estadosFinancieros.length === 0 ? (
-                                            <div className="text-center py-12">
-                                                <p className="text-muted-foreground">No se encontraron estados financieros con los filtros seleccionados.</p>
-                                            </div>
-                                        ) : (
-                                            <>
-                                                <div className="rounded-md border">
-                                                    <div className="overflow-x-auto custom-scrollbar">
-                                                        <table className="w-full text-sm">
-                                                            <thead>
-                                                                {table.getHeaderGroups().map((headerGroup) => (
-                                                                    <tr key={headerGroup.id} className="border-b">
-                                                                        {headerGroup.headers.map((header) => (
-                                                                            <th
-                                                                                key={header.id}
-                                                                                className="h-10 px-3 text-left align-middle font-medium text-muted-foreground"
-                                                                            >
-                                                                                {header.isPlaceholder
-                                                                                    ? null
-                                                                                    : flexRender(
-                                                                                        header.column.columnDef.header,
-                                                                                        header.getContext()
-                                                                                    )}
-                                                                            </th>
-                                                                        ))}
-                                                                    </tr>
-                                                                ))}
-                                                            </thead>
-                                                            <tbody>
-                                                                {table.getRowModel().rows?.length ? (
-                                                                    table.getRowModel().rows.map((row) => (
-                                                                        <motion.tr
-                                                                            key={row.id}
-                                                                            className="border-b transition-colors hover:bg-muted/50"
-                                                                            initial={{ opacity: 0 }}
-                                                                            animate={{ opacity: 1 }}
-                                                                            transition={{ duration: 0.2 }}
-                                                                        >
-                                                                            {row.getVisibleCells().map((cell) => (
-                                                                                <td key={cell.id} className="py-2 px-3 align-middle">
-                                                                                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                                                                                </td>
-                                                                            ))}
-                                                                        </motion.tr>
-                                                                    ))
-                                                                ) : (
-                                                                    <tr>
-                                                                        <td colSpan={columns.length} className="h-24 text-center">
-                                                                            No hay resultados.
-                                                                        </td>
-                                                                    </tr>
-                                                                )}
-                                                            </tbody>
-                                                        </table>
-                                                    </div>
-                                                </div>
-                                                <div className="flex items-center justify-between space-x-2 py-4">
-                                                    <div className="flex-1 text-sm text-muted-foreground">
-                                                        {table.getFilteredRowModel().rows.length} de {table.getCoreRowModel().rows.length} filas.
-                                                    </div>
-                                                    <div className="flex items-center space-x-2">
-                                                        <Button
-                                                            variant="outline"
-                                                            size="sm"
-                                                            onClick={() => table.previousPage()}
-                                                            disabled={!table.getCanPreviousPage()}
-                                                        >
-                                                            Anterior
-                                                        </Button>
-                                                        <Button
-                                                            variant="outline"
-                                                            size="sm"
-                                                            onClick={() => table.nextPage()}
-                                                            disabled={!table.getCanNextPage()}
-                                                        >
-                                                            Siguiente
-                                                        </Button>
-                                                    </div>
-                                                </div>
-                                            </>
-                                        )}
-                                    </CardContent>
-                                </Card>
+                                    </>
+                                )}
                             </motion.div>
                         )}
 
@@ -854,8 +819,6 @@ export const AnalisisFinancieroPage = () => {
                                                         format: (value) => {
                                                             return formatCurrencyColombian(value)
                                                         },
-                                                        tickColor: 'hsl(var(--muted-foreground))',
-                                                        legendColor: 'hsl(var(--foreground))',
                                                         tickValues: 5,
                                                     }}
                                                     axisLeft={{
@@ -865,8 +828,6 @@ export const AnalisisFinancieroPage = () => {
                                                         legend: 'Descripción de Cuenta',
                                                         legendPosition: 'middle',
                                                         legendOffset: -220,
-                                                        tickColor: 'hsl(var(--muted-foreground))',
-                                                        legendColor: 'hsl(var(--foreground))',
                                                         renderTick: (tick) => {
                                                             const item = chartData.find(d => d.id === tick.value)
                                                             const label = item?.cuenta || tick.value
@@ -907,14 +868,6 @@ export const AnalisisFinancieroPage = () => {
                                                                     fontFamily: 'Inter, Roboto, "Open Sans", system-ui, sans-serif'
                                                                 }
                                                             },
-                                                            grid: {
-                                                                line: {
-                                                                    stroke: 'hsl(var(--border))',
-                                                                    strokeWidth: 1,
-                                                                    strokeDasharray: '3 3',
-                                                                    opacity: 0.4
-                                                                }
-                                                            }
                                                         },
                                                         grid: {
                                                             line: {
@@ -989,7 +942,7 @@ export const AnalisisFinancieroPage = () => {
                                                     ]}
                                                     animate={true}
                                                     motionConfig="gentle"
-                                                    tooltip={({ id, value, indexValue }) => {
+                                                    tooltip={({ value, indexValue }) => {
                                                         const item = chartData.find(d => d.id === indexValue)
                                                         return (
                                                             <div
@@ -1068,332 +1021,274 @@ export const AnalisisFinancieroPage = () => {
                         })()}
                     </TabsContent>
 
-                    <TabsContent value="perdidas-ganancias" className="mt-6">
+                    <TabsContent value="perdidas-ganancias" className="mt-6 space-y-6">
                         {isLoadingPG ? (
-                            <Card>
-                                <CardHeader>
-                                    <CardTitle>Estado de Resultados (Pérdidas y Ganancias)</CardTitle>
-                                </CardHeader>
-                                <CardContent>
-                                    <div className="space-y-4">
-                                        <Skeleton className="h-10 w-full" />
-                                        <Skeleton className="h-64 w-full" />
-                                    </div>
-                                </CardContent>
-                            </Card>
+                            <div className="space-y-4">
+                                <Skeleton className="h-10 w-full" />
+                                <Skeleton className="h-64 w-full" />
+                            </div>
                         ) : errorPG ? (
-                            <Card className="border-red-200 bg-red-50">
-                                <CardHeader>
-                                    <CardTitle className="text-red-800">Error al cargar pérdidas y ganancias</CardTitle>
-                                </CardHeader>
-                                <CardContent className="flex items-center justify-center h-64">
-                                    <div className="text-center text-red-600">
-                                        <p className="text-lg font-medium">No se pudieron obtener los datos</p>
-                                        <p className="text-sm mt-2">Error: {errorPG instanceof Error ? errorPG.message : 'Error desconocido'}</p>
-                                        <Button onClick={() => refetchPG()} className="mt-4" variant="outline">
-                                            Reintentar
-                                        </Button>
-                                    </div>
-                                </CardContent>
-                            </Card>
+                            <ErrorState
+                                title="Error al cargar pérdidas y ganancias"
+                                message={`No se pudieron obtener los datos. Error: ${errorPG instanceof Error ? errorPG.message : 'Error desconocido'}`}
+                                onRetry={() => refetchPG()}
+                            />
                         ) : (
                             <motion.div
                                 initial={{ opacity: 0, y: 20 }}
                                 animate={{ opacity: 1, y: 0 }}
                                 transition={{ duration: 0.5, delay: 0.3 }}
+                                className="flex flex-col gap-3"
                             >
-                                <Card className="border-2 border-primary/20 bg-gradient-to-br from-background to-primary/5">
-                                    <CardHeader>
-                                        <div className="flex items-start justify-between gap-4">
-                                            <div>
-                                                <CardTitle className="flex items-center gap-2">
-                                                    <span className="text-primary">Estado de Resultados (Pérdidas y Ganancias)</span>
-                                                    {perdidasGanancias && (
-                                                        <span className="ml-2 text-sm font-normal text-muted-foreground">
-                                                            ({perdidasGanancias.length} {perdidasGanancias.length === 1 ? 'registro' : 'registros'})
-                                                        </span>
-                                                    )}
-                                                </CardTitle>
+                                <div>
+                                    <p className="text-xs italic text-muted-foreground/80">
+                                        Retorna el Estado de Resultados agrupado por tipo de cuenta (Ingresos, Costos, Gastos, Otros) según el primer dígito del código auxiliar. Las cuentas se clasifican automáticamente - código 4xxx para Ingresos, 5xxx para Costos, 6xxx para Gastos, otros para Otros.
+                                    </p>
+                                </div>
+                                <div className="flex flex-col gap-3 border-b pb-3 sm:flex-row sm:items-center sm:justify-between">
+                                    <div className="flex flex-1 flex-col gap-3 sm:flex-row sm:items-center">
+                                        <div className="relative w-full max-w-sm">
+                                            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                                            <Input
+                                                placeholder="Buscar en pérdidas y ganancias..."
+                                                value={globalFilterPG ?? ''}
+                                                onChange={(event) => setGlobalFilterPG(String(event.target.value))}
+                                                className="pl-9"
+                                            />
+                                        </div>
+                                        <Button
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={handleExportToExcelPG}
+                                            className="h-9 shrink-0"
+                                        >
+                                            <Download className="h-4 w-4 mr-2" />
+                                            Exportar Excel
+                                        </Button>
+                                    </div>
+                                    <p className="shrink-0 text-sm text-muted-foreground">
+                                        {perdidasGanancias ? `${perdidasGanancias.length} ${perdidasGanancias.length === 1 ? 'registro' : 'registros'}` : ''}
+                                    </p>
+                                </div>
+                                {!perdidasGanancias || perdidasGanancias.length === 0 ? (
+                                    <div className="text-center py-12">
+                                        <p className="text-muted-foreground">No se encontraron datos de pérdidas y ganancias con los filtros seleccionados.</p>
+                                    </div>
+                                ) : (
+                                    <>
+                                        <div className="rounded-md border">
+                                            <div className="overflow-x-auto">
+                                                <table className="w-full text-sm">
+                                                    <thead>
+                                                        {tablePG.getHeaderGroups().map((headerGroup) => (
+                                                            <tr key={headerGroup.id} className="border-b bg-muted/30">
+                                                                {headerGroup.headers.map((header) => (
+                                                                    <th
+                                                                        key={header.id}
+                                                                        className="h-10 px-3 text-left align-middle font-semibold text-muted-foreground"
+                                                                    >
+                                                                        {header.isPlaceholder
+                                                                            ? null
+                                                                            : flexRender(
+                                                                                header.column.columnDef.header,
+                                                                                header.getContext()
+                                                                            )}
+                                                                    </th>
+                                                                ))}
+                                                            </tr>
+                                                        ))}
+                                                    </thead>
+                                                    <tbody>
+                                                        {tablePG.getRowModel().rows?.length ? (
+                                                            tablePG.getRowModel().rows.map((row) => (
+                                                                <motion.tr
+                                                                    key={row.id}
+                                                                    className="border-b transition-colors hover:bg-muted/50"
+                                                                    initial={{ opacity: 0 }}
+                                                                    animate={{ opacity: 1 }}
+                                                                    transition={{ duration: 0.2 }}
+                                                                >
+                                                                    {row.getVisibleCells().map((cell) => (
+                                                                        <td key={cell.id} className="py-2.5 px-3 align-middle">
+                                                                            {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                                                                        </td>
+                                                                    ))}
+                                                                </motion.tr>
+                                                            ))
+                                                        ) : (
+                                                            <tr>
+                                                                <td colSpan={columnsPG.length} className="h-24 text-center">
+                                                                    No hay resultados.
+                                                                </td>
+                                                            </tr>
+                                                        )}
+                                                    </tbody>
+                                                </table>
                                             </div>
                                         </div>
-                                        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 mt-4">
-                                            <div className="relative flex-1 max-w-sm">
-                                                <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-                                                <Input
-                                                    placeholder="Buscar en pérdidas y ganancias..."
-                                                    value={globalFilterPG ?? ''}
-                                                    onChange={(event) => setGlobalFilterPG(String(event.target.value))}
-                                                    className="pl-8"
-                                                />
+                                        <div className="flex items-center justify-between space-x-2">
+                                            <div className="flex-1 text-xs font-medium text-muted-foreground">
+                                                Mostrando {tablePG.getFilteredRowModel().rows.length} de {tablePG.getCoreRowModel().rows.length} filas.
                                             </div>
-                                            <div className="flex items-center gap-2">
+                                            <div className="flex items-center space-x-2">
                                                 <Button
                                                     variant="outline"
                                                     size="sm"
-                                                    onClick={handleExportToExcelPG}
-                                                    className="h-9"
+                                                    className="h-8 text-xs"
+                                                    onClick={() => tablePG.previousPage()}
+                                                    disabled={!tablePG.getCanPreviousPage()}
                                                 >
-                                                    <Download className="h-4 w-4 mr-2" />
-                                                    Exportar Excel
+                                                    Anterior
                                                 </Button>
-                                                <p className="text-xs text-muted-foreground/80 italic max-w-md hidden lg:block">
-                                                    Retorna el Estado de Resultados agrupado por tipo de cuenta (Ingresos, Costos, Gastos, Otros) según el primer dígito del código auxiliar. Las cuentas se clasifican automáticamente - código 4xxx para Ingresos, 5xxx para Costos, 6xxx para Gastos, otros para Otros.
-                                                </p>
+                                                <Button
+                                                    variant="outline"
+                                                    size="sm"
+                                                    className="h-8 text-xs"
+                                                    onClick={() => tablePG.nextPage()}
+                                                    disabled={!tablePG.getCanNextPage()}
+                                                >
+                                                    Siguiente
+                                                </Button>
                                             </div>
                                         </div>
-                                        <p className="text-xs text-muted-foreground/80 italic lg:hidden mt-2">
-                                            Retorna el Estado de Resultados agrupado por tipo de cuenta (Ingresos, Costos, Gastos, Otros) según el primer dígito del código auxiliar. Las cuentas se clasifican automáticamente - código 4xxx para Ingresos, 5xxx para Costos, 6xxx para Gastos, otros para Otros.
-                                        </p>
-                                    </CardHeader>
-                                    <CardContent>
-                                        {!perdidasGanancias || perdidasGanancias.length === 0 ? (
-                                            <div className="text-center py-12">
-                                                <p className="text-muted-foreground">No se encontraron datos de pérdidas y ganancias con los filtros seleccionados.</p>
-                                            </div>
-                                        ) : (
-                                            <>
-                                                <div className="rounded-md border">
-                                                    <div className="overflow-x-auto">
-                                                        <table className="w-full text-sm">
-                                                            <thead>
-                                                                {tablePG.getHeaderGroups().map((headerGroup) => (
-                                                                    <tr key={headerGroup.id} className="border-b">
-                                                                        {headerGroup.headers.map((header) => (
-                                                                            <th
-                                                                                key={header.id}
-                                                                                className="h-10 px-3 text-left align-middle font-medium text-muted-foreground"
-                                                                            >
-                                                                                {header.isPlaceholder
-                                                                                    ? null
-                                                                                    : flexRender(
-                                                                                        header.column.columnDef.header,
-                                                                                        header.getContext()
-                                                                                    )}
-                                                                            </th>
-                                                                        ))}
-                                                                    </tr>
-                                                                ))}
-                                                            </thead>
-                                                            <tbody>
-                                                                {tablePG.getRowModel().rows?.length ? (
-                                                                    tablePG.getRowModel().rows.map((row) => (
-                                                                        <motion.tr
-                                                                            key={row.id}
-                                                                            className="border-b transition-colors hover:bg-muted/50"
-                                                                            initial={{ opacity: 0 }}
-                                                                            animate={{ opacity: 1 }}
-                                                                            transition={{ duration: 0.2 }}
-                                                                        >
-                                                                            {row.getVisibleCells().map((cell) => (
-                                                                                <td key={cell.id} className="py-2 px-3 align-middle">
-                                                                                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                                                                                </td>
-                                                                            ))}
-                                                                        </motion.tr>
-                                                                    ))
-                                                                ) : (
-                                                                    <tr>
-                                                                        <td colSpan={columnsPG.length} className="h-24 text-center">
-                                                                            No hay resultados.
-                                                                        </td>
-                                                                    </tr>
-                                                                )}
-                                                            </tbody>
-                                                        </table>
-                                                    </div>
-                                                </div>
-                                                <div className="flex items-center justify-between space-x-2 py-4">
-                                                    <div className="flex-1 text-sm text-muted-foreground">
-                                                        {tablePG.getFilteredRowModel().rows.length} de {tablePG.getCoreRowModel().rows.length} filas.
-                                                    </div>
-                                                    <div className="flex items-center space-x-2">
-                                                        <Button
-                                                            variant="outline"
-                                                            size="sm"
-                                                            onClick={() => tablePG.previousPage()}
-                                                            disabled={!tablePG.getCanPreviousPage()}
-                                                        >
-                                                            Anterior
-                                                        </Button>
-                                                        <Button
-                                                            variant="outline"
-                                                            size="sm"
-                                                            onClick={() => tablePG.nextPage()}
-                                                            disabled={!tablePG.getCanNextPage()}
-                                                        >
-                                                            Siguiente
-                                                        </Button>
-                                                    </div>
-                                                </div>
-                                            </>
-                                        )}
-                                    </CardContent>
-                                </Card>
+                                    </>
+                                )}
                             </motion.div>
                         )}
                     </TabsContent>
 
-                    <TabsContent value="tendencia-mensual" className="mt-6">
+                    <TabsContent value="tendencia-mensual" className="mt-6 space-y-6">
                         {isLoadingTM ? (
-                            <Card>
-                                <CardHeader>
-                                    <CardTitle>Tendencia Mensual</CardTitle>
-                                </CardHeader>
-                                <CardContent>
-                                    <div className="space-y-4">
-                                        <Skeleton className="h-10 w-full" />
-                                        <Skeleton className="h-64 w-full" />
-                                    </div>
-                                </CardContent>
-                            </Card>
+                            <div className="space-y-4">
+                                <Skeleton className="h-10 w-full" />
+                                <Skeleton className="h-64 w-full" />
+                            </div>
                         ) : errorTM ? (
-                            <Card className="border-red-200 bg-red-50">
-                                <CardHeader>
-                                    <CardTitle className="text-red-800">Error al cargar tendencia mensual</CardTitle>
-                                </CardHeader>
-                                <CardContent className="flex items-center justify-center h-64">
-                                    <div className="text-center text-red-600">
-                                        <p className="text-lg font-medium">No se pudieron obtener los datos</p>
-                                        <p className="text-sm mt-2">Error: {errorTM instanceof Error ? errorTM.message : 'Error desconocido'}</p>
-                                        <Button onClick={() => refetchTM()} className="mt-4" variant="outline">
-                                            Reintentar
-                                        </Button>
-                                    </div>
-                                </CardContent>
-                            </Card>
+                            <ErrorState
+                                title="Error al cargar tendencia mensual"
+                                message={`No se pudieron obtener los datos. Error: ${errorTM instanceof Error ? errorTM.message : 'Error desconocido'}`}
+                                onRetry={() => refetchTM()}
+                            />
                         ) : (
                             <motion.div
                                 initial={{ opacity: 0, y: 20 }}
                                 animate={{ opacity: 1, y: 0 }}
                                 transition={{ duration: 0.5, delay: 0.4 }}
+                                className="flex flex-col gap-3"
                             >
-                                <Card className="border-2 border-primary/20 bg-gradient-to-br from-background to-primary/5">
-                                    <CardHeader>
-                                        <div className="flex items-start justify-between gap-4">
-                                            <div>
-                                                <CardTitle className="flex items-center gap-2">
-                                                    <span className="text-primary">Tendencia Mensual</span>
-                                                    {tendenciaMensual && (
-                                                        <span className="ml-2 text-sm font-normal text-muted-foreground">
-                                                            ({tendenciaMensual.length} {tendenciaMensual.length === 1 ? 'registro' : 'registros'})
-                                                        </span>
-                                                    )}
-                                                </CardTitle>
+                                <div>
+                                    <p className="text-xs italic text-muted-foreground/80">
+                                        Retorna la tendencia mensual de ingresos, costos y gastos agrupados por periodo contable. Calcula automáticamente la utilidad como Ingresos menos Costos y Gastos.
+                                    </p>
+                                </div>
+                                <div className="flex flex-col gap-3 border-b pb-3 sm:flex-row sm:items-center sm:justify-between">
+                                    <div className="flex flex-1 flex-col gap-3 sm:flex-row sm:items-center">
+                                        <div className="relative w-full max-w-sm">
+                                            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                                            <Input
+                                                placeholder="Buscar en tendencia mensual..."
+                                                value={globalFilterTM ?? ''}
+                                                onChange={(event) => setGlobalFilterTM(String(event.target.value))}
+                                                className="pl-9"
+                                            />
+                                        </div>
+                                        <Button
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={handleExportToExcelTM}
+                                            className="h-9 shrink-0"
+                                        >
+                                            <Download className="h-4 w-4 mr-2" />
+                                            Exportar Excel
+                                        </Button>
+                                    </div>
+                                    <p className="shrink-0 text-sm text-muted-foreground">
+                                        {tendenciaMensual ? `${tendenciaMensual.length} ${tendenciaMensual.length === 1 ? 'registro' : 'registros'}` : ''}
+                                    </p>
+                                </div>
+                                {!tendenciaMensual || tendenciaMensual.length === 0 ? (
+                                    <div className="text-center py-12">
+                                        <p className="text-muted-foreground">No se encontraron datos de tendencia mensual con los filtros seleccionados.</p>
+                                    </div>
+                                ) : (
+                                    <>
+                                        <div className="rounded-md border">
+                                            <div className="overflow-x-auto">
+                                                <table className="w-full text-sm">
+                                                    <thead>
+                                                        {tableTM.getHeaderGroups().map((headerGroup) => (
+                                                            <tr key={headerGroup.id} className="border-b bg-muted/30">
+                                                                {headerGroup.headers.map((header) => (
+                                                                    <th
+                                                                        key={header.id}
+                                                                        className="h-10 px-3 text-left align-middle font-semibold text-muted-foreground"
+                                                                    >
+                                                                        {header.isPlaceholder
+                                                                            ? null
+                                                                            : flexRender(
+                                                                                header.column.columnDef.header,
+                                                                                header.getContext()
+                                                                            )}
+                                                                    </th>
+                                                                ))}
+                                                            </tr>
+                                                        ))}
+                                                    </thead>
+                                                    <tbody>
+                                                        {tableTM.getRowModel().rows?.length ? (
+                                                            tableTM.getRowModel().rows.map((row) => (
+                                                                <motion.tr
+                                                                    key={row.id}
+                                                                    className="border-b transition-colors hover:bg-muted/50"
+                                                                    initial={{ opacity: 0 }}
+                                                                    animate={{ opacity: 1 }}
+                                                                    transition={{ duration: 0.2 }}
+                                                                >
+                                                                    {row.getVisibleCells().map((cell) => (
+                                                                        <td key={cell.id} className="py-2.5 px-3 align-middle">
+                                                                            {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                                                                        </td>
+                                                                    ))}
+                                                                </motion.tr>
+                                                            ))
+                                                        ) : (
+                                                            <tr>
+                                                                <td colSpan={columnsTM.length} className="h-24 text-center">
+                                                                    No hay resultados.
+                                                                </td>
+                                                            </tr>
+                                                        )}
+                                                    </tbody>
+                                                </table>
                                             </div>
                                         </div>
-                                        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 mt-4">
-                                            <div className="relative flex-1 max-w-sm">
-                                                <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-                                                <Input
-                                                    placeholder="Buscar en tendencia mensual..."
-                                                    value={globalFilterTM ?? ''}
-                                                    onChange={(event) => setGlobalFilterTM(String(event.target.value))}
-                                                    className="pl-8"
-                                                />
+                                        <div className="flex items-center justify-between space-x-2">
+                                            <div className="flex-1 text-xs font-medium text-muted-foreground">
+                                                Mostrando {tableTM.getFilteredRowModel().rows.length} de {tableTM.getCoreRowModel().rows.length} filas.
                                             </div>
-                                            <div className="flex items-center gap-2">
+                                            <div className="flex items-center space-x-2">
                                                 <Button
                                                     variant="outline"
                                                     size="sm"
-                                                    onClick={handleExportToExcelTM}
-                                                    className="h-9"
+                                                    className="h-8 text-xs"
+                                                    onClick={() => tableTM.previousPage()}
+                                                    disabled={!tableTM.getCanPreviousPage()}
                                                 >
-                                                    <Download className="h-4 w-4 mr-2" />
-                                                    Exportar Excel
+                                                    Anterior
                                                 </Button>
-                                                <p className="text-xs text-muted-foreground/80 italic max-w-md hidden lg:block">
-                                                    Retorna la tendencia mensual de ingresos, costos y gastos agrupados por periodo contable. Calcula automáticamente la utilidad como Ingresos menos Costos y Gastos.
-                                                </p>
+                                                <Button
+                                                    variant="outline"
+                                                    size="sm"
+                                                    className="h-8 text-xs"
+                                                    onClick={() => tableTM.nextPage()}
+                                                    disabled={!tableTM.getCanNextPage()}
+                                                >
+                                                    Siguiente
+                                                </Button>
                                             </div>
                                         </div>
-                                        <p className="text-xs text-muted-foreground/80 italic lg:hidden mt-2">
-                                            Retorna la tendencia mensual de ingresos, costos y gastos agrupados por periodo contable. Calcula automáticamente la utilidad como Ingresos menos Costos y Gastos.
-                                        </p>
-                                    </CardHeader>
-                                    <CardContent>
-                                        {!tendenciaMensual || tendenciaMensual.length === 0 ? (
-                                            <div className="text-center py-12">
-                                                <p className="text-muted-foreground">No se encontraron datos de tendencia mensual con los filtros seleccionados.</p>
-                                            </div>
-                                        ) : (
-                                            <>
-                                                <div className="rounded-md border">
-                                                    <div className="overflow-x-auto">
-                                                        <table className="w-full text-sm">
-                                                            <thead>
-                                                                {tableTM.getHeaderGroups().map((headerGroup) => (
-                                                                    <tr key={headerGroup.id} className="border-b">
-                                                                        {headerGroup.headers.map((header) => (
-                                                                            <th
-                                                                                key={header.id}
-                                                                                className="h-10 px-3 text-left align-middle font-medium text-muted-foreground"
-                                                                            >
-                                                                                {header.isPlaceholder
-                                                                                    ? null
-                                                                                    : flexRender(
-                                                                                        header.column.columnDef.header,
-                                                                                        header.getContext()
-                                                                                    )}
-                                                                            </th>
-                                                                        ))}
-                                                                    </tr>
-                                                                ))}
-                                                            </thead>
-                                                            <tbody>
-                                                                {tableTM.getRowModel().rows?.length ? (
-                                                                    tableTM.getRowModel().rows.map((row) => (
-                                                                        <motion.tr
-                                                                            key={row.id}
-                                                                            className="border-b transition-colors hover:bg-muted/50"
-                                                                            initial={{ opacity: 0 }}
-                                                                            animate={{ opacity: 1 }}
-                                                                            transition={{ duration: 0.2 }}
-                                                                        >
-                                                                            {row.getVisibleCells().map((cell) => (
-                                                                                <td key={cell.id} className="py-2 px-3 align-middle">
-                                                                                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                                                                                </td>
-                                                                            ))}
-                                                                        </motion.tr>
-                                                                    ))
-                                                                ) : (
-                                                                    <tr>
-                                                                        <td colSpan={columnsTM.length} className="h-24 text-center">
-                                                                            No hay resultados.
-                                                                        </td>
-                                                                    </tr>
-                                                                )}
-                                                            </tbody>
-                                                        </table>
-                                                    </div>
-                                                </div>
-                                                <div className="flex items-center justify-between space-x-2 py-4">
-                                                    <div className="flex-1 text-sm text-muted-foreground">
-                                                        {tableTM.getFilteredRowModel().rows.length} de {tableTM.getCoreRowModel().rows.length} filas.
-                                                    </div>
-                                                    <div className="flex items-center space-x-2">
-                                                        <Button
-                                                            variant="outline"
-                                                            size="sm"
-                                                            onClick={() => tableTM.previousPage()}
-                                                            disabled={!tableTM.getCanPreviousPage()}
-                                                        >
-                                                            Anterior
-                                                        </Button>
-                                                        <Button
-                                                            variant="outline"
-                                                            size="sm"
-                                                            onClick={() => tableTM.nextPage()}
-                                                            disabled={!tableTM.getCanNextPage()}
-                                                        >
-                                                            Siguiente
-                                                        </Button>
-                                                    </div>
-                                                </div>
-                                            </>
-                                        )}
-                                    </CardContent>
-                                </Card>
+                                    </>
+                                )}
                             </motion.div>
                         )}
                     </TabsContent>
@@ -1401,15 +1296,11 @@ export const AnalisisFinancieroPage = () => {
             )}
 
             {!searchParams && (
-                <Card>
-                    <CardContent className="flex items-center justify-center h-64">
-                        <div className="text-center text-muted-foreground">
-                            <Filter className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                            <p className="text-lg font-medium">Selecciona los filtros y haz clic en "Buscar"</p>
-                            <p className="text-sm mt-2">Los valores por defecto son: Periodo Inicial 202401, Periodo Final 202402</p>
-                        </div>
-                    </CardContent>
-                </Card>
+                <div className="flex flex-col items-center justify-center py-20 text-center text-muted-foreground">
+                    <Filter className="h-12 w-12 mb-4 opacity-50" />
+                    <p className="text-lg font-medium text-foreground">Selecciona los filtros y haz clic en "Buscar"</p>
+                    <p className="text-sm mt-2">Los valores por defecto son: Periodo Inicial 202401, Periodo Final 202402</p>
+                </div>
             )}
         </motion.div>
     )
