@@ -43,7 +43,7 @@ const getPrioridadBadge = (prioridad: string) => {
     switch (prioridad?.toLowerCase()) {
         case 'alta':
         case 'urgente':
-            return 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
+            return 'bg-destructive/10 text-destructive'
         case 'media':
             return 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400'
         case 'baja':
@@ -62,7 +62,7 @@ const getEstadoBadge = (estado: string) => {
             return 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
         case 'rechazado':
         case 'cancelado':
-            return 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
+            return 'bg-destructive/10 text-destructive'
         case 'en revisión':
         case 'en revision':
             return 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400'
@@ -197,7 +197,7 @@ const SoportesSubAccordion = ({ soportes, colSpan }: SoportesSubAccordionProps) 
                                         </div>
                                         <div className="bg-primary/5 px-4 py-2 text-center">
                                             <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">Saldo pendiente</p>
-                                            <p className={`text-xs font-bold mt-0.5 ${resumen.saldo_pendiente > 0 ? 'text-red-600 dark:text-red-400' : 'text-green-600 dark:text-green-400'}`}>
+                                            <p className={`text-xs font-bold mt-0.5 ${resumen.saldo_pendiente > 0 ? 'text-destructive' : 'text-green-600 dark:text-green-400'}`}>
                                                 {formatters.currency(resumen.saldo_pendiente)}
                                             </p>
                                         </div>
@@ -325,7 +325,7 @@ const ConductorRow = ({ item, idx, soportes }: ConductorRowProps) => {
                             ? soportesConductor[0].saldo_pendiente
                             : getValorDistribucion(item)
                         return (
-                            <span className={`font-semibold text-sm ${disponible > 0 ? 'text-red-600 dark:text-red-400' : 'text-green-600 dark:text-green-400'}`}>
+                            <span className={`font-semibold text-sm ${disponible > 0 ? 'text-destructive' : 'text-green-600 dark:text-green-400'}`}>
                                 {formatters.currency(disponible)}
                             </span>
                         )
@@ -463,7 +463,7 @@ const DistribucionAccordion = ({ anticipo, totalColumnas }: DistribucionAccordio
                                                 </span>
                                             </td>
                                             <td className="py-2 px-4 text-right">
-                                                <span className="font-bold text-sm text-red-600 dark:text-red-400">
+                                                <span className="font-bold text-sm text-destructive">
                                                     {formatters.currency(
                                                         data.reduce((sum, item) => {
                                                             const uid = item.usuario_id ?? item.conductor_id

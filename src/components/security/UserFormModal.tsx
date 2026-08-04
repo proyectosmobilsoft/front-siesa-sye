@@ -596,7 +596,7 @@ export const UserFormModal = ({ isOpen, onClose, user }: UserFormModalProps) => 
                                 className={`h-10 pr-14 ${
                                     isEditing ? 'bg-muted/50' :
                                     usuarioStatus === 'available' ? 'border-green-500 focus-visible:ring-green-500' :
-                                    usuarioStatus === 'taken' ? 'border-red-500 focus-visible:ring-red-500' : ''
+                                    usuarioStatus === 'taken' ? 'border-destructive focus-visible:ring-destructive' : ''
                                 }`}
                             />
                             <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
@@ -605,7 +605,7 @@ export const UserFormModal = ({ isOpen, onClose, user }: UserFormModalProps) => 
                                 ) : usuarioStatus === 'available' ? (
                                     <CheckCircle2 className="h-4 w-4 text-green-500" />
                                 ) : usuarioStatus === 'taken' ? (
-                                    <XCircle className="h-4 w-4 text-red-500" />
+                                    <XCircle className="h-4 w-4 text-destructive" />
                                 ) : null}
                                 <button
                                     type="button"
@@ -620,7 +620,7 @@ export const UserFormModal = ({ isOpen, onClose, user }: UserFormModalProps) => 
                         </div>
                         <p className="text-xs text-muted-foreground">
                             {usuarioStatus === 'available' && <span className="text-green-600">Disponible</span>}
-                            {usuarioStatus === 'taken' && <span className="text-red-600">Ya existe</span>}
+                            {usuarioStatus === 'taken' && <span className="text-destructive">Ya existe</span>}
                             {usuarioStatus === 'checking' && 'Verificando...'}
                             {usuarioStatus === 'idle' && usuario === '' && 'Se genera con el nombre'}
                         </p>

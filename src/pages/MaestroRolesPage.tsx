@@ -442,11 +442,11 @@ export const MaestroRolesPage = () => {
                                         onClick={() => setFormEstado(false)}
                                         className={`flex items-center gap-1.5 px-3 py-2 rounded-lg border transition-all text-sm font-medium shrink-0 ${
                                             !formEstado
-                                                ? 'border-red-500 bg-red-50 dark:bg-red-950/30 text-red-600 dark:text-red-400'
+                                                ? 'border-destructive/30 bg-destructive/10 text-destructive'
                                                 : 'border-border text-muted-foreground hover:border-muted-foreground/50'
                                         }`}
                                     >
-                                        <span className={`w-2 h-2 rounded-full ${!formEstado ? 'bg-red-500' : 'bg-muted-foreground/30'}`} />
+                                        <span className={`w-2 h-2 rounded-full ${!formEstado ? 'bg-destructive' : 'bg-muted-foreground/30'}`} />
                                         Inactivo
                                     </button>
                                 </div>
@@ -565,7 +565,7 @@ export const MaestroRolesPage = () => {
             >
                 <div className="flex flex-col items-center text-center py-4">
                     <div className="relative mb-6">
-                        <div className="relative h-20 w-20 rounded-full bg-gradient-to-br from-red-50 to-red-100 dark:from-red-950/50 dark:to-red-900/30 border-2 border-red-200 dark:border-red-800 flex items-center justify-center">
+                        <div className="relative h-20 w-20 rounded-full bg-destructive/10 border-2 border-destructive/30 flex items-center justify-center">
                             <AlertTriangle className="h-10 w-10 text-destructive" />
                         </div>
                     </div>
@@ -590,13 +590,13 @@ export const MaestroRolesPage = () => {
                         </p>
                     </div>
 
-                    <p className="text-xs text-red-500/80 dark:text-red-400/80 mb-6">
+                    <p className="text-xs text-destructive/80 mb-6">
                         Los usuarios con este rol podrían perder acceso. Esta acción no se puede deshacer.
                     </p>
 
                     {deleteError && (
-                        <div className="w-full max-w-sm bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 rounded-lg px-4 py-3 mb-4">
-                            <p className="text-sm text-red-600 dark:text-red-400 font-medium">
+                        <div className="w-full max-w-sm bg-destructive/10 border border-destructive/30 rounded-lg px-4 py-3 mb-4">
+                            <p className="text-sm text-destructive font-medium">
                                 {deleteError}
                             </p>
                         </div>

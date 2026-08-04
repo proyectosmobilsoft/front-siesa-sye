@@ -94,13 +94,13 @@ const ConciliarConductorModal = ({
                 <div className={cn(
                     'rounded-xl border p-4',
                     esFaltante
-                        ? 'border-red-200 bg-red-50 dark:border-red-900 dark:bg-red-950/30'
-                        : 'border-blue-200 bg-blue-50 dark:border-blue-900 dark:bg-blue-950/30'
+                        ? 'border-destructive/30 bg-destructive/10'
+                        : 'border-emerald-200 bg-emerald-50 dark:border-emerald-900 dark:bg-emerald-950/30'
                 )}>
                     <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                         {conductor.diferencia === 0 ? 'Diferencias por resolver' : esFaltante ? 'Faltante por resolver' : 'Sobrante por resolver'}
                     </p>
-                    <p className={cn('mt-1 text-3xl font-extrabold tabular-nums', esFaltante ? 'text-red-600' : 'text-blue-600')}>
+                    <p className={cn('mt-1 text-3xl font-extrabold tabular-nums', esFaltante ? 'text-destructive' : 'text-emerald-600')}>
                         {formatters.currency(conductor.diferencia !== 0 ? Math.abs(conductor.diferencia) : conductor.montoPendiente)}
                     </p>
                     <p className="mt-2 text-xs text-muted-foreground">
@@ -117,7 +117,7 @@ const ConciliarConductorModal = ({
                 </div>
 
                 {error && (
-                    <p className="rounded-lg border border-red-300 bg-red-50 p-3 text-xs font-bold text-red-700 dark:border-red-800 dark:bg-red-900/20 dark:text-red-400">
+                    <p className="rounded-lg border border-destructive/30 bg-destructive/10 p-3 text-xs font-bold text-destructive">
                         {error}
                     </p>
                 )}
@@ -197,7 +197,7 @@ const TableroConciliacion = ({ movimientos, onResuelto }: { movimientos: Movimie
                             </span>
                             <span className={cn(
                                 'rounded-full px-3 py-1 text-xs font-bold',
-                                descuadrados.length ? 'bg-red-100 text-red-700 dark:bg-red-950/40 dark:text-red-400' : 'bg-emerald-100 text-emerald-700'
+                                descuadrados.length ? 'bg-destructive/10 text-destructive' : 'bg-emerald-100 text-emerald-700'
                             )}>
                                 {descuadrados.length} por conciliar
                             </span>
@@ -230,7 +230,7 @@ const TableroConciliacion = ({ movimientos, onResuelto }: { movimientos: Movimie
                                                     <div className="flex items-center gap-3">
                                                         <div className={cn(
                                                             'flex h-9 w-9 items-center justify-center rounded-full text-xs font-bold text-white',
-                                                            alDia ? 'bg-emerald-500' : 'bg-red-500'
+                                                            alDia ? 'bg-emerald-500' : 'bg-destructive'
                                                         )}>
                                                             {conductor.conductorNombre.charAt(0).toUpperCase()}
                                                         </div>
@@ -256,14 +256,14 @@ const TableroConciliacion = ({ movimientos, onResuelto }: { movimientos: Movimie
                                                         'inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-bold',
                                                         alDia
                                                             ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400'
-                                                            : 'bg-red-100 text-red-700 dark:bg-red-950/40 dark:text-red-400'
+                                                            : 'bg-destructive/10 text-destructive'
                                                     )}>
                                                         {alDia ? <ShieldCheck className="h-3.5 w-3.5" /> : <TriangleAlert className="h-3.5 w-3.5" />}
                                                         {alDia ? 'Al día' : 'Tiene un descuadre'}
                                                     </span>
                                                 </td>
                                                 <td className="px-5 py-3 text-right">
-                                                    <p className={cn('font-bold tabular-nums', alDia ? 'text-emerald-600' : conductor.diferencia < 0 ? 'text-red-600' : 'text-blue-600')}>
+                                                    <p className={cn('font-bold tabular-nums', alDia ? 'text-emerald-600' : conductor.diferencia < 0 ? 'text-destructive' : 'text-emerald-600')}>
                                                         {alDia ? formatters.currency(0) : formatters.currency(conductor.montoPendiente)}
                                                     </p>
                                                     {!alDia && (
@@ -290,9 +290,9 @@ const TableroConciliacion = ({ movimientos, onResuelto }: { movimientos: Movimie
                                 </tbody>
                                 {descuadrados.length > 0 && (
                                     <tfoot>
-                                        <tr className="border-t border-border bg-red-50/60 dark:bg-red-950/10">
+                                        <tr className="border-t border-border bg-destructive/10">
                                             <td colSpan={2} className="px-5 py-3 text-xs font-bold uppercase tracking-wide text-muted-foreground">Total de diferencias por conciliar</td>
-                                            <td className="px-5 py-3 text-right font-extrabold tabular-nums text-red-600">{formatters.currency(totalPorConciliar)}</td>
+                                            <td className="px-5 py-3 text-right font-extrabold tabular-nums text-destructive">{formatters.currency(totalPorConciliar)}</td>
                                             <td />
                                         </tr>
                                     </tfoot>
@@ -374,8 +374,8 @@ const ValidarEntregaModal = ({ entrega, onClose, onConfirmado }: ValidarEntregaM
 
                 {!cuadra && valorContado.trim() !== '' && (
                     <div className={`flex items-center gap-2 rounded-lg border p-3 text-sm font-semibold ${diferencia > 0
-                        ? 'border-blue-300 bg-blue-50 text-blue-700 dark:border-blue-800 dark:bg-blue-900/20 dark:text-blue-400'
-                        : 'border-red-300 bg-red-50 text-red-700 dark:border-red-800 dark:bg-red-900/20 dark:text-red-400'
+                        ? 'border-emerald-300 bg-emerald-50 text-emerald-700 dark:border-emerald-800 dark:bg-emerald-900/20 dark:text-emerald-400'
+                        : 'border-destructive/30 bg-destructive/10 text-destructive'
                         }`}>
                         <AlertCircle className="h-4 w-4 flex-shrink-0" />
                         Diferencia de {formatters.currency(Math.abs(diferencia))} ({diferencia > 0 ? 'sobrante' : 'faltante'})
@@ -383,7 +383,7 @@ const ValidarEntregaModal = ({ entrega, onClose, onConfirmado }: ValidarEntregaM
                 )}
 
                 {error && (
-                    <p className="rounded-lg border border-red-300 bg-red-50 p-3 text-xs font-bold text-red-700 dark:border-red-800 dark:bg-red-900/20 dark:text-red-400">
+                    <p className="rounded-lg border border-destructive/30 bg-destructive/10 p-3 text-xs font-bold text-destructive">
                         {error}
                     </p>
                 )}
@@ -456,7 +456,7 @@ const EntregasSubAccordion = ({ entregas, colSpan, onValidar }: { entregas: Movi
                                         <>
                                             <td className="px-4 py-2 text-right font-semibold">
                                                 {mov.diferencia ? (
-                                                    <span className={mov.diferencia > 0 ? 'text-blue-600 dark:text-blue-400' : 'text-red-600 dark:text-red-400'}>
+                                                    <span className={mov.diferencia > 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-destructive'}>
                                                         {mov.diferencia > 0 ? '+' : ''}{formatters.currency(mov.diferencia)}
                                                     </span>
                                                 ) : (
@@ -602,7 +602,7 @@ const RecibosConductorModal = ({ grupo, onClose, rango }: { grupo: GrupoConducto
                     <Loader2 className="h-4 w-4 animate-spin" /> Cargando recibos...
                 </div>
             ) : error ? (
-                <p className="text-sm font-semibold text-red-600 dark:text-red-400">Error al cargar los recibos.</p>
+                <p className="text-sm font-semibold text-destructive">Error al cargar los recibos.</p>
             ) : recibos.length === 0 ? (
                 <p className="py-10 text-center text-xs font-bold uppercase tracking-widest text-muted-foreground">
                     Este conductor no tiene recibos de caja en el periodo
@@ -630,8 +630,8 @@ const RecibosConductorModal = ({ grupo, onClose, rango }: { grupo: GrupoConducto
                             </div>
                         </div>
                         <div className="flex items-center gap-3 rounded-xl border border-border bg-muted/30 px-4 py-3">
-                            <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-blue-500/10">
-                                <Landmark className="h-4 w-4 text-blue-600" />
+                            <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-muted">
+                                <Landmark className="h-4 w-4 text-muted-foreground" />
                             </div>
                             <div>
                                 <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Total transferencia</p>
@@ -695,7 +695,7 @@ const RecibosConductorModal = ({ grupo, onClose, rango }: { grupo: GrupoConducto
                                     <td className="whitespace-nowrap px-3 py-3 text-right font-mono text-xs font-extrabold text-emerald-600">
                                         {formatters.currency(totalEfectivo)}
                                     </td>
-                                    <td className="whitespace-nowrap px-3 py-3 text-right font-mono text-xs font-extrabold text-blue-600">
+                                    <td className="whitespace-nowrap px-3 py-3 text-right font-mono text-xs font-extrabold text-muted-foreground">
                                         {formatters.currency(totalConsignacion)}
                                     </td>
                                     <td className="whitespace-nowrap px-3 py-3 text-right font-mono text-xs font-extrabold text-primary">
@@ -783,8 +783,8 @@ const EntregasPanel = ({ esPendiente, data, isLoading, error, onValidar, onVerRC
                         </div>
                     ) : error ? (
                         <div className="flex flex-col items-center gap-2 py-14">
-                            <AlertCircle className="h-6 w-6 text-red-500" />
-                            <p className="text-sm font-semibold text-red-600 dark:text-red-400">Error al cargar las entregas.</p>
+                            <AlertCircle className="h-6 w-6 text-destructive" />
+                            <p className="text-sm font-semibold text-destructive">Error al cargar las entregas.</p>
                         </div>
                     ) : grupos.length === 0 ? (
                         <div className="flex flex-col items-center gap-3 py-16">
@@ -860,7 +860,7 @@ const ResumenPeriodo = ({ pendientes, confirmadas }: { pendientes: MovimientoEfe
         { label: 'Total del periodo', value: formatters.currency(totalGeneral), icon: Wallet, tono: 'text-primary bg-primary/10', borde: 'border-l-primary' },
         { label: 'Pendiente por validar', value: formatters.currency(totalPendiente), icon: Hourglass, tono: 'text-amber-600 bg-amber-500/10', borde: 'border-l-amber-500' },
         { label: '% conciliado', value: `${pctConciliado}%`, icon: ShieldCheck, tono: 'text-emerald-600 bg-emerald-500/10', borde: 'border-l-emerald-500' },
-        { label: 'Conductores activos', value: String(conductoresActivos), icon: Users, tono: 'text-blue-600 bg-blue-500/10', borde: 'border-l-blue-500' },
+        { label: 'Conductores activos', value: String(conductoresActivos), icon: Users, tono: 'text-muted-foreground bg-muted', borde: 'border-l-muted-foreground/40' },
     ]
 
     return (

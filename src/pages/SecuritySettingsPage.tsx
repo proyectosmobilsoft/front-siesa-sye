@@ -324,7 +324,7 @@ export const SecuritySettingsPage = () => {
                 <div className="flex flex-col items-center text-center py-4">
                     {/* Icono grande animado */}
                     <div className="relative mb-6">
-                        <div className="relative h-20 w-20 rounded-full bg-gradient-to-br from-red-50 to-red-100 dark:from-red-950/50 dark:to-red-900/30 border-2 border-red-200 dark:border-red-800 flex items-center justify-center">
+                        <div className="relative h-20 w-20 rounded-full bg-destructive/10 border-2 border-destructive/30 flex items-center justify-center">
                             <AlertTriangle className="h-10 w-10 text-destructive" />
                         </div>
                     </div>
@@ -355,7 +355,7 @@ export const SecuritySettingsPage = () => {
                     </div>
 
                     {/* Advertencia */}
-                    <p className="text-xs text-red-500/80 dark:text-red-400/80 mb-6">
+                    <p className="text-xs text-destructive/80 mb-6">
                         Se eliminarán sus roles y permisos. Esta acción no se puede deshacer.
                     </p>
 

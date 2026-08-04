@@ -215,7 +215,7 @@ export const MaestroDescuentosFinancierosPage = () => {
             >
                 <div className="flex flex-col items-center text-center py-4">
                     <div className="relative mb-6">
-                        <div className="relative h-20 w-20 rounded-full bg-gradient-to-br from-red-50 to-red-100 dark:from-red-950/50 dark:to-red-900/30 border-2 border-red-200 dark:border-red-800 flex items-center justify-center">
+                        <div className="relative h-20 w-20 rounded-full bg-destructive/10 border-2 border-destructive/30 flex items-center justify-center">
                             <AlertTriangle className="h-10 w-10 text-destructive" />
                         </div>
                     </div>
@@ -231,13 +231,13 @@ export const MaestroDescuentosFinancierosPage = () => {
                         <p className="text-sm text-muted-foreground mt-1 font-mono">{deletingCondicion?.code}</p>
                     </div>
 
-                    <p className="text-xs text-red-500/80 dark:text-red-400/80 mb-6">
+                    <p className="text-xs text-destructive/80 mb-6">
                         Se eliminarán también todos sus descuentos asociados. Esta acción no se puede deshacer.
                     </p>
 
                     {errorDelete && (
-                        <div className="w-full max-w-sm bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 rounded-lg px-4 py-3 mb-4">
-                            <p className="text-sm text-red-600 dark:text-red-400 font-medium">{errorDelete}</p>
+                        <div className="w-full max-w-sm bg-destructive/10 border border-destructive/30 rounded-lg px-4 py-3 mb-4">
+                            <p className="text-sm text-destructive font-medium">{errorDelete}</p>
                         </div>
                     )}
 
