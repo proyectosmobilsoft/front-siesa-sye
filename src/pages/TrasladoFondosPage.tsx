@@ -197,7 +197,7 @@ export const TrasladoFondosPage = () => {
                             {exito && !crearTraslado.isError && (
                                 <div className="flex items-center gap-2 rounded-lg border border-green-300 bg-green-50 p-3 text-sm font-medium text-green-700 dark:border-green-900 dark:bg-green-950/30 dark:text-green-400">
                                     <CheckCircle2 className="h-4 w-4 flex-shrink-0" />
-                                    Traslado registrado. Queda pendiente de aprobar en SIESA escritorio.
+                                    Traslado registrado y aprobado en SIESA.
                                 </div>
                             )}
 
