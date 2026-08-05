@@ -1,5 +1,5 @@
 import { apiClient } from './client'
-import { ReciboCajaUsuario, RecibosCajaUsuarioResponse } from './types'
+import { ReciboCajaUsuario, RecibosCajaUsuarioResponse, ResumenConductoresDia, ResumenConductoresDiaResponse } from './types'
 import { withRetry } from '@/utils/retry'
 
 export const reciboCajaApi = {
@@ -16,6 +16,24 @@ export const reciboCajaApi = {
             fecha_inicial: opts?.fechaInicial,
             fecha_final: opts?.fechaFinal,
             tipo: opts?.tipo,
+          },
+        }
+      )
+      return response.data.data
+    })
+  },
+
+  /** Tablero admin: RC del día por conductor, sin importar si ya se hizo la entrega de efectivo */
+  getResumenConductoresDia: async (
+    opts?: { fechaInicial?: string; fechaFinal?: string }
+  ): Promise<ResumenConductoresDia> => {
+    return withRetry(async () => {
+      const response = await apiClient.get<ResumenConductoresDiaResponse>(
+        '/recibo-caja/resumen-conductores',
+        {
+          params: {
+            fecha_inicial: opts?.fechaInicial,
+            fecha_final: opts?.fechaFinal,
           },
         }
       )

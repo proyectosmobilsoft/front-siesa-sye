@@ -394,3 +394,23 @@ export interface RecibosCajaUsuarioResponse {
   total: number
   data: ReciboCajaUsuario[]
 }
+
+export interface ResumenConductoresDiaItem {
+  usuario_creacion: string
+  conductor_nombre: string
+  total_efectivo: number
+  total_consignacion: number
+  total: number
+  recibos_count: number
+}
+
+export interface ResumenConductoresDia {
+  fecha_inicial: string
+  fecha_final: string
+  conductores: ResumenConductoresDiaItem[]
+}
+
+export interface ResumenConductoresDiaResponse {
+  success: boolean
+  data: ResumenConductoresDia
+}
