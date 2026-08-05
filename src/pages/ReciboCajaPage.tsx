@@ -24,7 +24,6 @@ import { Input } from '@/components/ui/input'
 import { Select } from '@/components/ui/select'
 import { cn } from '@/lib/utils'
 import { apiClient } from '@/api/client'
-import { maestroCajasApi, Caja } from '@/api/maestroCajas'
 import { reciboCajaApi } from '@/api/reciboCaja'
 import { ResumenConductoresDia, ReciboCajaUsuario } from '@/api/types'
 import { formatters } from '@/utils/formatters'
@@ -76,20 +75,21 @@ export const ReciboCajaPage = () => {
   const responsableCedula = sesion?.id ? String(sesion.id) : '—'
 
   const [tab, setTab] = useState<'general' | 'conductores' | 'recibos'>('general')
-  const [cajas, setCajas] = useState<Caja[]>([])
-  const [caja, setCaja] = useState('')
-  
+
   // Filtros de fecha General
   const [fechaDesde, setFechaDesde] = useState(hoyISO())
   const [fechaHasta, setFechaHasta] = useState('')
   const [consultado, setConsultado] = useState(false)
   const [cargandoGeneral, setCargandoGeneral] = useState(false)
 
-  const [ventasEfectivo, setVentasEfectivo] = useState(16126)
-  const [ventasTarjetas, setVentasTarjetas] = useState(131148)
-  const [ventasConsignado, setVentasConsignado] = useState(1176198)
-  const [recaudos, setRecaudos] = useState(130005)
-  const saldoAnterior = -44444992.58
+  const [ventasEfectivo, setVentasEfectivo] = useState(0)
+  // Tarjetas y recaudos de cartera no tienen endpoint propio todavía (resumen-conductores
+  // solo distingue efectivo/transferencia) — quedan en 0 hasta que exista esa fuente real.
+  const [ventasTarjetas, setVentasTarjetas] = useState(0)
+  const [ventasConsignado, setVentasConsignado] = useState(0)
+  const [recaudos, setRecaudos] = useState(0)
+  // Saldo anterior (saldo de caja en SIESA) no está conectado a un endpoint real todavía.
+  const saldoAnterior = 0
 
   const [tipodoc, setTipodoc] = useState('RC')
   const [estado, setEstado] = useState(0)
@@ -138,8 +138,8 @@ export const ReciboCajaPage = () => {
       if (res && res.conductores) {
         const ef = res.conductores.reduce((acc, c) => acc + c.total_efectivo, 0)
         const cg = res.conductores.reduce((acc, c) => acc + c.total_consignacion, 0)
-        if (ef > 0) setVentasEfectivo(ef)
-        if (cg > 0) setVentasConsignado(cg)
+        setVentasEfectivo(ef)
+        setVentasConsignado(cg)
       }
       setConsultado(true)
     } catch (err) {
@@ -192,17 +192,6 @@ export const ReciboCajaPage = () => {
     () => (!razonSocial.trim() ? data : data.filter((r) => r.Razón_Social?.toLowerCase().includes(razonSocial.toLowerCase()))),
     [data, razonSocial]
   )
-
-  useEffect(() => {
-    maestroCajasApi
-      .listarCajas(true)
-      .then((res) => {
-        const lista = res.data ?? []
-        setCajas(lista)
-        if (lista.length > 0) setCaja(lista[0].nombre)
-      })
-      .catch((err) => console.error('Error cargando cajas del maestro:', err))
-  }, [])
 
   const fechaFinalAplicada = fechaHasta || fechaDesde || hoyISO()
 
@@ -286,25 +275,7 @@ export const ReciboCajaPage = () => {
         {tab === 'general' && (
           <div className="space-y-6 p-4 sm:p-6">
             {/* Filtros de la pestaña General */}
-            <div className="grid items-end gap-4 rounded-xl border border-border/60 bg-muted/20 p-4 sm:grid-cols-2 lg:grid-cols-[1fr_1fr_1fr_auto]">
-              <div className="space-y-1.5">
-                <label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Caja</label>
-                <div className="relative">
-                  <Landmark className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                  <Select value={caja} onChange={(e) => setCaja(e.target.value)} className="pl-9">
-                    {cajas.length === 0 ? (
-                      <option value="">Sin cajas configuradas</option>
-                    ) : (
-                      cajas.map((c) => (
-                        <option key={c.id} value={c.nombre}>
-                          {c.nombre}
-                        </option>
-                      ))
-                    )}
-                  </Select>
-                </div>
-              </div>
-
+            <div className="grid items-end gap-4 rounded-xl border border-border/60 bg-muted/20 p-4 sm:grid-cols-2 lg:grid-cols-[1fr_1fr_auto]">
               <div className="space-y-1.5">
                 <label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Fecha Inicial</label>
                 <div className="relative">
@@ -378,7 +349,7 @@ export const ReciboCajaPage = () => {
                 <div className="space-y-1">
                   <p className="text-base font-bold text-foreground">El tablero de arqueo está listo</p>
                   <p className="max-w-md text-xs text-muted-foreground">
-                    Seleccione la caja y el rango de fechas (si no especifica fecha final se tomará la fecha inicial/hoy por defecto) y presione <strong>Consultar</strong>.
+                    Seleccione el rango de fechas (si no especifica fecha final se tomará la fecha inicial/hoy por defecto) y presione <strong>Consultar</strong>. Suma TODOS los RC de todas las cajas en ese rango.
                   </p>
                 </div>
                 <Button onClick={handleConsultarGeneral} disabled={cargandoGeneral} className="mt-2 gap-2 text-xs shadow-xs">
