@@ -200,7 +200,10 @@ export const SecuritySettingsPage = () => {
             className="flex h-full min-h-0 flex-col gap-4 p-6"
         >
             <div className="flex shrink-0 flex-col gap-3 border-b pb-4 sm:flex-row sm:items-center sm:justify-between">
-                <Button variant="outline" size="icon" onClick={() => navigate('/configuracion')}>
+                {/* Volver atrás: esta pantalla se alcanza desde Configuración → Seguridad
+                    y también desde Maestro → Maestro de Usuarios, así que se regresa al
+                    origen real en vez de forzar siempre /configuracion. */}
+                <Button variant="outline" size="icon" onClick={() => navigate(-1)}>
                     <ArrowLeft className="h-4 w-4" />
                 </Button>
                 <div className="flex w-full items-center gap-3 sm:w-auto">
