@@ -40,10 +40,14 @@ const CajaSelector = ({
             <Select value={value} onChange={(e) => onChange(e.target.value)} className="pl-9">
                 <option value="">Selecciona una caja</option>
                 {cajas.map((c, idx) => {
-                    const idVal = c?.id_caja ? String(c.id_caja).trim() : `caja-${idx}`
+                    if (!c || c.id_caja === undefined || c.id_caja === null) return null
+                    const idVal = String(c.id_caja).trim()
+                    const uniqueKey = `${idVal}-${c.id_co || ''}-${idx}`
+                    const coSuffix = c.id_co ? ` (CO ${c.id_co})` : ''
+                    const labelText = c.nombre ? `${c.nombre}${coSuffix}` : `Caja ${idVal}${coSuffix}`
                     return (
-                        <option key={idVal} value={idVal} disabled={idVal === disabledValue}>
-                            {c?.nombre ?? `Caja ${idVal}`}
+                        <option key={uniqueKey} value={idVal} disabled={idVal === disabledValue}>
+                            {labelText}
                         </option>
                     )
                 })}
@@ -86,7 +90,8 @@ export const TrasladoFondosPage = () => {
         if (!id || typeof id !== 'string') return ''
         const idLimpio = id.trim()
         const cajaEncontrada = cajas?.find((c) => c?.id_caja && String(c.id_caja).trim() === idLimpio)
-        return cajaEncontrada?.nombre ?? `Caja ${idLimpio}`
+        if (!cajaEncontrada) return `Caja ${idLimpio}`
+        return cajaEncontrada.nombre ? `${cajaEncontrada.nombre}` : `Caja ${idLimpio}`
     }
 
     const limpiarFiltroFechas = () => {

@@ -306,6 +306,7 @@ export interface CajaTraspaso {
   id_caja: string
   id_co: string
   rowid_auxiliar: number
+  auxiliar: string | null
   nombre: string | null
 }
 
