@@ -1,6 +1,6 @@
 import { motion } from 'framer-motion'
 import { useState, useEffect, useRef } from 'react'
-import { Search, Plus, Edit, Trash2, RefreshCw, Loader2, AlertTriangle } from 'lucide-react'
+import { Search, Plus, Edit, Trash2, RefreshCw, Loader2, AlertTriangle, RotateCcw } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { CajaModal } from '@/components/maestro/CajaModal'
@@ -13,10 +13,14 @@ export const MaestroCajasPage = () => {
     const [isModalOpen, setIsModalOpen] = useState(false)
     const [editingCaja, setEditingCaja] = useState<Caja | null>(null)
     const [deletingCaja, setDeletingCaja] = useState<Caja | null>(null)
+    const [reactivandoCaja, setReactivandoCaja] = useState<Caja | null>(null)
+    const [nombreReactivar, setNombreReactivar] = useState('')
     const [cajas, setCajas] = useState<Caja[]>([])
     const [loading, setLoading] = useState(true)
     const [deleting, setDeleting] = useState(false)
+    const [reactivando, setReactivando] = useState(false)
     const [errorDelete, setErrorDelete] = useState<string | null>(null)
+    const [errorReactivar, setErrorReactivar] = useState<string | null>(null)
     const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
     const fetchCajas = async (searchTerm = search) => {
@@ -91,6 +95,31 @@ export const MaestroCajasPage = () => {
         }
     }
 
+    const handleReactivar = (caja: Caja) => {
+        setReactivandoCaja(caja)
+        setNombreReactivar(caja.nombre)
+        setErrorReactivar(null)
+    }
+
+    const confirmReactivar = async () => {
+        if (!reactivandoCaja) return
+        if (!nombreReactivar.trim()) {
+            setErrorReactivar('El nombre no puede quedar vacío')
+            return
+        }
+        try {
+            setReactivando(true)
+            await maestroCajasApi.reactivarCaja(reactivandoCaja.id, nombreReactivar.trim())
+            setReactivandoCaja(null)
+            fetchCajas(search)
+        } catch (err: any) {
+            console.error('Error reactivando caja:', err)
+            setErrorReactivar(err?.response?.data?.message || 'Error al reactivar la caja')
+        } finally {
+            setReactivando(false)
+        }
+    }
+
     return (
         <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -160,24 +189,39 @@ export const MaestroCajasPage = () => {
                                     </td>
                                     <td className="py-3.5 px-4">
                                         <div className="flex justify-end gap-1">
-                                            <Button
-                                                variant="ghost"
-                                                size="sm"
-                                                onClick={() => handleEdit(c)}
-                                                className="h-8 w-8 p-0 text-primary border border-primary/20 hover:bg-primary/10"
-                                                title="Editar"
-                                            >
-                                                <Edit className="h-4 w-4" />
-                                            </Button>
-                                            <Button
-                                                variant="ghost"
-                                                size="sm"
-                                                onClick={() => handleDelete(c)}
-                                                className="h-8 w-8 p-0 text-destructive border border-destructive/20 hover:bg-destructive/10"
-                                                title="Eliminar"
-                                            >
-                                                <Trash2 className="h-4 w-4" />
-                                            </Button>
+                                            {c.activa === 1 || c.activa === true ? (
+                                                <>
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="sm"
+                                                        onClick={() => handleEdit(c)}
+                                                        className="h-8 w-8 p-0 text-primary border border-primary/20 hover:bg-primary/10"
+                                                        title="Editar"
+                                                    >
+                                                        <Edit className="h-4 w-4" />
+                                                    </Button>
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="sm"
+                                                        onClick={() => handleDelete(c)}
+                                                        className="h-8 w-8 p-0 text-destructive border border-destructive/20 hover:bg-destructive/10"
+                                                        title="Eliminar"
+                                                    >
+                                                        <Trash2 className="h-4 w-4" />
+                                                    </Button>
+                                                </>
+                                            ) : (
+                                                <Button
+                                                    variant="ghost"
+                                                    size="sm"
+                                                    onClick={() => handleReactivar(c)}
+                                                    className="h-8 gap-1.5 px-3 text-emerald-600 border border-emerald-500/20 hover:bg-emerald-500/10"
+                                                    title="Reactivar"
+                                                >
+                                                    <RotateCcw className="h-3.5 w-3.5" />
+                                                    Reactivar
+                                                </Button>
+                                            )}
                                         </div>
                                     </td>
                                 </tr>
@@ -263,6 +307,69 @@ export const MaestroCajasPage = () => {
                                 <>
                                     <Trash2 className="h-4 w-4" />
                                     Sí, eliminar
+                                </>
+                            )}
+                        </Button>
+                    </div>
+                </div>
+            </Modal>
+
+            <Modal
+                isOpen={!!reactivandoCaja}
+                onClose={() => {
+                    if (!reactivando) {
+                        setReactivandoCaja(null)
+                        setErrorReactivar(null)
+                    }
+                }}
+                title="Reactivar caja"
+                className="max-w-md"
+            >
+                <div className="mt-3 space-y-4">
+                    <p className="text-sm text-muted-foreground">
+                        Confirma el nombre con el que se mostrará esta caja (puedes cambiarlo si quieres):
+                    </p>
+
+                    <div className="space-y-1.5">
+                        <label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Nombre</label>
+                        <Input
+                            value={nombreReactivar}
+                            onChange={(e) => setNombreReactivar(e.target.value)}
+                            className="h-10"
+                            autoComplete="off"
+                        />
+                        <p className="text-xs text-muted-foreground font-mono">
+                            CO {reactivandoCaja?.id_co} · Aux {reactivandoCaja?.auxiliar_contable}
+                        </p>
+                    </div>
+
+                    {errorReactivar && (
+                        <div className="p-2.5 text-sm text-destructive bg-destructive/10 border border-destructive/30 rounded-lg">
+                            {errorReactivar}
+                        </div>
+                    )}
+
+                    <div className="flex justify-end gap-3 pt-4 border-t">
+                        <Button
+                            variant="outline"
+                            onClick={() => {
+                                setReactivandoCaja(null)
+                                setErrorReactivar(null)
+                            }}
+                            disabled={reactivando}
+                        >
+                            Cancelar
+                        </Button>
+                        <Button onClick={confirmReactivar} disabled={reactivando} className="gap-2">
+                            {reactivando ? (
+                                <>
+                                    <Loader2 className="h-4 w-4 animate-spin" />
+                                    Reactivando...
+                                </>
+                            ) : (
+                                <>
+                                    <RotateCcw className="h-4 w-4" />
+                                    Reactivar
                                 </>
                             )}
                         </Button>

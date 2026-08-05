@@ -36,4 +36,9 @@ export const maestroCajasApi = {
         const response = await apiClient.delete(`/maestros/cajas/${id}`)
         return response.data
     },
+
+    reactivarCaja: async (id: number, nombre?: string) => {
+        const response = await apiClient.patch(`/maestros/cajas/${id}/reactivar`, nombre ? { nombre } : {})
+        return response.data
+    },
 }
