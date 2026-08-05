@@ -17,6 +17,7 @@ import {
   Lock,
   Building2,
   Layers,
+  AlertCircle,
 } from 'lucide-react'
 import { motion } from 'framer-motion'
 import { Button } from '@/components/ui/button'
@@ -28,6 +29,7 @@ import { maestroCajasApi, Caja } from '@/api/maestroCajas'
 import { reciboCajaApi } from '@/api/reciboCaja'
 import { ResumenConductoresDia, ReciboCajaUsuario } from '@/api/types'
 import { formatters } from '@/utils/formatters'
+import { useAuthStore } from '@/store/authStore'
 
 interface ReciboCaja {
   Rowid: number
@@ -53,6 +55,7 @@ const LIMIT = 50
 const MONEY = new Intl.NumberFormat('es-CO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 const money = (n: number) => MONEY.format(n)
 const amount = (v: string) => Number(v.replace(/\D/g, '')) || 0
+const hoyISO = () => new Date().toISOString().slice(0, 10)
 
 const ESTADO_OPTIONS = [
   { value: 0, label: 'Todos los estados' },
@@ -69,10 +72,20 @@ const estadoBadge = (estado: string) =>
       : 'bg-amber-500/15 text-amber-700 dark:text-amber-400 border border-amber-500/20'
 
 export const ReciboCajaPage = () => {
+  const { sesion } = useAuthStore()
+  const responsableNombre = sesion?.nombre_completo || sesion?.usuario || 'Usuario Autenticado'
+  const responsableCedula = sesion?.id ? String(sesion.id) : '—'
+
   const [tab, setTab] = useState<'general' | 'conductores' | 'recibos'>('general')
   const [cajas, setCajas] = useState<Caja[]>([])
   const [caja, setCaja] = useState('')
-  const [fecha, setFecha] = useState('2026-05-05')
+  
+  // Filtros de fecha General
+  const [fechaDesde, setFechaDesde] = useState(hoyISO())
+  const [fechaHasta, setFechaHasta] = useState('')
+  const [consultado, setConsultado] = useState(false)
+  const [cargandoGeneral, setCargandoGeneral] = useState(false)
+
   const [ventasEfectivo, setVentasEfectivo] = useState(16126)
   const [ventasTarjetas, setVentasTarjetas] = useState(131148)
   const [ventasConsignado, setVentasConsignado] = useState(1176198)
@@ -112,6 +125,31 @@ export const ReciboCajaPage = () => {
     const interval = setInterval(fetchResumenConductores, 30000)
     return () => clearInterval(interval)
   }, [tab])
+
+  const handleConsultarGeneral = async () => {
+    setCargandoGeneral(true)
+    try {
+      const fInicial = fechaDesde || hoyISO()
+      const fFinal = fechaHasta || fInicial
+      // Consultar resumen / RCs del periodo seleccionado (si no hay fechaHasta, se toma fInicial)
+      const res = await reciboCajaApi.getResumenConductoresDia({
+        fechaInicial: fInicial,
+        fechaFinal: fFinal,
+      })
+      if (res && res.conductores) {
+        const ef = res.conductores.reduce((acc, c) => acc + c.total_efectivo, 0)
+        const cg = res.conductores.reduce((acc, c) => acc + c.total_consignacion, 0)
+        if (ef > 0) setVentasEfectivo(ef)
+        if (cg > 0) setVentasConsignado(cg)
+      }
+      setConsultado(true)
+    } catch (err) {
+      console.error('Error al consultar arqueo general:', err)
+      setConsultado(true)
+    } finally {
+      setCargandoGeneral(false)
+    }
+  }
 
   const ingresos: [number, number, number] = [ventasEfectivo, ventasTarjetas, ventasConsignado]
   const totalIngresos = ingresos.reduce((sum, value) => sum + value, 0) + recaudos
@@ -167,6 +205,8 @@ export const ReciboCajaPage = () => {
       .catch((err) => console.error('Error cargando cajas del maestro:', err))
   }, [])
 
+  const fechaFinalAplicada = fechaHasta || fechaDesde || hoyISO()
+
   return (
     <div className="mx-auto max-w-[1400px] space-y-6 p-4 sm:p-6 lg:p-8">
       {/* ── Header de la vista ── */}
@@ -204,7 +244,7 @@ export const ReciboCajaPage = () => {
 
       {/* ── Contenedor principal con Navegación por pestañas ── */}
       <div className="space-y-6 rounded-2xl border border-border/60 bg-card shadow-sm">
-        {/* Barra de Pestañas estilo pildora */}
+        {/* Barra de Pestañas estilo píldora */}
         <div className="flex items-center border-b border-border/60 px-4 pt-3">
           <div className="flex space-x-1 rounded-xl bg-muted/60 p-1">
             <button
@@ -247,7 +287,7 @@ export const ReciboCajaPage = () => {
         {tab === 'general' && (
           <div className="space-y-6 p-4 sm:p-6">
             {/* Filtros de la pestaña General */}
-            <div className="grid items-end gap-4 rounded-xl border border-border/60 bg-muted/20 p-4 sm:grid-cols-2 lg:grid-cols-[1fr_1fr_auto]">
+            <div className="grid items-end gap-4 rounded-xl border border-border/60 bg-muted/20 p-4 sm:grid-cols-2 lg:grid-cols-[1fr_1fr_1fr_auto]">
               <div className="space-y-1.5">
                 <label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Caja</label>
                 <div className="relative">
@@ -267,29 +307,44 @@ export const ReciboCajaPage = () => {
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Fecha</label>
+                <label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Fecha Inicial</label>
                 <div className="relative">
                   <Calendar className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                   <Input
                     type="date"
-                    value={fecha}
-                    onChange={(e) => setFecha(e.target.value)}
+                    value={fechaDesde}
+                    onChange={(e) => setFechaDesde(e.target.value)}
                     className="pl-9 text-xs"
                   />
                 </div>
               </div>
 
-              <Button className="gap-2 self-end shadow-xs">
-                <Search className="h-3.5 w-3.5" /> Consultar
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Fecha Final (Opcional)</label>
+                <div className="relative">
+                  <Calendar className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    type="date"
+                    value={fechaHasta}
+                    onChange={(e) => setFechaHasta(e.target.value)}
+                    placeholder="Hoy por defecto"
+                    className="pl-9 text-xs"
+                  />
+                </div>
+              </div>
+
+              <Button onClick={handleConsultarGeneral} disabled={cargandoGeneral} className="gap-2 self-end shadow-xs">
+                <Search className={cn('h-3.5 w-3.5', cargandoGeneral && 'animate-spin')} />
+                {cargandoGeneral ? 'Consultando...' : 'Consultar'}
               </Button>
             </div>
 
             {/* Fila de metadatos de último cuadre */}
             <div className="flex flex-col gap-3 rounded-xl border border-border/60 bg-card p-4 text-xs lg:flex-row lg:items-center lg:justify-between">
               <div className="flex items-center gap-2 font-semibold text-muted-foreground">
-                <span>Fecha último cuadre caja:</span>
+                <span>Periodo consultado:</span>
                 <span className="rounded-lg bg-muted/60 px-3 py-1 font-mono font-medium text-foreground">
-                  domingo, 21 de junio de 2026
+                  {fechaDesde === fechaFinalAplicada ? fechaDesde : `${fechaDesde} — ${fechaFinalAplicada}`}
                 </span>
               </div>
 
@@ -315,106 +370,126 @@ export const ReciboCajaPage = () => {
               </div>
             </div>
 
-            {/* Tabla Principal del Arqueo / Flujo General */}
-            <div className="overflow-hidden rounded-xl border border-border/60 shadow-xs">
-              <div className="overflow-x-auto">
-                <table className="w-full text-xs">
-                  <thead>
-                    <tr className="border-b border-border bg-muted/60">
-                      <th className="w-[35%] px-4 py-3 text-left font-semibold uppercase tracking-wide text-muted-foreground">
-                        Descripción o concepto
-                      </th>
-                      {['Efectivo', 'Tarjetas', 'Consignado', 'Total', 'Anticipo x Dev'].map((h) => (
-                        <th key={h} className="px-4 py-3 text-right font-semibold uppercase tracking-wide text-muted-foreground">
-                          {h}
-                        </th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {lines.map((line, rowIndex) => (
-                      <tr
-                        key={line.label}
-                        className={cn(
-                          'border-b border-border/40 transition-colors',
-                          line.kind === 'flow'
-                            ? 'bg-primary/5 font-bold text-primary'
-                            : 'hover:bg-muted/30'
-                        )}
-                      >
-                        <td className="px-4 py-3 font-semibold">{line.label}</td>
-                        {line.values.map((value, colIndex) => (
-                          <td key={`${line.label}-${colIndex}`} className="px-4 py-3 text-right font-mono">
-                            {rowIndex === 0 && colIndex === 0 ? (
-                              <BoardInput value={value} onChange={setVentasEfectivo} />
-                            ) : rowIndex === 0 && colIndex === 1 ? (
-                              <BoardInput value={value} onChange={setVentasTarjetas} />
-                            ) : rowIndex === 0 && colIndex === 2 ? (
-                              <BoardInput value={value} onChange={setVentasConsignado} />
-                            ) : rowIndex === 1 && colIndex === 2 ? (
-                              <BoardInput value={value} onChange={setRecaudos} />
-                            ) : (
-                              money(value)
+            {/* Estado Inicial: Si NO ha consultado aún, mostrar tablero vacío con prompt */}
+            {!consultado ? (
+              <div className="flex flex-col items-center justify-center gap-3 rounded-2xl border border-dashed border-border/80 bg-muted/10 py-16 text-center shadow-xs">
+                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 text-primary">
+                  <Search className="h-6 w-6" />
+                </div>
+                <div className="space-y-1">
+                  <p className="text-base font-bold text-foreground">El tablero de arqueo está listo</p>
+                  <p className="max-w-md text-xs text-muted-foreground">
+                    Seleccione la caja y el rango de fechas (si no especifica fecha final se tomará la fecha inicial/hoy por defecto) y presione <strong>Consultar</strong>.
+                  </p>
+                </div>
+                <Button onClick={handleConsultarGeneral} disabled={cargandoGeneral} className="mt-2 gap-2 text-xs shadow-xs">
+                  <Search className={cn('h-3.5 w-3.5', cargandoGeneral && 'animate-spin')} /> Consultar Arqueo
+                </Button>
+              </div>
+            ) : (
+              <>
+                {/* Tabla Principal del Arqueo / Flujo General */}
+                <div className="overflow-hidden rounded-xl border border-border/60 shadow-xs">
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-xs">
+                      <thead>
+                        <tr className="border-b border-border bg-muted/60">
+                          <th className="w-[35%] px-4 py-3 text-left font-semibold uppercase tracking-wide text-muted-foreground">
+                            Descripción o concepto
+                          </th>
+                          {['Efectivo', 'Tarjetas', 'Consignado', 'Total', 'Anticipo x Dev'].map((h) => (
+                            <th key={h} className="px-4 py-3 text-right font-semibold uppercase tracking-wide text-muted-foreground">
+                              {h}
+                            </th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {lines.map((line, rowIndex) => (
+                          <tr
+                            key={line.label}
+                            className={cn(
+                              'border-b border-border/40 transition-colors',
+                              line.kind === 'flow'
+                                ? 'bg-primary/5 font-bold text-primary'
+                                : 'hover:bg-muted/30'
                             )}
-                          </td>
+                          >
+                            <td className="px-4 py-3 font-semibold">{line.label}</td>
+                            {line.values.map((value, colIndex) => (
+                              <td key={`${line.label}-${colIndex}`} className="px-4 py-3 text-right font-mono">
+                                {rowIndex === 0 && colIndex === 0 ? (
+                                  <BoardInput value={value} onChange={setVentasEfectivo} />
+                                ) : rowIndex === 0 && colIndex === 1 ? (
+                                  <BoardInput value={value} onChange={setVentasTarjetas} />
+                                ) : rowIndex === 0 && colIndex === 2 ? (
+                                  <BoardInput value={value} onChange={setVentasConsignado} />
+                                ) : rowIndex === 1 && colIndex === 2 ? (
+                                  <BoardInput value={value} onChange={setRecaudos} />
+                                ) : (
+                                  money(value)
+                                )}
+                              </td>
+                            ))}
+                            <td className="px-4 py-3 text-right font-mono font-bold text-foreground">
+                              {money(line.values.reduce((sum, n) => sum + n, 0))}
+                            </td>
+                            <td className="px-4 py-3 text-right font-mono text-muted-foreground">0.00</td>
+                          </tr>
                         ))}
-                        <td className="px-4 py-3 text-right font-mono font-bold text-foreground">
-                          {money(line.values.reduce((sum, n) => sum + n, 0))}
-                        </td>
-                        <td className="px-4 py-3 text-right font-mono text-muted-foreground">0.00</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
 
-            {/* Fila de datos del Responsable */}
-            <div className="grid gap-4 rounded-xl border border-border/60 bg-muted/20 p-4 sm:grid-cols-2">
-              <div className="flex items-center gap-2 text-xs">
-                <User className="h-4 w-4 text-muted-foreground" />
-                <span className="font-semibold text-muted-foreground">Responsable Caja:</span>
-                <span className="font-medium text-foreground">PEREZ POLANCO ANDRES ARTURO</span>
-              </div>
-              <div className="flex items-center gap-2 text-xs sm:justify-end">
-                <span className="font-semibold text-muted-foreground">Cédula:</span>
-                <span className="font-mono font-bold text-foreground">1140848342</span>
-              </div>
-            </div>
+                {/* Fila de datos del Responsable (Persona autenticada en la sesión) */}
+                <div className="grid gap-4 rounded-xl border border-border/60 bg-muted/20 p-4 sm:grid-cols-2">
+                  <div className="flex items-center gap-2 text-xs">
+                    <User className="h-4 w-4 text-primary" />
+                    <span className="font-semibold text-muted-foreground">Responsable Caja (Usuario actual):</span>
+                    <span className="font-bold text-foreground">{responsableNombre}</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-xs sm:justify-end">
+                    <span className="font-semibold text-muted-foreground">ID Sesión / Cédula:</span>
+                    <span className="font-mono font-bold text-foreground">{responsableCedula}</span>
+                  </div>
+                </div>
 
-            {/* Tarjetas KPI de Totales de Arqueo y Botones de Acción */}
-            <div className="grid gap-4 lg:grid-cols-4">
-              <div className="rounded-xl border border-border/60 bg-card p-4 shadow-xs">
-                <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Disponible En Caja Según Sistema</p>
-                <p className="mt-1 font-mono text-lg font-extrabold text-primary">{money(disponible)}</p>
-              </div>
+                {/* Tarjetas KPI de Totales de Arqueo y Botones de Acción */}
+                <div className="grid gap-4 lg:grid-cols-4">
+                  <div className="rounded-xl border border-border/60 bg-card p-4 shadow-xs">
+                    <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Disponible En Caja Según Sistema</p>
+                    <p className="mt-1 font-mono text-lg font-extrabold text-primary">{money(disponible)}</p>
+                  </div>
 
-              <div className="rounded-xl border border-border/60 bg-card p-4 shadow-xs">
-                <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Efectivo según Arqueo de Caja</p>
-                <p className="mt-1 font-mono text-lg font-extrabold text-foreground">{money(0)}</p>
-              </div>
+                  <div className="rounded-xl border border-border/60 bg-card p-4 shadow-xs">
+                    <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Efectivo según Arqueo de Caja</p>
+                    <p className="mt-1 font-mono text-lg font-extrabold text-foreground">{money(0)}</p>
+                  </div>
 
-              <div className="rounded-xl border border-red-500/20 bg-red-500/5 p-4 shadow-xs">
-                <p className="text-[10px] font-semibold uppercase tracking-wider text-red-600 dark:text-red-400">Sobrante/Faltante En caja</p>
-                <p className="mt-1 font-mono text-lg font-extrabold text-red-600 dark:text-red-400">{money(0)}</p>
-              </div>
+                  <div className="rounded-xl border border-red-500/20 bg-red-500/5 p-4 shadow-xs">
+                    <p className="text-[10px] font-semibold uppercase tracking-wider text-red-600 dark:text-red-400">Sobrante/Faltante En caja</p>
+                    <p className="mt-1 font-mono text-lg font-extrabold text-red-600 dark:text-red-400">{money(0)}</p>
+                  </div>
 
-              {/* Botones de acción rápida */}
-              <div className="flex items-center justify-end gap-2 rounded-xl border border-border/60 bg-card p-4 shadow-xs">
-                <Button variant="outline" size="sm" title="Imprimir" className="h-9 w-9 p-0">
-                  <Printer className="h-4 w-4" />
-                </Button>
-                <Button variant="outline" size="sm" title="Imprimir Anexo" className="h-9 w-9 p-0">
-                  <FileText className="h-4 w-4" />
-                </Button>
-                <Button variant="outline" size="sm" title="Exportar" className="h-9 w-9 p-0">
-                  <FileSpreadsheet className="h-4 w-4" />
-                </Button>
-                <Button variant="outline" size="sm" title="Abrir" className="h-9 w-9 p-0">
-                  <FolderOpen className="h-4 w-4" />
-                </Button>
-              </div>
-            </div>
+                  {/* Botones de acción rápida */}
+                  <div className="flex items-center justify-end gap-2 rounded-xl border border-border/60 bg-card p-4 shadow-xs">
+                    <Button variant="outline" size="sm" title="Imprimir" className="h-9 w-9 p-0">
+                      <Printer className="h-4 w-4" />
+                    </Button>
+                    <Button variant="outline" size="sm" title="Imprimir Anexo" className="h-9 w-9 p-0">
+                      <FileText className="h-4 w-4" />
+                    </Button>
+                    <Button variant="outline" size="sm" title="Exportar" className="h-9 w-9 p-0">
+                      <FileSpreadsheet className="h-4 w-4" />
+                    </Button>
+                    <Button variant="outline" size="sm" title="Abrir" className="h-9 w-9 p-0">
+                      <FolderOpen className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              </>
+            )}
           </div>
         )}
 
@@ -526,7 +601,7 @@ function TableroConductoresRC({
             <span className="text-muted-foreground">{totales.recibos} RC</span>
             <span className="text-emerald-600 dark:text-emerald-400">Efectivo {formatters.currency(totales.efectivo)}</span>
             <span className="text-blue-600 dark:text-blue-400">Transferencia {formatters.currency(totales.consignacion)}</span>
-            <span className="text-foreground font-bold">Total {formatters.currency(totales.total)}</span>
+            <span className="font-bold text-foreground">Total {formatters.currency(totales.total)}</span>
           </div>
 
           <Button variant="outline" size="sm" className="h-8 w-8 p-0" onClick={onRefresh} disabled={loading} title="Actualizar">
