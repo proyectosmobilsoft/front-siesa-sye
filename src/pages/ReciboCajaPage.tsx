@@ -17,7 +17,6 @@ import {
   Lock,
   Building2,
   Layers,
-  Banknote,
 } from 'lucide-react'
 import { motion } from 'framer-motion'
 import { Button } from '@/components/ui/button'
