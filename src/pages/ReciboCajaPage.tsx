@@ -17,7 +17,6 @@ import {
   Lock,
   Building2,
   Layers,
-  AlertCircle,
 } from 'lucide-react'
 import { motion } from 'framer-motion'
 import { Button } from '@/components/ui/button'
@@ -697,7 +696,8 @@ function RcConductorDetalle({ rc, loading }: { rc: ReciboCajaUsuario[] | undefin
       <table className="w-full text-xs">
         <thead>
           <tr className="border-b border-border/60">
-            <th className="px-3 py-2 text-left font-semibold uppercase tracking-wider text-muted-foreground">Número</th>
+            <th className="px-3 py-2 text-left font-semibold uppercase tracking-wider text-muted-foreground">Documento</th>
+            <th className="px-3 py-2 text-left font-semibold uppercase tracking-wider text-muted-foreground">C.O.</th>
             <th className="px-3 py-2 text-left font-semibold uppercase tracking-wider text-muted-foreground">Fecha</th>
             <th className="px-3 py-2 text-left font-semibold uppercase tracking-wider text-muted-foreground">Tercero</th>
             <th className="px-3 py-2 text-right font-semibold uppercase tracking-wider text-muted-foreground">Efectivo</th>
@@ -712,9 +712,10 @@ function RcConductorDetalle({ rc, loading }: { rc: ReciboCajaUsuario[] | undefin
               <td className="px-3 py-2 font-mono font-bold text-primary">
                 <span className="flex items-center gap-1">
                   <Hash className="h-3 w-3" />
-                  {r.Numero}
+                  {(r.Tipo_Docto || 'RC').trim()}#{r.Numero}
                 </span>
               </td>
+              <td className="px-3 py-2 font-mono text-muted-foreground">{r['C.O.']}</td>
               <td className="px-3 py-2 font-mono text-muted-foreground">{r.Fecha?.slice(0, 10)}</td>
               <td className="max-w-[200px] truncate px-3 py-2 font-medium">{r.Tercero_Nombre}</td>
               <td className="px-3 py-2 text-right font-mono">{formatters.currency(r.efectivo ?? 0)}</td>
