@@ -31,8 +31,8 @@ const AnalisisFinancieroPage = lazy(() => import('@/pages/AnalisisFinancieroPage
 const PedidosPage = lazy(() => import('@/pages/PedidosPage').then(m => ({ default: m.PedidosPage })))
 const SecuritySettingsPage = lazy(() => import('@/pages/SecuritySettingsPage').then(m => ({ default: m.SecuritySettingsPage })))
 const MaestroRolesPage = lazy(() => import('@/pages/MaestroRolesPage').then(m => ({ default: m.MaestroRolesPage })))
-const MaestroUsuariosPage = lazy(() => import('@/pages/MaestroUsuariosPage').then(m => ({ default: m.MaestroUsuariosPage })))
 const MaestroDescuentosFinancierosPage = lazy(() => import('@/pages/MaestroDescuentosFinancierosPage').then(m => ({ default: m.MaestroDescuentosFinancierosPage })))
+const MaestroConceptosPage = lazy(() => import('@/pages/MaestroConceptosPage').then(m => ({ default: m.MaestroConceptosPage })))
 const EgresoPage = lazy(() => import('@/pages/EgresoPage').then(m => ({ default: m.EgresoPage })))
 const FerregangaPage = lazy(() => import('@/pages/FerregangaPage'))
 const ReciboCajaPage = lazy(() => import('@/pages/ReciboCajaPage').then(m => ({ default: m.ReciboCajaPage })))
@@ -71,6 +71,11 @@ function AppLayout() {
                                 <ProtectedRoute permiso={PERMISOS.EGRESO}><EgresoPage /></ProtectedRoute>
                             } />
 
+                            {/* Relación de Conceptos: protegido por VER_CONCEPTOS (solo rol Administrador) */}
+                            <Route path="/maestro/relacion-conceptos" element={
+                                <ProtectedRoute permiso={PERMISOS.CONCEPTOS}><MaestroConceptosPage /></ProtectedRoute>
+                            } />
+
                             {/* Gestión de Ventas: protegido por VER_RECIBO */}
                             <Route path="/facturas/gestion-ventas" element={
                                 <ProtectedRoute permiso={PERMISOS.GESTION_VENTAS}><GestionVentasPage /></ProtectedRoute>
@@ -93,7 +98,10 @@ function AppLayout() {
                                 <ProtectedRoute permiso={PERMISOS.TRASLADO_FONDOS}>. */}
                             <Route path="/tesoreria/traslado-fondos"         element={<TrasladoFondosPage />} />
                             <Route path="/maestro/roles"                     element={<MaestroRolesPage />} />
-                            <Route path="/maestro/usuarios"                  element={<MaestroUsuariosPage />} />
+                            {/* Maestro de Usuarios y Configuración → Seguridad son la MISMA
+                                pantalla (SecuritySettingsPage). Antes /maestro/usuarios abría
+                                MaestroUsuariosPage, una versión distinta con otro modal. */}
+                            <Route path="/maestro/usuarios"                  element={<SecuritySettingsPage />} />
                             <Route path="/maestro/descuentos-financieros"    element={<MaestroDescuentosFinancierosPage />} />
                             <Route path="/tesoreria/recibo-caja"             element={<ReciboCajaPage />} />
                             <Route path="/tesoreria/entrega-recaudo"         element={<TesoreriaEntregaRecaudoPage />} />

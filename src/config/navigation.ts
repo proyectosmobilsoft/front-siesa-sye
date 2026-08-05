@@ -20,6 +20,7 @@ import {
     Landmark,
     Banknote,
     ArrowRightLeft,
+    ListChecks,
     type LucideIcon,
 } from 'lucide-react'
 import { PERMISOS } from '@/config/permisos'
@@ -85,6 +86,8 @@ export const navigation: NavItem[] = [
             { name: 'Maestro de Roles', href: '/maestro/roles', icon: Shield, subtitle: 'Administración de roles y permisos' },
             { name: 'Maestro de Usuarios', href: '/maestro/usuarios', icon: UserPlus, subtitle: 'Administración de usuarios del sistema' },
             { name: 'Descuentos Financieros', href: '/maestro/descuentos-financieros', icon: Percent, subtitle: 'Condiciones y descuentos de pago' },
+            // Relación de Conceptos: permiso VER_CONCEPTOS, asignado solo al rol Administrador
+            { name: 'Relación de Conceptos', href: '/maestro/relacion-conceptos', icon: ListChecks, subtitle: 'Catálogo de conceptos de gasto operativo', permiso: PERMISOS.CONCEPTOS },
         ]
     },
     {

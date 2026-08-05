@@ -15,6 +15,8 @@ export const PERMISOS = {
   // Traslado de Fondos (caja -> caja): por ahora solo el rol Administrador
   // debe tener este permiso asignado en backend. Ver docs/traslado-fondos.md
   TRASLADO_FONDOS:        'TRASLADO_FONDOS',
+  // Maestro Relación de Conceptos: asignado solo al rol Administrador
+  CONCEPTOS:              'VER_CONCEPTOS',
 
   // --- Acciones sobre anticipos ---
   CREAR_ANTICIPO:         'CREAR_ANTICIPO',
@@ -42,6 +44,11 @@ export const PERMISOS = {
 
   // --- Viáticos ---
   CREAR_VIATICO:          'CREAR_VIATICO',
+
+  // --- Acciones sobre la Relación de Conceptos ---
+  CREAR_CONCEPTO:         'CREAR_CONCEPTO',
+  EDITAR_CONCEPTO:        'EDITAR_CONCEPTO',
+  ELIMINAR_CONCEPTO:      'ELIMINAR_CONCEPTO',
 } as const
 
 export type PermisoCodigo = typeof PERMISOS[keyof typeof PERMISOS]

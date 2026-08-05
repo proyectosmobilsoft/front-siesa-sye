@@ -1,30 +1,35 @@
 /**
- * Configuración centralizada de la API
- * Permite cambiar fácilmente entre diferentes entornos (desarrollo, producción)
- * 
- * IMPORTANTE: 
- * - En desarrollo (npm run dev): usa el proxy de Vite (/api) que redirige a localhost
- * - En producción (npm run build): usa directamente la URL de producción (apisye.mobilsoft.co)
+ * Configuración centralizada de la API.
+ *
+ * El entorno lo decide la variable ENV del .env (la resuelve vite.config.ts y
+ * la inyecta como VITE_APP_ENV junto con VITE_API_ORIGIN):
+ *   ENV=local → http://localhost:3010
+ *   ENV=prod  → https://apisye.mobilsoft.co
+ *
+ * - Con `npm run dev` las peticiones salen a /api y el proxy de Vite las
+ *   redirige al origen elegido (mismo origen para el navegador → sin CORS).
+ * - Con `npm run build` no hay proxy, así que se usa la URL absoluta.
  */
 
-// Obtener la URL base de la API desde variables de entorno o usar valores por defecto
+/** Entorno resuelto por vite.config.ts a partir de ENV. */
+export const APP_ENV = import.meta.env.VITE_APP_ENV ?? 'local'
+
+/** Origen del backend (sin '/api') según ENV. */
+export const API_ORIGIN = import.meta.env.VITE_API_ORIGIN ?? 'http://localhost:3010'
+
 const getApiBaseUrl = (): string => {
-  // Si hay una variable de entorno específica configurada, usarla (tiene prioridad)
+  // Override manual: si se define VITE_API_BASE_URL, gana sobre ENV.
+  // Útil para apuntar a un backend puntual sin tocar el resto.
   if (import.meta.env.VITE_API_BASE_URL) {
     return import.meta.env.VITE_API_BASE_URL
   }
 
-  // En desarrollo, usar el proxy de Vite (/api)
-  // El proxy de Vite redirige internamente las peticiones a http://localhost:3000
-  // Esto evita problemas de CORS porque el navegador ve las peticiones como si fueran al mismo origen
+  // En dev, el proxy de Vite ya apunta al origen correcto según ENV.
   if (import.meta.env.DEV) {
     return '/api'
   }
 
-  // En producción, usar la URL completa del backend de producción
-  // Si está configurada en .env, usarla; si no, usar apisye.mobilsoft.co por defecto
-  const prodUrl = import.meta.env.VITE_API_BASE_URL_PROD || 'https://apisye.mobilsoft.co/api'
-  return prodUrl
+  return `${API_ORIGIN.replace(/\/+$/, '')}/api`
 }
 
 export const API_CONFIG = {
@@ -40,21 +45,11 @@ if (!API_CONFIG.BASE_URL) {
 }
 
 // Log de configuración
-if (import.meta.env.DEV) {
-  const backendUrl = import.meta.env.VITE_API_BASE_URL_DEV || 'https://apisye.mobilsoft.co'
-  console.log('🔧 API Config (Desarrollo):', {
-    BASE_URL: API_CONFIG.BASE_URL,
-    MODE: import.meta.env.MODE,
-    PROXY_TARGET: backendUrl,
-    NOTE: `Las peticiones van a /api y Vite las redirige a ${backendUrl} internamente`,
-  })
-} else {
-  const prodUrl = import.meta.env.VITE_API_BASE_URL_PROD 
-  console.log('🔧 API Config (Producción):', {
-    BASE_URL: API_CONFIG.BASE_URL,
-    MODE: import.meta.env.MODE,
-    BACKEND_URL: prodUrl,
-    NOTE: 'Las peticiones van directamente al backend de producción',
-  })
-}
-
+console.log(`🔧 API Config (ENV=${APP_ENV})`, {
+  BASE_URL: API_CONFIG.BASE_URL,
+  MODE: import.meta.env.MODE,
+  API_ORIGIN,
+  NOTE: import.meta.env.DEV
+    ? `Las peticiones van a /api y Vite las redirige a ${API_ORIGIN} internamente`
+    : 'Las peticiones van directamente al backend',
+})

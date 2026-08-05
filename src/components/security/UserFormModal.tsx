@@ -162,8 +162,13 @@ export const UserFormModal = ({ isOpen, onClose, user }: UserFormModalProps) => 
                 const userRolId = user?.roles?.[0]?.id ?? user?.rol_id
                 if (userRolId) {
                     setRoleId(userRolId)
-                } else if (user?.usuario) {
-                    // Obtener detalles completos del usuario por username
+                }
+
+                // Siempre traer el detalle completo: la fila de la tabla puede venir
+                // sin rol_id y/o sin la vinculación SIESA, y sin esto el campo
+                // "Usuario de Siesa" aparecía vacío al editar aunque el usuario
+                // sí estuviera vinculado.
+                if (user?.usuario) {
                     loadUserDetails(user.usuario)
                 }
             }
@@ -191,6 +196,7 @@ export const UserFormModal = ({ isOpen, onClose, user }: UserFormModalProps) => 
                     f552_esactivo: 1,
                     f552_ind_estado: 1,
                 })
+                setSiesaSearch('')
             }
         } catch (err) {
             console.error('Error cargando detalles del usuario:', err)
@@ -263,10 +269,12 @@ export const UserFormModal = ({ isOpen, onClose, user }: UserFormModalProps) => 
         return () => document.removeEventListener('mousedown', handleClickOutside)
     }, [])
 
-    // Buscar usuarios Siesa con debounce 300ms
+    // Cargar/buscar usuarios Siesa con debounce 300ms.
+    // Se dispara al abrir el modal (no solo al desplegar el dropdown) para que
+    // el listado ya esté disponible de entrada, tanto al crear como al editar.
     useEffect(() => {
         if (siesaDebounceRef.current) clearTimeout(siesaDebounceRef.current)
-        if (!showSiesaDropdown) return
+        if (!isOpen) return
         siesaDebounceRef.current = setTimeout(async () => {
             setSiesaLoading(true)
             try {
@@ -281,7 +289,17 @@ export const UserFormModal = ({ isOpen, onClose, user }: UserFormModalProps) => 
         return () => {
             if (siesaDebounceRef.current) clearTimeout(siesaDebounceRef.current)
         }
-    }, [siesaSearch, showSiesaDropdown])
+    }, [siesaSearch, isOpen])
+
+    // Al editar, la vinculación SIESA se reconstruye solo con rowid + nombre
+    // (es lo único que guarda auth_usuario). Cuando llega el listado completo
+    // se completa la descripción para mostrar la misma etiqueta que en el
+    // dropdown en lugar de solo el nombre.
+    useEffect(() => {
+        if (!siesaSelected || siesaSelected.f552_descripcion) return
+        const completo = siesaOptions.find(o => o.f552_rowid === siesaSelected.f552_rowid)
+        if (completo) setSiesaSelected(completo)
+    }, [siesaOptions, siesaSelected])
 
     // Limpiar credencial/contraseña si el rol cambia
     useEffect(() => {
@@ -727,7 +745,9 @@ export const UserFormModal = ({ isOpen, onClose, user }: UserFormModalProps) => 
                             <Input
                                 placeholder="Buscar usuario de Siesa..."
                                 value={siesaSelected
-                                    ? `${siesaSelected.f552_nombre} — ${siesaSelected.f552_descripcion}`
+                                    ? [siesaSelected.f552_nombre, siesaSelected.f552_descripcion]
+                                          .filter(Boolean)
+                                          .join(' — ')
                                     : siesaSearch}
                                 onChange={(e) => {
                                     setSiesaSelected(null)
