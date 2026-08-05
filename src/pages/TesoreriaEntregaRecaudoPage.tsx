@@ -577,6 +577,7 @@ const exportarRecibosCSV = (recibos: ReciboCajaUsuario[], conductorNombre: strin
 }
 
 const RecibosConductorModal = ({ grupo, onClose, rango }: { grupo: GrupoConductor | null; onClose: () => void; rango: { fechaInicial?: string; fechaFinal?: string } | undefined }) => {
+    const [incluirAnulados, setIncluirAnulados] = useState(false)
     const siesaNombre = grupo?.conductorSiesaNombre
     const fechaInicial = rango?.fechaInicial
     const fechaFinal = rango?.fechaFinal ?? rango?.fechaInicial
@@ -588,10 +589,12 @@ const RecibosConductorModal = ({ grupo, onClose, rango }: { grupo: GrupoConducto
 
     if (!grupo) return null
 
-    // Solo lo que realmente respalda la entrega del periodo: RC del rango, no anulados.
-    const recibos = (data ?? []).filter((r) => r.Estado !== 2)
-    const totalEfectivo = recibos.reduce((sum, r) => sum + (r.efectivo ?? 0), 0)
-    const totalConsignacion = recibos.reduce((sum, r) => sum + (r.consignacion ?? 0), 0)
+    const todosRecibos = data ?? []
+    const conteoAnulados = todosRecibos.filter((r) => r.Estado === 2).length
+    const recibos = incluirAnulados ? todosRecibos : todosRecibos.filter((r) => r.Estado !== 2)
+
+    const totalEfectivo = recibos.filter(r => r.Estado !== 2).reduce((sum, r) => sum + (r.efectivo ?? 0), 0)
+    const totalConsignacion = recibos.filter(r => r.Estado !== 2).reduce((sum, r) => sum + (r.consignacion ?? 0), 0)
     const totalGeneral = totalEfectivo + totalConsignacion
     const etiquetaPeriodo = fechaInicial === fechaFinal ? `del ${fechaInicial}` : `${fechaInicial} — ${fechaFinal}`
 
@@ -607,21 +610,50 @@ const RecibosConductorModal = ({ grupo, onClose, rango }: { grupo: GrupoConducto
                 </div>
             ) : error ? (
                 <p className="text-sm font-semibold text-destructive">Error al cargar los recibos.</p>
-            ) : recibos.length === 0 ? (
+            ) : todosRecibos.length === 0 ? (
                 <p className="py-10 text-center text-xs font-bold uppercase tracking-widest text-muted-foreground">
                     Este conductor no tiene recibos de caja en el periodo
                 </p>
+            ) : recibos.length === 0 && conteoAnulados > 0 && !incluirAnulados ? (
+                <div className="flex flex-col items-center justify-center gap-3 py-10 text-center">
+                    <div className="flex h-12 w-12 items-center justify-center rounded-full bg-destructive/10">
+                        <AlertCircle className="h-6 w-6 text-destructive" />
+                    </div>
+                    <div className="space-y-1">
+                        <p className="text-sm font-bold text-foreground">
+                            No hay recibos de caja activos en este periodo.
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                            Se encontraron <strong className="text-destructive">{conteoAnulados} recibo{conteoAnulados !== 1 ? 's' : ''} ANULADO{conteoAnulados !== 1 ? 'S' : ''}</strong> en SIESA para este conductor en la fecha seleccionada.
+                        </p>
+                    </div>
+                    <Button variant="outline" size="sm" onClick={() => setIncluirAnulados(true)}>
+                        Ver recibos anulados ({conteoAnulados})
+                    </Button>
+                </div>
             ) : (
                 <div className="space-y-3">
-                    <div className="flex justify-end">
-                        <Button
-                            variant="outline"
-                            size="sm"
-                            className="gap-1.5 text-xs"
-                            onClick={() => exportarRecibosCSV(recibos, grupo.conductorNombre)}
-                        >
-                            <Download className="h-3.5 w-3.5" /> Exportar CSV
-                        </Button>
+                    <div className="flex items-center justify-between gap-2">
+                        {conteoAnulados > 0 && (
+                            <Button
+                                variant={incluirAnulados ? "secondary" : "outline"}
+                                size="sm"
+                                className="gap-1.5 text-xs"
+                                onClick={() => setIncluirAnulados(!incluirAnulados)}
+                            >
+                                {incluirAnulados ? "Ocultar anulados" : `Mostrar recibos anulados (${conteoAnulados})`}
+                            </Button>
+                        )}
+                        <div className="ml-auto">
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                className="gap-1.5 text-xs"
+                                onClick={() => exportarRecibosCSV(recibos, grupo.conductorNombre)}
+                            >
+                                <Download className="h-3.5 w-3.5" /> Exportar CSV
+                            </Button>
+                        </div>
                     </div>
                     <div className="grid gap-3 sm:grid-cols-3">
                         <div className="flex items-center gap-3 rounded-xl border border-border bg-muted/30 px-4 py-3">
@@ -668,7 +700,7 @@ const RecibosConductorModal = ({ grupo, onClose, rango }: { grupo: GrupoConducto
                             </thead>
                             <tbody>
                                 {recibos.map((r) => (
-                                    <tr key={r.Rowid} className="border-b border-border/50 hover:bg-muted/20">
+                                    <tr key={r.Rowid} className={cn("border-b border-border/50 hover:bg-muted/20", r.Estado === 2 && "opacity-60 bg-red-500/5")}>
                                         <td className="whitespace-nowrap px-3 py-2 font-mono text-muted-foreground">{r.Fecha?.slice(0, 10)}</td>
                                         <td className="px-3 py-2 font-mono font-bold text-primary">{r.Numero}</td>
                                         <td className="max-w-[160px] truncate px-3 py-2">{r.Tercero_Nombre || r.Id_tercero}</td>
@@ -686,6 +718,7 @@ const RecibosConductorModal = ({ grupo, onClose, rango }: { grupo: GrupoConducto
                                         <td className="px-3 py-2 text-center">
                                             <span className={cn('rounded-full px-2 py-0.5 text-[10px] font-black uppercase', estadoRCBadge(r.Estado))}>
                                                 {estadoRCLabel(r.Estado)}
+                                                {r.Estado === 2 && r.Usuario_Anulacion ? ` (${r.Usuario_Anulacion})` : ''}
                                             </span>
                                         </td>
                                     </tr>
