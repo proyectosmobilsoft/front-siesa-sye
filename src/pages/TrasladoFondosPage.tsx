@@ -8,13 +8,15 @@ import {
     Landmark,
     History,
     ArrowRight,
+    ChevronRight,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Select } from '@/components/ui/select'
+import { Modal } from '@/components/ui/modal'
 import { useCajasTraspaso, useTrasladosFondos, useCrearTrasladoFondos } from '@/hooks/useTrasladoFondos'
 import { formatters } from '@/utils/formatters'
-import { CajaTraspaso } from '@/api/types'
+import { CajaTraspaso, TrasladoFondosMov } from '@/api/types'
 
 const CajaSelector = ({
     label,
@@ -67,6 +69,7 @@ export const TrasladoFondosPage = () => {
     const [exito, setExito] = useState(false)
     const [fechaInicial, setFechaInicial] = useState('')
     const [fechaFinal, setFechaFinal] = useState('')
+    const [trasladoSeleccionado, setTrasladoSeleccionado] = useState<TrasladoFondosMov | null>(null)
 
     const rangoInvalido = !!fechaInicial && !!fechaFinal && fechaInicial > fechaFinal
 
@@ -76,7 +79,12 @@ export const TrasladoFondosPage = () => {
     )
     const crearTraslado = useCrearTrasladoFondos()
 
-    const nombreCaja = (id: string) => cajas?.find((c) => c.id_caja === id)?.nombre ?? id
+    const nombreCaja = (id: string) => {
+        if (!id) return ''
+        const idLimpio = id.trim()
+        const cajaEncontrada = cajas?.find((c) => c.id_caja.trim() === idLimpio)
+        return cajaEncontrada?.nombre ?? `Caja ${idLimpio}`
+    }
 
     const limpiarFiltroFechas = () => {
         setFechaInicial('')
@@ -214,7 +222,7 @@ export const TrasladoFondosPage = () => {
                     {exito && !crearTraslado.isError && (
                         <div className="flex items-center gap-2 text-sm font-medium text-green-700 dark:text-green-400">
                             <CheckCircle2 className="h-4 w-4 flex-shrink-0" />
-                            Traslado registrado. Queda pendiente de aprobar en SIESA escritorio.
+                            Traslado registrado y aprobado en SIESA.
                         </div>
                     )}
 
@@ -320,24 +328,36 @@ export const TrasladoFondosPage = () => {
                                     initial={{ opacity: 0, x: -6 }}
                                     animate={{ opacity: 1, x: 0 }}
                                     transition={{ duration: 0.2, delay: idx * 0.03 }}
-                                    className="flex items-center gap-3 px-4 py-3.5 transition-colors hover:bg-muted/40"
+                                    onClick={() => setTrasladoSeleccionado(t)}
+                                    className="flex items-center gap-3 px-4 py-3.5 transition-colors hover:bg-muted/40 cursor-pointer group"
                                 >
-                                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+                                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary group-hover:bg-primary group-hover:text-primary-foreground transition-colors">
                                         <ArrowRightLeft className="h-4 w-4" />
                                     </div>
-                                    <div className="min-w-0 flex-1">
-                                        <p className="flex flex-wrap items-center gap-1.5 truncate text-sm font-semibold">
-                                            {nombreCaja(t.id_caja_origen)}
-                                            <ArrowRight className="h-3 w-3 text-muted-foreground" />
-                                            {nombreCaja(t.id_caja_destino)}
-                                        </p>
-                                        <p className="mt-0.5 text-xs text-muted-foreground">
+                                    <div className="min-w-0 flex-1 space-y-0.5">
+                                        <div className="flex flex-wrap items-center gap-2">
+                                            <span className="font-bold text-sm text-primary font-mono bg-primary/10 px-2 py-0.5 rounded">
+                                                TC-{t.numero_tc ?? t.id}
+                                            </span>
+                                            <span className="text-xs font-medium text-foreground flex items-center gap-1">
+                                                {nombreCaja(t.id_caja_origen)}
+                                                <ArrowRight className="h-3 w-3 text-muted-foreground" />
+                                                {nombreCaja(t.id_caja_destino)}
+                                            </span>
+                                        </div>
+                                        <p className="text-xs text-muted-foreground">
                                             {formatters.dateTime(t.fecha)} · {t.usuario_nombre || 'Administrador'}
                                             {t.motivo ? ` · ${t.motivo}` : ''}
                                         </p>
                                     </div>
-                                    <div className="text-right">
-                                        <p className="text-sm font-bold tabular-nums">{formatters.currency(t.valor)}</p>
+                                    <div className="flex items-center gap-2 text-right">
+                                        <div>
+                                            <p className="text-sm font-bold tabular-nums">{formatters.currency(t.valor)}</p>
+                                            <span className="text-[11px] font-medium text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity">
+                                                Ver resumen
+                                            </span>
+                                        </div>
+                                        <ChevronRight className="h-4 w-4 text-muted-foreground group-hover:text-foreground transition-colors shrink-0" />
                                     </div>
                                 </motion.div>
                             ))}
@@ -345,6 +365,124 @@ export const TrasladoFondosPage = () => {
                     )}
                 </div>
             </motion.div>
+
+            {/* Modal de Resumen */}
+            <Modal
+                isOpen={!!trasladoSeleccionado}
+                onClose={() => setTrasladoSeleccionado(null)}
+                title=""
+                className="max-w-xl"
+            >
+                {trasladoSeleccionado && (
+                    <div className="space-y-5">
+                        {/* Encabezado */}
+                        <div className="flex items-center justify-between border-b pb-3.5">
+                            <div>
+                                <div className="flex items-center gap-2">
+                                    <h2 className="text-xl font-extrabold tracking-tight">
+                                        TC-{trasladoSeleccionado.numero_tc ?? trasladoSeleccionado.id}
+                                    </h2>
+                                    <span className="rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-600 dark:text-emerald-400 px-2.5 py-0.5 text-xs font-semibold flex items-center gap-1">
+                                        <CheckCircle2 className="h-3 w-3" /> Aprobado SIESA
+                                    </span>
+                                </div>
+                                <p className="text-xs text-muted-foreground mt-0.5">
+                                    Docto SIESA #{trasladoSeleccionado.rowid_docto_siesa ?? 'N/A'} · Período {trasladoSeleccionado.periodo_tc ?? 'N/A'}
+                                </p>
+                            </div>
+                        </div>
+
+                        {/* Card del Valor */}
+                        <div className="rounded-xl border border-primary/20 bg-primary/5 p-4 flex items-center justify-between">
+                            <div>
+                                <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Valor Trasladado</p>
+                                <p className="text-2xl font-extrabold text-primary tabular-nums">{formatters.currency(trasladoSeleccionado.valor)}</p>
+                            </div>
+                            <div className="text-right">
+                                <span className="text-xs font-bold text-muted-foreground uppercase bg-background/80 px-2.5 py-1 rounded-md border border-border">
+                                    {trasladoSeleccionado.id_moneda || 'COP'}
+                                </span>
+                            </div>
+                        </div>
+
+                        {/* Origen vs Destino */}
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            <div className="rounded-lg border border-border bg-muted/20 p-3.5 space-y-1.5">
+                                <div className="flex items-center justify-between">
+                                    <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Caja Origen</span>
+                                    <span className="text-xs font-semibold px-2 py-0.5 rounded bg-muted border border-border/50">
+                                        CO {trasladoSeleccionado.id_co_origen}
+                                    </span>
+                                </div>
+                                <p className="text-sm font-bold">{nombreCaja(trasladoSeleccionado.id_caja_origen)}</p>
+                                <div className="text-xs text-muted-foreground pt-1.5 border-t border-border/50 flex justify-between">
+                                    <span>Caja ID: <strong className="text-foreground">{trasladoSeleccionado.id_caja_origen.trim()}</strong></span>
+                                    {trasladoSeleccionado.rowid_auxiliar_origen && (
+                                        <span>Aux: <strong className="text-foreground">{trasladoSeleccionado.rowid_auxiliar_origen}</strong></span>
+                                    )}
+                                </div>
+                            </div>
+
+                            <div className="rounded-lg border border-border bg-muted/20 p-3.5 space-y-1.5">
+                                <div className="flex items-center justify-between">
+                                    <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Caja Destino</span>
+                                    <span className="text-xs font-semibold px-2 py-0.5 rounded bg-muted border border-border/50">
+                                        CO {trasladoSeleccionado.id_co_destino}
+                                    </span>
+                                </div>
+                                <p className="text-sm font-bold">{nombreCaja(trasladoSeleccionado.id_caja_destino)}</p>
+                                <div className="text-xs text-muted-foreground pt-1.5 border-t border-border/50 flex justify-between">
+                                    <span>Caja ID: <strong className="text-foreground">{trasladoSeleccionado.id_caja_destino.trim()}</strong></span>
+                                    {trasladoSeleccionado.rowid_auxiliar_destino && (
+                                        <span>Aux: <strong className="text-foreground">{trasladoSeleccionado.rowid_auxiliar_destino}</strong></span>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Detalles de la Transacción */}
+                        <div className="rounded-lg border border-border p-4 space-y-3">
+                            <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground border-b pb-2">
+                                Resumen de Transacción
+                            </h3>
+
+                            <div className="grid grid-cols-2 gap-3 text-sm">
+                                <div>
+                                    <p className="text-xs text-muted-foreground font-medium">Motivo</p>
+                                    <p className="font-semibold">{trasladoSeleccionado.motivo || 'Traslado de fondos'}</p>
+                                </div>
+                                <div>
+                                    <p className="text-xs text-muted-foreground font-medium">Usuario / Registrado por</p>
+                                    <p className="font-semibold">{trasladoSeleccionado.usuario_nombre || `ID: ${trasladoSeleccionado.usuario_id}`}</p>
+                                </div>
+                                <div>
+                                    <p className="text-xs text-muted-foreground font-medium">Fecha Movimiento</p>
+                                    <p className="font-semibold">{formatters.dateTime(trasladoSeleccionado.fecha)}</p>
+                                </div>
+                                <div>
+                                    <p className="text-xs text-muted-foreground font-medium">Compañía / UN</p>
+                                    <p className="font-semibold">CIA {trasladoSeleccionado.id_cia} · UN {trasladoSeleccionado.id_un}</p>
+                                </div>
+                                <div>
+                                    <p className="text-xs text-muted-foreground font-medium">Número TC</p>
+                                    <p className="font-semibold font-mono">{trasladoSeleccionado.numero_tc ?? 'N/A'}</p>
+                                </div>
+                                <div>
+                                    <p className="text-xs text-muted-foreground font-medium">Fecha Registro</p>
+                                    <p className="font-semibold">{formatters.dateTime(trasladoSeleccionado.created_at)}</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Pie del Modal */}
+                        <div className="flex justify-end pt-2">
+                            <Button onClick={() => setTrasladoSeleccionado(null)} variant="outline">
+                                Cerrar
+                            </Button>
+                        </div>
+                    </div>
+                )}
+            </Modal>
         </div>
     )
 }

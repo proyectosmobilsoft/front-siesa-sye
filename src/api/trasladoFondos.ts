@@ -10,7 +10,8 @@ import {
 import { withRetry } from '@/utils/retry'
 
 /**
- * Traslado de Fondos entre cajas — conectado a POST /api/caja-traspaso/*.
+ * Traslado de Fondos entre cajas — conectado a /api/caja-traspaso (endpoint
+ * único: GET con ?vista=historial|cajas, POST único para crear).
  * Ver docs/traslado-fondos.md para el detalle histórico de la maqueta previa.
  */
 export interface RangoFechasTraslado {
@@ -28,7 +29,9 @@ export interface CrearTrasladoFondosPayload {
 export const trasladoFondosApi = {
   listarCajas: async (): Promise<CajaTraspaso[]> => {
     return withRetry(async () => {
-      const response = await apiClient.get<CajasTraspasoResponse>('/caja-traspaso/cajas')
+      const response = await apiClient.get<CajasTraspasoResponse>('/caja-traspaso', {
+        params: { vista: 'cajas' },
+      })
       return response.data.data
     })
   },
@@ -37,6 +40,7 @@ export const trasladoFondosApi = {
     return withRetry(async () => {
       const response = await apiClient.get<TrasladosFondosMovResponse>('/caja-traspaso', {
         params: {
+          vista: 'historial',
           fecha_inicial: rango?.fechaInicial,
           fecha_final: rango?.fechaFinal,
         },
@@ -49,7 +53,7 @@ export const trasladoFondosApi = {
     // Sin reintentos a propósito: es una operación de dinero que no debe
     // reenviarse sola ante un timeout (mismo criterio que conductorEfectivoApi).
     const response = await apiClient.post<TrasladoFondosCreadoResponse>(
-      '/caja-traspaso/simple',
+      '/caja-traspaso',
       payload
     )
     return response.data.data
