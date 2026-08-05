@@ -27,10 +27,11 @@ export interface CrearTrasladoFondosPayload {
 }
 
 export const trasladoFondosApi = {
-  listarCajas: async (): Promise<CajaTraspaso[]> => {
+  /** soloMaestro=true filtra contra el maestro curado (/maestro/cajas); false trae el catálogo SIESA completo */
+  listarCajas: async (soloMaestro = false): Promise<CajaTraspaso[]> => {
     return withRetry(async () => {
       const response = await apiClient.get<CajasTraspasoResponse>('/caja-traspaso', {
-        params: { vista: 'cajas' },
+        params: { vista: 'cajas', solo_maestro: soloMaestro },
       })
       return response.data.data
     })

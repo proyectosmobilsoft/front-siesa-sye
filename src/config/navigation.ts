@@ -20,6 +20,7 @@ import {
     Landmark,
     Banknote,
     ArrowRightLeft,
+    Archive,
     type LucideIcon,
 } from 'lucide-react'
 import { PERMISOS } from '@/config/permisos'
@@ -85,6 +86,7 @@ export const navigation: NavItem[] = [
             { name: 'Maestro de Roles', href: '/maestro/roles', icon: Shield, subtitle: 'Administración de roles y permisos' },
             { name: 'Maestro de Usuarios', href: '/maestro/usuarios', icon: UserPlus, subtitle: 'Administración de usuarios del sistema' },
             { name: 'Descuentos Financieros', href: '/maestro/descuentos-financieros', icon: Percent, subtitle: 'Condiciones y descuentos de pago' },
+            { name: 'Maestro de Cajas', href: '/maestro/cajas', icon: Archive, subtitle: 'Cajas que se muestran en el tablero de tesorería' },
         ]
     },
     {

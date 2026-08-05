@@ -7,8 +7,8 @@ import {
 
 export const useCajasTraspaso = () => {
   return useQuery({
-    queryKey: ['caja-traspaso', 'cajas'],
-    queryFn: () => trasladoFondosApi.listarCajas(),
+    queryKey: ['caja-traspaso', 'cajas', 'maestro'],
+    queryFn: () => trasladoFondosApi.listarCajas(true),
     staleTime: 5 * 60 * 1000,
     retry: 3,
   })

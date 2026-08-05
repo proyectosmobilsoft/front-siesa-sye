@@ -1,9 +1,10 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { ChevronLeft, ChevronRight, FileText, Hash, Search } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { cn } from '@/lib/utils'
 import { apiClient } from '@/api/client'
+import { maestroCajasApi, Caja } from '@/api/maestroCajas'
 
 interface ReciboCaja {
   Rowid: number; Fecha: string; 'C.O.': string; Tipo_Docto: string; Número: number
@@ -27,7 +28,8 @@ const estadoBadge = (estado: string) => estado === 'Aprobado'
 
 export const ReciboCajaPage = () => {
   const [tab, setTab] = useState<'general' | 'detalle'>('general')
-  const [caja, setCaja] = useState('CAJA SUCURSAL PORTAL DE SOLEDAD')
+  const [cajas, setCajas] = useState<Caja[]>([])
+  const [caja, setCaja] = useState('')
   const [fecha, setFecha] = useState('2026-05-05')
   const [ventasEfectivo, setVentasEfectivo] = useState(16126)
   const [ventasTarjetas, setVentasTarjetas] = useState(131148)
@@ -73,6 +75,16 @@ export const ReciboCajaPage = () => {
 
   const filas = useMemo(() => !razonSocial.trim() ? data : data.filter(r => r.Razón_Social?.toLowerCase().includes(razonSocial.toLowerCase())), [data, razonSocial])
 
+  useEffect(() => {
+    maestroCajasApi.listarCajas(true)
+      .then(res => {
+        const lista = res.data ?? []
+        setCajas(lista)
+        if (lista.length > 0) setCaja(lista[0].nombre)
+      })
+      .catch(err => console.error('Error cargando cajas del maestro:', err))
+  }, [])
+
   return (
     <div className="min-w-[850px] bg-[#f5f5f5] p-4 text-[12px] text-[#161616] dark:bg-[#171717] dark:text-gray-100 sm:p-8">
       <div className="mx-auto max-w-[1420px] overflow-hidden rounded-md border border-[#b7c6d1] bg-white shadow-2xl shadow-black/10 ring-1 ring-black/[0.03] dark:border-gray-700 dark:bg-[#202020] dark:shadow-black/50 dark:ring-white/5">
@@ -86,7 +98,7 @@ export const ReciboCajaPage = () => {
 
         {tab === 'general' ? <>
           <div className="grid items-end gap-x-4 gap-y-3 px-4 py-4 md:grid-cols-[315px_300px_1fr]">
-            <label className="flex items-center gap-2">Caja<select value={caja} onChange={e => setCaja(e.target.value)} className="h-8 min-w-0 flex-1 rounded-sm border border-[#b9b9b9] bg-white px-1.5 shadow-inner shadow-black/5 transition-colors focus:border-[#064b82] focus:outline-none dark:bg-[#292929]"><option>CAJA SUCURSAL PORTAL DE SOLEDAD</option><option>CAJA PRINCIPAL</option></select></label>
+            <label className="flex items-center gap-2">Caja<select value={caja} onChange={e => setCaja(e.target.value)} className="h-8 min-w-0 flex-1 rounded-sm border border-[#b9b9b9] bg-white px-1.5 shadow-inner shadow-black/5 transition-colors focus:border-[#064b82] focus:outline-none dark:bg-[#292929]">{cajas.length === 0 ? <option value="">Sin cajas configuradas</option> : cajas.map(c => <option key={c.id} value={c.nombre}>{c.nombre}</option>)}</select></label>
             <label className="flex items-center gap-2">Fecha<div className="flex"><Input type="date" value={fecha} onChange={e => setFecha(e.target.value)} className="h-8 rounded-sm rounded-r-none border-[#b9b9b9] px-1.5 text-[12px] shadow-inner shadow-black/5 transition-colors focus-visible:border-[#064b82] focus-visible:ring-0" /><span className="flex h-8 items-center rounded-sm rounded-l-none border border-l-0 border-[#b9b9b9] px-1.5">▦</span></div></label>
             <Button className="h-8 w-[120px] rounded-sm border border-[#275e8b] bg-[#d8e7f1] px-2 text-[12px] font-normal text-[#111] shadow-sm transition-colors hover:bg-[#c6dce9] hover:shadow active:bg-[#b6d3e4]">🔍 Consultar</Button>
           </div>

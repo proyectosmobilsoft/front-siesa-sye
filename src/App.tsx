@@ -33,6 +33,7 @@ const SecuritySettingsPage = lazy(() => import('@/pages/SecuritySettingsPage').t
 const MaestroRolesPage = lazy(() => import('@/pages/MaestroRolesPage').then(m => ({ default: m.MaestroRolesPage })))
 const MaestroUsuariosPage = lazy(() => import('@/pages/MaestroUsuariosPage').then(m => ({ default: m.MaestroUsuariosPage })))
 const MaestroDescuentosFinancierosPage = lazy(() => import('@/pages/MaestroDescuentosFinancierosPage').then(m => ({ default: m.MaestroDescuentosFinancierosPage })))
+const MaestroCajasPage = lazy(() => import('@/pages/MaestroCajasPage').then(m => ({ default: m.MaestroCajasPage })))
 const EgresoPage = lazy(() => import('@/pages/EgresoPage').then(m => ({ default: m.EgresoPage })))
 const FerregangaPage = lazy(() => import('@/pages/FerregangaPage'))
 const ReciboCajaPage = lazy(() => import('@/pages/ReciboCajaPage').then(m => ({ default: m.ReciboCajaPage })))
@@ -95,6 +96,7 @@ function AppLayout() {
                             <Route path="/maestro/roles"                     element={<MaestroRolesPage />} />
                             <Route path="/maestro/usuarios"                  element={<MaestroUsuariosPage />} />
                             <Route path="/maestro/descuentos-financieros"    element={<MaestroDescuentosFinancierosPage />} />
+                            <Route path="/maestro/cajas"                     element={<MaestroCajasPage />} />
                             <Route path="/tesoreria/recibo-caja"             element={<ReciboCajaPage />} />
                             <Route path="/tesoreria/entrega-recaudo"         element={<TesoreriaEntregaRecaudoPage />} />
                             <Route path="/configuracion"                     element={<SettingsPage />} />

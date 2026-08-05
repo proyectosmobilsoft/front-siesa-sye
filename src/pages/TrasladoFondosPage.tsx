@@ -43,8 +43,8 @@ const CajaSelector = ({
                     if (!c || c.id_caja === undefined || c.id_caja === null) return null
                     const idVal = String(c.id_caja).trim()
                     const uniqueKey = `${idVal}-${c.id_co || ''}-${idx}`
-                    const coSuffix = c.id_co ? ` (CO ${c.id_co})` : ''
-                    const labelText = c.nombre ? `${c.nombre}${coSuffix}` : `Caja ${idVal}${coSuffix}`
+                    const auxSuffix = c.auxiliar ? ` · Aux ${c.auxiliar}` : ''
+                    const labelText = c.nombre ? `${c.nombre}${auxSuffix}` : `Caja ${idVal}${auxSuffix}`
                     return (
                         <option key={uniqueKey} value={idVal} disabled={idVal === disabledValue}>
                             {labelText}
@@ -144,16 +144,16 @@ export const TrasladoFondosPage = () => {
 
                 <form onSubmit={handleSubmit} className="flex min-h-0 flex-1 flex-col gap-5 overflow-auto">
                     {/* Flujo origen -> destino */}
-                    <div className="flex flex-col items-center gap-3 sm:flex-row">
+                    <div className="flex flex-col items-center gap-3 xl:flex-row">
                         <CajaSelector label="Caja origen" value={cajaOrigen} onChange={setCajaOrigen} disabledValue={cajaDestino} cajas={cajas ?? []} />
 
                         <motion.div
                             animate={{ rotate: [0, 8, -8, 0] }}
                             transition={{ duration: 2.5, repeat: Infinity, ease: 'easeInOut' }}
-                            className="mt-2 flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary shadow-sm sm:mt-6"
+                            className="mt-2 flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary shadow-sm xl:mt-6"
                         >
-                            <ArrowRight className="h-4 w-4 hidden sm:block" />
-                            <ArrowRightLeft className="h-4 w-4 sm:hidden" />
+                            <ArrowRight className="h-4 w-4 hidden xl:block" />
+                            <ArrowRightLeft className="h-4 w-4 xl:hidden" />
                         </motion.div>
 
                         <CajaSelector label="Caja destino" value={cajaDestino} onChange={setCajaDestino} disabledValue={cajaOrigen} cajas={cajas ?? []} />
