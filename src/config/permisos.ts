@@ -19,6 +19,8 @@ export const PERMISOS = {
   CONCEPTOS:              'VER_CONCEPTOS',
   // Maestro de Maquinaria (BD Vehiman, solo lectura): solo rol Administrador
   MAQUINARIA:             'VER_MAQUINARIA',
+  // Maestro de Cajas: asignado solo al rol Administrador
+  CAJAS:                  'VER_CAJAS',
 
   // --- Acciones sobre anticipos ---
   CREAR_ANTICIPO:         'CREAR_ANTICIPO',
@@ -51,6 +53,11 @@ export const PERMISOS = {
   CREAR_CONCEPTO:         'CREAR_CONCEPTO',
   EDITAR_CONCEPTO:        'EDITAR_CONCEPTO',
   ELIMINAR_CONCEPTO:      'ELIMINAR_CONCEPTO',
+
+  // --- Acciones sobre el Maestro de Cajas ---
+  CREAR_CAJA:             'CREAR_CAJA',
+  EDITAR_CAJA:            'EDITAR_CAJA',                        // Cubre editar y reactivar
+  ELIMINAR_CAJA:          'ELIMINAR_CAJA',
 } as const
 
 export type PermisoCodigo = typeof PERMISOS[keyof typeof PERMISOS]

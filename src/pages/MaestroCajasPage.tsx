@@ -7,8 +7,15 @@ import { CajaModal } from '@/components/maestro/CajaModal'
 import { Modal } from '@/components/ui/modal'
 import { maestroCajasApi, Caja } from '@/api/maestroCajas'
 import { badgeClass } from '@/utils/badges'
+import { usePermiso } from '@/hooks/usePermiso'
 
 export const MaestroCajasPage = () => {
+    const { puede, P } = usePermiso()
+    const puedeCrear = puede(P.CREAR_CAJA)
+    // Reactivar es una edición del registro, así que comparte permiso con editar
+    const puedeEditar = puede(P.EDITAR_CAJA)
+    const puedeEliminar = puede(P.ELIMINAR_CAJA)
+
     const [search, setSearch] = useState('')
     const [isModalOpen, setIsModalOpen] = useState(false)
     const [editingCaja, setEditingCaja] = useState<Caja | null>(null)
@@ -142,10 +149,12 @@ export const MaestroCajasPage = () => {
                     <Button variant="outline" size="icon" onClick={() => fetchCajas(search)} disabled={loading} title="Actualizar">
                         <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
                     </Button>
-                    <Button onClick={handleNew} className="whitespace-nowrap gap-2">
-                        <Plus className="h-4 w-4" />
-                        Nueva Caja
-                    </Button>
+                    {puedeCrear && (
+                        <Button onClick={handleNew} className="whitespace-nowrap gap-2">
+                            <Plus className="h-4 w-4" />
+                            Nueva Caja
+                        </Button>
+                    )}
                 </div>
                 <span className="inline-flex shrink-0 items-center rounded-full bg-muted px-3 py-1 text-xs font-medium text-muted-foreground">
                     {cajas.length} {cajas.length === 1 ? 'caja' : 'cajas'}
@@ -191,36 +200,42 @@ export const MaestroCajasPage = () => {
                                         <div className="flex justify-end gap-1">
                                             {c.activa === 1 || c.activa === true ? (
                                                 <>
-                                                    <Button
-                                                        variant="ghost"
-                                                        size="sm"
-                                                        onClick={() => handleEdit(c)}
-                                                        className="h-8 w-8 p-0 text-primary border border-primary/20 hover:bg-primary/10"
-                                                        title="Editar"
-                                                    >
-                                                        <Edit className="h-4 w-4" />
-                                                    </Button>
-                                                    <Button
-                                                        variant="ghost"
-                                                        size="sm"
-                                                        onClick={() => handleDelete(c)}
-                                                        className="h-8 w-8 p-0 text-destructive border border-destructive/20 hover:bg-destructive/10"
-                                                        title="Eliminar"
-                                                    >
-                                                        <Trash2 className="h-4 w-4" />
-                                                    </Button>
+                                                    {puedeEditar && (
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="sm"
+                                                            onClick={() => handleEdit(c)}
+                                                            className="h-8 w-8 p-0 text-primary border border-primary/20 hover:bg-primary/10"
+                                                            title="Editar"
+                                                        >
+                                                            <Edit className="h-4 w-4" />
+                                                        </Button>
+                                                    )}
+                                                    {puedeEliminar && (
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="sm"
+                                                            onClick={() => handleDelete(c)}
+                                                            className="h-8 w-8 p-0 text-destructive border border-destructive/20 hover:bg-destructive/10"
+                                                            title="Eliminar"
+                                                        >
+                                                            <Trash2 className="h-4 w-4" />
+                                                        </Button>
+                                                    )}
                                                 </>
                                             ) : (
-                                                <Button
-                                                    variant="ghost"
-                                                    size="sm"
-                                                    onClick={() => handleReactivar(c)}
-                                                    className="h-8 gap-1.5 px-3 text-emerald-600 border border-emerald-500/20 hover:bg-emerald-500/10"
-                                                    title="Reactivar"
-                                                >
-                                                    <RotateCcw className="h-3.5 w-3.5" />
-                                                    Reactivar
-                                                </Button>
+                                                puedeEditar && (
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="sm"
+                                                        onClick={() => handleReactivar(c)}
+                                                        className="h-8 gap-1.5 px-3 text-emerald-600 border border-emerald-500/20 hover:bg-emerald-500/10"
+                                                        title="Reactivar"
+                                                    >
+                                                        <RotateCcw className="h-3.5 w-3.5" />
+                                                        Reactivar
+                                                    </Button>
+                                                )
                                             )}
                                         </div>
                                     </td>

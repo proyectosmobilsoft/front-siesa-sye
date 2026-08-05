@@ -27,7 +27,6 @@ import {
   SlidersHorizontal,
   CircleHelp,
   type LucideIcon,
-  Users,
 } from 'lucide-react'
 import { PERMISOS } from '@/config/permisos'
 
@@ -88,6 +87,14 @@ export const navigation: NavItem[] = [
         href: '/maestro/roles',
         icon: Shield,
         subtitle: 'Administración de roles y permisos',
+      },
+      // Cajas: permiso VER_CAJAS, asignado solo al rol Administrador
+      {
+        name: 'Cajas',
+        href: '/maestro/cajas',
+        icon: Archive,
+        subtitle: 'Cajas que se muestran en el tablero de tesorería',
+        permiso: PERMISOS.CAJAS,
       },
       {
         name: 'Descuentos Financieros',
@@ -175,7 +182,7 @@ export const navigation: NavItem[] = [
         subtitle: 'Pedidos diarios consolidados',
       },
       {
-        name: 'Resumen Ventas',
+        name: 'Resumen de Ventas',
         href: '/reportes/ventas',
         icon: TrendingUp,
         subtitle: 'Resumen de ventas por periodo',
@@ -185,44 +192,6 @@ export const navigation: NavItem[] = [
         href: '/reportes/vendedores',
         icon: UserCircle,
         subtitle: 'Rendimiento por vendedor',
-      },
-    ],
-  },
-  {
-    name: 'Maestro',
-    icon: Users,
-    subItems: [
-      {
-        name: 'Maestro de Roles',
-        href: '/maestro/roles',
-        icon: Shield,
-        subtitle: 'Administración de roles y permisos',
-      },
-      {
-        name: 'Maestro de Usuarios',
-        href: '/maestro/usuarios',
-        icon: UserPlus,
-        subtitle: 'Administración de usuarios del sistema',
-      },
-      {
-        name: 'Descuentos Financieros',
-        href: '/maestro/descuentos-financieros',
-        icon: Percent,
-        subtitle: 'Condiciones y descuentos de pago',
-      },
-      {
-        name: 'Maestro de Cajas',
-        href: '/maestro/cajas',
-        icon: Archive,
-        subtitle: 'Cajas que se muestran en el tablero de tesorería',
-      },
-      // Relación de Conceptos: permiso VER_CONCEPTOS, asignado solo al rol Administrador
-      {
-        name: 'Relación de Conceptos',
-        href: '/maestro/relacion-conceptos',
-        icon: ListChecks,
-        subtitle: 'Catálogo de conceptos de gasto operativo',
-        permiso: PERMISOS.CONCEPTOS,
       },
     ],
   },
@@ -257,30 +226,6 @@ export const navigation: NavItem[] = [
         icon: Wallet,
         subtitle: 'Gestión de anticipos operativos',
         permiso: PERMISOS.EGRESO,
-      },
-    ],
-  },
-  {
-    name: 'Reportes',
-    icon: FileText,
-    subItems: [
-      {
-        name: 'Pedidos Diarios',
-        href: '/reportes',
-        icon: ClipboardList,
-        subtitle: 'Pedidos diarios consolidados',
-      },
-      {
-        name: 'Resumen de Ventas',
-        href: '/reportes/ventas',
-        icon: TrendingUp,
-        subtitle: 'Resumen de ventas por periodo',
-      },
-      {
-        name: 'Vendedores',
-        href: '/reportes/vendedores',
-        icon: UserCircle,
-        subtitle: 'Rendimiento por vendedor',
       },
     ],
   },

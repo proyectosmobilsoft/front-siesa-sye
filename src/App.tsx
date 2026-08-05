@@ -82,6 +82,11 @@ function AppLayout() {
                                     <ProtectedRoute permiso={PERMISOS.MAQUINARIA}><MaestroMaquinariaPage /></ProtectedRoute>
                                 } />
 
+                                {/* Maestro de Cajas: protegido por VER_CAJAS (solo rol Administrador) */}
+                                <Route path="/maestro/cajas" element={
+                                    <ProtectedRoute permiso={PERMISOS.CAJAS}><MaestroCajasPage /></ProtectedRoute>
+                                } />
+
                                 {/* Gestión de Ventas: protegido por VER_RECIBO */}
                                 <Route path="/facturas/gestion-ventas" element={
                                     <ProtectedRoute permiso={PERMISOS.GESTION_VENTAS}><GestionVentasPage /></ProtectedRoute>
@@ -111,7 +116,6 @@ function AppLayout() {
                                 MaestroUsuariosPage, una versión distinta con otro modal. */}
                                 <Route path="/maestro/usuarios" element={<SecuritySettingsPage />} />
                                 <Route path="/maestro/descuentos-financieros" element={<MaestroDescuentosFinancierosPage />} />
-                                <Route path="/maestro/cajas" element={<MaestroCajasPage />} />
                                 <Route path="/maestro/relacion-conceptos" element={<ProtectedRoute permiso={PERMISOS.CONCEPTOS}><MaestroConceptosPage /></ProtectedRoute>} />
                                 <Route path="/tesoreria/recibo-caja" element={<ReciboCajaPage />} />
                                 <Route path="/tesoreria/entrega-recaudo" element={<TesoreriaEntregaRecaudoPage />} />
