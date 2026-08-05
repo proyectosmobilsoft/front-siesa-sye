@@ -17,6 +17,8 @@ export const PERMISOS = {
   TRASLADO_FONDOS:        'TRASLADO_FONDOS',
   // Maestro Relación de Conceptos: asignado solo al rol Administrador
   CONCEPTOS:              'VER_CONCEPTOS',
+  // Maestro de Maquinaria (BD Vehiman, solo lectura): solo rol Administrador
+  MAQUINARIA:             'VER_MAQUINARIA',
 
   // --- Acciones sobre anticipos ---
   CREAR_ANTICIPO:         'CREAR_ANTICIPO',

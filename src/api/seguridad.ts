@@ -22,6 +22,10 @@ export interface UsuarioMaster {
     ultimo_acceso: string | null
     siesa_rowid?: number | null
     siesa_nombre?: string | null
+    /** Maquinaria asignada (solo roles con MODULO_CONDUCTOR) */
+    maquinaria_cod?: number | null
+    maquinaria_placa?: string | null
+    maquinaria_categoria?: string | null
 }
 
 export interface ListarUsuariosResponse {
@@ -58,6 +62,9 @@ export interface CreateUsuarioMasterDto {
     activo: boolean
     siesa_rowid?: number | null
     siesa_nombre?: string | null
+    maquinaria_cod?: number | null
+    maquinaria_placa?: string | null
+    maquinaria_categoria?: string | null
 }
 
 export interface UpdateUsuarioMasterDto {
@@ -73,6 +80,9 @@ export interface UpdateUsuarioMasterDto {
     activo?: boolean
     siesa_rowid?: number | null
     siesa_nombre?: string | null
+    maquinaria_cod?: number | null
+    maquinaria_placa?: string | null
+    maquinaria_categoria?: string | null
 }
 
 export interface PermisoEnRol {

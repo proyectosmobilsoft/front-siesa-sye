@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { seguridadApi, AuthRole, UsuarioMaster, SiesaUsuario, rolTieneModuloConductor } from '@/api/seguridad'
 import { paisesApi, Pais } from '@/api/paises'
+import { maquinariaApi, Maquinaria } from '@/api/maquinaria'
 import { ChevronDown, Loader2, CheckCircle2, XCircle, RefreshCw, Copy } from 'lucide-react'
 
 /**
@@ -61,6 +62,28 @@ interface UserFormModalProps {
     user?: UsuarioMaster // If editing, pass the user object
 }
 
+/**
+ * Encabezado de sección del formulario. Agrupa campos relacionados para que el
+ * modal no se lea como una lista plana de inputs: el ojo ancla en el título y
+ * la línea separa visualmente cada bloque.
+ */
+const SeccionTitulo = ({ children }: { children: React.ReactNode }) => (
+    <div className="flex items-center gap-3">
+        <h3 className="whitespace-nowrap text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+            {children}
+        </h3>
+        <div className="h-px flex-1 bg-border" />
+    </div>
+)
+
+/** Etiqueta de campo, con marca opcional de obligatorio. */
+const Etiqueta = ({ children, requerido }: { children: React.ReactNode; requerido?: boolean }) => (
+    <label className="text-sm font-medium">
+        {children}
+        {requerido && <span className="ml-0.5 text-destructive">*</span>}
+    </label>
+)
+
 export const UserFormModal = ({ isOpen, onClose, user }: UserFormModalProps) => {
     const isEditing = !!user
 
@@ -96,6 +119,16 @@ export const UserFormModal = ({ isOpen, onClose, user }: UserFormModalProps) => 
     const siesaRef = useRef<HTMLDivElement>(null)
     const siesaDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
+    // Maquinaria asignada — se muestra bajo la misma condición que "Forma de pago"
+    // (rol con MODULO_CONDUCTOR), porque solo aplica a conductores.
+    const [maqSearch, setMaqSearch] = useState('')
+    const [maqOptions, setMaqOptions] = useState<Maquinaria[]>([])
+    const [maqLoading, setMaqLoading] = useState(false)
+    const [maqSelected, setMaqSelected] = useState<Maquinaria | null>(null)
+    const [showMaqDropdown, setShowMaqDropdown] = useState(false)
+    const maqRef = useRef<HTMLDivElement>(null)
+    const maqDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
     // Determinar si el rol seleccionado usa PIN
     const rolSeleccionado = roles.find(r => r.id === roleId)
     const requierePin = rolSeleccionado?.pin === true
@@ -121,6 +154,9 @@ export const UserFormModal = ({ isOpen, onClose, user }: UserFormModalProps) => 
                 setSiesaSearch('')
                 setSiesaOptions([])
                 setSiesaSelected(null)
+                setMaqSearch('')
+                setMaqOptions([])
+                setMaqSelected(null)
             } else {
                 // Cargar datos básicos del objeto de la tabla
                 setName(user?.nombre_completo || '')
@@ -145,6 +181,21 @@ export const UserFormModal = ({ isOpen, onClose, user }: UserFormModalProps) => 
                 } else {
                     setSiesaSelected(null)
                     setSiesaSearch('')
+                }
+
+                // Inicializar maquinaria asignada. Solo se guardan cod/placa/categoría,
+                // así que se reconstruye un objeto parcial y el resto se completa
+                // cuando llega el listado.
+                if (user?.maquinaria_cod) {
+                    setMaqSelected({
+                        Cod_Equipo: user.maquinaria_cod,
+                        PLACA: user.maquinaria_placa || 'Sin Placa',
+                        CATEGORIA: user.maquinaria_categoria || 'Ninguno',
+                    } as Maquinaria)
+                    setMaqSearch('')
+                } else {
+                    setMaqSelected(null)
+                    setMaqSearch('')
                 }
 
                 // Separar código de país y teléfono
@@ -197,6 +248,14 @@ export const UserFormModal = ({ isOpen, onClose, user }: UserFormModalProps) => 
                     f552_ind_estado: 1,
                 })
                 setSiesaSearch('')
+            }
+            if (fullUser?.maquinaria_cod) {
+                setMaqSelected({
+                    Cod_Equipo: fullUser.maquinaria_cod,
+                    PLACA: fullUser.maquinaria_placa || 'Sin Placa',
+                    CATEGORIA: fullUser.maquinaria_categoria || 'Ninguno',
+                } as Maquinaria)
+                setMaqSearch('')
             }
         } catch (err) {
             console.error('Error cargando detalles del usuario:', err)
@@ -290,6 +349,46 @@ export const UserFormModal = ({ isOpen, onClose, user }: UserFormModalProps) => 
             if (siesaDebounceRef.current) clearTimeout(siesaDebounceRef.current)
         }
     }, [siesaSearch, isOpen])
+
+    // Cerrar dropdown de maquinaria al hacer click fuera
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (maqRef.current && !maqRef.current.contains(event.target as Node)) {
+                setShowMaqDropdown(false)
+            }
+        }
+        document.addEventListener('mousedown', handleClickOutside)
+        return () => document.removeEventListener('mousedown', handleClickOutside)
+    }, [])
+
+    // Cargar/buscar maquinaria con debounce 300ms. Solo se pide si el rol es de
+    // conductor, que es cuando el campo está visible.
+    useEffect(() => {
+        if (maqDebounceRef.current) clearTimeout(maqDebounceRef.current)
+        if (!isOpen || !rolTieneModuloConductor(rolSeleccionado)) return
+        maqDebounceRef.current = setTimeout(async () => {
+            setMaqLoading(true)
+            try {
+                const res = await maquinariaApi.listar(maqSearch || undefined, 1, 500)
+                setMaqOptions(res.data || [])
+            } catch {
+                setMaqOptions([])
+            } finally {
+                setMaqLoading(false)
+            }
+        }, 300)
+        return () => {
+            if (maqDebounceRef.current) clearTimeout(maqDebounceRef.current)
+        }
+    }, [maqSearch, isOpen, rolSeleccionado])
+
+    // Al editar solo se guardan cod/placa/categoría: cuando llega el listado se
+    // reemplaza por el registro completo para mantener una sola fuente de verdad.
+    useEffect(() => {
+        if (!maqSelected) return
+        const completo = maqOptions.find(o => o.Cod_Equipo === maqSelected.Cod_Equipo)
+        if (completo && completo !== maqSelected && !maqSelected.SERIE) setMaqSelected(completo)
+    }, [maqOptions, maqSelected])
 
     // Al editar, la vinculación SIESA se reconstruye solo con rowid + nombre
     // (es lo único que guarda auth_usuario). Cuando llega el listado completo
@@ -448,6 +547,17 @@ export const UserFormModal = ({ isOpen, onClose, user }: UserFormModalProps) => 
                 payload.siesa_nombre = siesaNombreActual
             }
 
+            // Maquinaria: igual que forma_pago, solo aplica a roles de conductor.
+            // Si el rol dejó de serlo, se limpia la asignación.
+            const maqCodActual = rolTieneModuloConductor(rolSeleccionado)
+                ? maqSelected?.Cod_Equipo ?? null
+                : null
+            if (maqCodActual !== (user.maquinaria_cod ?? null)) {
+                payload.maquinaria_cod = maqCodActual
+                payload.maquinaria_placa = maqCodActual ? maqSelected?.PLACA ?? null : null
+                payload.maquinaria_categoria = maqCodActual ? maqSelected?.CATEGORIA ?? null : null
+            }
+
             console.log('📤 JSON enviado a PATCH /auth-secundario/usuarios/' + user.id + ':')
             console.log(JSON.stringify(payload, null, 2))
 
@@ -486,6 +596,9 @@ export const UserFormModal = ({ isOpen, onClose, user }: UserFormModalProps) => 
                 activo: true,
                 siesa_rowid: siesaSelected?.f552_rowid ?? null,
                 siesa_nombre: siesaSelected?.f552_nombre ?? null,
+                maquinaria_cod: rolTieneModuloConductor(rolSeleccionado) ? maqSelected?.Cod_Equipo ?? null : null,
+                maquinaria_placa: rolTieneModuloConductor(rolSeleccionado) ? maqSelected?.PLACA ?? null : null,
+                maquinaria_categoria: rolTieneModuloConductor(rolSeleccionado) ? maqSelected?.CATEGORIA ?? null : null,
             }
 
             console.log('📤 JSON enviado a POST /auth-secundario/usuarios:')
@@ -510,13 +623,14 @@ export const UserFormModal = ({ isOpen, onClose, user }: UserFormModalProps) => 
             isOpen={isOpen}
             onClose={onClose}
             title={isEditing ? 'Editar Usuario' : 'Nuevo Usuario'}
-            className="max-w-3xl"
+            className="max-w-5xl"
         >
-            <div className="mt-6 space-y-6">
-                {/* Fila 1: Nombre / Correo / Celular */}
+            <div className="mt-2 space-y-7">
+                {/* ─── Información personal ─── */}
+                <SeccionTitulo>Información personal</SeccionTitulo>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
                     <div className="space-y-2">
-                        <label className="text-sm font-medium">Nombre Completo</label>
+                        <Etiqueta requerido>Nombre Completo</Etiqueta>
                         <Input
                             placeholder="Ej. Juan Pérez"
                             value={name}
@@ -524,7 +638,7 @@ export const UserFormModal = ({ isOpen, onClose, user }: UserFormModalProps) => 
                         />
                     </div>
                     <div className="space-y-2">
-                        <label className="text-sm font-medium">Correo Electrónico</label>
+                        <Etiqueta>Correo Electrónico</Etiqueta>
                         <Input
                             type="email"
                             placeholder="juan@email.com"
@@ -533,7 +647,7 @@ export const UserFormModal = ({ isOpen, onClose, user }: UserFormModalProps) => 
                         />
                     </div>
                     <div className="space-y-2">
-                        <label className="text-sm font-medium">Celular (Opcional)</label>
+                        <Etiqueta>Celular</Etiqueta>
                         <div className="flex gap-1.5 items-center">
                             <div ref={codigoRef} className="relative w-20 shrink-0">
                                 <div className="relative">
@@ -601,10 +715,11 @@ export const UserFormModal = ({ isOpen, onClose, user }: UserFormModalProps) => 
                     </div>
                 </div>
 
-                {/* Fila 2: Usuario / Rol / Contraseña o PIN */}
+                {/* ─── Acceso al sistema ─── */}
+                <SeccionTitulo>Acceso al sistema</SeccionTitulo>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
                     <div className="space-y-2">
-                        <label className="text-sm font-medium">Usuario</label>
+                        <Etiqueta requerido>Usuario</Etiqueta>
                         <div className="relative">
                             <Input
                                 placeholder={generandoUsuario ? 'Generando...' : isEditing ? '' : 'Se genera automáticamente'}
@@ -644,7 +759,7 @@ export const UserFormModal = ({ isOpen, onClose, user }: UserFormModalProps) => 
                         </p>
                     </div>
                     <div className="space-y-2">
-                        <label className="text-sm font-medium">Rol</label>
+                        <Etiqueta requerido>Rol</Etiqueta>
                         <select
                             className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                             value={roleId?.toString() || ''}
@@ -669,7 +784,7 @@ export const UserFormModal = ({ isOpen, onClose, user }: UserFormModalProps) => 
                     <div className="space-y-2">
                         {roleId && requierePin ? (
                             <>
-                                <label className="text-sm font-medium">PIN de Acceso</label>
+                                <Etiqueta requerido={!isEditing}>PIN de Acceso</Etiqueta>
                                 <div className="flex gap-1.5 items-center">
                                     <Input
                                         type="text"
@@ -713,7 +828,7 @@ export const UserFormModal = ({ isOpen, onClose, user }: UserFormModalProps) => 
                             </>
                         ) : roleId && !requierePin ? (
                             <>
-                                <label className="text-sm font-medium">Contraseña</label>
+                                <Etiqueta requerido={!isEditing}>Contraseña</Etiqueta>
                                 <Input
                                     type="password"
                                     placeholder={isEditing ? 'Dejar vacío para no cambiar' : 'Contraseña del usuario'}
@@ -735,12 +850,16 @@ export const UserFormModal = ({ isOpen, onClose, user }: UserFormModalProps) => 
                     </div>
                 </div>
 
-                {/* Fila 3: Usuario Siesa / Observaciones / Forma de pago */}
+                {/* ─── Vinculación y operación ───
+                    Usuario de Siesa siempre; Maquinaria y Forma de pago solo para
+                    roles con MODULO_CONDUCTOR. Con rol no conductor la fila queda
+                    en 2 columnas para que el campo no se vea perdido a 1/3. */}
+                <SeccionTitulo>Vinculación y operación</SeccionTitulo>
                 <div
                     className={`grid grid-cols-1 gap-5 ${rolTieneModuloConductor(rolSeleccionado) ? 'md:grid-cols-3' : 'md:grid-cols-2'}`}
                 >
                     <div className="space-y-2" ref={siesaRef}>
-                        <label className="text-sm font-medium">Usuario de Siesa</label>
+                        <Etiqueta>Usuario de Siesa</Etiqueta>
                         <div className="relative">
                             <Input
                                 placeholder="Buscar usuario de Siesa..."
@@ -808,29 +927,112 @@ export const UserFormModal = ({ isOpen, onClose, user }: UserFormModalProps) => 
                             </p>
                         )}
                     </div>
-                    <div className="space-y-2">
-                        <label className="text-sm font-medium">Observaciones</label>
-                        <Input
-                            placeholder="Notas opcionales..."
-                            value={observaciones}
-                            onChange={(e) => setObservaciones(e.target.value)}
-                        />
-                    </div>
+                    {rolTieneModuloConductor(rolSeleccionado) && (
+                        <div className="space-y-2" ref={maqRef}>
+                            <Etiqueta>Maquinaria</Etiqueta>
+                            <div className="relative">
+                                <Input
+                                    placeholder="Buscar por placa o categoría..."
+                                    value={maqSelected
+                                        ? `${maqSelected.PLACA} — ${maqSelected.CATEGORIA}`
+                                        : maqSearch}
+                                    onChange={(e) => {
+                                        setMaqSelected(null)
+                                        setMaqSearch(e.target.value)
+                                        setShowMaqDropdown(true)
+                                    }}
+                                    onFocus={() => setShowMaqDropdown(true)}
+                                    className="h-10 pr-8"
+                                />
+                                {maqSelected && (
+                                    <button
+                                        type="button"
+                                        className="absolute right-2 top-1/2 -translate-y-1/2 p-0.5 rounded hover:bg-muted"
+                                        title="Quitar maquinaria asignada"
+                                        onClick={() => {
+                                            setMaqSelected(null)
+                                            setMaqSearch('')
+                                        }}
+                                    >
+                                        <XCircle className="h-4 w-4 text-muted-foreground" />
+                                    </button>
+                                )}
+                                {!maqSelected && maqLoading && (
+                                    <Loader2 className="absolute right-2 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-muted-foreground" />
+                                )}
+                                {showMaqDropdown && !maqSelected && (
+                                    <div className="absolute left-0 right-0 z-50 mt-1 bg-background border border-input rounded-md shadow-lg max-h-60 overflow-auto">
+                                        {maqLoading ? (
+                                            <div className="px-3 py-2 text-sm text-muted-foreground">Buscando...</div>
+                                        ) : maqOptions.length > 0 ? (
+                                            maqOptions.map((m) => (
+                                                <div
+                                                    key={m.Cod_Equipo}
+                                                    className="px-3 py-2 hover:bg-muted cursor-pointer text-sm flex flex-col"
+                                                    onClick={() => {
+                                                        setMaqSelected(m)
+                                                        setMaqSearch('')
+                                                        setShowMaqDropdown(false)
+                                                    }}
+                                                >
+                                                    <span className="font-medium">{m.PLACA}</span>
+                                                    <span className="text-xs text-muted-foreground">{m.CATEGORIA}</span>
+                                                </div>
+                                            ))
+                                        ) : (
+                                            <div className="px-3 py-2 text-sm text-muted-foreground">
+                                                {maqSearch ? 'Sin resultados' : 'No hay maquinaria disponible'}
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+                            </div>
+                            {maqSelected && (
+                                <p className="text-xs text-green-600 flex items-center gap-1">
+                                    <CheckCircle2 className="h-3.5 w-3.5" />
+                                    Asignada · Equipo {maqSelected.Cod_Equipo}
+                                </p>
+                            )}
+                        </div>
+                    )}
                     {rolTieneModuloConductor(rolSeleccionado) && (
                         <div className="space-y-2">
-                            <label className="text-sm font-medium">Forma de pago</label>
+                            <Etiqueta>Forma de pago</Etiqueta>
                             <Input
-                                placeholder="Opcional — ej. transferencia, efectivo..."
+                                placeholder="Ej. transferencia, efectivo..."
                                 value={formaPago}
                                 onChange={(e) => setFormaPago(e.target.value)}
+                                className="h-10"
                             />
                         </div>
                     )}
                 </div>
 
-                <div className="flex justify-end space-x-2 pt-4 border-t">
-                    <Button variant="outline" onClick={onClose}>Cancelar</Button>
-                    <Button onClick={handleSave}>{isEditing ? 'Actualizar Usuario' : 'Guardar Usuario'}</Button>
+                {/* Observaciones a ancho completo: es texto libre y se beneficia
+                    de más espacio que un tercio de fila. */}
+                <div className="space-y-2">
+                    <Etiqueta>Observaciones</Etiqueta>
+                    <Input
+                        placeholder="Notas opcionales sobre el usuario..."
+                        value={observaciones}
+                        onChange={(e) => setObservaciones(e.target.value)}
+                        className="h-10"
+                    />
+                </div>
+
+                {/* Acciones: pegadas abajo y separadas del contenido. La nota de
+                    campos obligatorios va a la izquierda para no competir con los
+                    botones, que quedan alineados a la derecha (acción primaria al final). */}
+                <div className="flex flex-col-reverse gap-3 border-t pt-5 sm:flex-row sm:items-center sm:justify-between">
+                    <p className="text-xs text-muted-foreground">
+                        Los campos marcados con <span className="text-destructive">*</span> son obligatorios
+                    </p>
+                    <div className="flex justify-end gap-2">
+                        <Button variant="outline" onClick={onClose} className="min-w-[110px]">Cancelar</Button>
+                        <Button onClick={handleSave} className="min-w-[160px]">
+                            {isEditing ? 'Actualizar Usuario' : 'Guardar Usuario'}
+                        </Button>
+                    </div>
                 </div>
             </div>
         </Modal>

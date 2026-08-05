@@ -14,7 +14,10 @@ export const Sidebar = () => {
     const { hasPermiso, sesion } = useAuthStore()
     const location = useLocation()
     const isMobile = useMediaQuery('(max-width: 1023px)')
-    const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set())
+    // Acordeón: un solo grupo abierto a la vez. Ahora que TODAS las rutas
+    // cuelgan de un grupo, permitir varios abiertos hacía crecer el menú hasta
+    // necesitar scroll a medida que el usuario navegaba entre secciones.
+    const [expandedItem, setExpandedItem] = useState<string | null>(null)
 
     // Filtrar items de navegación según permisos del usuario
     const navFiltrado: NavItem[] = navigation.reduce<NavItem[]>((acc, item) => {
@@ -36,35 +39,23 @@ export const Sidebar = () => {
         return acc
     }, [])
 
-    // Auto-expandir items si la ruta actual está en sus sub-items
+    // Abrir el grupo que contiene la ruta actual (y cerrar el resto)
     useEffect(() => {
-        navFiltrado.forEach((item) => {
-            if (item.subItems) {
-                const hasActiveSubItem = item.subItems.some(
-                    (subItem) => subItem.href === location.pathname
-                )
-                if (hasActiveSubItem) {
-                    setExpandedItems((prev) => new Set(prev).add(item.name))
-                }
-            }
-        })
+        const grupoActivo = navFiltrado.find((item) =>
+            item.subItems?.some((subItem) => subItem.href === location.pathname)
+        )
+        if (grupoActivo) {
+            setExpandedItem(grupoActivo.name)
+        }
     }, [location.pathname]) // eslint-disable-line react-hooks/exhaustive-deps
 
     const currentPage = getPageMeta(location.pathname) ?? { name: 'Dashboard', icon: BarChart3 }
 
     const toggleExpanded = (itemName: string) => {
-        setExpandedItems((prev) => {
-            const newSet = new Set(prev)
-            if (newSet.has(itemName)) {
-                newSet.delete(itemName)
-            } else {
-                newSet.add(itemName)
-            }
-            return newSet
-        })
+        setExpandedItem((prev) => (prev === itemName ? null : itemName))
     }
 
-    const isItemExpanded = (itemName: string) => expandedItems.has(itemName)
+    const isItemExpanded = (itemName: string) => expandedItem === itemName
 
     return (
         <>
@@ -169,7 +160,9 @@ export const Sidebar = () => {
                                                                 key={subItem.href}
                                                                 to={subItem.href}
                                                                 className={cn(
-                                                                    'flex items-center rounded-xl px-3 py-2 text-sm transition-colors active:scale-[0.98]',
+                                                                    // gap-3 igual que el botón del grupo: sin él el icono
+                                                                    // quedaba pegado al texto del sub-ítem.
+                                                                    'flex items-center gap-3 rounded-xl px-3 py-2 text-sm transition-colors active:scale-[0.98]',
                                                                     'hover:bg-accent hover:text-accent-foreground',
                                                                     isSubActive
                                                                         ? 'bg-accent text-accent-foreground font-medium'
@@ -182,8 +175,8 @@ export const Sidebar = () => {
                                                                 }}
                                                                 title={!sidebarOpen ? subItem.name : undefined}
                                                             >
-                                                                <subItem.icon className="h-4 w-4" />
-                                                                {sidebarOpen && <span>{subItem.name}</span>}
+                                                                <subItem.icon className="h-4 w-4 shrink-0" />
+                                                                {sidebarOpen && <span className="truncate">{subItem.name}</span>}
                                                             </Link>
                                                         )
                                                     })}

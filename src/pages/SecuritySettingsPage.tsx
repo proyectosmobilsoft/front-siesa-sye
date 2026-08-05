@@ -130,6 +130,22 @@ export const SecuritySettingsPage = () => {
             },
         },
         {
+            id: 'rol',
+            header: 'Rol',
+            // El listado devuelve roles[] (auth_usuario_rol + auth_roles); se usa el
+            // primero, que es el que el modal edita como rol_id.
+            cell: ({ row }) => {
+                const rol = row.original.roles?.[0]?.nombre
+                return rol
+                    ? (
+                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${badgeClass('blue')}`}>
+                            {rol}
+                        </span>
+                    )
+                    : <span className="text-muted-foreground italic text-xs">Sin rol</span>
+            },
+        },
+        {
             accessorKey: 'activo',
             header: 'Estado',
             cell: ({ row }) => {

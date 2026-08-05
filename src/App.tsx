@@ -34,6 +34,7 @@ const MaestroRolesPage = lazy(() => import('@/pages/MaestroRolesPage').then(m =>
 const MaestroDescuentosFinancierosPage = lazy(() => import('@/pages/MaestroDescuentosFinancierosPage').then(m => ({ default: m.MaestroDescuentosFinancierosPage })))
 const MaestroCajasPage = lazy(() => import('@/pages/MaestroCajasPage').then(m => ({ default: m.MaestroCajasPage })))
 const MaestroConceptosPage = lazy(() => import('@/pages/MaestroConceptosPage').then(m => ({ default: m.MaestroConceptosPage })))
+const MaestroMaquinariaPage = lazy(() => import('@/pages/MaestroMaquinariaPage').then(m => ({ default: m.MaestroMaquinariaPage })))
 const EgresoPage = lazy(() => import('@/pages/EgresoPage').then(m => ({ default: m.EgresoPage })))
 const FerregangaPage = lazy(() => import('@/pages/FerregangaPage'))
 const ReciboCajaPage = lazy(() => import('@/pages/ReciboCajaPage').then(m => ({ default: m.ReciboCajaPage })))
@@ -63,40 +64,61 @@ function AppLayout() {
                                 Cargando…
                             </div>
                         }>
-                        <Routes>
-                            {/* Dashboard: accesible a todos los autenticados */}
-                            <Route path="/"                                  element={<DashboardPage />} />
-                            <Route path="/clientes"                          element={<ClientsPage />} />
-                            <Route path="/companias"                         element={<CompaniesPage />} />
-                            <Route path="/productos"                         element={<ProductsPage />} />
-                            <Route path="/pedidos"                           element={<PedidosPage />} />
-                            <Route path="/ferreganga"                        element={<FerregangaPage />} />
-                            <Route path="/egreso"                            element={<ProtectedRoute permiso={PERMISOS.EGRESO}><EgresoPage /></ProtectedRoute>} />
-                            <Route path="/facturas/gestion-ventas"           element={<ProtectedRoute permiso={PERMISOS.GESTION_VENTAS}><GestionVentasPage /></ProtectedRoute>} />
-                            <Route path="/facturas/analisis-financiero"      element={<AnalisisFinancieroPage />} />
-                            <Route path="/reportes"                          element={<ReportsPage />} />
-                            <Route path="/reportes/ventas"                   element={<SalesSummaryPage />} />
-                            <Route path="/reportes/vendedores"               element={<VendorsPage />} />
-                            {/* Sin permiso todavía en backend (ver docs/traslado-fondos.md):
+                            <Routes>
+                                <Route path="/" element={<DashboardPage />} />
+
+                                {/* Egreso/Anticipos: protegido por VER_ANTICIPO */}
+                                <Route path="/egreso" element={
+                                    <ProtectedRoute permiso={PERMISOS.EGRESO}><EgresoPage /></ProtectedRoute>
+                                } />
+
+                                {/* Relación de Conceptos: protegido por VER_CONCEPTOS (solo rol Administrador) */}
+                                <Route path="/maestro/relacion-conceptos" element={
+                                    <ProtectedRoute permiso={PERMISOS.CONCEPTOS}><MaestroConceptosPage /></ProtectedRoute>
+                                } />
+
+                                {/* Maquinaria: protegido por VER_MAQUINARIA (solo rol Administrador) */}
+                                <Route path="/maestro/maquinaria" element={
+                                    <ProtectedRoute permiso={PERMISOS.MAQUINARIA}><MaestroMaquinariaPage /></ProtectedRoute>
+                                } />
+
+                                {/* Gestión de Ventas: protegido por VER_RECIBO */}
+                                <Route path="/facturas/gestion-ventas" element={
+                                    <ProtectedRoute permiso={PERMISOS.GESTION_VENTAS}><GestionVentasPage /></ProtectedRoute>
+                                } />
+
+                                {/* Rutas sin permiso aún en backend — accesibles a cualquier usuario autenticado */}
+                                <Route path="/clientes" element={<ClientsPage />} />
+                                <Route path="/companias" element={<CompaniesPage />} />
+                                <Route path="/productos" element={<ProductsPage />} />
+                                <Route path="/pedidos" element={<PedidosPage />} />
+                                <Route path="/ferreganga" element={<FerregangaPage />} />
+                                <Route path="/egreso" element={<ProtectedRoute permiso={PERMISOS.EGRESO}><EgresoPage /></ProtectedRoute>} />
+                                <Route path="/facturas/gestion-ventas" element={<ProtectedRoute permiso={PERMISOS.GESTION_VENTAS}><GestionVentasPage /></ProtectedRoute>} />
+                                <Route path="/facturas/analisis-financiero" element={<AnalisisFinancieroPage />} />
+                                <Route path="/reportes" element={<ReportsPage />} />
+                                <Route path="/reportes/ventas" element={<SalesSummaryPage />} />
+                                <Route path="/reportes/vendedores" element={<VendorsPage />} />
+                                {/* Sin permiso todavía en backend (ver docs/traslado-fondos.md):
                                 Traslado de Fondos visible para cualquier autenticado hasta
                                 que backend lo cree y lo asigne SOLO al rol Administrador — ver
                                 docs/traslado-fondos.md. Cuando eso pase, envolver de nuevo en
                                 <ProtectedRoute permiso={PERMISOS.TRASLADO_FONDOS}>. */}
-                            <Route path="/tesoreria/traslado-fondos"         element={<TrasladoFondosPage />} />
-                            <Route path="/maestro/roles"                     element={<MaestroRolesPage />} />
-                            {/* Maestro de Usuarios y Configuración → Seguridad son la MISMA
+                                <Route path="/tesoreria/traslado-fondos" element={<TrasladoFondosPage />} />
+                                <Route path="/maestro/roles" element={<MaestroRolesPage />} />
+                                {/* Maestro de Usuarios y Configuración → Seguridad son la MISMA
                                 pantalla (SecuritySettingsPage). Antes /maestro/usuarios abría
                                 MaestroUsuariosPage, una versión distinta con otro modal. */}
-                            <Route path="/maestro/usuarios"                  element={<SecuritySettingsPage />} />
-                            <Route path="/maestro/descuentos-financieros"    element={<MaestroDescuentosFinancierosPage />} />
-                            <Route path="/maestro/cajas"                     element={<MaestroCajasPage />} />
-                            <Route path="/maestro/relacion-conceptos"        element={<ProtectedRoute permiso={PERMISOS.CONCEPTOS}><MaestroConceptosPage /></ProtectedRoute>} />
-                            <Route path="/tesoreria/recibo-caja"             element={<ReciboCajaPage />} />
-                            <Route path="/tesoreria/entrega-recaudo"         element={<TesoreriaEntregaRecaudoPage />} />
-                            <Route path="/configuracion"                     element={<SettingsPage />} />
-                            <Route path="/configuracion/seguridad"           element={<SecuritySettingsPage />} />
-                            <Route path="/ayuda"                             element={<HelpPage />} />
-                        </Routes>
+                                <Route path="/maestro/usuarios" element={<SecuritySettingsPage />} />
+                                <Route path="/maestro/descuentos-financieros" element={<MaestroDescuentosFinancierosPage />} />
+                                <Route path="/maestro/cajas" element={<MaestroCajasPage />} />
+                                <Route path="/maestro/relacion-conceptos" element={<ProtectedRoute permiso={PERMISOS.CONCEPTOS}><MaestroConceptosPage /></ProtectedRoute>} />
+                                <Route path="/tesoreria/recibo-caja" element={<ReciboCajaPage />} />
+                                <Route path="/tesoreria/entrega-recaudo" element={<TesoreriaEntregaRecaudoPage />} />
+                                <Route path="/configuracion" element={<SettingsPage />} />
+                                <Route path="/configuracion/seguridad" element={<SecuritySettingsPage />} />
+                                <Route path="/ayuda" element={<HelpPage />} />
+                            </Routes>
                         </Suspense>
                     </main>
                 </div>
@@ -167,9 +189,9 @@ function App() {
     useEffect(() => {
         const token = localStorage.getItem('auth_token')
         const currentPath = window.location.pathname
-        
+
         console.log('🚀 Aplicación iniciada:', { hasToken: !!token, path: currentPath })
-        
+
         // Si no hay token y no está en login, redirigir inmediatamente
         if (!token && currentPath !== '/login') {
             console.log('🔒 Sin token al iniciar, redirigiendo a login')
