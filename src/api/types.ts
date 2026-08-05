@@ -297,9 +297,10 @@ export interface MovimientosEfectivoResponse {
 
 /**
  * Traslado de Fondos: mueve efectivo entre 2 cajas físicas de SIESA. Crea un
- * documento contable TC real (borrador, pendiente de aprobar en SIESA
- * escritorio) y actualiza el saldo operativo de ambas cajas en el mismo
- * paso. Ver POST /api/caja-traspaso/simple en el backend.
+ * documento contable TC real, ya aprobado, y actualiza el saldo operativo de
+ * ambas cajas en el mismo paso. Ver POST /api/caja-traspaso en el backend
+ * (endpoint único: GET con ?vista=historial|cajas, POST con solo
+ * id_caja_origen/destino/valor obligatorios).
  */
 export interface CajaTraspaso {
   id_caja: string
@@ -341,6 +342,12 @@ export interface TrasladoFondosMov {
   usuario_nombre?: string
   fecha: string
   created_at: string
+  rowid_auxiliar_origen: number | null
+  rowid_auxiliar_destino: number | null
+  rowid_docto_siesa: number | null
+  numero_tc: number | null
+  periodo_tc: number | null
+  tipo?: string | null
 }
 
 export interface TrasladosFondosMovResponse {
