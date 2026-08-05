@@ -20,6 +20,7 @@ import {
   Database,
   UserPlus,
   Shield,
+  KeyRound,
   Percent,
   ListChecks,
   Truck,
@@ -83,10 +84,19 @@ export const navigation: NavItem[] = [
         subtitle: 'Administración de usuarios del sistema',
       },
       {
-        name: 'Roles y Permisos',
+        name: 'Roles',
         href: '/maestro/roles',
         icon: Shield,
-        subtitle: 'Administración de roles y permisos',
+        subtitle: 'Administración de roles',
+      },
+      // Módulos y Permisos: el catálogo que alimenta la pantalla de Roles.
+      // Permiso VER_MODULOS, asignado solo al rol Administrador.
+      {
+        name: 'Módulos y Permisos',
+        href: '/maestro/modulos',
+        icon: KeyRound,
+        subtitle: 'Catálogo de módulos y permisos del sistema',
+        permiso: PERMISOS.MODULOS,
       },
       // Cajas: permiso VER_CAJAS, asignado solo al rol Administrador
       {

@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion'
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect } from 'react'
 import {
     ColumnDef,
     flexRender,
@@ -7,12 +7,13 @@ import {
     getPaginationRowModel,
     useReactTable,
 } from '@tanstack/react-table'
-import { ArrowLeft, Plus, Edit, Shield, Loader2, Trash2, AlertTriangle, Key, Lock, Search, X } from 'lucide-react'
+import { ArrowLeft, Plus, Edit, Shield, Loader2, Trash2, AlertTriangle, Key, Lock } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Modal } from '@/components/ui/modal'
 import { useNavigate } from 'react-router-dom'
-import { seguridadApi, AuthRole, Permiso } from '@/api/seguridad'
+import { seguridadApi, AuthRole, ModuloPermisos } from '@/api/seguridad'
+import { PermisosPorModulo } from '@/components/maestros/PermisosPorModulo'
 import { badgeClass } from '@/utils/badges'
 
 export const MaestroRolesPage = () => {
@@ -29,13 +30,11 @@ export const MaestroRolesPage = () => {
     const [formPin, setFormPin] = useState(false)
     const [formEstado, setFormEstado] = useState(true)
     const [saving, setSaving] = useState(false)
-    // Permisos
-    const [permisos, setPermisos] = useState<Permiso[]>([])
-    const [permisosSeleccionados, setPermisosSeleccionados] = useState<Permiso[]>([])
+    // Permisos: el catálogo llega ya agrupado por módulo desde auth_modulos,
+    // y la selección se maneja como IDs sueltos (que es lo que espera el API).
+    const [modulos, setModulos] = useState<ModuloPermisos[]>([])
+    const [permisosSeleccionados, setPermisosSeleccionados] = useState<number[]>([])
     const [loadingPermisos, setLoadingPermisos] = useState(false)
-    const [permisosDropdownOpen, setPermisosDropdownOpen] = useState(false)
-    const [permisosSearch, setPermisosSearch] = useState('')
-    const permisosDropdownRef = useRef<HTMLDivElement>(null)
 
     // Estado modal eliminar
     const [isDeleteOpen, setIsDeleteOpen] = useState(false)
@@ -58,16 +57,19 @@ export const MaestroRolesPage = () => {
 
     useEffect(() => {
         fetchRoles()
+        // También al montar, no solo al abrir el modal: la tabla resume el
+        // acceso de cada rol en módulos, no en códigos sueltos.
+        loadModulos()
     }, [])
 
-    const loadPermisos = async () => {
+    const loadModulos = async () => {
         try {
             setLoadingPermisos(true)
-            const res = await seguridadApi.listarPermisos()
-            setPermisos(res.data || [])
+            const res = await seguridadApi.listarModulos()
+            setModulos(res.data || [])
         } catch (err) {
-            console.error('Error cargando permisos:', err)
-            setPermisos([])
+            console.error('Error cargando módulos de permisos:', err)
+            setModulos([])
         } finally {
             setLoadingPermisos(false)
         }
@@ -75,40 +77,9 @@ export const MaestroRolesPage = () => {
 
     useEffect(() => {
         if (isFormOpen) {
-            loadPermisos()
+            loadModulos()
         }
     }, [isFormOpen])
-
-    useEffect(() => {
-        const handleClickOutside = (e: MouseEvent) => {
-            if (permisosDropdownRef.current && !permisosDropdownRef.current.contains(e.target as Node)) {
-                setPermisosDropdownOpen(false)
-            }
-        }
-        document.addEventListener('mousedown', handleClickOutside)
-        return () => document.removeEventListener('mousedown', handleClickOutside)
-    }, [])
-
-    const permisosFiltrados = permisos.filter(p => {
-        if (!permisosSearch.trim()) return true
-        const q = permisosSearch.toLowerCase()
-        return (p.codigo?.toLowerCase().includes(q)) || (p.nombre?.toLowerCase().includes(q))
-    })
-
-    const togglePermiso = (perm: Permiso) => {
-        const yaEsta = permisosSeleccionados.some(p => p.codigo === perm.codigo)
-        if (yaEsta) {
-            setPermisosSeleccionados(prev => prev.filter(p => p.codigo !== perm.codigo))
-        } else {
-            setPermisosSeleccionados(prev => [...prev, perm])
-        }
-    }
-
-    const quitarPermiso = (codigo: string) => {
-        setPermisosSeleccionados(prev => prev.filter(p => p.codigo !== codigo))
-    }
-
-    const estaSeleccionado = (codigo: string) => permisosSeleccionados.some(p => p.codigo === codigo)
 
     // --- Handlers CRUD ---
     const handleNewRole = () => {
@@ -117,7 +88,6 @@ export const MaestroRolesPage = () => {
         setFormPin(false)
         setFormEstado(true)
         setPermisosSeleccionados([])
-        setPermisosSearch('')
         setIsFormOpen(true)
     }
 
@@ -126,14 +96,10 @@ export const MaestroRolesPage = () => {
         setFormNombre(role.nombre)
         setFormPin(role.pin)
         setFormEstado(!!role.estado)
-        // Cargar permisos asociados al rol (vienen en role.permisos del API)
-        const permisosDelRol: Permiso[] = (role.permisos || []).map((p) => ({
-            id: p.id,
-            codigo: p.codigo,
-            nombre: p.descripcion,
-        }))
-        setPermisosSeleccionados(permisosDelRol)
-        setPermisosSearch('')
+        // Permisos asociados al rol (vienen en role.permisos del API)
+        setPermisosSeleccionados(
+            (role.permisos || []).map((p) => p.id).filter((id): id is number => id != null)
+        )
         setIsFormOpen(true)
     }
 
@@ -147,12 +113,11 @@ export const MaestroRolesPage = () => {
         if (!formNombre.trim()) return
         setSaving(true)
 
-        const idsPermisos = permisosSeleccionados.map(p => p.id).filter((id): id is number => id != null)
         const payload = {
             nombre: formNombre.trim().toUpperCase(),
             pin: formPin,
             estado: formEstado,
-            permisos: idsPermisos,
+            permisos: permisosSeleccionados,
         }
 
         try {
@@ -207,6 +172,12 @@ export const MaestroRolesPage = () => {
         }
     }
 
+    /** Nombres de los módulos donde el rol tiene al menos un permiso. */
+    const modulosDelRol = (role: AuthRole): string[] => {
+        const ids = new Set((role.permisos || []).map((p) => p.id))
+        return modulos.filter((m) => m.permisos.some((p) => ids.has(p.id))).map((m) => m.nombre)
+    }
+
     // --- Columnas ---
     const columns: ColumnDef<AuthRole>[] = [
         {
@@ -249,6 +220,34 @@ export const MaestroRolesPage = () => {
                                 <Lock className="h-4 w-4 text-blue-500" />
                                 <span className="text-sm font-medium text-blue-600 dark:text-blue-400">Contraseña</span>
                             </>
+                        )}
+                    </div>
+                )
+            },
+        },
+        {
+            id: 'acceso',
+            header: 'Acceso',
+            cell: ({ row }) => {
+                const role = row.original
+                const nombres = modulosDelRol(role)
+                const total = role.permisos?.length ?? 0
+                if (nombres.length === 0) {
+                    return <span className="text-sm text-muted-foreground">Sin permisos</span>
+                }
+                const visibles = nombres.slice(0, 2)
+                const resto = nombres.length - visibles.length
+                return (
+                    <div className="flex flex-wrap items-center gap-1" title={`${nombres.join(', ')} — ${total} permisos`}>
+                        {visibles.map((n) => (
+                            <span key={n} className="rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
+                                {n}
+                            </span>
+                        ))}
+                        {resto > 0 && (
+                            <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
+                                +{resto}
+                            </span>
                         )}
                     </div>
                 )
@@ -377,9 +376,11 @@ export const MaestroRolesPage = () => {
                 isOpen={isFormOpen}
                 onClose={() => { if (!saving) setIsFormOpen(false) }}
                 title={editingRole ? 'Editar Rol' : 'Nuevo Rol'}
-                className="max-w-lg"
+                className="max-w-2xl"
             >
-                <div className="mt-4 space-y-5">
+                {/* Con varios módulos desplegados el formulario crece: scroll
+                    propio para que los botones de guardar sigan alcanzables. */}
+                <div className="mt-4 max-h-[70vh] space-y-5 overflow-y-auto pr-1">
                     <div className="space-y-2">
                         <label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Nombre del Rol</label>
                         <Input
@@ -454,95 +455,15 @@ export const MaestroRolesPage = () => {
                         )}
                     </div>
 
-                    {/* Permisos: multiselect con search + tabla */}
-                    <div className="space-y-2">
-                        <label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Permisos del Rol</label>
-                        <div ref={permisosDropdownRef} className="relative">
-                            <div
-                                onClick={() => setPermisosDropdownOpen(!permisosDropdownOpen)}
-                                className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm cursor-pointer hover:bg-muted/50"
-                            >
-                                <span className="text-muted-foreground truncate">
-                                    {loadingPermisos ? 'Cargando permisos...' : 'Seleccionar permisos para agregar'}
-                                </span>
-                                <Search className="h-4 w-4 text-muted-foreground shrink-0" />
-                            </div>
-                            {permisosDropdownOpen && (
-                                <div className="absolute z-50 mt-1 w-full rounded-md border bg-popover shadow-lg max-h-64 overflow-hidden">
-                                    <div className="p-2 border-b bg-muted/30">
-                                        <div className="relative">
-                                            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                                            <Input
-                                                placeholder="Buscar permiso..."
-                                                value={permisosSearch}
-                                                onChange={(e) => setPermisosSearch(e.target.value)}
-                                                className="h-9 pl-8"
-                                                autoFocus
-                                            />
-                                        </div>
-                                    </div>
-                                    <div className="max-h-48 overflow-y-auto p-1">
-                                        {permisosFiltrados.length === 0 ? (
-                                            <div className="py-4 text-center text-sm text-muted-foreground">
-                                                {loadingPermisos ? 'Cargando...' : 'No hay permisos'}
-                                            </div>
-                                        ) : (
-                                            permisosFiltrados.map((perm) => (
-                                                <label
-                                                    key={perm.codigo}
-                                                    className={`flex items-center gap-2 px-2 py-2 rounded cursor-pointer hover:bg-muted/50 ${estaSeleccionado(perm.codigo) ? 'bg-primary/10' : ''}`}
-                                                >
-                                                    <input
-                                                        type="checkbox"
-                                                        checked={estaSeleccionado(perm.codigo)}
-                                                        onChange={() => togglePermiso(perm)}
-                                                        className="rounded border-input"
-                                                    />
-                                                    <span className="text-sm truncate">{perm.codigo}</span>
-                                                    {perm.nombre && <span className="text-xs text-muted-foreground truncate">— {perm.nombre}</span>}
-                                                </label>
-                                            ))
-                                        )}
-                                    </div>
-                                </div>
-                            )}
-                        </div>
+                    {/* Permisos agrupados por módulo (auth_modulos) */}
+                    <PermisosPorModulo
+                        modulos={modulos}
+                        loading={loadingPermisos}
+                        seleccion={permisosSeleccionados}
+                        onChange={setPermisosSeleccionados}
+                        resetKey={editingRole ? String(editingRole.id) : 'nuevo'}
+                    />
 
-                        {/* Tabla de permisos seleccionados */}
-                        {permisosSeleccionados.length > 0 && (
-                            <div className="rounded-md border overflow-hidden">
-                                <table className="w-full text-sm">
-                                    <thead>
-                                        <tr className="bg-muted/50 border-b">
-                                            <th className="h-9 px-3 text-left font-medium text-muted-foreground">Código</th>
-                                            <th className="h-9 px-3 text-left font-medium text-muted-foreground">Nombre</th>
-                                            <th className="h-9 px-3 w-12 text-right"></th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {permisosSeleccionados.map((perm) => (
-                                            <tr key={perm.codigo} className="border-b last:border-0 hover:bg-muted/30">
-                                                <td className="py-2 px-3 font-medium">{perm.codigo}</td>
-                                                <td className="py-2 px-3 text-muted-foreground">{perm.nombre || '—'}</td>
-                                                <td className="py-2 px-3 text-right">
-                                                    <Button
-                                                        type="button"
-                                                        variant="ghost"
-                                                        size="sm"
-                                                        className="h-8 w-8 p-0 text-destructive hover:bg-destructive/10"
-                                                        onClick={() => quitarPermiso(perm.codigo)}
-                                                        title="Quitar permiso"
-                                                    >
-                                                        <X className="h-4 w-4" />
-                                                    </Button>
-                                                </td>
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
-                            </div>
-                        )}
-                    </div>
 
                     <div className="flex justify-end gap-3 pt-4 border-t">
                         <Button variant="outline" onClick={() => setIsFormOpen(false)} disabled={saving}>

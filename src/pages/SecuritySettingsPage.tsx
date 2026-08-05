@@ -375,7 +375,7 @@ export const SecuritySettingsPage = () => {
 
                     {/* Advertencia */}
                     <p className="text-xs text-destructive/80 mb-6">
-                        Se eliminarán sus roles y permisos. Esta acción no se puede deshacer.
+                        Se eliminarán sus roles. Esta acción no se puede deshacer.
                     </p>
 
                     {/* Botones */}

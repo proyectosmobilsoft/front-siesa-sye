@@ -21,6 +21,8 @@ export const PERMISOS = {
   MAQUINARIA:             'VER_MAQUINARIA',
   // Maestro de Cajas: asignado solo al rol Administrador
   CAJAS:                  'VER_CAJAS',
+  // Maestro de Módulos y Permisos (catálogo de seguridad): solo Administrador
+  MODULOS:                'VER_MODULOS',
 
   // --- Acciones sobre anticipos ---
   CREAR_ANTICIPO:         'CREAR_ANTICIPO',
@@ -58,6 +60,13 @@ export const PERMISOS = {
   CREAR_CAJA:             'CREAR_CAJA',
   EDITAR_CAJA:            'EDITAR_CAJA',                        // Cubre editar y reactivar
   ELIMINAR_CAJA:          'ELIMINAR_CAJA',
+
+  // --- Acciones sobre el maestro de Módulos y Permisos ---
+  // Un solo juego cubre módulos y permisos: crear un permiso dentro de un
+  // módulo es "crear" en ese maestro.
+  CREAR_MODULO:           'CREAR_MODULO',
+  EDITAR_MODULO:          'EDITAR_MODULO',
+  ELIMINAR_MODULO:        'ELIMINAR_MODULO',
 } as const
 
 export type PermisoCodigo = typeof PERMISOS[keyof typeof PERMISOS]

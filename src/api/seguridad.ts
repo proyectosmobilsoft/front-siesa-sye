@@ -123,6 +123,67 @@ export interface ListarPermisosResponse {
     data: Permiso[]
 }
 
+/**
+ * Tipo de un permiso dentro de su módulo (columna Tipo de auth_permisos):
+ * - VISTA: da acceso al módulo. El API lo agrega solo si el rol tiene
+ *   cualquier otra acción del mismo módulo, así que en la UI va fijo.
+ * - ACCION: operación dentro del módulo (crear, aprobar, …).
+ * - TAB: visibilidad de una pestaña dentro del módulo.
+ * - ESPECIAL: marca de comportamiento, no es una pantalla (MODULO_CONDUCTOR).
+ */
+export type TipoPermiso = 'VISTA' | 'ACCION' | 'TAB' | 'ESPECIAL'
+
+export interface PermisoDeModulo {
+    id: number
+    codigo: string
+    descripcion?: string | null
+    /** Nombre corto y legible ("Crear", "Aprobar", "Rechazadas") */
+    etiqueta: string
+    tipo: TipoPermiso
+    orden: number
+    /** Solo lo devuelve el modo `todos` del maestro; en Roles siempre es true */
+    estado?: boolean
+}
+
+export interface ModuloPermisos {
+    /** null en el módulo sintético SIN_CLASIFICAR que arma el API */
+    id: number | null
+    codigo: string
+    nombre: string
+    grupo?: string | null
+    /** Nombre de un icono de lucide-react */
+    icono?: string | null
+    orden: number
+    /** Solo lo devuelve el modo `todos` del maestro; en Roles siempre es true */
+    estado?: boolean
+    permisos: PermisoDeModulo[]
+}
+
+export interface ListarModulosResponse {
+    success?: boolean
+    data: ModuloPermisos[]
+}
+
+export interface CrearModuloDto {
+    codigo: string
+    nombre: string
+    grupo?: string | null
+    /** Nombre de un icono de lucide-react (ej. "Archive") */
+    icono?: string | null
+    orden?: number
+    estado?: boolean
+}
+
+export interface CrearPermisoDto {
+    codigo: string
+    descripcion?: string | null
+    modulo_id?: number | null
+    tipo?: TipoPermiso
+    etiqueta?: string | null
+    orden?: number
+    estado?: boolean
+}
+
 export const seguridadApi = {
     listarUsuarios: async (page = 1, pageSize = 100, search = ''): Promise<ListarUsuariosResponse> => {
         const params: Record<string, any> = { page, pageSize }
@@ -220,6 +281,74 @@ export const seguridadApi = {
             return raw
         }
         return { data: raw?.data || [] }
+    },
+
+    /**
+     * Catálogo de permisos ya agrupado por módulo (auth_modulos).
+     * La agrupación vive en BD, así que un permiso nuevo aparece aquí sin
+     * tocar el front.
+     */
+    listarModulos: async (todos = false): Promise<ListarModulosResponse> => {
+        const response = await apiClient.get('/auth-secundario/modulos', {
+            // `todos` incluye lo inactivo y los módulos vacíos: solo lo necesita
+            // el maestro de Módulos y Permisos, no el selector de Roles.
+            params: todos ? { todos: true } : undefined,
+        })
+        const raw = response.data
+        const data: ModuloPermisos[] = (raw?.data || []).map((m: any) => ({
+            id: m.id ?? null,
+            codigo: m.codigo ?? '',
+            nombre: m.nombre ?? m.codigo ?? '',
+            grupo: m.grupo ?? null,
+            icono: m.icono ?? null,
+            orden: m.orden ?? 999,
+            estado: m.estado ?? true,
+            permisos: (m.permisos || []).map((p: any) => ({
+                id: p.id,
+                codigo: p.codigo ?? '',
+                descripcion: p.descripcion ?? null,
+                etiqueta: p.etiqueta || p.codigo || '',
+                tipo: (p.tipo || 'ACCION') as TipoPermiso,
+                orden: p.orden ?? 999,
+                estado: p.estado ?? true,
+            })),
+        }))
+        return { success: raw?.success, data }
+    },
+
+    // --- Maestro de Módulos y Permisos ---
+    // El `codigo` de un permiso NO se envía en la actualización: está escrito a
+    // mano en los requirePermiso del backend y en PERMISOS, así que renombrarlo
+    // desde la pantalla dejaría roles apuntando a un permiso que no valida nada.
+
+    crearModulo: async (data: CrearModuloDto) => {
+        const response = await apiClient.post('/auth-secundario/modulos', data)
+        return response.data
+    },
+
+    actualizarModulo: async (id: number, data: Partial<CrearModuloDto>) => {
+        const response = await apiClient.put(`/auth-secundario/modulos/${id}`, data)
+        return response.data
+    },
+
+    eliminarModulo: async (id: number) => {
+        const response = await apiClient.delete(`/auth-secundario/modulos/${id}`)
+        return response.data
+    },
+
+    crearPermiso: async (data: CrearPermisoDto) => {
+        const response = await apiClient.post('/auth-secundario/permisos', data)
+        return response.data
+    },
+
+    actualizarPermiso: async (id: number, data: Omit<Partial<CrearPermisoDto>, 'codigo'>) => {
+        const response = await apiClient.put(`/auth-secundario/permisos/${id}`, data)
+        return response.data
+    },
+
+    eliminarPermiso: async (id: number) => {
+        const response = await apiClient.delete(`/auth-secundario/permisos/${id}`)
+        return response.data
     },
 
     crearRol: async (data: { nombre: string; pin: boolean; estado?: boolean; permisos?: number[] }) => {

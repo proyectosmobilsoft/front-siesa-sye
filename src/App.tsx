@@ -35,6 +35,7 @@ const MaestroDescuentosFinancierosPage = lazy(() => import('@/pages/MaestroDescu
 const MaestroCajasPage = lazy(() => import('@/pages/MaestroCajasPage').then(m => ({ default: m.MaestroCajasPage })))
 const MaestroConceptosPage = lazy(() => import('@/pages/MaestroConceptosPage').then(m => ({ default: m.MaestroConceptosPage })))
 const MaestroMaquinariaPage = lazy(() => import('@/pages/MaestroMaquinariaPage').then(m => ({ default: m.MaestroMaquinariaPage })))
+const MaestroModulosPage = lazy(() => import('@/pages/MaestroModulosPage').then(m => ({ default: m.MaestroModulosPage })))
 const EgresoPage = lazy(() => import('@/pages/EgresoPage').then(m => ({ default: m.EgresoPage })))
 const FerregangaPage = lazy(() => import('@/pages/FerregangaPage'))
 const ReciboCajaPage = lazy(() => import('@/pages/ReciboCajaPage').then(m => ({ default: m.ReciboCajaPage })))
@@ -85,6 +86,11 @@ function AppLayout() {
                                 {/* Maestro de Cajas: protegido por VER_CAJAS (solo rol Administrador) */}
                                 <Route path="/maestro/cajas" element={
                                     <ProtectedRoute permiso={PERMISOS.CAJAS}><MaestroCajasPage /></ProtectedRoute>
+                                } />
+
+                                {/* Módulos y Permisos (catálogo de seguridad): protegido por VER_MODULOS */}
+                                <Route path="/maestro/modulos" element={
+                                    <ProtectedRoute permiso={PERMISOS.MODULOS}><MaestroModulosPage /></ProtectedRoute>
                                 } />
 
                                 {/* Gestión de Ventas: protegido por VER_RECIBO */}
