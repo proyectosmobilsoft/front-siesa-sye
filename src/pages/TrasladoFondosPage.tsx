@@ -39,11 +39,14 @@ const CajaSelector = ({
             <Landmark className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Select value={value} onChange={(e) => onChange(e.target.value)} className="pl-9">
                 <option value="">Selecciona una caja</option>
-                {cajas.map((c) => (
-                    <option key={c.id_caja} value={c.id_caja} disabled={c.id_caja === disabledValue}>
-                        {c.nombre ?? c.id_caja}
-                    </option>
-                ))}
+                {cajas.map((c, idx) => {
+                    const idVal = c?.id_caja ? String(c.id_caja).trim() : `caja-${idx}`
+                    return (
+                        <option key={idVal} value={idVal} disabled={idVal === disabledValue}>
+                            {c?.nombre ?? `Caja ${idVal}`}
+                        </option>
+                    )
+                })}
             </Select>
         </div>
     </div>
@@ -79,10 +82,10 @@ export const TrasladoFondosPage = () => {
     )
     const crearTraslado = useCrearTrasladoFondos()
 
-    const nombreCaja = (id: string) => {
-        if (!id) return ''
+    const nombreCaja = (id?: string | null) => {
+        if (!id || typeof id !== 'string') return ''
         const idLimpio = id.trim()
-        const cajaEncontrada = cajas?.find((c) => c.id_caja.trim() === idLimpio)
+        const cajaEncontrada = cajas?.find((c) => c?.id_caja && String(c.id_caja).trim() === idLimpio)
         return cajaEncontrada?.nombre ?? `Caja ${idLimpio}`
     }
 
@@ -416,7 +419,7 @@ export const TrasladoFondosPage = () => {
                                 </div>
                                 <p className="text-sm font-bold">{nombreCaja(trasladoSeleccionado.id_caja_origen)}</p>
                                 <div className="text-xs text-muted-foreground pt-1.5 border-t border-border/50 flex justify-between">
-                                    <span>Caja ID: <strong className="text-foreground">{trasladoSeleccionado.id_caja_origen.trim()}</strong></span>
+                                    <span>Caja ID: <strong className="text-foreground">{trasladoSeleccionado.id_caja_origen ? String(trasladoSeleccionado.id_caja_origen).trim() : 'N/A'}</strong></span>
                                     {trasladoSeleccionado.rowid_auxiliar_origen && (
                                         <span>Aux: <strong className="text-foreground">{trasladoSeleccionado.rowid_auxiliar_origen}</strong></span>
                                     )}
@@ -432,7 +435,7 @@ export const TrasladoFondosPage = () => {
                                 </div>
                                 <p className="text-sm font-bold">{nombreCaja(trasladoSeleccionado.id_caja_destino)}</p>
                                 <div className="text-xs text-muted-foreground pt-1.5 border-t border-border/50 flex justify-between">
-                                    <span>Caja ID: <strong className="text-foreground">{trasladoSeleccionado.id_caja_destino.trim()}</strong></span>
+                                    <span>Caja ID: <strong className="text-foreground">{trasladoSeleccionado.id_caja_destino ? String(trasladoSeleccionado.id_caja_destino).trim() : 'N/A'}</strong></span>
                                     {trasladoSeleccionado.rowid_auxiliar_destino && (
                                         <span>Aux: <strong className="text-foreground">{trasladoSeleccionado.rowid_auxiliar_destino}</strong></span>
                                     )}
