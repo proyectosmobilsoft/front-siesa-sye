@@ -19,6 +19,7 @@ import {
     Search,
     Download,
     Wallet,
+    Hash,
 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -137,7 +138,7 @@ const ConciliarConductorModal = ({
 
 const SIN_ANULACIONES: Set<number> = new Set()
 
-const TableroConciliacion = ({ movimientos, onResuelto, anulacionesPosteriores }: { movimientos: MovimientoEfectivo[] | undefined; onResuelto: () => void; anulacionesPosteriores: Set<number> }) => {
+const TableroConciliacion = ({ movimientos, onResuelto }: { movimientos: MovimientoEfectivo[] | undefined; onResuelto: () => void }) => {
     // Resolver diferencias también se exige en la API
     // (requirePermiso RESOLVER_DIFERENCIA_RECAUDO).
     const { puede, P } = usePermiso()
@@ -233,14 +234,13 @@ const TableroConciliacion = ({ movimientos, onResuelto, anulacionesPosteriores }
                                 <tbody>
                                     {conductores.map((conductor) => {
                                         const alDia = conductor.movimientosConDiferencia === 0
-                                        const tieneAnulacionPosterior = anulacionesPosteriores.has(conductor.conductorId)
                                         return (
-                                            <tr key={conductor.conductorId} className={cn('border-b border-border/60 last:border-0 hover:bg-muted/20', tieneAnulacionPosterior && 'bg-amber-500/5')}>
+                                            <tr key={conductor.conductorId} className="border-b border-border/60 last:border-0 hover:bg-muted/20">
                                                 <td className="px-5 py-3 text-left">
                                                     <div className="flex items-center gap-3">
                                                         <div className={cn(
                                                             'flex h-9 w-9 items-center justify-center rounded-full text-xs font-bold text-white',
-                                                            tieneAnulacionPosterior ? 'bg-amber-500' : alDia ? 'bg-emerald-500' : 'bg-destructive'
+                                                            alDia ? 'bg-emerald-500' : 'bg-destructive'
                                                         )}>
                                                             {conductor.conductorNombre.charAt(0).toUpperCase()}
                                                         </div>
@@ -267,14 +267,12 @@ const TableroConciliacion = ({ movimientos, onResuelto, anulacionesPosteriores }
                                                 <td className="px-5 py-3 text-left">
                                                     <span className={cn(
                                                         'inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-bold',
-                                                        tieneAnulacionPosterior
-                                                            ? 'bg-amber-500/10 text-amber-700 dark:text-amber-400'
-                                                            : alDia
-                                                                ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400'
-                                                                : 'bg-destructive/10 text-destructive'
+                                                        alDia
+                                                            ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400'
+                                                            : 'bg-destructive/10 text-destructive'
                                                     )}>
-                                                        {tieneAnulacionPosterior ? <AlertCircle className="h-3.5 w-3.5" /> : alDia ? <ShieldCheck className="h-3.5 w-3.5" /> : <TriangleAlert className="h-3.5 w-3.5" />}
-                                                        {tieneAnulacionPosterior ? 'RC anulado en SIESA' : alDia ? 'Al día' : 'Tiene un descuadre'}
+                                                        {alDia ? <ShieldCheck className="h-3.5 w-3.5" /> : <TriangleAlert className="h-3.5 w-3.5" />}
+                                                        {alDia ? 'Al día' : 'Tiene un descuadre'}
                                                     </span>
                                                 </td>
                                                 <td className="px-5 py-3 text-right">
@@ -425,7 +423,7 @@ const ValidarEntregaModal = ({ entrega, onClose, onConfirmado }: ValidarEntregaM
 
 // ─── Sub-tabla de entregas de un conductor ───────────────────────────────────
 
-const EntregasSubAccordion = ({ entregas, colSpan, onValidar }: { entregas: MovimientoEfectivo[]; colSpan: number; onValidar?: (mov: MovimientoEfectivo) => void }) => {
+const EntregasSubAccordion = ({ entregas, colSpan, onValidar, entregasConHistorialAnulado }: { entregas: MovimientoEfectivo[]; colSpan: number; onValidar?: (mov: MovimientoEfectivo) => void; entregasConHistorialAnulado?: Set<number> }) => {
     const confirmadas = !onValidar
     return (
     <tr>
@@ -473,7 +471,13 @@ const EntregasSubAccordion = ({ entregas, colSpan, onValidar }: { entregas: Movi
                                     transition={{ duration: 0.18, delay: idx * 0.04, ease: [0.22, 1, 0.36, 1] }}
                                 >
                                     <td className="px-4 py-2 text-left text-muted-foreground">{formatters.dateTime(mov.fecha)}</td>
-                                    <td className="px-4 py-2 text-left text-muted-foreground">{mov.referencia || <span className="italic">—</span>}</td>
+                                    <td className="px-4 py-2 text-left text-muted-foreground">
+                                        {entregasConHistorialAnulado?.has(mov.id) ? (
+                                            <span className="font-bold uppercase text-destructive">Anulado</span>
+                                        ) : (
+                                            mov.referencia || <span className="italic">—</span>
+                                        )}
+                                    </td>
                                     <td className="px-4 py-2 text-left font-semibold text-primary">{formatters.currency(mov.valor)}</td>
                                     {confirmadas ? (
                                         <>
@@ -508,7 +512,7 @@ const EntregasSubAccordion = ({ entregas, colSpan, onValidar }: { entregas: Movi
 
 // ─── Fila de conductor ────────────────────────────────────────────────────────
 
-const ConductorGrupoRow = ({ grupo, idx, onValidar, onVerRC, etiqueta, tieneAnulacionPosterior }: { grupo: GrupoConductor; idx: number; onValidar?: (mov: MovimientoEfectivo) => void; onVerRC: (grupo: GrupoConductor) => void; etiqueta: string; tieneAnulacionPosterior?: boolean }) => {
+const ConductorGrupoRow = ({ grupo, idx, onValidar, onVerRC, etiqueta, tieneAnulacionPosterior, entregasConHistorialAnulado }: { grupo: GrupoConductor; idx: number; onValidar?: (mov: MovimientoEfectivo) => void; onVerRC: (grupo: GrupoConductor) => void; etiqueta: string; tieneAnulacionPosterior?: boolean; entregasConHistorialAnulado?: Set<number> }) => {
     const [expanded, setExpanded] = useState(false)
     const confirmadas = !onValidar
 
@@ -571,7 +575,7 @@ const ConductorGrupoRow = ({ grupo, idx, onValidar, onVerRC, etiqueta, tieneAnul
                 </td>
             </motion.tr>
             <AnimatePresence>
-                {expanded && <EntregasSubAccordion entregas={grupo.entregas} colSpan={3} onValidar={onValidar} />}
+                {expanded && <EntregasSubAccordion entregas={grupo.entregas} colSpan={3} onValidar={onValidar} entregasConHistorialAnulado={entregasConHistorialAnulado} />}
             </AnimatePresence>
         </>
     )
@@ -752,30 +756,19 @@ const RecibosConductorModal = ({ grupo, onClose, rango }: { grupo: GrupoConducto
     const todosRecibos = data ?? []
     const conteoAnulados = todosRecibos.filter((r) => r.Estado === 2).length
     const recibos = incluirAnulados ? todosRecibos : todosRecibos.filter((r) => r.Estado !== 2)
-    const fechasEntregasConfirmadas = grupo.entregas
-        .filter((mov) => mov.estado === 'CONFIRMADO' && mov.fecha_confirma)
-        .map((mov) => new Date(mov.fecha_confirma as string).getTime())
-        .filter(Number.isFinite)
-    // SIESA no expone el timestamp de anulación en este endpoint. Si el RC ya
-    // existía antes de que caja confirmara la entrega y hoy aparece anulado,
-    // queda identificado como una anulación posterior a esa entrega.
-    const anuladosDespuesEntrega = todosRecibos.filter((recibo) => (
-        recibo.Estado === 2
-        && fechasEntregasConfirmadas.length > 0
-        && fechasEntregasConfirmadas.some((fechaEntrega) => {
-            const fechaRc = new Date(recibo.Fecha).getTime()
-            return Number.isFinite(fechaRc) && fechaRc <= fechaEntrega
-        })
-    ))
-    const efectivoAnuladoDespuesEntrega = anuladosDespuesEntrega.reduce((sum, recibo) => sum + (recibo.efectivo ?? 0), 0)
+    // No hay forma confiable de saber qué RC puntual respalda cuál entrega
+    // (SIESA permite consolidar varias entregas en 1 RC). Se compara el total
+    // entregado y confirmado de este conductor contra el efectivo de sus RC
+    // ACTIVOS (no anulados) — si un RC se anuló pero otro activo ya cubre el
+    // total, no hay faltante real aunque haya anulados en la lista.
+    const totalActivo = todosRecibos.filter((recibo) => recibo.Estado !== 2).reduce((sum, recibo) => sum + (recibo.efectivo ?? 0), 0)
 
     const valorEntrega = grupo.entregas.reduce(
         (sum, movimiento) => sum + (movimiento.estado === 'CONFIRMADO' ? (movimiento.valor_confirmado ?? movimiento.valor) : movimiento.valor),
         0
     )
-    // El total del modal debe conciliar la entrega seleccionada, no sumar todos
-    // los RC que el usuario tenga en SIESA durante el día.
-    const totalEfectivo = Math.max(0, valorEntrega - efectivoAnuladoDespuesEntrega)
+    const faltante = Math.max(0, valorEntrega - totalActivo)
+    const totalEfectivo = Math.min(valorEntrega, totalActivo)
     const totalConsignacion = 0
     const totalGeneral = totalEfectivo
     const etiquetaPeriodo = fechaInicial === fechaFinal ? `del ${fechaInicial}` : `${fechaInicial} — ${fechaFinal}`
@@ -811,9 +804,9 @@ const RecibosConductorModal = ({ grupo, onClose, rango }: { grupo: GrupoConducto
                         <p className="text-xs font-bold text-foreground">
                             Recaudo aplicable a esta entrega: {formatters.currency(totalEfectivo)}
                         </p>
-                        {anuladosDespuesEntrega.length > 0 && (
+                        {faltante > 0 && (
                             <p className="text-xs font-bold text-destructive">
-                                {anuladosDespuesEntrega.length} RC anulado{anuladosDespuesEntrega.length !== 1 ? 's' : ''} después de la entrega · efectivo descontado: {formatters.currency(efectivoAnuladoDespuesEntrega)}
+                                Falta respaldo por {formatters.currency(faltante)} — ningún RC activo lo cubre
                             </p>
                         )}
                     </div>
@@ -881,9 +874,9 @@ const RecibosConductorModal = ({ grupo, onClose, rango }: { grupo: GrupoConducto
                         <div className="flex gap-3 rounded-lg border border-destructive/30 bg-destructive/5 p-3 text-xs text-muted-foreground">
                             <AlertCircle className="h-4 w-4 flex-shrink-0 text-destructive" />
                             <p>
-                                Los RC anulados ya fueron descontados del recaudo y del efectivo vigente de <strong>{grupo.conductorNombre}</strong>.
-                                {anuladosDespuesEntrega.length > 0 && (
-                                    <> Se detectaron <strong className="text-destructive">{anuladosDespuesEntrega.length} RC anulados después de una entrega confirmada</strong> por {formatters.currency(efectivoAnuladoDespuesEntrega)} en efectivo.</>
+                                Los RC anulados no cuentan en el recaudo vigente de <strong>{grupo.conductorNombre}</strong>; solo se toma el efectivo de sus RC activos.
+                                {faltante > 0 && (
+                                    <> Con eso, queda <strong className="text-destructive">{formatters.currency(faltante)} entregado sin respaldo</strong> en SIESA.</>
                                 )}
                                 {documentacionQuery.isLoading
                                     ? ' Consultando la documentación de reemplazo...'
@@ -902,12 +895,15 @@ const RecibosConductorModal = ({ grupo, onClose, rango }: { grupo: GrupoConducto
                                     <th className="px-3 py-2 text-right font-medium uppercase tracking-wide text-muted-foreground">Efectivo</th>
                                     <th className="px-3 py-2 text-right font-medium uppercase tracking-wide text-muted-foreground">Transferencia</th>
                                     <th className="px-3 py-2 text-right font-medium uppercase tracking-wide text-muted-foreground">Total</th>
+                                    <th className="px-3 py-2 text-right font-medium uppercase tracking-wide text-muted-foreground">Desc. financiero</th>
                                     <th className="px-3 py-2 text-center font-medium uppercase tracking-wide text-muted-foreground">Estado</th>
                                     <th className="px-3 py-2 text-left font-medium uppercase tracking-wide text-muted-foreground">Soporte SIESA</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                {recibos.map((r) => (
+                                {recibos.map((r) => {
+                                    const descuentoFinanciero = (r.Facturas ?? []).reduce((s, f) => s + (f.Descuento_Pp || 0), 0)
+                                    return (
                                     <tr key={r.Rowid} className={cn("border-b border-border/50 hover:bg-muted/20", r.Estado === 2 && "opacity-60 bg-red-500/5")}>
                                         <td className="whitespace-nowrap px-3 py-2 font-mono text-muted-foreground">{r.Fecha?.slice(0, 10)}</td>
                                         <td className="px-3 py-2 font-mono font-bold text-primary">{r.Numero}</td>
@@ -923,11 +919,13 @@ const RecibosConductorModal = ({ grupo, onClose, rango }: { grupo: GrupoConducto
                                         <td className="px-3 py-2 text-right font-mono font-bold text-foreground">
                                             {formatters.currency((r.efectivo ?? 0) + (r.consignacion ?? 0))}
                                         </td>
+                                        <td className="px-3 py-2 text-right font-mono text-muted-foreground">
+                                            {descuentoFinanciero > 0 ? formatters.currency(descuentoFinanciero) : '—'}
+                                        </td>
                                         <td className="px-3 py-2 text-center">
                                             <span className={cn('rounded-full px-2 py-0.5 text-[10px] font-black uppercase', estadoRCBadge(r.Estado))}>
                                                 {estadoRCLabel(r.Estado)}
                                                 {r.Estado === 2 && r.Usuario_Anulacion ? ` (${r.Usuario_Anulacion})` : ''}
-                                                {anuladosDespuesEntrega.some((anulado) => anulado.Rowid === r.Rowid) ? ' · DESPUÉS DE ENTREGA' : ''}
                                             </span>
                                         </td>
                                         <td className="px-3 py-2 text-left">
@@ -949,7 +947,8 @@ const RecibosConductorModal = ({ grupo, onClose, rango }: { grupo: GrupoConducto
                                             })()}
                                         </td>
                                     </tr>
-                                ))}
+                                    )
+                                })}
                             </tbody>
                             <tfoot className="sticky bottom-0 bg-card">
                                 <tr className="border-t-2 border-border bg-muted/60">
@@ -997,9 +996,10 @@ interface EntregasPanelProps {
     onValidar?: (mov: MovimientoEfectivo) => void
     onVerRC: (grupo: GrupoConductor) => void
     anulacionesPosteriores: Set<number>
+    entregasConHistorialAnulado?: Set<number>
 }
 
-const EntregasPanel = ({ esPendiente, data, isLoading, error, onValidar, onVerRC, anulacionesPosteriores }: EntregasPanelProps) => {
+const EntregasPanel = ({ esPendiente, data, isLoading, error, onValidar, onVerRC, anulacionesPosteriores, entregasConHistorialAnulado }: EntregasPanelProps) => {
     const [busqueda, setBusqueda] = useState('')
     const grupos = useMemo(() => agruparPorConductor(data ?? []), [data])
     const total = useMemo(() => grupos.reduce((sum, g) => sum + g.total, 0), [grupos])
@@ -1099,6 +1099,7 @@ const EntregasPanel = ({ esPendiente, data, isLoading, error, onValidar, onVerRC
                                         onVerRC={onVerRC}
                                         etiqueta={esPendiente ? 'pendiente' : 'confirmada'}
                                         tieneAnulacionPosterior={anulacionesPosteriores.has(grupo.conductorId)}
+                                        entregasConHistorialAnulado={entregasConHistorialAnulado}
                                     />
                                 ))}
                             </tbody>
@@ -1194,8 +1195,26 @@ export const TesoreriaEntregaRecaudoPage = () => {
             retry: 1,
         })),
     })
+    // No hay forma confiable de saber qué RC respalda qué entrega puntual
+    // (SIESA permite consolidar N entregas en 1 solo RC, y no hay FK real) —
+    // intentar emparejar entrega-por-entrega es una fuente permanente de
+    // falsos positivos/negativos. La pregunta correcta no es "¿qué entrega
+    // perdió su RC?" sino "¿al conductor le falta plata?": se compara el
+    // total físicamente entregado y confirmado contra el total respaldado
+    // por RC ACTIVOS (no anulados) en SIESA. Si el activo ya cubre lo
+    // entregado, un RC anulado en el camino no es un incidente — el dinero
+    // quedó bien contabilizado (ej. RC duplicado que se corrigió). Solo hay
+    // incidente cuando queda un faltante real. Las entregas físicas NUNCA se
+    // sacan de Pendientes/Confirmadas/Conciliación por esto — son un hecho
+    // ya confirmado por tesorería, el incidente es de conciliación con SIESA.
     const resumenRC = useMemo(() => {
-        const anulacionesPosteriores = new Set<number>()
+        const incidentesPorConductor = new Map<number, { conductorId: number; faltante: number; totalEntregado: number; totalRespaldado: number }>()
+        // Entregas que coinciden en valor con un RC anulado del mismo
+        // conductor — se muestran en Incidentes como auditoría/historial
+        // aunque el dinero ya esté cubierto por otro RC activo (no afecta el
+        // recaudo vigente, que se calcula arriba por balance real).
+        const movimientosConHistorialAnulado = new Set<number>()
+        const anuladosPorConductor = new Map<number, ReciboCajaUsuario[]>()
         let totalVigente = 0
         let consultasCompletas = conductoresSiesa.length === recibosPorConductorQueries.length
 
@@ -1204,35 +1223,44 @@ export const TesoreriaEntregaRecaudoPage = () => {
             if (!consulta?.isFetched) consultasCompletas = false
             const recibos = consulta?.data ?? []
 
-            const fechasEntrega = movimientosPeriodo
-                .filter((movimiento) => movimiento.conductor_id === conductorId && movimiento.estado === 'CONFIRMADO' && movimiento.fecha_confirma)
-                .map((movimiento) => new Date(movimiento.fecha_confirma as string).getTime())
-                .filter(Number.isFinite)
-            const anuladosPosteriores = recibos.filter((recibo) => (
-                recibo.Estado === 2
-                && fechasEntrega.some((fechaEntrega) => {
-                    const fechaRc = new Date(recibo.Fecha).getTime()
-                    return Number.isFinite(fechaRc) && fechaRc <= fechaEntrega
-                })
-            ))
-            const valorEntregado = movimientosPeriodo
-                .filter((movimiento) => movimiento.conductor_id === conductorId)
-                .reduce((total, movimiento) => total + (movimiento.estado === 'CONFIRMADO' ? (movimiento.valor_confirmado ?? movimiento.valor) : movimiento.valor), 0)
-            const efectivoAnulado = anuladosPosteriores.reduce((total, recibo) => total + (recibo.efectivo ?? 0), 0)
-            totalVigente += Math.max(0, valorEntregado - efectivoAnulado)
+            const entregasConfirmadas = movimientosPeriodo.filter((movimiento) => movimiento.conductor_id === conductorId && movimiento.estado === 'CONFIRMADO')
+            const totalEntregado = entregasConfirmadas.reduce((total, movimiento) => total + (movimiento.valor_confirmado ?? movimiento.valor), 0)
+            const totalRespaldado = recibos
+                .filter((recibo) => recibo.Estado !== 2)
+                .reduce((total, recibo) => total + (recibo.efectivo ?? 0), 0)
 
-            const tieneAnulacionPosterior = anuladosPosteriores.length > 0
-            if (tieneAnulacionPosterior) anulacionesPosteriores.add(conductorId)
+            const faltante = totalEntregado - totalRespaldado
+            if (faltante > 1) {
+                incidentesPorConductor.set(conductorId, { conductorId, faltante, totalEntregado, totalRespaldado })
+            }
+            totalVigente += Math.min(totalEntregado, totalRespaldado)
+
+            const anulados = recibos.filter((recibo) => recibo.Estado === 2)
+            if (anulados.length > 0) anuladosPorConductor.set(conductorId, anulados)
+            for (const movimiento of entregasConfirmadas) {
+                const valor = movimiento.valor_confirmado ?? movimiento.valor
+                if (anulados.some((recibo) => Math.abs((recibo.efectivo ?? 0) - valor) < 1)) {
+                    movimientosConHistorialAnulado.add(movimiento.id)
+                }
+            }
         })
 
         return {
             totalVigente: consultasCompletas ? totalVigente : null,
-            anulacionesPosteriores,
+            incidentesPorConductor,
+            movimientosConHistorialAnulado,
+            anuladosPorConductor,
         }
     }, [conductoresSiesa, movimientosPeriodo, recibosPorConductorQueries])
 
+    const gruposIncidentes = useMemo(
+        () => agruparPorConductor(movimientosPeriodo.filter((m) => m.estado === 'CONFIRMADO' && (resumenRC.incidentesPorConductor.has(m.conductor_id) || resumenRC.movimientosConHistorialAnulado.has(m.id)))),
+        [movimientosPeriodo, resumenRC.incidentesPorConductor, resumenRC.movimientosConHistorialAnulado]
+    )
+
     const [movValidando, setMovValidando] = useState<MovimientoEfectivo | null>(null)
     const [grupoViendoRC, setGrupoViendoRC] = useState<GrupoConductor | null>(null)
+    const [tabPrincipal, setTabPrincipal] = useState<'flujo' | 'incidentes'>('flujo')
     const queryClient = useQueryClient()
 
     const refrescarTodo = () => {
@@ -1250,6 +1278,112 @@ export const TesoreriaEntregaRecaudoPage = () => {
         <div className="mx-auto max-w-7xl space-y-5 p-4 sm:p-6">
             <ResumenPeriodo pendientes={pendientesQuery.data} confirmadas={confirmadasQuery.data} totalVigente={resumenRC.totalVigente} />
 
+            <div className="flex items-center border-b border-border/60">
+                <div className="flex space-x-1 rounded-xl bg-muted/60 p-1">
+                    <button
+                        onClick={() => setTabPrincipal('flujo')}
+                        className={cn(
+                            'flex items-center gap-2 rounded-lg px-4 py-2 text-xs font-semibold transition-all',
+                            tabPrincipal === 'flujo'
+                                ? 'bg-card text-foreground shadow-xs'
+                                : 'text-muted-foreground hover:bg-card/50 hover:text-foreground'
+                        )}
+                    >
+                        <Landmark className="h-3.5 w-3.5" /> Entregas
+                    </button>
+                    <button
+                        onClick={() => setTabPrincipal('incidentes')}
+                        className={cn(
+                            'flex items-center gap-2 rounded-lg px-4 py-2 text-xs font-semibold transition-all',
+                            tabPrincipal === 'incidentes'
+                                ? 'bg-card text-foreground shadow-xs'
+                                : 'text-muted-foreground hover:bg-card/50 hover:text-foreground'
+                        )}
+                    >
+                        <AlertCircle className="h-3.5 w-3.5" /> Incidentes
+                        {gruposIncidentes.length > 0 && (
+                            <span className="rounded-full bg-destructive px-1.5 text-[10px] font-black text-destructive-foreground">{gruposIncidentes.length}</span>
+                        )}
+                    </button>
+                </div>
+            </div>
+
+            {tabPrincipal === 'incidentes' ? (
+                <Card className="overflow-hidden">
+                    <CardHeader className="border-b border-border bg-muted/20">
+                        <div className="flex items-center gap-3">
+                            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-destructive/10">
+                                <AlertCircle className="h-5 w-5 text-destructive" />
+                            </div>
+                            <div>
+                                <CardTitle className="text-base">Incidentes — falta respaldo en SIESA</CardTitle>
+                                <p className="mt-0.5 text-xs text-muted-foreground">Conductores cuyo total entregado y confirmado supera el efectivo de sus RC activos (no anulados) en SIESA. Un RC anulado que ya fue reemplazado por otro que cubre el total no aparece aquí.</p>
+                            </div>
+                        </div>
+                    </CardHeader>
+                    <CardContent className="p-0">
+                        {gruposIncidentes.length === 0 ? (
+                            <div className="flex flex-col items-center gap-2 py-12 text-muted-foreground">
+                                <ShieldCheck className="h-6 w-6" />
+                                <p className="text-xs font-bold uppercase tracking-widest">Sin incidentes en este periodo</p>
+                            </div>
+                        ) : (
+                            <div className="divide-y divide-border/60">
+                                {gruposIncidentes.map((grupo) => {
+                                    const incidente = resumenRC.incidentesPorConductor.get(grupo.conductorId)
+                                    const entregasHistorial = grupo.entregas.filter((mov) => resumenRC.movimientosConHistorialAnulado.has(mov.id))
+                                    const anulados = resumenRC.anuladosPorConductor.get(grupo.conductorId) ?? []
+                                    return (
+                                        <div key={grupo.conductorId} className="flex flex-col gap-3 px-5 py-4">
+                                            <div className="flex flex-wrap items-center justify-between gap-3">
+                                                <div className="flex items-center gap-3">
+                                                    <div className={cn('flex h-9 w-9 items-center justify-center rounded-full text-xs font-bold text-white', incidente ? 'bg-destructive' : 'bg-amber-500')}>
+                                                        {grupo.conductorNombre.charAt(0).toUpperCase()}
+                                                    </div>
+                                                    <div>
+                                                        <p className="font-semibold">{grupo.conductorNombre}</p>
+                                                        {incidente ? (
+                                                            <p className="text-[11px] text-muted-foreground">
+                                                                Entregado {formatters.currency(incidente.totalEntregado)} · Respaldado en SIESA {formatters.currency(incidente.totalRespaldado)}
+                                                            </p>
+                                                        ) : (
+                                                            <p className="text-[11px] text-muted-foreground">
+                                                                {entregasHistorial.length} entrega{entregasHistorial.length !== 1 ? 's' : ''} por {formatters.currency(entregasHistorial.reduce((s, m) => s + (m.valor_confirmado ?? m.valor), 0))} coincide{entregasHistorial.length === 1 ? '' : 'n'} en valor con un RC anulado — ya cubierto por otro RC activo, solo auditoría
+                                                            </p>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                                {incidente ? (
+                                                    <p className="text-sm font-bold text-destructive">{formatters.currency(incidente.faltante)} sin respaldo</p>
+                                                ) : (
+                                                    <span className="rounded-full bg-amber-500/10 px-2.5 py-1 text-[10px] font-bold uppercase text-amber-700 dark:text-amber-400">Cubierto</span>
+                                                )}
+                                            </div>
+                                            {anulados.length > 0 && (
+                                                <div className="ml-12 flex flex-wrap gap-2">
+                                                    {anulados.map((r) => {
+                                                        const descuentoFinanciero = (r.Facturas ?? []).reduce((s, f) => s + (f.Descuento_Pp || 0), 0)
+                                                        return (
+                                                        <span key={r.Rowid} className="inline-flex items-center gap-1.5 rounded-full border border-destructive/30 bg-destructive/5 px-2.5 py-1 text-[11px] font-semibold text-destructive">
+                                                            <Hash className="h-3 w-3" />
+                                                            {(r.Tipo_Docto || 'RC').trim()}#{r.Numero} anulado · {formatters.currency(r.Creditos)}
+                                                            {descuentoFinanciero > 0 ? ` (incl. desc. financiero ${formatters.currency(descuentoFinanciero)})` : ''}
+                                                            {r.Fecha_Anulacion ? ` · ${formatters.dateTime(r.Fecha_Anulacion)}` : ''}
+                                                            {r.Usuario_Anulacion ? ` · ${r.Usuario_Anulacion}` : ''}
+                                                        </span>
+                                                        )
+                                                    })}
+                                                </div>
+                                            )}
+                                        </div>
+                                    )
+                                })}
+                            </div>
+                        )}
+                    </CardContent>
+                </Card>
+            ) : (
+            <>
             <div className="flex flex-wrap items-center gap-x-5 gap-y-3 rounded-xl border border-border bg-muted/30 px-4 py-3">
                 <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
                     <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10">
@@ -1311,14 +1445,16 @@ export const TesoreriaEntregaRecaudoPage = () => {
                     error={confirmadasQuery.error}
                     onVerRC={setGrupoViendoRC}
                     anulacionesPosteriores={SIN_ANULACIONES}
+                    entregasConHistorialAnulado={resumenRC.movimientosConHistorialAnulado}
                 />
             </div>
 
             <TableroConciliacion
                 movimientos={confirmadasQuery.data}
                 onResuelto={() => queryClient.invalidateQueries({ queryKey: ['conductor-efectivo'] })}
-                anulacionesPosteriores={resumenRC.anulacionesPosteriores}
             />
+            </>
+            )}
 
             <ValidarEntregaModal entrega={movValidando} onClose={() => setMovValidando(null)} onConfirmado={handleConfirmado} />
             <RecibosConductorModal grupo={grupoViendoRC} onClose={() => setGrupoViendoRC(null)} rango={rango} />

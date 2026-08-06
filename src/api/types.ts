@@ -362,6 +362,7 @@ export interface FacturaAfectadaRC {
   Tipo: string
   Numero: number
   Valor_Aplicado: number
+  Descuento_Pp: number
 }
 
 export interface ReciboCajaUsuario {
@@ -378,6 +379,7 @@ export interface ReciboCajaUsuario {
   Tercero_Nombre?: string
   Usuario_Creacion: string
   Usuario_Anulacion?: string | null
+  Fecha_Anulacion?: string | null
   Caja_Id?: string
   Caja_Nombre?: string
   Facturas: FacturaAfectadaRC[]

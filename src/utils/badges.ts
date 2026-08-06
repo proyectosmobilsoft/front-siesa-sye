@@ -11,9 +11,9 @@ const TONOS: Record<Tono, string> = {
 
 export const badgeClass = (tono: Tono) => TONOS[tono]
 
-/** Estado de recibo de caja SIESA: 3 aprobado, 2 anulado, resto en proceso. */
+/** Estado de recibo de caja SIESA (f350_ind_estado): 1 aprobado, 2 anulado, 0/resto borrador. */
 export const estadoRCBadge = (estado: number) =>
-  estado === 3 ? badgeClass('green') : estado === 2 ? badgeClass('red') : badgeClass('yellow')
+  estado === 1 ? badgeClass('green') : estado === 2 ? badgeClass('red') : badgeClass('yellow')
 
 export const estadoRCLabel = (estado: number) =>
-  estado === 3 ? 'Aprobado' : estado === 2 ? 'Anulado' : 'En proceso'
+  estado === 1 ? 'Aprobado' : estado === 2 ? 'Anulado' : 'En proceso'

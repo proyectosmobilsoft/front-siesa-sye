@@ -668,6 +668,7 @@ function RcConductorDetalle({ rc, loading }: { rc: ReciboCajaUsuario[] | undefin
         <thead>
           <tr className="border-b border-border/60">
             <th className="px-3 py-2 text-left font-semibold uppercase tracking-wider text-muted-foreground">Documento</th>
+            <th className="px-3 py-2 text-left font-semibold uppercase tracking-wider text-muted-foreground">Factura</th>
             <th className="px-3 py-2 text-left font-semibold uppercase tracking-wider text-muted-foreground">C.O.</th>
             <th className="px-3 py-2 text-left font-semibold uppercase tracking-wider text-muted-foreground">Fecha</th>
             <th className="px-3 py-2 text-left font-semibold uppercase tracking-wider text-muted-foreground">Tercero</th>
@@ -678,27 +679,36 @@ function RcConductorDetalle({ rc, loading }: { rc: ReciboCajaUsuario[] | undefin
           </tr>
         </thead>
         <tbody>
-          {rc.map((r) => (
-            <tr key={r.Rowid} className="border-b border-border/30 last:border-0 hover:bg-muted/30">
-              <td className="px-3 py-2 font-mono font-bold text-primary">
-                <span className="flex items-center gap-1">
-                  <Hash className="h-3 w-3" />
-                  {(r.Tipo_Docto || 'RC').trim()}#{r.Numero}
-                </span>
-              </td>
-              <td className="px-3 py-2 font-mono text-muted-foreground">{r['C.O.']}</td>
-              <td className="px-3 py-2 font-mono text-muted-foreground">{r.Fecha?.slice(0, 10)}</td>
-              <td className="max-w-[200px] truncate px-3 py-2 font-medium">{r.Tercero_Nombre}</td>
-              <td className="px-3 py-2 text-right font-mono">{formatters.currency(r.efectivo ?? 0)}</td>
-              <td className="px-3 py-2 text-right font-mono">{formatters.currency(r.consignacion ?? 0)}</td>
-              <td className="px-3 py-2 text-right font-mono font-bold">{formatters.currency(r.Creditos)}</td>
-              <td className="px-3 py-2 text-center">
-                <span className={cn('rounded-full px-2 py-0.5 text-[10px] font-bold uppercase', estadoBadgeNum(r.Estado))}>
-                  {r.Estado === 1 ? 'Aprobado' : r.Estado === 2 ? 'Anulado' : 'En proceso'}
-                </span>
-              </td>
-            </tr>
-          ))}
+          {rc.map((r) => {
+            const factura = Array.isArray(r.Facturas) && r.Facturas.length > 0
+              ? r.Facturas
+                .map((f) => `${(f.Tipo || '').trim().toUpperCase()} ${f.Numero}`)
+                .join(', ')
+              : '—'
+
+            return (
+              <tr key={r.Rowid} className="border-b border-border/30 last:border-0 hover:bg-muted/30">
+                <td className="px-3 py-2 font-mono font-bold text-primary">
+                  <span className="flex items-center gap-1">
+                    <Hash className="h-3 w-3" />
+                    {(r.Tipo_Docto || 'RC').trim()}#{r.Numero}
+                  </span>
+                </td>
+                <td className="max-w-[220px] truncate px-3 py-2 font-mono text-muted-foreground">{factura}</td>
+                <td className="px-3 py-2 font-mono text-muted-foreground">{r['C.O.']}</td>
+                <td className="px-3 py-2 font-mono text-muted-foreground">{r.Fecha?.slice(0, 10)}</td>
+                <td className="max-w-[200px] truncate px-3 py-2 font-medium">{r.Tercero_Nombre}</td>
+                <td className="px-3 py-2 text-right font-mono">{formatters.currency(r.efectivo ?? 0)}</td>
+                <td className="px-3 py-2 text-right font-mono">{formatters.currency(r.consignacion ?? 0)}</td>
+                <td className="px-3 py-2 text-right font-mono font-bold">{formatters.currency(r.Creditos)}</td>
+                <td className="px-3 py-2 text-center">
+                  <span className={cn('rounded-full px-2 py-0.5 text-[10px] font-bold uppercase', estadoBadgeNum(r.Estado))}>
+                    {r.Estado === 1 ? 'Aprobado' : r.Estado === 2 ? 'Anulado' : 'En proceso'}
+                  </span>
+                </td>
+              </tr>
+            )
+          })}
         </tbody>
       </table>
     </div>
