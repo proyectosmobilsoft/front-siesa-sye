@@ -74,7 +74,7 @@ export const ReciboCajaPage = () => {
   const filas = useMemo(() => !razonSocial.trim() ? data : data.filter(r => r.Razón_Social?.toLowerCase().includes(razonSocial.toLowerCase())), [data, razonSocial])
 
   return (
-    <div className="min-w-[850px] bg-muted/40 p-4 text-[12px] text-foreground sm:p-8">
+    <div className="min-w-[850px] bg-muted/40 p-3 text-[12px] text-foreground sm:p-5">
       <div className="mx-auto max-w-[1420px] overflow-hidden rounded-lg border border-border bg-card shadow-2xl shadow-black/10 ring-1 ring-black/[0.03] dark:shadow-black/50 dark:ring-white/5">
         {/* Header: tabs + identificación del cuadre */}
         <div className="flex flex-wrap items-center gap-x-6 gap-y-2 border-b border-border bg-muted/50 px-4 pt-3">
@@ -91,9 +91,9 @@ export const ReciboCajaPage = () => {
           </div>
         </div>
 
-        {tab === 'general' ? <div className="flex flex-col gap-5 p-5">
+        {tab === 'general' ? <div className="flex flex-col gap-3 p-3 sm:p-4">
           {/* Toolbar de consulta + estado del período */}
-          <section className="flex flex-wrap items-end justify-between gap-4 border-b border-border pb-5">
+          <section className="flex flex-wrap items-end justify-between gap-4 border-b border-border pb-3">
             <div className="flex flex-wrap items-end gap-4">
               <label className="flex flex-col gap-1">
                 <span className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">Caja</span>
@@ -109,7 +109,7 @@ export const ReciboCajaPage = () => {
           </section>
 
           {/* Datos del último cuadre */}
-          <section className="flex flex-wrap items-center gap-3 border-b border-border pb-5">
+          <section className="flex flex-wrap items-center gap-3 border-b border-border pb-3">
             <FieldChip label="Fecha último cuadre caja" value="domingo, 21 de junio de 2026" className="mr-auto" />
             <FieldChip label="Centro" value="002" />
             <FieldChip label="Cuenta" value="11050502" />
@@ -117,10 +117,10 @@ export const ReciboCajaPage = () => {
           </section>
 
           {/* Tablero de ventas / flujo del día */}
-          <section className="overflow-x-auto"><table className="w-full min-w-[760px] border-collapse overflow-hidden rounded-md border border-border shadow-sm"><thead><tr className="bg-primary text-primary-foreground"><th className="w-[30%] border border-primary-foreground/20 px-2 py-2 font-medium tracking-wide">Descripción o concepto</th>{['Efectivo', 'Tarjetas', 'Consignado', 'Total', 'Anticipo x Dev'].map(h => <th key={h} className="border border-primary-foreground/20 px-2 py-2 font-medium tracking-wide">{h}</th>)}</tr></thead><tbody>{lines.map((line, rowIndex) => <tr key={line.label} className={cn('transition-colors', line.kind === 'income-total' || line.kind === 'expense-total' ? 'bg-primary/15 font-bold' : line.kind === 'flow' ? 'bg-primary/10 font-bold' : rowIndex === 0 ? 'bg-primary/[0.08] text-primary hover:bg-primary/[0.12]' : 'hover:bg-muted/40')}><td className="border border-border px-2 py-1.5">{line.label}</td>{line.values.map((value, colIndex) => <td key={`${line.label}-${colIndex}`} className="border border-border px-2 py-1.5 text-right font-mono">{rowIndex === 0 && colIndex === 0 ? <BoardInput value={value} onChange={setVentasEfectivo} /> : rowIndex === 0 && colIndex === 1 ? <BoardInput value={value} onChange={setVentasTarjetas} /> : rowIndex === 0 && colIndex === 2 ? <BoardInput value={value} onChange={setVentasConsignado} /> : rowIndex === 1 && colIndex === 2 ? <BoardInput value={value} onChange={setRecaudos} /> : money(value)}</td>)}<td className="border border-border px-2 py-1.5 text-right font-mono">{money(line.values.reduce((sum, n) => sum + n, 0))}</td><td className="border border-border px-2 py-1.5 text-right font-mono">0.00</td></tr>)}</tbody></table></section>
+          <section className="overflow-x-auto"><table className="w-full min-w-[760px] table-fixed border-collapse overflow-hidden rounded-md border border-border shadow-sm"><thead><tr className="bg-primary text-primary-foreground"><th className="w-[18%] border border-primary-foreground/20 px-2 py-1.5 font-medium tracking-wide">Descripción o concepto</th>{['Efectivo', 'Tarjetas', 'Consignado', 'Total', 'Anticipo x Dev'].map(h => <th key={h} className="border border-primary-foreground/20 px-2 py-1.5 font-medium tracking-wide">{h}</th>)}</tr></thead><tbody>{lines.map((line, rowIndex) => <tr key={line.label} className={cn('transition-colors', line.kind === 'income-total' || line.kind === 'expense-total' ? 'bg-primary/15 font-bold' : line.kind === 'flow' ? 'bg-primary/10 font-bold' : rowIndex === 0 ? 'bg-primary/[0.08] text-primary hover:bg-primary/[0.12]' : 'hover:bg-muted/40')}><td className="border border-border px-2 py-1">{line.label}</td>{line.values.map((value, colIndex) => <td key={`${line.label}-${colIndex}`} className="border border-border px-2 py-1 text-right font-mono">{rowIndex === 0 && colIndex === 0 ? <BoardInput value={value} onChange={setVentasEfectivo} /> : rowIndex === 0 && colIndex === 1 ? <BoardInput value={value} onChange={setVentasTarjetas} /> : rowIndex === 0 && colIndex === 2 ? <BoardInput value={value} onChange={setVentasConsignado} /> : rowIndex === 1 && colIndex === 2 ? <BoardInput value={value} onChange={setRecaudos} /> : money(value)}</td>)}<td className="border border-border px-2 py-1 text-right font-mono">{money(line.values.reduce((sum, n) => sum + n, 0))}</td><td className="border border-border px-2 py-1 text-right font-mono">0.00</td></tr>)}</tbody></table></section>
 
           {/* Responsable de caja */}
-          <section className="grid gap-3 border-b border-border pb-5 sm:grid-cols-2">
+          <section className="grid gap-3 border-b border-border pb-3 sm:grid-cols-2">
             <FieldChip label="Responsable Caja" value="PEREZ POLANCO ANDRES ARTURO" className="w-full [&>span]:w-full [&>span]:text-primary" />
             <FieldChip label="Cédula" value="1140848342" />
           </section>
@@ -129,9 +129,9 @@ export const ReciboCajaPage = () => {
           <section className="flex flex-wrap items-end justify-between gap-4">
             <div className="flex flex-wrap gap-4">
               {[['Disponible En Caja Según Sistema', disponible], ['Efectivo según Arqueo de Caja', 0], ['Sobrante/Faltante En caja', 0]].map(([label, value], index) => (
-                <label key={label as string} className={cn('flex flex-col gap-1.5 text-[10px] font-bold tracking-wide', index === 2 ? 'text-destructive' : 'text-muted-foreground')}>
+                <label key={label as string} className={cn('flex flex-col gap-1 text-[10px] font-bold tracking-wide', index === 2 ? 'text-destructive' : 'text-muted-foreground')}>
                   {label as string}
-                  <span className="rounded-sm border border-border bg-card px-3 py-2.5 text-right font-mono text-[14px] font-bold text-primary shadow-sm">{money(value as number)}</span>
+                  <span className="rounded-sm border border-border bg-card px-3 py-2 text-right font-mono text-[14px] font-bold text-primary shadow-sm">{money(value as number)}</span>
                 </label>
               ))}
             </div>
