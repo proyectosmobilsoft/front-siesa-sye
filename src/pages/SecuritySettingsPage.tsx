@@ -15,9 +15,18 @@ import { UserFormModal } from '@/components/security/UserFormModal'
 import { seguridadApi, UsuarioMaster } from '@/api/seguridad'
 import { badgeClass } from '@/utils/badges'
 import { Modal } from '@/components/ui/modal'
+import { usePermiso } from '@/hooks/usePermiso'
 
 export const SecuritySettingsPage = () => {
     const navigate = useNavigate()
+
+    // Permisos de acción del maestro de Usuarios. La API también los exige
+    // (requirePermiso en /auth-secundario/usuarios), esto solo evita mostrar
+    // botones que terminarían en 403.
+    const { puede, P } = usePermiso()
+    const puedeCrear = puede(P.CREAR_USUARIO)
+    const puedeEditar = puede(P.EDITAR_USUARIO)
+    const puedeEliminar = puede(P.ELIMINAR_USUARIO)
 
     // Estados modal
     const [isFormOpen, setIsFormOpen] = useState(false)
@@ -177,24 +186,31 @@ export const SecuritySettingsPage = () => {
                 const user = row.original
                 return (
                     <div className="flex justify-end gap-1 pr-2">
-                        <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleEditUser(user)}
-                            title="Editar usuario"
-                            className="h-8 w-8 p-0 text-primary border border-primary/20 hover:bg-primary/10"
-                        >
-                            <Edit className="h-4 w-4" />
-                        </Button>
-                        <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleDeleteUser(user)}
-                            title="Eliminar usuario"
-                            className="h-8 w-8 p-0 text-destructive border border-destructive/20 hover:bg-destructive/10"
-                        >
-                            <Trash2 className="h-4 w-4" />
-                        </Button>
+                        {puedeEditar && (
+                            <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleEditUser(user)}
+                                title="Editar usuario"
+                                className="h-8 w-8 p-0 text-primary border border-primary/20 hover:bg-primary/10"
+                            >
+                                <Edit className="h-4 w-4" />
+                            </Button>
+                        )}
+                        {puedeEliminar && (
+                            <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleDeleteUser(user)}
+                                title="Eliminar usuario"
+                                className="h-8 w-8 p-0 text-destructive border border-destructive/20 hover:bg-destructive/10"
+                            >
+                                <Trash2 className="h-4 w-4" />
+                            </Button>
+                        )}
+                        {!puedeEditar && !puedeEliminar && (
+                            <span className="text-xs text-muted-foreground">—</span>
+                        )}
                     </div>
                 )
             },
@@ -236,10 +252,10 @@ export const SecuritySettingsPage = () => {
                     <Button variant="outline" size="icon" onClick={() => fetchUsuarios(globalFilter)} disabled={loading} title="Actualizar">
                         <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
                     </Button>
-                    <Button onClick={handleNewUser} className="whitespace-nowrap">
+                    {puedeCrear && <Button onClick={handleNewUser} className="whitespace-nowrap">
                         <UserPlus className="mr-2 h-4 w-4" />
                         Nuevo Usuario
-                    </Button>
+                    </Button>}
                 </div>
                 <p className="shrink-0 text-sm text-muted-foreground">
                     {usuarios.length} {usuarios.length === 1 ? 'usuario' : 'usuarios'}

@@ -32,6 +32,7 @@ import { formatters } from '@/utils/formatters'
 import { estadoRCBadge, estadoRCLabel } from '@/utils/badges'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { cn } from '@/lib/utils'
+import { usePermiso } from '@/hooks/usePermiso'
 
 // ─── Agrupación por conductor ────────────────────────────────────────────────
 
@@ -135,6 +136,11 @@ const ConciliarConductorModal = ({
 }
 
 const TableroConciliacion = ({ movimientos, onResuelto }: { movimientos: MovimientoEfectivo[] | undefined; onResuelto: () => void }) => {
+    // Resolver diferencias también se exige en la API
+    // (requirePermiso RESOLVER_DIFERENCIA_RECAUDO).
+    const { puede, P } = usePermiso()
+    const puedeResolver = puede(P.RESOLVER_DIFERENCIA)
+
     const [seleccionado, setSeleccionado] = useState<ConciliacionConductor | null>(null)
     const [guardando, setGuardando] = useState(false)
     const [error, setError] = useState<string | null>(null)
@@ -280,9 +286,10 @@ const TableroConciliacion = ({ movimientos, onResuelto }: { movimientos: Movimie
                                                     <Button
                                                         variant={alDia ? 'ghost' : 'default'}
                                                         size="sm"
-                                                        disabled={alDia}
+                                                        disabled={alDia || !puedeResolver}
                                                         className="gap-1.5 text-xs"
                                                         onClick={() => setSeleccionado(conductor)}
+                                                        title={!puedeResolver ? 'Requiere el permiso Resolver diferencia' : undefined}
                                                     >
                                                         {alDia ? <CheckCircle2 className="h-3.5 w-3.5" /> : <Scale className="h-3.5 w-3.5" />}
                                                         {alDia ? 'Sin pendientes' : 'Conciliar'}
@@ -326,6 +333,11 @@ interface ValidarEntregaModalProps {
 }
 
 const ValidarEntregaModal = ({ entrega, onClose, onConfirmado }: ValidarEntregaModalProps) => {
+    // Confirmar la recepción también se exige en la API
+    // (requirePermiso CONFIRMAR_ENTREGA_RECAUDO).
+    const { puede, P } = usePermiso()
+    const puedeConfirmar = puede(P.CONFIRMAR_ENTREGA)
+
     const [valorContado, setValorContado] = useState<string>('')
     const [loading, setLoading] = useState(false)
     const [error, setError] = useState<string | null>(null)
@@ -394,10 +406,12 @@ const ValidarEntregaModal = ({ entrega, onClose, onConfirmado }: ValidarEntregaM
 
                 <div className="flex justify-end gap-2 pt-2">
                     <Button variant="outline" onClick={onClose} disabled={loading}>Cancelar</Button>
-                    <Button onClick={handleConfirmar} disabled={loading} className="gap-2">
-                        {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
-                        Confirmar recepción
-                    </Button>
+                    {puedeConfirmar && (
+                        <Button onClick={handleConfirmar} disabled={loading} className="gap-2">
+                            {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
+                            Confirmar recepción
+                        </Button>
+                    )}
                 </div>
             </div>
         </Modal>
@@ -692,6 +706,10 @@ const DocumentarRCAnuladoModal = ({
 }
 
 const RecibosConductorModal = ({ grupo, onClose, rango }: { grupo: GrupoConductor | null; onClose: () => void; rango: { fechaInicial?: string; fechaFinal?: string } | undefined }) => {
+    // Exportar a CSV es una acción con permiso propio del módulo.
+    const { puede, P } = usePermiso()
+    const puedeExportar = puede(P.EXPORTAR_ENTREGA)
+
     const [incluirAnulados, setIncluirAnulados] = useState(false)
     const [reciboDocumentando, setReciboDocumentando] = useState<ReciboCajaUsuario | null>(null)
     const queryClient = useQueryClient()
@@ -775,16 +793,18 @@ const RecibosConductorModal = ({ grupo, onClose, rango }: { grupo: GrupoConducto
                                 {incluirAnulados ? "Ocultar anulados" : `Mostrar recibos anulados (${conteoAnulados})`}
                             </Button>
                         )}
-                        <div className="ml-auto">
-                            <Button
-                                variant="outline"
-                                size="sm"
-                                className="gap-1.5 text-xs"
-                                onClick={() => exportarRecibosCSV(recibos, grupo.conductorNombre)}
-                            >
-                                <Download className="h-3.5 w-3.5" /> Exportar CSV
-                            </Button>
-                        </div>
+                        {puedeExportar && (
+                            <div className="ml-auto">
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="gap-1.5 text-xs"
+                                    onClick={() => exportarRecibosCSV(recibos, grupo.conductorNombre)}
+                                >
+                                    <Download className="h-3.5 w-3.5" /> Exportar CSV
+                                </Button>
+                            </div>
+                        )}
                     </div>
                     <div className="grid gap-3 sm:grid-cols-3">
                         <div className="flex items-center gap-3 rounded-xl border border-border bg-muted/30 px-4 py-3">

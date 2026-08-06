@@ -24,6 +24,7 @@ import {
   Percent,
   ListChecks,
   Truck,
+  Calculator,
   Settings,
   SlidersHorizontal,
   CircleHelp,
@@ -82,12 +83,14 @@ export const navigation: NavItem[] = [
         href: '/maestro/usuarios',
         icon: UserPlus,
         subtitle: 'Administración de usuarios del sistema',
+        permiso: PERMISOS.USUARIOS,
       },
       {
         name: 'Roles',
         href: '/maestro/roles',
         icon: Shield,
         subtitle: 'Administración de roles',
+        permiso: PERMISOS.ROLES,
       },
       // Módulos y Permisos: el catálogo que alimenta la pantalla de Roles.
       // Permiso VER_MODULOS, asignado solo al rol Administrador.
@@ -111,6 +114,7 @@ export const navigation: NavItem[] = [
         href: '/maestro/descuentos-financieros',
         icon: Percent,
         subtitle: 'Condiciones y descuentos de pago',
+        permiso: PERMISOS.DESCUENTOS,
       },
       // Relación de Conceptos: permiso VER_CONCEPTOS, asignado solo al rol Administrador
       {
@@ -128,6 +132,14 @@ export const navigation: NavItem[] = [
         subtitle: 'Inventario de equipos y maquinaria',
         permiso: PERMISOS.MAQUINARIA,
       },
+      // Interfaz Contable Vehículos: cuenta contable por placa de cada conductor
+      {
+        name: 'Interfaz Contable Vehículos',
+        href: '/maestro/interfaz-contable-vehiculos',
+        icon: Calculator,
+        subtitle: 'Cuenta contable asociada a cada placa del conductor',
+        permiso: PERMISOS.INTERFAZ_CONTABLE,
+      },
     ],
   },
   {
@@ -139,24 +151,28 @@ export const navigation: NavItem[] = [
         href: '/clientes',
         icon: User,
         subtitle: 'Gestión y visualización de clientes',
+        permiso: PERMISOS.CLIENTES,
       },
       {
         name: 'Productos',
         href: '/productos',
         icon: Package,
         subtitle: 'Gestión y visualización de productos',
+        permiso: PERMISOS.PRODUCTOS,
       },
       {
         name: 'Pedidos',
         href: '/pedidos',
         icon: ShoppingBag,
         subtitle: 'Historial y seguimiento de pedidos',
+        permiso: PERMISOS.PEDIDOS,
       },
       {
         name: 'Ferreganga',
         href: '/ferreganga',
         icon: Ticket,
         subtitle: 'Campañas, sorteos y clientes de Ferreganga',
+        permiso: PERMISOS.FERREGANGA,
       },
     ],
   },
@@ -178,6 +194,7 @@ export const navigation: NavItem[] = [
         href: '/facturas/analisis-financiero',
         icon: TrendingDown,
         subtitle: 'Análisis financiero por periodo',
+        permiso: PERMISOS.ANALISIS_FINANCIERO,
       },
     ],
   },
@@ -190,18 +207,21 @@ export const navigation: NavItem[] = [
         href: '/reportes',
         icon: ClipboardList,
         subtitle: 'Pedidos diarios consolidados',
+        permiso: PERMISOS.REPORTE_PEDIDOS,
       },
       {
         name: 'Resumen de Ventas',
         href: '/reportes/ventas',
         icon: TrendingUp,
         subtitle: 'Resumen de ventas por periodo',
+        permiso: PERMISOS.REPORTE_VENTAS,
       },
       {
         name: 'Vendedores',
         href: '/reportes/vendedores',
         icon: UserCircle,
         subtitle: 'Rendimiento por vendedor',
+        permiso: PERMISOS.REPORTE_VENDEDORES,
       },
     ],
   },
@@ -214,12 +234,14 @@ export const navigation: NavItem[] = [
         href: '/tesoreria/recibo-caja',
         icon: Receipt,
         subtitle: 'Consulta y arqueo de recibos de caja',
+        permiso: PERMISOS.RECIBO_CAJA,
       },
       {
         name: 'Entrega de Recaudo',
         href: '/tesoreria/entrega-recaudo',
         icon: Banknote,
         subtitle: 'Validación y conciliación de efectivo de conductores',
+        permiso: PERMISOS.ENTREGA_RECAUDO,
       },
       // Sin permiso todavía en backend (ver docs/traslado-fondos.md): visible para
       // cualquier autenticado, igual que el resto de módulos sin permiso aún.
@@ -228,6 +250,7 @@ export const navigation: NavItem[] = [
         href: '/tesoreria/traslado-fondos',
         icon: ArrowRightLeft,
         subtitle: 'Movimientos manuales de efectivo entre cajas',
+        permiso: PERMISOS.TRASLADO_FONDOS,
       },
       // Egreso/Anticipos vive aquí porque es salida de dinero: requiere VER_ANTICIPO
       {
@@ -248,6 +271,7 @@ export const navigation: NavItem[] = [
         href: '/configuracion',
         icon: SlidersHorizontal,
         subtitle: 'Preferencias del sistema',
+        permiso: PERMISOS.CONFIGURACION,
       },
       {
         name: 'Ayuda',
