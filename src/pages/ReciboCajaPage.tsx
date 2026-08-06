@@ -75,31 +75,80 @@ export const ReciboCajaPage = () => {
 
   return (
     <div className="min-w-[850px] bg-muted/40 p-4 text-[12px] text-foreground sm:p-8">
-      <div className="mx-auto max-w-[1420px] overflow-hidden rounded-md border border-border bg-card shadow-2xl shadow-black/10 ring-1 ring-black/[0.03] dark:shadow-black/50 dark:ring-white/5">
-        <div className="flex items-end border-b border-border bg-muted/50 px-3 pt-3 shadow-sm">
-          <button onClick={() => setTab('general')} className={cn('rounded-t-sm border border-b-0 px-5 py-2.5 text-[14px] font-medium transition-colors', tab === 'general' ? 'border-border bg-primary text-primary-foreground shadow-sm' : 'bg-muted text-primary hover:bg-muted/70')}>General</button>
-          <button onClick={() => setTab('detalle')} className={cn('rounded-t-sm border-b-0 px-3 py-2.5 text-[11px] font-semibold transition-colors', tab === 'detalle' ? 'border border-b-0 bg-card text-primary shadow-sm' : 'text-primary hover:text-primary/70')}>Detalle</button>
-          <div className="ml-3 flex items-center gap-2 border-l border-border pb-2.5 pl-3 text-[13px] font-bold">Saldo Anterior <span className="ml-1 rounded-sm border border-border bg-card px-4 py-1.5 font-mono font-normal text-primary shadow-inner shadow-black/5">{money(saldoAnterior)}</span></div>
-          <div className="ml-4 hidden items-center gap-2 pb-2.5 font-bold md:flex">Cuadre de Caja No. <span className="rounded-sm border border-border bg-card px-4 py-1.5 font-mono text-destructive shadow-inner shadow-black/5">00000641</span></div>
-          <div className="ml-auto flex items-center gap-1 pb-2.5 pr-3 text-[11px] font-semibold"><span className="text-[17px]">▣</span> Anexo de Cuadre</div>
+      <div className="mx-auto max-w-[1420px] overflow-hidden rounded-lg border border-border bg-card shadow-2xl shadow-black/10 ring-1 ring-black/[0.03] dark:shadow-black/50 dark:ring-white/5">
+        {/* Header: tabs + identificación del cuadre */}
+        <div className="flex flex-wrap items-center gap-x-6 gap-y-2 border-b border-border bg-muted/50 px-4 pt-3">
+          <div className="flex items-end gap-1">
+            <button onClick={() => setTab('general')} className={cn('rounded-t-md border border-b-0 px-5 py-2.5 text-[14px] font-medium transition-colors', tab === 'general' ? 'border-border bg-primary text-primary-foreground shadow-sm' : 'bg-muted text-primary hover:bg-muted/70')}>General</button>
+            <button onClick={() => setTab('detalle')} className={cn('rounded-t-md border-b-0 px-4 py-2.5 text-[11px] font-semibold transition-colors', tab === 'detalle' ? 'border border-b-0 bg-card text-primary shadow-sm' : 'text-primary hover:text-primary/70')}>Detalle</button>
+          </div>
+          <div className="ml-auto flex flex-wrap items-center gap-2 pb-2.5">
+            <FieldChip label="Saldo anterior" value={money(saldoAnterior)} tone="primary" />
+            <FieldChip label="Cuadre de caja N.°" value="00000641" tone="destructive" className="hidden md:flex" />
+            <button className="flex items-center gap-1.5 rounded-md border border-border bg-card px-3 py-1.5 text-[11px] font-semibold text-muted-foreground shadow-sm transition-colors hover:bg-muted/60 hover:text-foreground">
+              <span className="text-[15px] leading-none">▣</span> Anexo de Cuadre
+            </button>
+          </div>
         </div>
 
-        {tab === 'general' ? <>
-          <div className="grid items-end gap-x-4 gap-y-3 px-4 py-4 md:grid-cols-[315px_300px_1fr]">
-            <label className="flex items-center gap-2">Caja<select value={caja} onChange={e => setCaja(e.target.value)} className="h-8 min-w-0 flex-1 rounded-sm border border-input bg-card px-1.5 shadow-inner shadow-black/5 transition-colors focus:border-primary focus:outline-none"><option>CAJA SUCURSAL PORTAL DE SOLEDAD</option><option>CAJA PRINCIPAL</option></select></label>
-            <label className="flex items-center gap-2">Fecha<div className="flex"><Input type="date" value={fecha} onChange={e => setFecha(e.target.value)} className="h-8 rounded-sm rounded-r-none border-input px-1.5 text-[12px] shadow-inner shadow-black/5 transition-colors focus-visible:border-primary focus-visible:ring-0" /><span className="flex h-8 items-center rounded-sm rounded-l-none border border-l-0 border-input px-1.5">▦</span></div></label>
-            <Button className="h-8 w-[120px] rounded-sm border border-primary/40 bg-primary/10 px-2 text-[12px] font-normal text-foreground shadow-sm transition-colors hover:bg-primary/20 hover:shadow active:bg-primary/30">🔍 Consultar</Button>
-          </div>
-          <div className="grid gap-3 border-b border-border px-4 pb-3 md:grid-cols-[1fr_420px]"><label className="flex items-center gap-3 font-bold uppercase tracking-wide">Fecha último cuadre caja <span className="w-full rounded-sm border border-border bg-card px-2 py-1.5 text-right font-normal normal-case shadow-inner shadow-black/5">domingo, 21 de junio de 2026</span></label><div className="flex items-center justify-center gap-3"><span>Centro <b className="rounded-sm border border-border bg-card px-4 py-1.5 font-normal shadow-inner shadow-black/5">002</b></span><span>Cuenta <b className="rounded-sm border border-border bg-card px-4 py-1.5 font-normal shadow-inner shadow-black/5">11050502</b></span><b className="rounded-sm border border-border bg-card px-4 py-1.5 font-normal shadow-inner shadow-black/5">9002</b></div></div>
-          <div className="flex justify-end px-4 py-3"><span className="w-[165px] rounded-sm bg-destructive py-1.5 text-center font-semibold text-destructive-foreground shadow-sm">Periodo Cerrado</span></div>
-          <div className="overflow-x-auto px-4 pb-3"><table className="w-full min-w-[760px] border-collapse overflow-hidden rounded-sm border border-border shadow-sm"><thead><tr className="bg-primary text-primary-foreground"><th className="w-[30%] border border-primary-foreground/20 px-2 py-2 font-medium tracking-wide">Descripción o concepto</th>{['Efectivo', 'Tarjetas', 'Consignado', 'Total', 'Anticipo x Dev'].map(h => <th key={h} className="border border-primary-foreground/20 px-2 py-2 font-medium tracking-wide">{h}</th>)}</tr></thead><tbody>{lines.map((line, rowIndex) => <tr key={line.label} className={cn('transition-colors', line.kind === 'income-total' || line.kind === 'expense-total' ? 'bg-primary/15 font-bold' : line.kind === 'flow' ? 'bg-primary/10 font-bold' : rowIndex === 0 ? 'bg-primary/[0.08] text-primary hover:bg-primary/[0.12]' : 'hover:bg-muted/40')}><td className="border border-border px-2 py-1.5">{line.label}</td>{line.values.map((value, colIndex) => <td key={`${line.label}-${colIndex}`} className="border border-border px-2 py-1.5 text-right font-mono">{rowIndex === 0 && colIndex === 0 ? <BoardInput value={value} onChange={setVentasEfectivo} /> : rowIndex === 0 && colIndex === 1 ? <BoardInput value={value} onChange={setVentasTarjetas} /> : rowIndex === 0 && colIndex === 2 ? <BoardInput value={value} onChange={setVentasConsignado} /> : rowIndex === 1 && colIndex === 2 ? <BoardInput value={value} onChange={setRecaudos} /> : money(value)}</td>)}<td className="border border-border px-2 py-1.5 text-right font-mono">{money(line.values.reduce((sum, n) => sum + n, 0))}</td><td className="border border-border px-2 py-1.5 text-right font-mono">0.00</td></tr>)}</tbody></table></div>
-          <div className="grid gap-3 px-6 pb-4 pt-2 lg:grid-cols-2"><label className="flex items-center gap-2">Responsable Caja <span className="flex-1 rounded-sm border border-border bg-card px-2 py-1.5 text-primary shadow-inner shadow-black/5">PEREZ POLANCO ANDRES ARTURO</span></label><label className="flex items-center gap-2">Cédula <span className="rounded-sm border border-border bg-card px-3 py-1.5 font-mono shadow-inner shadow-black/5">1140848342</span></label></div>
-          <div className="grid items-end gap-4 border-t border-border px-6 py-4 lg:grid-cols-[160px_160px_160px_1fr]">{[['Disponible En Caja Según Sistema', disponible], ['Efectivo según Arqueo de Caja', 0], ['Sobrante/Faltante En caja', 0]].map(([label, value], index) => <label key={label as string} className={cn('text-[10px] font-bold tracking-wide', index === 2 ? 'text-destructive' : '')}>{label as string}<span className="mt-1.5 block rounded-sm border border-border bg-card px-2 py-2.5 text-right font-mono text-[14px] font-bold text-primary shadow-sm">{money(value as number)}</span></label>)}<div className="flex justify-end gap-4 rounded-sm border border-border p-3 text-lg shadow-sm">{['Imprimir', 'Imprimir', 'Exportar', 'Abrir'].map((title, i) => <span key={i} title={title} className="cursor-pointer text-muted-foreground transition-transform hover:scale-110 hover:text-primary">{['▣', '▣', '▧', '▱'][i]}</span>)}</div></div>
-        </> : <History data={filas} total={total} page={page} totalPages={totalPages} loading={loading} error={error} tipodoc={tipodoc} setTipodoc={setTipodoc} estado={estado} setEstado={setEstado} numero={numero} setNumero={setNumero} razonSocial={razonSocial} setRazonSocial={setRazonSocial} fetchRecibos={fetchRecibos} />}
+        {tab === 'general' ? <div className="flex flex-col gap-5 p-5">
+          {/* Toolbar de consulta + estado del período */}
+          <section className="flex flex-wrap items-end justify-between gap-4 rounded-md border border-border bg-muted/20 p-4">
+            <div className="flex flex-wrap items-end gap-4">
+              <label className="flex flex-col gap-1">
+                <span className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">Caja</span>
+                <select value={caja} onChange={e => setCaja(e.target.value)} className="h-8 w-[280px] rounded-sm border border-input bg-card px-1.5 shadow-inner shadow-black/5 transition-colors focus:border-primary focus:outline-none"><option>CAJA SUCURSAL PORTAL DE SOLEDAD</option><option>CAJA PRINCIPAL</option></select>
+              </label>
+              <label className="flex flex-col gap-1">
+                <span className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">Fecha</span>
+                <div className="flex"><Input type="date" value={fecha} onChange={e => setFecha(e.target.value)} className="h-8 w-[150px] rounded-sm rounded-r-none border-input px-1.5 text-[12px] shadow-inner shadow-black/5 transition-colors focus-visible:border-primary focus-visible:ring-0" /><span className="flex h-8 items-center rounded-sm rounded-l-none border border-l-0 border-input px-1.5">▦</span></div>
+              </label>
+              <Button className="h-8 w-[120px] rounded-sm border border-primary/40 bg-primary/10 px-2 text-[12px] font-normal text-foreground shadow-sm transition-colors hover:bg-primary/20 hover:shadow active:bg-primary/30">🔍 Consultar</Button>
+            </div>
+            <span className="rounded-sm bg-destructive px-4 py-1.5 text-center text-[11px] font-semibold text-destructive-foreground shadow-sm">Periodo Cerrado</span>
+          </section>
+
+          {/* Datos del último cuadre */}
+          <section className="flex flex-wrap items-center gap-3 rounded-md border border-border bg-muted/20 p-4">
+            <FieldChip label="Fecha último cuadre caja" value="domingo, 21 de junio de 2026" className="mr-auto" />
+            <FieldChip label="Centro" value="002" />
+            <FieldChip label="Cuenta" value="11050502" />
+            <FieldChip label="Auxiliar" value="9002" />
+          </section>
+
+          {/* Tablero de ventas / flujo del día */}
+          <section className="overflow-x-auto"><table className="w-full min-w-[760px] border-collapse overflow-hidden rounded-md border border-border shadow-sm"><thead><tr className="bg-primary text-primary-foreground"><th className="w-[30%] border border-primary-foreground/20 px-2 py-2 font-medium tracking-wide">Descripción o concepto</th>{['Efectivo', 'Tarjetas', 'Consignado', 'Total', 'Anticipo x Dev'].map(h => <th key={h} className="border border-primary-foreground/20 px-2 py-2 font-medium tracking-wide">{h}</th>)}</tr></thead><tbody>{lines.map((line, rowIndex) => <tr key={line.label} className={cn('transition-colors', line.kind === 'income-total' || line.kind === 'expense-total' ? 'bg-primary/15 font-bold' : line.kind === 'flow' ? 'bg-primary/10 font-bold' : rowIndex === 0 ? 'bg-primary/[0.08] text-primary hover:bg-primary/[0.12]' : 'hover:bg-muted/40')}><td className="border border-border px-2 py-1.5">{line.label}</td>{line.values.map((value, colIndex) => <td key={`${line.label}-${colIndex}`} className="border border-border px-2 py-1.5 text-right font-mono">{rowIndex === 0 && colIndex === 0 ? <BoardInput value={value} onChange={setVentasEfectivo} /> : rowIndex === 0 && colIndex === 1 ? <BoardInput value={value} onChange={setVentasTarjetas} /> : rowIndex === 0 && colIndex === 2 ? <BoardInput value={value} onChange={setVentasConsignado} /> : rowIndex === 1 && colIndex === 2 ? <BoardInput value={value} onChange={setRecaudos} /> : money(value)}</td>)}<td className="border border-border px-2 py-1.5 text-right font-mono">{money(line.values.reduce((sum, n) => sum + n, 0))}</td><td className="border border-border px-2 py-1.5 text-right font-mono">0.00</td></tr>)}</tbody></table></section>
+
+          {/* Responsable de caja */}
+          <section className="grid gap-3 rounded-md border border-border bg-muted/20 p-4 sm:grid-cols-2">
+            <FieldChip label="Responsable Caja" value="PEREZ POLANCO ANDRES ARTURO" className="w-full [&>span]:w-full [&>span]:text-primary" />
+            <FieldChip label="Cédula" value="1140848342" />
+          </section>
+
+          {/* Totales y acciones */}
+          <section className="flex flex-wrap items-end justify-between gap-4 rounded-md border border-border bg-muted/20 p-4">
+            <div className="flex flex-wrap gap-4">
+              {[['Disponible En Caja Según Sistema', disponible], ['Efectivo según Arqueo de Caja', 0], ['Sobrante/Faltante En caja', 0]].map(([label, value], index) => (
+                <label key={label as string} className={cn('flex flex-col gap-1.5 text-[10px] font-bold tracking-wide', index === 2 ? 'text-destructive' : 'text-muted-foreground')}>
+                  {label as string}
+                  <span className="rounded-sm border border-border bg-card px-3 py-2.5 text-right font-mono text-[14px] font-bold text-primary shadow-sm">{money(value as number)}</span>
+                </label>
+              ))}
+            </div>
+            <div className="flex gap-4 rounded-md border border-border bg-card p-3 text-lg shadow-sm">{['Imprimir', 'Imprimir', 'Exportar', 'Abrir'].map((title, i) => <span key={i} title={title} className="cursor-pointer text-muted-foreground transition-transform hover:scale-110 hover:text-primary">{['▣', '▣', '▧', '▱'][i]}</span>)}</div>
+          </section>
+        </div> : <History data={filas} total={total} page={page} totalPages={totalPages} loading={loading} error={error} tipodoc={tipodoc} setTipodoc={setTipodoc} estado={estado} setEstado={setEstado} numero={numero} setNumero={setNumero} razonSocial={razonSocial} setRazonSocial={setRazonSocial} fetchRecibos={fetchRecibos} />}
       </div>
     </div>
   )
 }
+
+const FieldChip = ({ label, value, tone, className }: { label: string; value: string; tone?: 'primary' | 'destructive'; className?: string }) => (
+  <div className={cn('flex items-center gap-2 text-[11px] font-semibold', className)}>
+    <span className="text-muted-foreground">{label}</span>
+    <span className={cn('rounded-sm border border-border bg-card px-3 py-1.5 font-mono font-normal shadow-inner shadow-black/5', tone === 'primary' ? 'text-primary' : tone === 'destructive' ? 'text-destructive' : 'text-foreground')}>{value}</span>
+  </div>
+)
 
 const BoardInput = ({ value, onChange }: { value: number; onChange: (value: number) => void }) => <input aria-label="Valor editable" value={money(value)} onChange={event => onChange(amount(event.target.value))} className="w-full min-w-[76px] bg-transparent text-right font-mono text-[11px] text-primary underline decoration-dotted outline-none transition-colors focus:decoration-solid focus:decoration-2" />
 
