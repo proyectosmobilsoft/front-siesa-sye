@@ -38,6 +38,7 @@ export const PERMISOS = {
   RECIBO_CAJA:            'VER_RECIBO_CAJA',
   ENTREGA_RECAUDO:        'VER_ENTREGA_RECAUDO',
   CONFIGURACION:          'VER_CONFIGURACION',
+  INTERFAZ_CONTABLE:      'VER_INTERFAZ_CONTABLE',
 
   // ─── Acciones sobre anticipos ───
   CREAR_ANTICIPO:         'CREAR_ANTICIPO',
@@ -114,6 +115,11 @@ export const PERMISOS = {
 
   // ─── Traslado de Fondos ───
   CREAR_TRASLADO_FONDOS:  'CREAR_TRASLADO_FONDOS',
+
+  // ─── Interfaz Contable Vehículos ───
+  CREAR_INTERFAZ_CONTABLE:    'CREAR_INTERFAZ_CONTABLE',
+  EDITAR_INTERFAZ_CONTABLE:   'EDITAR_INTERFAZ_CONTABLE',
+  ELIMINAR_INTERFAZ_CONTABLE: 'ELIMINAR_INTERFAZ_CONTABLE',
 } as const
 
 export type PermisoCodigo = typeof PERMISOS[keyof typeof PERMISOS]

@@ -258,6 +258,18 @@ export const seguridadApi = {
         return response.data
     },
 
+    /**
+     * Usuarios cuyo rol tiene MODULO_CONDUCTOR, con sus maquinarias asignadas.
+     * Lo consume el formulario de Interfaz Contable Vehículos para ofrecer solo
+     * las placas que el conductor realmente tiene.
+     */
+    listarConductores: async (): Promise<{ success: boolean; data: UsuarioMaster[] }> => {
+        const response = await apiClient.get('/auth-secundario/conductores')
+        const raw = response.data
+        const data: UsuarioMaster[] = Array.isArray(raw) ? raw : (raw?.data ?? [])
+        return { success: true, data }
+    },
+
     listarRoles: async (): Promise<ListarRolesResponse> => {
         const response = await apiClient.get('/auth-secundario/roles')
         const raw = response.data

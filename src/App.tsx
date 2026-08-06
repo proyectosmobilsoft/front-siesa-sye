@@ -35,6 +35,7 @@ const MaestroDescuentosFinancierosPage = lazy(() => import('@/pages/MaestroDescu
 const MaestroCajasPage = lazy(() => import('@/pages/MaestroCajasPage').then(m => ({ default: m.MaestroCajasPage })))
 const MaestroConceptosPage = lazy(() => import('@/pages/MaestroConceptosPage').then(m => ({ default: m.MaestroConceptosPage })))
 const MaestroMaquinariaPage = lazy(() => import('@/pages/MaestroMaquinariaPage').then(m => ({ default: m.MaestroMaquinariaPage })))
+const InterfazContableVehiculosPage = lazy(() => import('@/pages/InterfazContableVehiculosPage').then(m => ({ default: m.InterfazContableVehiculosPage })))
 const MaestroModulosPage = lazy(() => import('@/pages/MaestroModulosPage').then(m => ({ default: m.MaestroModulosPage })))
 const EgresoPage = lazy(() => import('@/pages/EgresoPage').then(m => ({ default: m.EgresoPage })))
 const FerregangaPage = lazy(() => import('@/pages/FerregangaPage'))
@@ -81,6 +82,11 @@ function AppLayout() {
                                 {/* Maquinaria: protegido por VER_MAQUINARIA (solo rol Administrador) */}
                                 <Route path="/maestro/maquinaria" element={
                                     <ProtectedRoute permiso={PERMISOS.MAQUINARIA}><MaestroMaquinariaPage /></ProtectedRoute>
+                                } />
+
+                                {/* Interfaz Contable Vehículos: protegido por VER_INTERFAZ_CONTABLE */}
+                                <Route path="/maestro/interfaz-contable-vehiculos" element={
+                                    <ProtectedRoute permiso={PERMISOS.INTERFAZ_CONTABLE}><InterfazContableVehiculosPage /></ProtectedRoute>
                                 } />
 
                                 {/* Maestro de Cajas: protegido por VER_CAJAS (solo rol Administrador) */}

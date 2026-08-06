@@ -24,6 +24,7 @@ import {
   Percent,
   ListChecks,
   Truck,
+  Calculator,
   Settings,
   SlidersHorizontal,
   CircleHelp,
@@ -130,6 +131,14 @@ export const navigation: NavItem[] = [
         icon: Truck,
         subtitle: 'Inventario de equipos y maquinaria',
         permiso: PERMISOS.MAQUINARIA,
+      },
+      // Interfaz Contable Vehículos: cuenta contable por placa de cada conductor
+      {
+        name: 'Interfaz Contable Vehículos',
+        href: '/maestro/interfaz-contable-vehiculos',
+        icon: Calculator,
+        subtitle: 'Cuenta contable asociada a cada placa del conductor',
+        permiso: PERMISOS.INTERFAZ_CONTABLE,
       },
     ],
   },
