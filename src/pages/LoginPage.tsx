@@ -41,7 +41,28 @@ export const LoginPage = () => {
             localStorage.setItem('last_activity', Date.now().toString())
             console.log('✅ Token guardado en localStorage')
 
-            // Cargar datos del usuario y sus permisos usando seguridadApi (con normalización)
+            // El login ya devuelve rol y permisos: son los mismos que el backend
+            // firma dentro del JWT. Usarlos evita consultar rutas que exigen
+            // VER_USUARIOS — un rol sin ese permiso (CAJERA, CONDUCTOR...) recibía
+            // 403 y terminaba con la sesión SIN permisos, viendo solo el Dashboard.
+            if (Array.isArray(res.data.permisos)) {
+                const permisos: string[] = res.data.permisos
+                useAuthStore.getState().setSession(
+                    {
+                        id: res.data.id ?? 0,
+                        usuario: res.data.usuario ?? usuarioNormalizado,
+                        nombre_completo: res.data.nombre_completo ?? null,
+                        rol_id: res.data.rol_id ?? null,
+                        rol_nombre: res.data.rol_nombre ?? '',
+                    },
+                    permisos
+                )
+                console.log(`✅ Sesión cargada desde el login — rol: ${res.data.rol_nombre || 'desconocido'}, permisos: ${permisos.length}`)
+                navigate('/')
+                return
+            }
+
+            // Respaldo para APIs anteriores que no devuelven permisos en el login.
             try {
                 const [userData, rolesRes] = await Promise.all([
                     seguridadApi.obtenerUsuario(usuarioNormalizado),
