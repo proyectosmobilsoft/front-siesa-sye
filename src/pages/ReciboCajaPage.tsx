@@ -93,7 +93,7 @@ export const ReciboCajaPage = () => {
 
         {tab === 'general' ? <div className="flex flex-col gap-5 p-5">
           {/* Toolbar de consulta + estado del período */}
-          <section className="flex flex-wrap items-end justify-between gap-4 rounded-md border border-border bg-muted/20 p-4">
+          <section className="flex flex-wrap items-end justify-between gap-4 border-b border-border pb-5">
             <div className="flex flex-wrap items-end gap-4">
               <label className="flex flex-col gap-1">
                 <span className="text-[10px] font-bold uppercase tracking-wide text-muted-foreground">Caja</span>
@@ -109,7 +109,7 @@ export const ReciboCajaPage = () => {
           </section>
 
           {/* Datos del último cuadre */}
-          <section className="flex flex-wrap items-center gap-3 rounded-md border border-border bg-muted/20 p-4">
+          <section className="flex flex-wrap items-center gap-3 border-b border-border pb-5">
             <FieldChip label="Fecha último cuadre caja" value="domingo, 21 de junio de 2026" className="mr-auto" />
             <FieldChip label="Centro" value="002" />
             <FieldChip label="Cuenta" value="11050502" />
@@ -120,13 +120,13 @@ export const ReciboCajaPage = () => {
           <section className="overflow-x-auto"><table className="w-full min-w-[760px] border-collapse overflow-hidden rounded-md border border-border shadow-sm"><thead><tr className="bg-primary text-primary-foreground"><th className="w-[30%] border border-primary-foreground/20 px-2 py-2 font-medium tracking-wide">Descripción o concepto</th>{['Efectivo', 'Tarjetas', 'Consignado', 'Total', 'Anticipo x Dev'].map(h => <th key={h} className="border border-primary-foreground/20 px-2 py-2 font-medium tracking-wide">{h}</th>)}</tr></thead><tbody>{lines.map((line, rowIndex) => <tr key={line.label} className={cn('transition-colors', line.kind === 'income-total' || line.kind === 'expense-total' ? 'bg-primary/15 font-bold' : line.kind === 'flow' ? 'bg-primary/10 font-bold' : rowIndex === 0 ? 'bg-primary/[0.08] text-primary hover:bg-primary/[0.12]' : 'hover:bg-muted/40')}><td className="border border-border px-2 py-1.5">{line.label}</td>{line.values.map((value, colIndex) => <td key={`${line.label}-${colIndex}`} className="border border-border px-2 py-1.5 text-right font-mono">{rowIndex === 0 && colIndex === 0 ? <BoardInput value={value} onChange={setVentasEfectivo} /> : rowIndex === 0 && colIndex === 1 ? <BoardInput value={value} onChange={setVentasTarjetas} /> : rowIndex === 0 && colIndex === 2 ? <BoardInput value={value} onChange={setVentasConsignado} /> : rowIndex === 1 && colIndex === 2 ? <BoardInput value={value} onChange={setRecaudos} /> : money(value)}</td>)}<td className="border border-border px-2 py-1.5 text-right font-mono">{money(line.values.reduce((sum, n) => sum + n, 0))}</td><td className="border border-border px-2 py-1.5 text-right font-mono">0.00</td></tr>)}</tbody></table></section>
 
           {/* Responsable de caja */}
-          <section className="grid gap-3 rounded-md border border-border bg-muted/20 p-4 sm:grid-cols-2">
+          <section className="grid gap-3 border-b border-border pb-5 sm:grid-cols-2">
             <FieldChip label="Responsable Caja" value="PEREZ POLANCO ANDRES ARTURO" className="w-full [&>span]:w-full [&>span]:text-primary" />
             <FieldChip label="Cédula" value="1140848342" />
           </section>
 
           {/* Totales y acciones */}
-          <section className="flex flex-wrap items-end justify-between gap-4 rounded-md border border-border bg-muted/20 p-4">
+          <section className="flex flex-wrap items-end justify-between gap-4">
             <div className="flex flex-wrap gap-4">
               {[['Disponible En Caja Según Sistema', disponible], ['Efectivo según Arqueo de Caja', 0], ['Sobrante/Faltante En caja', 0]].map(([label, value], index) => (
                 <label key={label as string} className={cn('flex flex-col gap-1.5 text-[10px] font-bold tracking-wide', index === 2 ? 'text-destructive' : 'text-muted-foreground')}>
@@ -135,7 +135,7 @@ export const ReciboCajaPage = () => {
                 </label>
               ))}
             </div>
-            <div className="flex gap-4 rounded-md border border-border bg-card p-3 text-lg shadow-sm">{['Imprimir', 'Imprimir', 'Exportar', 'Abrir'].map((title, i) => <span key={i} title={title} className="cursor-pointer text-muted-foreground transition-transform hover:scale-110 hover:text-primary">{['▣', '▣', '▧', '▱'][i]}</span>)}</div>
+            <div className="flex gap-4 pb-1 text-lg">{['Imprimir', 'Imprimir', 'Exportar', 'Abrir'].map((title, i) => <span key={i} title={title} className="cursor-pointer text-muted-foreground transition-transform hover:scale-110 hover:text-primary">{['▣', '▣', '▧', '▱'][i]}</span>)}</div>
           </section>
         </div> : <History data={filas} total={total} page={page} totalPages={totalPages} loading={loading} error={error} tipodoc={tipodoc} setTipodoc={setTipodoc} estado={estado} setEstado={setEstado} numero={numero} setNumero={setNumero} razonSocial={razonSocial} setRazonSocial={setRazonSocial} fetchRecibos={fetchRecibos} />}
       </div>
