@@ -30,7 +30,7 @@ import { reciboCajaApi } from '@/api/reciboCaja'
 import { DocumentacionRCAnulado, MovimientoEfectivo, ReciboCajaUsuario } from '@/api/types'
 import { formatters } from '@/utils/formatters'
 import { estadoRCBadge, estadoRCLabel } from '@/utils/badges'
-import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { useQueries, useQuery, useQueryClient } from '@tanstack/react-query'
 import { cn } from '@/lib/utils'
 import { usePermiso } from '@/hooks/usePermiso'
 
@@ -135,7 +135,9 @@ const ConciliarConductorModal = ({
     )
 }
 
-const TableroConciliacion = ({ movimientos, onResuelto }: { movimientos: MovimientoEfectivo[] | undefined; onResuelto: () => void }) => {
+const SIN_ANULACIONES: Set<number> = new Set()
+
+const TableroConciliacion = ({ movimientos, onResuelto, anulacionesPosteriores }: { movimientos: MovimientoEfectivo[] | undefined; onResuelto: () => void; anulacionesPosteriores: Set<number> }) => {
     // Resolver diferencias también se exige en la API
     // (requirePermiso RESOLVER_DIFERENCIA_RECAUDO).
     const { puede, P } = usePermiso()
@@ -503,7 +505,7 @@ const EntregasSubAccordion = ({ entregas, colSpan, onValidar }: { entregas: Movi
 
 // ─── Fila de conductor ────────────────────────────────────────────────────────
 
-const ConductorGrupoRow = ({ grupo, idx, onValidar, onVerRC, etiqueta }: { grupo: GrupoConductor; idx: number; onValidar?: (mov: MovimientoEfectivo) => void; onVerRC: (grupo: GrupoConductor) => void; etiqueta: string }) => {
+const ConductorGrupoRow = ({ grupo, idx, onValidar, onVerRC, etiqueta, tieneAnulacionPosterior }: { grupo: GrupoConductor; idx: number; onValidar?: (mov: MovimientoEfectivo) => void; onVerRC: (grupo: GrupoConductor) => void; etiqueta: string; tieneAnulacionPosterior?: boolean }) => {
     const [expanded, setExpanded] = useState(false)
     const confirmadas = !onValidar
 
@@ -512,7 +514,7 @@ const ConductorGrupoRow = ({ grupo, idx, onValidar, onVerRC, etiqueta }: { grupo
             <motion.tr
                 className={cn(
                     'cursor-pointer border-b last:border-0 transition-colors',
-                    expanded ? 'bg-primary/5' : 'hover:bg-muted/30'
+                    expanded ? (tieneAnulacionPosterior ? 'bg-amber-500/10' : 'bg-primary/5') : (tieneAnulacionPosterior ? 'bg-amber-500/5 hover:bg-amber-500/10' : 'hover:bg-muted/30')
                 )}
                 initial={{ opacity: 0, y: 6 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -532,7 +534,7 @@ const ConductorGrupoRow = ({ grupo, idx, onValidar, onVerRC, etiqueta }: { grupo
                             className={cn(
                                 'flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full text-xs font-bold text-white shadow-sm',
                                 confirmadas
-                                    ? 'bg-gradient-to-br from-emerald-500 to-emerald-600'
+                                    ? (tieneAnulacionPosterior ? 'bg-gradient-to-br from-amber-400 to-amber-600' : 'bg-gradient-to-br from-emerald-500 to-emerald-600')
                                     : 'bg-gradient-to-br from-amber-400 to-amber-600'
                             )}
                         >
@@ -543,6 +545,11 @@ const ConductorGrupoRow = ({ grupo, idx, onValidar, onVerRC, etiqueta }: { grupo
                             <span className="text-[11px] text-muted-foreground">
                                 {grupo.entregas.length} entrega{grupo.entregas.length > 1 ? 's' : ''} {etiqueta}{grupo.entregas.length > 1 ? 's' : ''}
                             </span>
+                            {tieneAnulacionPosterior && (
+                                <span className="text-[10px] font-bold uppercase tracking-wide text-amber-700 dark:text-amber-400">
+                                    RC anulado después de entrega
+                                </span>
+                            )}
                         </div>
                     </div>
                 </td>
@@ -726,7 +733,11 @@ const RecibosConductorModal = ({ grupo, onClose, rango }: { grupo: GrupoConducto
     const documentacionQuery = useQuery({
         queryKey: ['recibo-caja', 'anulaciones', ...rowidsAnulados],
         queryFn: () => reciboCajaApi.getDocumentacionAnulaciones(rowidsAnulados),
-        enabled: rowidsAnulados.length > 0,
+        // La documentación es secundaria al tablero. Solo se consulta cuando
+        // el usuario abre explícitamente los anulados, para que una migración
+        // de BD2 pendiente no rompa la vista principal.
+        enabled: rowidsAnulados.length > 0 && incluirAnulados,
+        retry: false,
     })
     const documentacionPorRowid = useMemo(
         () => new Map((documentacionQuery.data ?? []).map((registro) => [registro.rc_rowid_siesa, registro])),
@@ -738,10 +749,32 @@ const RecibosConductorModal = ({ grupo, onClose, rango }: { grupo: GrupoConducto
     const todosRecibos = data ?? []
     const conteoAnulados = todosRecibos.filter((r) => r.Estado === 2).length
     const recibos = incluirAnulados ? todosRecibos : todosRecibos.filter((r) => r.Estado !== 2)
+    const fechasEntregasConfirmadas = grupo.entregas
+        .filter((mov) => mov.estado === 'CONFIRMADO' && mov.fecha_confirma)
+        .map((mov) => new Date(mov.fecha_confirma as string).getTime())
+        .filter(Number.isFinite)
+    // SIESA no expone el timestamp de anulación en este endpoint. Si el RC ya
+    // existía antes de que caja confirmara la entrega y hoy aparece anulado,
+    // queda identificado como una anulación posterior a esa entrega.
+    const anuladosDespuesEntrega = todosRecibos.filter((recibo) => (
+        recibo.Estado === 2
+        && fechasEntregasConfirmadas.length > 0
+        && fechasEntregasConfirmadas.some((fechaEntrega) => {
+            const fechaRc = new Date(recibo.Fecha).getTime()
+            return Number.isFinite(fechaRc) && fechaRc <= fechaEntrega
+        })
+    ))
+    const efectivoAnuladoDespuesEntrega = anuladosDespuesEntrega.reduce((sum, recibo) => sum + (recibo.efectivo ?? 0), 0)
 
-    const totalEfectivo = recibos.filter(r => r.Estado !== 2).reduce((sum, r) => sum + (r.efectivo ?? 0), 0)
-    const totalConsignacion = recibos.filter(r => r.Estado !== 2).reduce((sum, r) => sum + (r.consignacion ?? 0), 0)
-    const totalGeneral = totalEfectivo + totalConsignacion
+    const valorEntrega = grupo.entregas.reduce(
+        (sum, movimiento) => sum + (movimiento.estado === 'CONFIRMADO' ? (movimiento.valor_confirmado ?? movimiento.valor) : movimiento.valor),
+        0
+    )
+    // El total del modal debe conciliar la entrega seleccionada, no sumar todos
+    // los RC que el usuario tenga en SIESA durante el día.
+    const totalEfectivo = Math.max(0, valorEntrega - efectivoAnuladoDespuesEntrega)
+    const totalConsignacion = 0
+    const totalGeneral = totalEfectivo
     const etiquetaPeriodo = fechaInicial === fechaFinal ? `del ${fechaInicial}` : `${fechaInicial} — ${fechaFinal}`
 
     return (
@@ -773,8 +806,13 @@ const RecibosConductorModal = ({ grupo, onClose, rango }: { grupo: GrupoConducto
                             Se encontraron <strong className="text-destructive">{conteoAnulados} recibo{conteoAnulados !== 1 ? 's' : ''} ANULADO{conteoAnulados !== 1 ? 'S' : ''}</strong> en SIESA para este conductor en la fecha seleccionada.
                         </p>
                         <p className="text-xs font-bold text-foreground">
-                            Efectivo vigente en RC: {formatters.currency(0)}
+                            Recaudo aplicable a esta entrega: {formatters.currency(totalEfectivo)}
                         </p>
+                        {anuladosDespuesEntrega.length > 0 && (
+                            <p className="text-xs font-bold text-destructive">
+                                {anuladosDespuesEntrega.length} RC anulado{anuladosDespuesEntrega.length !== 1 ? 's' : ''} después de la entrega · efectivo descontado: {formatters.currency(efectivoAnuladoDespuesEntrega)}
+                            </p>
+                        )}
                     </div>
                     <Button variant="outline" size="sm" onClick={() => setIncluirAnulados(true)}>
                         Ver recibos anulados ({conteoAnulados})
@@ -812,7 +850,7 @@ const RecibosConductorModal = ({ grupo, onClose, rango }: { grupo: GrupoConducto
                                 <Banknote className="h-4 w-4 text-emerald-600" />
                             </div>
                             <div>
-                                <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Efectivo vigente en RC</p>
+                                <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Recaudo aplicable a esta entrega</p>
                                 <p className="text-base font-bold tabular-nums text-foreground">{formatters.currency(totalEfectivo)}</p>
                             </div>
                         </div>
@@ -821,7 +859,7 @@ const RecibosConductorModal = ({ grupo, onClose, rango }: { grupo: GrupoConducto
                                 <Landmark className="h-4 w-4 text-muted-foreground" />
                             </div>
                             <div>
-                                <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Total transferencia</p>
+                                <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Transferencia aplicable</p>
                                 <p className="text-base font-bold tabular-nums text-foreground">{formatters.currency(totalConsignacion)}</p>
                             </div>
                         </div>
@@ -841,6 +879,9 @@ const RecibosConductorModal = ({ grupo, onClose, rango }: { grupo: GrupoConducto
                             <AlertCircle className="h-4 w-4 flex-shrink-0 text-destructive" />
                             <p>
                                 Los RC anulados ya fueron descontados del recaudo y del efectivo vigente de <strong>{grupo.conductorNombre}</strong>.
+                                {anuladosDespuesEntrega.length > 0 && (
+                                    <> Se detectaron <strong className="text-destructive">{anuladosDespuesEntrega.length} RC anulados después de una entrega confirmada</strong> por {formatters.currency(efectivoAnuladoDespuesEntrega)} en efectivo.</>
+                                )}
                                 {documentacionQuery.isLoading
                                     ? ' Consultando la documentación de reemplazo...'
                                     : ' Documente el RC que Tesorería hizo en SIESA para conservar el soporte de cada anulación.'}
@@ -883,6 +924,7 @@ const RecibosConductorModal = ({ grupo, onClose, rango }: { grupo: GrupoConducto
                                             <span className={cn('rounded-full px-2 py-0.5 text-[10px] font-black uppercase', estadoRCBadge(r.Estado))}>
                                                 {estadoRCLabel(r.Estado)}
                                                 {r.Estado === 2 && r.Usuario_Anulacion ? ` (${r.Usuario_Anulacion})` : ''}
+                                                {anuladosDespuesEntrega.some((anulado) => anulado.Rowid === r.Rowid) ? ' · DESPUÉS DE ENTREGA' : ''}
                                             </span>
                                         </td>
                                         <td className="px-3 py-2 text-left">
@@ -951,9 +993,10 @@ interface EntregasPanelProps {
     error: unknown
     onValidar?: (mov: MovimientoEfectivo) => void
     onVerRC: (grupo: GrupoConductor) => void
+    anulacionesPosteriores: Set<number>
 }
 
-const EntregasPanel = ({ esPendiente, data, isLoading, error, onValidar, onVerRC }: EntregasPanelProps) => {
+const EntregasPanel = ({ esPendiente, data, isLoading, error, onValidar, onVerRC, anulacionesPosteriores }: EntregasPanelProps) => {
     const [busqueda, setBusqueda] = useState('')
     const grupos = useMemo(() => agruparPorConductor(data ?? []), [data])
     const total = useMemo(() => grupos.reduce((sum, g) => sum + g.total, 0), [grupos])
@@ -1052,6 +1095,7 @@ const EntregasPanel = ({ esPendiente, data, isLoading, error, onValidar, onVerRC
                                         onValidar={onValidar}
                                         onVerRC={onVerRC}
                                         etiqueta={esPendiente ? 'pendiente' : 'confirmada'}
+                                        tieneAnulacionPosterior={anulacionesPosteriores.has(grupo.conductorId)}
                                     />
                                 ))}
                             </tbody>
@@ -1065,10 +1109,12 @@ const EntregasPanel = ({ esPendiente, data, isLoading, error, onValidar, onVerRC
 
 // ─── Resumen KPI del periodo ─────────────────────────────────────────────────
 
-const ResumenPeriodo = ({ pendientes, confirmadas }: { pendientes: MovimientoEfectivo[] | undefined; confirmadas: MovimientoEfectivo[] | undefined }) => {
+const ResumenPeriodo = ({ pendientes, confirmadas, totalVigente }: { pendientes: MovimientoEfectivo[] | undefined; confirmadas: MovimientoEfectivo[] | undefined; totalVigente: number | null }) => {
     const totalPendiente = useMemo(() => (pendientes ?? []).reduce((sum, m) => sum + m.valor, 0), [pendientes])
     const totalConfirmado = useMemo(() => (confirmadas ?? []).reduce((sum, m) => sum + m.valor, 0), [confirmadas])
-    const totalGeneral = totalPendiente + totalConfirmado
+    // Mientras SIESA responde no mostramos el total físico anterior, porque
+    // ese valor incluye entregas cuyo RC pudo haber sido anulado.
+    const totalGeneral = totalVigente ?? 0
     // "Conciliado" = confirmado sin diferencia abierta (resuelta o nunca la tuvo).
     // No es lo mismo que "confirmado": una entrega puede estar validada y aun así
     // tener una diferencia pendiente de resolver (ver TableroConciliacion).
@@ -1087,7 +1133,7 @@ const ResumenPeriodo = ({ pendientes, confirmadas }: { pendientes: MovimientoEfe
     }, [pendientes, confirmadas])
 
     const items = [
-        { label: 'Total del periodo', value: formatters.currency(totalGeneral), icon: Wallet, tono: 'text-primary bg-primary/10', borde: 'border-l-primary' },
+        { label: 'Recaudo vigente de conductores', value: formatters.currency(totalGeneral), icon: Wallet, tono: 'text-primary bg-primary/10', borde: 'border-l-primary' },
         { label: 'Pendiente por validar', value: formatters.currency(totalPendiente), icon: Hourglass, tono: 'text-amber-600 bg-amber-500/10', borde: 'border-l-amber-500' },
         { label: '% conciliado', value: `${pctConciliado}%`, icon: ShieldCheck, tono: 'text-emerald-600 bg-emerald-500/10', borde: 'border-l-emerald-500' },
         { label: 'Conductores activos', value: String(conductoresActivos), icon: Users, tono: 'text-muted-foreground bg-muted', borde: 'border-l-muted-foreground/40' },
@@ -1125,6 +1171,63 @@ export const TesoreriaEntregaRecaudoPage = () => {
     const pendientesQuery = useEntregasPorEstado('PENDIENTE', rango)
     const confirmadasQuery = useEntregasPorEstado('CONFIRMADO', rango)
 
+    const movimientosPeriodo = useMemo(
+        () => [...(pendientesQuery.data ?? []), ...(confirmadasQuery.data ?? [])],
+        [pendientesQuery.data, confirmadasQuery.data]
+    )
+    const conductoresSiesa = useMemo(() => {
+        const mapa = new Map<number, string>()
+        for (const movimiento of movimientosPeriodo) {
+            if (movimiento.conductor_siesa_nombre) mapa.set(movimiento.conductor_id, movimiento.conductor_siesa_nombre)
+        }
+        return Array.from(mapa.entries())
+    }, [movimientosPeriodo])
+    const recibosPorConductorQueries = useQueries({
+        queries: conductoresSiesa.map(([conductorId, siesaNombre]) => ({
+            queryKey: ['recibo-caja', 'tablero-conductor', conductorId, siesaNombre, rango?.fechaInicial, rango?.fechaFinal],
+            queryFn: () => reciboCajaApi.getPorUsuario(siesaNombre, { fechaInicial: rango?.fechaInicial, fechaFinal: rango?.fechaFinal, tipo: 'RC' }),
+            enabled: !!siesaNombre,
+            staleTime: 30 * 1000,
+            retry: 1,
+        })),
+    })
+    const resumenRC = useMemo(() => {
+        const anulacionesPosteriores = new Set<number>()
+        let totalVigente = 0
+        let consultasCompletas = conductoresSiesa.length === recibosPorConductorQueries.length
+
+        conductoresSiesa.forEach(([conductorId], index) => {
+            const consulta = recibosPorConductorQueries[index]
+            if (!consulta?.isFetched) consultasCompletas = false
+            const recibos = consulta?.data ?? []
+
+            const fechasEntrega = movimientosPeriodo
+                .filter((movimiento) => movimiento.conductor_id === conductorId && movimiento.estado === 'CONFIRMADO' && movimiento.fecha_confirma)
+                .map((movimiento) => new Date(movimiento.fecha_confirma as string).getTime())
+                .filter(Number.isFinite)
+            const anuladosPosteriores = recibos.filter((recibo) => (
+                recibo.Estado === 2
+                && fechasEntrega.some((fechaEntrega) => {
+                    const fechaRc = new Date(recibo.Fecha).getTime()
+                    return Number.isFinite(fechaRc) && fechaRc <= fechaEntrega
+                })
+            ))
+            const valorEntregado = movimientosPeriodo
+                .filter((movimiento) => movimiento.conductor_id === conductorId)
+                .reduce((total, movimiento) => total + (movimiento.estado === 'CONFIRMADO' ? (movimiento.valor_confirmado ?? movimiento.valor) : movimiento.valor), 0)
+            const efectivoAnulado = anuladosPosteriores.reduce((total, recibo) => total + (recibo.efectivo ?? 0), 0)
+            totalVigente += Math.max(0, valorEntregado - efectivoAnulado)
+
+            const tieneAnulacionPosterior = anuladosPosteriores.length > 0
+            if (tieneAnulacionPosterior) anulacionesPosteriores.add(conductorId)
+        })
+
+        return {
+            totalVigente: consultasCompletas ? totalVigente : null,
+            anulacionesPosteriores,
+        }
+    }, [conductoresSiesa, movimientosPeriodo, recibosPorConductorQueries])
+
     const [movValidando, setMovValidando] = useState<MovimientoEfectivo | null>(null)
     const [grupoViendoRC, setGrupoViendoRC] = useState<GrupoConductor | null>(null)
     const queryClient = useQueryClient()
@@ -1142,7 +1245,7 @@ export const TesoreriaEntregaRecaudoPage = () => {
 
     return (
         <div className="mx-auto max-w-7xl space-y-5 p-4 sm:p-6">
-            <ResumenPeriodo pendientes={pendientesQuery.data} confirmadas={confirmadasQuery.data} />
+            <ResumenPeriodo pendientes={pendientesQuery.data} confirmadas={confirmadasQuery.data} totalVigente={resumenRC.totalVigente} />
 
             <div className="flex flex-wrap items-center gap-x-5 gap-y-3 rounded-xl border border-border bg-muted/30 px-4 py-3">
                 <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
@@ -1196,6 +1299,7 @@ export const TesoreriaEntregaRecaudoPage = () => {
                     error={pendientesQuery.error}
                     onValidar={setMovValidando}
                     onVerRC={setGrupoViendoRC}
+                    anulacionesPosteriores={SIN_ANULACIONES}
                 />
                 <EntregasPanel
                     esPendiente={false}
@@ -1203,6 +1307,7 @@ export const TesoreriaEntregaRecaudoPage = () => {
                     isLoading={confirmadasQuery.isLoading}
                     error={confirmadasQuery.error}
                     onVerRC={setGrupoViendoRC}
+                    anulacionesPosteriores={resumenRC.anulacionesPosteriores}
                 />
             </div>
 
