@@ -233,13 +233,14 @@ const TableroConciliacion = ({ movimientos, onResuelto, anulacionesPosteriores }
                                 <tbody>
                                     {conductores.map((conductor) => {
                                         const alDia = conductor.movimientosConDiferencia === 0
+                                        const tieneAnulacionPosterior = anulacionesPosteriores.has(conductor.conductorId)
                                         return (
-                                            <tr key={conductor.conductorId} className="border-b border-border/60 last:border-0 hover:bg-muted/20">
+                                            <tr key={conductor.conductorId} className={cn('border-b border-border/60 last:border-0 hover:bg-muted/20', tieneAnulacionPosterior && 'bg-amber-500/5')}>
                                                 <td className="px-5 py-3 text-left">
                                                     <div className="flex items-center gap-3">
                                                         <div className={cn(
                                                             'flex h-9 w-9 items-center justify-center rounded-full text-xs font-bold text-white',
-                                                            alDia ? 'bg-emerald-500' : 'bg-destructive'
+                                                            tieneAnulacionPosterior ? 'bg-amber-500' : alDia ? 'bg-emerald-500' : 'bg-destructive'
                                                         )}>
                                                             {conductor.conductorNombre.charAt(0).toUpperCase()}
                                                         </div>
@@ -266,12 +267,14 @@ const TableroConciliacion = ({ movimientos, onResuelto, anulacionesPosteriores }
                                                 <td className="px-5 py-3 text-left">
                                                     <span className={cn(
                                                         'inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-bold',
-                                                        alDia
-                                                            ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400'
-                                                            : 'bg-destructive/10 text-destructive'
+                                                        tieneAnulacionPosterior
+                                                            ? 'bg-amber-500/10 text-amber-700 dark:text-amber-400'
+                                                            : alDia
+                                                                ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400'
+                                                                : 'bg-destructive/10 text-destructive'
                                                     )}>
-                                                        {alDia ? <ShieldCheck className="h-3.5 w-3.5" /> : <TriangleAlert className="h-3.5 w-3.5" />}
-                                                        {alDia ? 'Al día' : 'Tiene un descuadre'}
+                                                        {tieneAnulacionPosterior ? <AlertCircle className="h-3.5 w-3.5" /> : alDia ? <ShieldCheck className="h-3.5 w-3.5" /> : <TriangleAlert className="h-3.5 w-3.5" />}
+                                                        {tieneAnulacionPosterior ? 'RC anulado en SIESA' : alDia ? 'Al día' : 'Tiene un descuadre'}
                                                     </span>
                                                 </td>
                                                 <td className="px-5 py-3 text-right">
@@ -1307,13 +1310,14 @@ export const TesoreriaEntregaRecaudoPage = () => {
                     isLoading={confirmadasQuery.isLoading}
                     error={confirmadasQuery.error}
                     onVerRC={setGrupoViendoRC}
-                    anulacionesPosteriores={resumenRC.anulacionesPosteriores}
+                    anulacionesPosteriores={SIN_ANULACIONES}
                 />
             </div>
 
             <TableroConciliacion
                 movimientos={confirmadasQuery.data}
                 onResuelto={() => queryClient.invalidateQueries({ queryKey: ['conductor-efectivo'] })}
+                anulacionesPosteriores={resumenRC.anulacionesPosteriores}
             />
 
             <ValidarEntregaModal entrega={movValidando} onClose={() => setMovValidando(null)} onConfirmado={handleConfirmado} />
