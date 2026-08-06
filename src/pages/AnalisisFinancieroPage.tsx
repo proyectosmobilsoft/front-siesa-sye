@@ -27,8 +27,13 @@ import { formatters } from '@/utils/formatters'
 import ExcelJS from 'exceljs'
 import { saveAs } from 'file-saver'
 import { ResponsiveBar } from '@nivo/bar'
+import { usePermiso } from '@/hooks/usePermiso'
 
 export const AnalisisFinancieroPage = () => {
+    // La exportación a Excel es una acción con permiso propio dentro del módulo.
+    const { puede, P } = usePermiso()
+    const puedeExportar = puede(P.EXPORTAR_ANALISIS)
+
     const [filtros, setFiltros] = useState<EstadosFinancierosParams>({
         periodoInicial: 202401,
         periodoFinal: 202402,
@@ -615,15 +620,17 @@ export const AnalisisFinancieroPage = () => {
                                                 className="pl-9"
                                             />
                                         </div>
-                                        <Button
-                                            variant="outline"
-                                            size="sm"
-                                            onClick={handleExportToExcel}
-                                            className="h-9 shrink-0"
-                                        >
-                                            <Download className="h-4 w-4 mr-2" />
-                                            Exportar Excel
-                                        </Button>
+                                        {puedeExportar && (
+                                            <Button
+                                                variant="outline"
+                                                size="sm"
+                                                onClick={handleExportToExcel}
+                                                className="h-9 shrink-0"
+                                            >
+                                                <Download className="h-4 w-4 mr-2" />
+                                                Exportar Excel
+                                            </Button>
+                                        )}
                                     </div>
                                     <p className="shrink-0 text-sm text-muted-foreground">
                                         {estadosFinancieros ? `${estadosFinancieros.length} ${estadosFinancieros.length === 1 ? 'registro' : 'registros'}` : ''}
@@ -1056,15 +1063,17 @@ export const AnalisisFinancieroPage = () => {
                                                 className="pl-9"
                                             />
                                         </div>
-                                        <Button
-                                            variant="outline"
-                                            size="sm"
-                                            onClick={handleExportToExcelPG}
-                                            className="h-9 shrink-0"
-                                        >
-                                            <Download className="h-4 w-4 mr-2" />
-                                            Exportar Excel
-                                        </Button>
+                                        {puedeExportar && (
+                                            <Button
+                                                variant="outline"
+                                                size="sm"
+                                                onClick={handleExportToExcelPG}
+                                                className="h-9 shrink-0"
+                                            >
+                                                <Download className="h-4 w-4 mr-2" />
+                                                Exportar Excel
+                                            </Button>
+                                        )}
                                     </div>
                                     <p className="shrink-0 text-sm text-muted-foreground">
                                         {perdidasGanancias ? `${perdidasGanancias.length} ${perdidasGanancias.length === 1 ? 'registro' : 'registros'}` : ''}
@@ -1192,15 +1201,17 @@ export const AnalisisFinancieroPage = () => {
                                                 className="pl-9"
                                             />
                                         </div>
-                                        <Button
-                                            variant="outline"
-                                            size="sm"
-                                            onClick={handleExportToExcelTM}
-                                            className="h-9 shrink-0"
-                                        >
-                                            <Download className="h-4 w-4 mr-2" />
-                                            Exportar Excel
-                                        </Button>
+                                        {puedeExportar && (
+                                            <Button
+                                                variant="outline"
+                                                size="sm"
+                                                onClick={handleExportToExcelTM}
+                                                className="h-9 shrink-0"
+                                            >
+                                                <Download className="h-4 w-4 mr-2" />
+                                                Exportar Excel
+                                            </Button>
+                                        )}
                                     </div>
                                     <p className="shrink-0 text-sm text-muted-foreground">
                                         {tendenciaMensual ? `${tendenciaMensual.length} ${tendenciaMensual.length === 1 ? 'registro' : 'registros'}` : ''}

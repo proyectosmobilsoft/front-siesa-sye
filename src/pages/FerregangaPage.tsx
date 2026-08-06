@@ -17,6 +17,7 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
+import { usePermiso } from '@/hooks/usePermiso';
 
 // --- TIPOS ---
 interface Prize {
@@ -96,6 +97,13 @@ const emptyForm = (): CampaignFormData => ({
 });
 
 const FerregangaPage: React.FC = () => {
+  // Permisos de acción sobre campañas. OJO: /api/campanias no exige JWT en el
+  // backend, así que por ahora esto solo oculta botones.
+  const { puede, P } = usePermiso();
+  const puedeCrear = puede(P.CREAR_CAMPANIA);
+  const puedeEditar = puede(P.EDITAR_CAMPANIA);
+  const puedeEliminar = puede(P.ELIMINAR_CAMPANIA);
+
   // --- ESTADOS ---
   const [activeTab, setActiveTab] = useState<'general' | 'clientes' | 'campanas' | 'sorteo'>('general');
   const [searchTerm, setSearchTerm] = useState("");
@@ -626,9 +634,11 @@ const FerregangaPage: React.FC = () => {
               {mostrarTodas ? 'Todas' : 'Solo activas'}
             </span>
           </button>
-          <Button className="gap-2" onClick={openNewForm}>
-            <PlusCircle size={18} /> Nueva Campaña
-          </Button>
+          {puedeCrear && (
+            <Button className="gap-2" onClick={openNewForm}>
+              <PlusCircle size={18} /> Nueva Campaña
+            </Button>
+          )}
         </div>
       </div>
 
@@ -726,17 +736,21 @@ const FerregangaPage: React.FC = () => {
                     </div>
                   ) : (
                     <div className="flex gap-2">
-                      <Button variant="outline" className="flex-1 gap-2" size="sm" onClick={() => openEditForm(camp)}>
-                        <Edit3 size={14} /> Editar
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="gap-2 text-destructive hover:bg-destructive hover:text-destructive-foreground border-destructive/30"
-                        onClick={() => setConfirmDeleteId(camp.id)}
-                      >
-                        <Trash2 size={14} />
-                      </Button>
+                      {puedeEditar && (
+                        <Button variant="outline" className="flex-1 gap-2" size="sm" onClick={() => openEditForm(camp)}>
+                          <Edit3 size={14} /> Editar
+                        </Button>
+                      )}
+                      {puedeEliminar && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="gap-2 text-destructive hover:bg-destructive hover:text-destructive-foreground border-destructive/30"
+                          onClick={() => setConfirmDeleteId(camp.id)}
+                        >
+                          <Trash2 size={14} />
+                        </Button>
+                      )}
                     </div>
                   )}
                 </div>

@@ -15,9 +15,17 @@ import { useNavigate } from 'react-router-dom'
 import { seguridadApi, AuthRole, ModuloPermisos } from '@/api/seguridad'
 import { PermisosPorModulo } from '@/components/maestros/PermisosPorModulo'
 import { badgeClass } from '@/utils/badges'
+import { usePermiso } from '@/hooks/usePermiso'
 
 export const MaestroRolesPage = () => {
     const navigate = useNavigate()
+
+    // Permisos de acción del maestro de Roles. La API también los exige
+    // (requirePermiso en /auth-secundario/roles).
+    const { puede, P } = usePermiso()
+    const puedeCrear = puede(P.CREAR_ROL)
+    const puedeEditar = puede(P.EDITAR_ROL)
+    const puedeEliminar = puede(P.ELIMINAR_ROL)
 
     // Estado tabla
     const [roles, setRoles] = useState<AuthRole[]>([])
@@ -260,24 +268,31 @@ export const MaestroRolesPage = () => {
                 const role = row.original
                 return (
                     <div className="flex justify-end gap-1 pr-2">
-                        <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleEditRole(role)}
-                            title="Editar rol"
-                            className="h-8 w-8 p-0 text-primary border border-primary/20 hover:bg-primary/10"
-                        >
-                            <Edit className="h-4 w-4" />
-                        </Button>
-                        <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleDeleteRole(role)}
-                            title="Eliminar rol"
-                            className="h-8 w-8 p-0 text-destructive border border-destructive/20 hover:bg-destructive/10"
-                        >
-                            <Trash2 className="h-4 w-4" />
-                        </Button>
+                        {puedeEditar && (
+                            <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleEditRole(role)}
+                                title="Editar rol"
+                                className="h-8 w-8 p-0 text-primary border border-primary/20 hover:bg-primary/10"
+                            >
+                                <Edit className="h-4 w-4" />
+                            </Button>
+                        )}
+                        {puedeEliminar && (
+                            <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleDeleteRole(role)}
+                                title="Eliminar rol"
+                                className="h-8 w-8 p-0 text-destructive border border-destructive/20 hover:bg-destructive/10"
+                            >
+                                <Trash2 className="h-4 w-4" />
+                            </Button>
+                        )}
+                        {!puedeEditar && !puedeEliminar && (
+                            <span className="text-xs text-muted-foreground">—</span>
+                        )}
                     </div>
                 )
             },
@@ -307,10 +322,12 @@ export const MaestroRolesPage = () => {
                         {roles.length} rol{roles.length !== 1 ? 'es' : ''} registrado{roles.length !== 1 ? 's' : ''}
                     </span>
                 </div>
-                <Button onClick={handleNewRole} className="whitespace-nowrap">
-                    <Plus className="mr-2 h-4 w-4" />
-                    Nuevo Rol
-                </Button>
+                {puedeCrear && (
+                    <Button onClick={handleNewRole} className="whitespace-nowrap">
+                        <Plus className="mr-2 h-4 w-4" />
+                        Nuevo Rol
+                    </Button>
+                )}
             </div>
 
             <div className="min-h-0 flex-1 overflow-auto rounded-md border">

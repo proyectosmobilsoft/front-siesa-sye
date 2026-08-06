@@ -17,6 +17,7 @@ import { Modal } from '@/components/ui/modal'
 import { useCajasTraspaso, useTrasladosFondos, useCrearTrasladoFondos } from '@/hooks/useTrasladoFondos'
 import { formatters } from '@/utils/formatters'
 import { CajaTraspaso, TrasladoFondosMov } from '@/api/types'
+import { usePermiso } from '@/hooks/usePermiso'
 
 const CajaSelector = ({
     label,
@@ -69,6 +70,11 @@ const SectionHeader = ({ icon: Icon, title, extra }: { icon: typeof ArrowRightLe
 )
 
 export const TrasladoFondosPage = () => {
+    // Ejecutar el traslado también se exige en la API
+    // (requirePermiso CREAR_TRASLADO_FONDOS en POST /caja-traspaso).
+    const { puede, P } = usePermiso()
+    const puedeTrasladar = puede(P.CREAR_TRASLADO_FONDOS)
+
     const [cajaOrigen, setCajaOrigen] = useState('')
     const [cajaDestino, setCajaDestino] = useState('')
     const [valor, setValor] = useState('')
@@ -235,7 +241,13 @@ export const TrasladoFondosPage = () => {
                     )}
 
                     <div className="mt-auto flex justify-end border-t pt-4">
-                        <Button type="submit" size="lg" disabled={!formularioValido || crearTraslado.isPending} className="gap-2">
+                        <Button
+                            type="submit"
+                            size="lg"
+                            disabled={!formularioValido || crearTraslado.isPending || !puedeTrasladar}
+                            className="gap-2"
+                            title={!puedeTrasladar ? 'Requiere el permiso Trasladar' : undefined}
+                        >
                             {crearTraslado.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <ArrowRightLeft className="h-4 w-4" />}
                             Realizar traslado
                         </Button>
