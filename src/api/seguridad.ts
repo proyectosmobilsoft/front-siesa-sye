@@ -5,6 +5,20 @@ export interface RolEnUsuario {
     nombre?: string
 }
 
+/**
+ * Maquinaria asignada a un usuario (tabla auth_usuario_maquinaria).
+ * Un usuario puede tener varias; como máximo una con en_uso = true, que es la
+ * que está conduciendo actualmente.
+ */
+export interface MaquinariaAsignada {
+    id?: number
+    usuario_id?: number
+    maquinaria_cod: number
+    placa: string | null
+    categoria: string | null
+    en_uso: boolean
+}
+
 export interface UsuarioMaster {
     id: number
     usuario: string
@@ -26,6 +40,8 @@ export interface UsuarioMaster {
     maquinaria_cod?: number | null
     maquinaria_placa?: string | null
     maquinaria_categoria?: string | null
+    /** Lista completa de maquinarias asignadas (reemplaza al par plano) */
+    maquinarias?: MaquinariaAsignada[]
 }
 
 export interface ListarUsuariosResponse {
@@ -65,6 +81,8 @@ export interface CreateUsuarioMasterDto {
     maquinaria_cod?: number | null
     maquinaria_placa?: string | null
     maquinaria_categoria?: string | null
+    /** Lista completa de maquinarias asignadas (reemplaza al par plano) */
+    maquinarias?: MaquinariaAsignada[]
 }
 
 export interface UpdateUsuarioMasterDto {
@@ -83,6 +101,8 @@ export interface UpdateUsuarioMasterDto {
     maquinaria_cod?: number | null
     maquinaria_placa?: string | null
     maquinaria_categoria?: string | null
+    /** Lista completa de maquinarias asignadas (reemplaza al par plano) */
+    maquinarias?: MaquinariaAsignada[]
 }
 
 export interface PermisoEnRol {

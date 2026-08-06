@@ -2,10 +2,10 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import { Modal } from '@/components/ui/modal'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { seguridadApi, AuthRole, UsuarioMaster, SiesaUsuario, rolTieneModuloConductor } from '@/api/seguridad'
+import { seguridadApi, AuthRole, UsuarioMaster, SiesaUsuario, MaquinariaAsignada, rolTieneModuloConductor } from '@/api/seguridad'
 import { paisesApi, Pais } from '@/api/paises'
 import { maquinariaApi, Maquinaria } from '@/api/maquinaria'
-import { ChevronDown, Loader2, CheckCircle2, XCircle, RefreshCw, Copy } from 'lucide-react'
+import { ChevronDown, Loader2, CheckCircle2, XCircle, RefreshCw, Copy, Plus } from 'lucide-react'
 
 /**
  * Genera combinaciones de usuario a partir de nombre completo.
@@ -121,13 +121,50 @@ export const UserFormModal = ({ isOpen, onClose, user }: UserFormModalProps) => 
 
     // Maquinaria asignada — se muestra bajo la misma condición que "Forma de pago"
     // (rol con MODULO_CONDUCTOR), porque solo aplica a conductores.
+    // Un conductor puede tener VARIAS maquinarias y como máximo una "en uso",
+    // que es la que está conduciendo ahora.
     const [maqSearch, setMaqSearch] = useState('')
     const [maqOptions, setMaqOptions] = useState<Maquinaria[]>([])
     const [maqLoading, setMaqLoading] = useState(false)
-    const [maqSelected, setMaqSelected] = useState<Maquinaria | null>(null)
+    const [maqAsignadas, setMaqAsignadas] = useState<MaquinariaAsignada[]>([])
     const [showMaqDropdown, setShowMaqDropdown] = useState(false)
     const maqRef = useRef<HTMLDivElement>(null)
     const maqDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+    /** Agrega una maquinaria del catálogo si no estaba ya asignada. */
+    const agregarMaquinaria = (m: Maquinaria) => {
+        setMaqAsignadas((prev) => {
+            if (prev.some((a) => a.maquinaria_cod === m.Cod_Equipo)) return prev
+            return [
+                ...prev,
+                {
+                    maquinaria_cod: m.Cod_Equipo,
+                    placa: m.PLACA,
+                    categoria: m.CATEGORIA,
+                    // La primera que se asigna queda en uso automáticamente
+                    en_uso: prev.length === 0,
+                },
+            ]
+        })
+        setMaqSearch('')
+        setShowMaqDropdown(false)
+    }
+
+    /** Quita una asignación. Si era la que estaba en uso, promueve a la primera. */
+    const quitarMaquinaria = (cod: number) => {
+        setMaqAsignadas((prev) => {
+            const restantes = prev.filter((a) => a.maquinaria_cod !== cod)
+            if (restantes.length > 0 && !restantes.some((a) => a.en_uso)) {
+                restantes[0] = { ...restantes[0], en_uso: true }
+            }
+            return restantes
+        })
+    }
+
+    /** Marca una como "en uso"; el resto queda desmarcado (exclusividad). */
+    const marcarEnUso = (cod: number) => {
+        setMaqAsignadas((prev) => prev.map((a) => ({ ...a, en_uso: a.maquinaria_cod === cod })))
+    }
 
     // Determinar si el rol seleccionado usa PIN
     const rolSeleccionado = roles.find(r => r.id === roleId)
@@ -156,7 +193,7 @@ export const UserFormModal = ({ isOpen, onClose, user }: UserFormModalProps) => 
                 setSiesaSelected(null)
                 setMaqSearch('')
                 setMaqOptions([])
-                setMaqSelected(null)
+                setMaqAsignadas([])
             } else {
                 // Cargar datos básicos del objeto de la tabla
                 setName(user?.nombre_completo || '')
@@ -183,19 +220,20 @@ export const UserFormModal = ({ isOpen, onClose, user }: UserFormModalProps) => 
                     setSiesaSearch('')
                 }
 
-                // Inicializar maquinaria asignada. Solo se guardan cod/placa/categoría,
-                // así que se reconstruye un objeto parcial y el resto se completa
-                // cuando llega el listado.
-                if (user?.maquinaria_cod) {
-                    setMaqSelected({
-                        Cod_Equipo: user.maquinaria_cod,
-                        PLACA: user.maquinaria_placa || 'Sin Placa',
-                        CATEGORIA: user.maquinaria_categoria || 'Ninguno',
-                    } as Maquinaria)
-                    setMaqSearch('')
+                // Maquinarias asignadas: el listado ya las trae en `maquinarias`.
+                // El par plano solo se usa como respaldo para datos antiguos.
+                setMaqSearch('')
+                if (Array.isArray(user?.maquinarias) && user.maquinarias.length > 0) {
+                    setMaqAsignadas(user.maquinarias)
+                } else if (user?.maquinaria_cod) {
+                    setMaqAsignadas([{
+                        maquinaria_cod: user.maquinaria_cod,
+                        placa: user.maquinaria_placa ?? null,
+                        categoria: user.maquinaria_categoria ?? null,
+                        en_uso: true,
+                    }])
                 } else {
-                    setMaqSelected(null)
-                    setMaqSearch('')
+                    setMaqAsignadas([])
                 }
 
                 // Separar código de país y teléfono
@@ -249,12 +287,8 @@ export const UserFormModal = ({ isOpen, onClose, user }: UserFormModalProps) => 
                 })
                 setSiesaSearch('')
             }
-            if (fullUser?.maquinaria_cod) {
-                setMaqSelected({
-                    Cod_Equipo: fullUser.maquinaria_cod,
-                    PLACA: fullUser.maquinaria_placa || 'Sin Placa',
-                    CATEGORIA: fullUser.maquinaria_categoria || 'Ninguno',
-                } as Maquinaria)
+            if (Array.isArray(fullUser?.maquinarias)) {
+                setMaqAsignadas(fullUser.maquinarias)
                 setMaqSearch('')
             }
         } catch (err) {
@@ -382,13 +416,22 @@ export const UserFormModal = ({ isOpen, onClose, user }: UserFormModalProps) => 
         }
     }, [maqSearch, isOpen, rolSeleccionado])
 
-    // Al editar solo se guardan cod/placa/categoría: cuando llega el listado se
-    // reemplaza por el registro completo para mantener una sola fuente de verdad.
+    // Al editar, las asignaciones guardadas traen placa/categoría pero no el
+    // resto del equipo; cuando llega el catálogo se completan esos dos campos
+    // por si cambiaron en la BD de maquinaria.
     useEffect(() => {
-        if (!maqSelected) return
-        const completo = maqOptions.find(o => o.Cod_Equipo === maqSelected.Cod_Equipo)
-        if (completo && completo !== maqSelected && !maqSelected.SERIE) setMaqSelected(completo)
-    }, [maqOptions, maqSelected])
+        if (maqOptions.length === 0 || maqAsignadas.length === 0) return
+        setMaqAsignadas((prev) => {
+            let cambio = false
+            const next = prev.map((a) => {
+                const cat = maqOptions.find((o) => o.Cod_Equipo === a.maquinaria_cod)
+                if (!cat || (a.placa === cat.PLACA && a.categoria === cat.CATEGORIA)) return a
+                cambio = true
+                return { ...a, placa: cat.PLACA, categoria: cat.CATEGORIA }
+            })
+            return cambio ? next : prev
+        })
+    }, [maqOptions, maqAsignadas.length])
 
     // Al editar, la vinculación SIESA se reconstruye solo con rowid + nombre
     // (es lo único que guarda auth_usuario). Cuando llega el listado completo
@@ -547,16 +590,11 @@ export const UserFormModal = ({ isOpen, onClose, user }: UserFormModalProps) => 
                 payload.siesa_nombre = siesaNombreActual
             }
 
-            // Maquinaria: igual que forma_pago, solo aplica a roles de conductor.
-            // Si el rol dejó de serlo, se limpia la asignación.
-            const maqCodActual = rolTieneModuloConductor(rolSeleccionado)
-                ? maqSelected?.Cod_Equipo ?? null
-                : null
-            if (maqCodActual !== (user.maquinaria_cod ?? null)) {
-                payload.maquinaria_cod = maqCodActual
-                payload.maquinaria_placa = maqCodActual ? maqSelected?.PLACA ?? null : null
-                payload.maquinaria_categoria = maqCodActual ? maqSelected?.CATEGORIA ?? null : null
-            }
+            // Maquinarias: igual que forma_pago, solo aplican a roles de conductor.
+            // Si el rol dejó de serlo, se envía [] para limpiar las asignaciones.
+            // Se manda siempre el array (el backend reemplaza el set completo);
+            // omitirlo dejaría las asignaciones intactas.
+            payload.maquinarias = rolTieneModuloConductor(rolSeleccionado) ? maqAsignadas : []
 
             console.log('📤 JSON enviado a PATCH /auth-secundario/usuarios/' + user.id + ':')
             console.log(JSON.stringify(payload, null, 2))
@@ -596,9 +634,7 @@ export const UserFormModal = ({ isOpen, onClose, user }: UserFormModalProps) => 
                 activo: true,
                 siesa_rowid: siesaSelected?.f552_rowid ?? null,
                 siesa_nombre: siesaSelected?.f552_nombre ?? null,
-                maquinaria_cod: rolTieneModuloConductor(rolSeleccionado) ? maqSelected?.Cod_Equipo ?? null : null,
-                maquinaria_placa: rolTieneModuloConductor(rolSeleccionado) ? maqSelected?.PLACA ?? null : null,
-                maquinaria_categoria: rolTieneModuloConductor(rolSeleccionado) ? maqSelected?.CATEGORIA ?? null : null,
+                maquinarias: rolTieneModuloConductor(rolSeleccionado) ? maqAsignadas : [],
             }
 
             console.log('📤 JSON enviado a POST /auth-secundario/usuarios:')
@@ -932,53 +968,41 @@ export const UserFormModal = ({ isOpen, onClose, user }: UserFormModalProps) => 
                             <Etiqueta>Maquinaria</Etiqueta>
                             <div className="relative">
                                 <Input
-                                    placeholder="Buscar por placa o categoría..."
-                                    value={maqSelected
-                                        ? `${maqSelected.PLACA} — ${maqSelected.CATEGORIA}`
-                                        : maqSearch}
+                                    placeholder="Buscar placa o categoría para agregar..."
+                                    value={maqSearch}
                                     onChange={(e) => {
-                                        setMaqSelected(null)
                                         setMaqSearch(e.target.value)
                                         setShowMaqDropdown(true)
                                     }}
                                     onFocus={() => setShowMaqDropdown(true)}
                                     className="h-10 pr-8"
                                 />
-                                {maqSelected && (
-                                    <button
-                                        type="button"
-                                        className="absolute right-2 top-1/2 -translate-y-1/2 p-0.5 rounded hover:bg-muted"
-                                        title="Quitar maquinaria asignada"
-                                        onClick={() => {
-                                            setMaqSelected(null)
-                                            setMaqSearch('')
-                                        }}
-                                    >
-                                        <XCircle className="h-4 w-4 text-muted-foreground" />
-                                    </button>
-                                )}
-                                {!maqSelected && maqLoading && (
+                                {maqLoading && (
                                     <Loader2 className="absolute right-2 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-muted-foreground" />
                                 )}
-                                {showMaqDropdown && !maqSelected && (
+                                {showMaqDropdown && (
                                     <div className="absolute left-0 right-0 z-50 mt-1 bg-background border border-input rounded-md shadow-lg max-h-60 overflow-auto">
                                         {maqLoading ? (
                                             <div className="px-3 py-2 text-sm text-muted-foreground">Buscando...</div>
                                         ) : maqOptions.length > 0 ? (
-                                            maqOptions.map((m) => (
-                                                <div
-                                                    key={m.Cod_Equipo}
-                                                    className="px-3 py-2 hover:bg-muted cursor-pointer text-sm flex flex-col"
-                                                    onClick={() => {
-                                                        setMaqSelected(m)
-                                                        setMaqSearch('')
-                                                        setShowMaqDropdown(false)
-                                                    }}
-                                                >
-                                                    <span className="font-medium">{m.PLACA}</span>
-                                                    <span className="text-xs text-muted-foreground">{m.CATEGORIA}</span>
-                                                </div>
-                                            ))
+                                            maqOptions.map((m) => {
+                                                const yaAsignada = maqAsignadas.some((a) => a.maquinaria_cod === m.Cod_Equipo)
+                                                return (
+                                                    <div
+                                                        key={m.Cod_Equipo}
+                                                        className={`px-3 py-2 text-sm flex items-center justify-between gap-2 ${yaAsignada ? 'opacity-50 cursor-default' : 'hover:bg-muted cursor-pointer'}`}
+                                                        onClick={() => { if (!yaAsignada) agregarMaquinaria(m) }}
+                                                    >
+                                                        <div className="flex min-w-0 flex-col">
+                                                            <span className="truncate font-medium">{m.PLACA}</span>
+                                                            <span className="truncate text-xs text-muted-foreground">{m.CATEGORIA}</span>
+                                                        </div>
+                                                        {yaAsignada
+                                                            ? <span className="shrink-0 text-[10px] uppercase tracking-wide text-muted-foreground">Asignada</span>
+                                                            : <Plus className="h-4 w-4 shrink-0 text-muted-foreground" />}
+                                                    </div>
+                                                )
+                                            })
                                         ) : (
                                             <div className="px-3 py-2 text-sm text-muted-foreground">
                                                 {maqSearch ? 'Sin resultados' : 'No hay maquinaria disponible'}
@@ -987,11 +1011,47 @@ export const UserFormModal = ({ isOpen, onClose, user }: UserFormModalProps) => 
                                     </div>
                                 )}
                             </div>
-                            {maqSelected && (
-                                <p className="text-xs text-green-600 flex items-center gap-1">
-                                    <CheckCircle2 className="h-3.5 w-3.5" />
-                                    Asignada · Equipo {maqSelected.Cod_Equipo}
-                                </p>
+
+                            {/* Asignadas: se puede tener varias, pero solo una "En uso".
+                                El radio garantiza la exclusividad en la UI; el backend y
+                                un índice único filtrado la garantizan en la BD. */}
+                            {maqAsignadas.length > 0 ? (
+                                <ul className="space-y-1.5 rounded-lg border border-border p-2">
+                                    {maqAsignadas.map((a) => (
+                                        <li
+                                            key={a.maquinaria_cod}
+                                            className={`flex items-center gap-2 rounded-md px-2 py-1.5 text-sm ${a.en_uso ? 'bg-green-500/10' : 'bg-muted/40'}`}
+                                        >
+                                            <label className="flex min-w-0 flex-1 cursor-pointer items-center gap-2">
+                                                <input
+                                                    type="radio"
+                                                    name="maquinaria-en-uso"
+                                                    checked={a.en_uso}
+                                                    onChange={() => marcarEnUso(a.maquinaria_cod)}
+                                                    className="h-3.5 w-3.5 shrink-0 accent-green-600"
+                                                    title="Marcar como la que está usando actualmente"
+                                                />
+                                                <span className="truncate font-medium">{a.placa || 'Sin placa'}</span>
+                                                <span className="truncate text-xs text-muted-foreground">{a.categoria}</span>
+                                            </label>
+                                            {a.en_uso && (
+                                                <span className="shrink-0 rounded-full bg-green-600/15 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-green-700 dark:text-green-400">
+                                                    En uso
+                                                </span>
+                                            )}
+                                            <button
+                                                type="button"
+                                                onClick={() => quitarMaquinaria(a.maquinaria_cod)}
+                                                className="shrink-0 rounded p-0.5 hover:bg-muted"
+                                                title="Quitar asignación"
+                                            >
+                                                <XCircle className="h-4 w-4 text-muted-foreground" />
+                                            </button>
+                                        </li>
+                                    ))}
+                                </ul>
+                            ) : (
+                                <p className="text-xs text-muted-foreground">Sin maquinaria asignada</p>
                             )}
                         </div>
                     )}
