@@ -1,5 +1,12 @@
 import { apiClient } from './client'
-import { ReciboCajaUsuario, RecibosCajaUsuarioResponse, ResumenConductoresDia, ResumenConductoresDiaResponse } from './types'
+import {
+  DocumentacionRCAnulado,
+  DocumentacionRCAnuladoResponse,
+  ReciboCajaUsuario,
+  RecibosCajaUsuarioResponse,
+  ResumenConductoresDia,
+  ResumenConductoresDiaResponse,
+} from './types'
 import { withRetry } from '@/utils/retry'
 
 export const reciboCajaApi = {
@@ -21,6 +28,32 @@ export const reciboCajaApi = {
       )
       return response.data.data
     })
+  },
+
+  /** Evidencia del RC que Tesorería elaboró en SIESA tras una anulación. */
+  getDocumentacionAnulaciones: async (rcRowids: number[]): Promise<DocumentacionRCAnulado[]> => {
+    if (rcRowids.length === 0) return []
+    const response = await apiClient.get<DocumentacionRCAnuladoResponse>('/recibo-caja/anulaciones', {
+      params: { rc_rowids: rcRowids.join(',') },
+    })
+    return response.data.data
+  },
+
+  registrarDocumentacionAnulacion: async ({
+    rcRowid,
+    numeroRcReemplazo,
+    observacion,
+  }: {
+    rcRowid: number
+    numeroRcReemplazo: number
+    observacion?: string
+  }): Promise<DocumentacionRCAnulado> => {
+    const response = await apiClient.post<{ success: boolean; data: DocumentacionRCAnulado }>('/recibo-caja/anulaciones', {
+      rc_rowid: rcRowid,
+      numero_rc_reemplazo: numeroRcReemplazo,
+      observacion: observacion || undefined,
+    })
+    return response.data.data
   },
 
   /** Tablero admin: RC del día por conductor, sin importar si ya se hizo la entrega de efectivo */

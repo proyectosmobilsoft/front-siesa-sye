@@ -395,6 +395,28 @@ export interface RecibosCajaUsuarioResponse {
   data: ReciboCajaUsuario[]
 }
 
+/** Evidencia en BD2 del RC de reemplazo de un recibo anulado en SIESA. */
+export interface DocumentacionRCAnulado {
+  id: number
+  rc_rowid_siesa: number
+  rc_numero_anulado: number
+  usuario_conductor_siesa: string | null
+  usuario_anulacion_siesa: string | null
+  valor_efectivo_anulado: number
+  numero_rc_reemplazo: number
+  observacion: string | null
+  version: number
+  usuario_registro: number
+  usuario_registro_nombre?: string
+  fecha_registro: string
+}
+
+export interface DocumentacionRCAnuladoResponse {
+  success: boolean
+  total: number
+  data: DocumentacionRCAnulado[]
+}
+
 export interface ResumenConductoresDiaItem {
   usuario_creacion: string
   conductor_nombre: string

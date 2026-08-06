@@ -27,7 +27,7 @@ import { Modal } from '@/components/ui/modal'
 import { useEntregasPorEstado } from '@/hooks/useConductorEfectivo'
 import { conductorEfectivoApi } from '@/api/conductorEfectivo'
 import { reciboCajaApi } from '@/api/reciboCaja'
-import { MovimientoEfectivo, ReciboCajaUsuario } from '@/api/types'
+import { DocumentacionRCAnulado, MovimientoEfectivo, ReciboCajaUsuario } from '@/api/types'
 import { formatters } from '@/utils/formatters'
 import { estadoRCBadge, estadoRCLabel } from '@/utils/badges'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
@@ -576,8 +576,125 @@ const exportarRecibosCSV = (recibos: ReciboCajaUsuario[], conductorNombre: strin
     URL.revokeObjectURL(url)
 }
 
+// El número de reemplazo no modifica el RC original: queda como una versión
+// adicional de la auditoría para que una corrección posterior nunca borre el
+// dato que Tesorería registró antes.
+const DocumentarRCAnuladoModal = ({
+    recibo,
+    documentacion,
+    onClose,
+    onGuardado,
+}: {
+    recibo: ReciboCajaUsuario | null
+    documentacion?: DocumentacionRCAnulado
+    onClose: () => void
+    onGuardado: () => void
+}) => {
+    const [numeroRc, setNumeroRc] = useState('')
+    const [observacion, setObservacion] = useState('')
+    const [guardando, setGuardando] = useState(false)
+    const [error, setError] = useState<string | null>(null)
+
+    if (!recibo) return null
+
+    const handleGuardar = async () => {
+        const numero = Number(numeroRc)
+        if (!Number.isInteger(numero) || numero <= 0) {
+            setError('Ingrese el número entero del RC de reemplazo elaborado en SIESA.')
+            return
+        }
+
+        setGuardando(true)
+        setError(null)
+        try {
+            await reciboCajaApi.registrarDocumentacionAnulacion({
+                rcRowid: recibo.Rowid,
+                numeroRcReemplazo: numero,
+                observacion,
+            })
+            onGuardado()
+        } catch (err: unknown) {
+            const apiError = err as { response?: { data?: { message?: string } } }
+            setError(apiError.response?.data?.message ?? 'No se pudo guardar la documentación del RC anulado.')
+        } finally {
+            setGuardando(false)
+        }
+    }
+
+    return (
+        <Modal
+            isOpen
+            onClose={onClose}
+            title={documentacion ? `Corregir documentación del RC #${recibo.Numero}` : `Documentar reemplazo del RC #${recibo.Numero}`}
+            className="max-w-md"
+        >
+            <div className="space-y-4">
+                <div className="rounded-xl border border-destructive/30 bg-destructive/10 p-4 text-sm">
+                    <p className="font-bold text-destructive">
+                        RC #${recibo.Numero} anulado{recibo.Usuario_Anulacion ? ` por ${recibo.Usuario_Anulacion}` : ''} en SIESA
+                    </p>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                        Este recibo no suma al recaudo ni al efectivo vigente del conductor. Registre el nuevo consecutivo que Tesorería elaboró directamente en SIESA.
+                    </p>
+                </div>
+
+                {documentacion && (
+                    <div className="rounded-lg border border-amber-300 bg-amber-50 p-3 text-xs text-amber-800 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-300">
+                        Último registro: RC #{documentacion.numero_rc_reemplazo} · versión {documentacion.version}
+                        {documentacion.usuario_registro_nombre ? ` · ${documentacion.usuario_registro_nombre}` : ''}.
+                        Guardar ahora crea una nueva versión; el historial anterior se conserva.
+                    </div>
+                )}
+
+                <div>
+                    <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                        Número del RC de reemplazo en SIESA
+                    </label>
+                    <Input
+                        type="number"
+                        inputMode="numeric"
+                        min="1"
+                        value={numeroRc}
+                        onChange={(event) => setNumeroRc(event.target.value)}
+                        placeholder="Ej. 70834"
+                        autoFocus
+                    />
+                </div>
+
+                <div>
+                    <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                        Observación (opcional)
+                    </label>
+                    <textarea
+                        value={observacion}
+                        onChange={(event) => setObservacion(event.target.value)}
+                        maxLength={500}
+                        rows={3}
+                        className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                        placeholder="Motivo o referencia para la reposición"
+                    />
+                </div>
+
+                {error && (
+                    <p className="rounded-lg border border-destructive/30 bg-destructive/10 p-3 text-xs font-bold text-destructive">{error}</p>
+                )}
+
+                <div className="flex justify-end gap-2 pt-1">
+                    <Button variant="outline" onClick={onClose} disabled={guardando}>Cancelar</Button>
+                    <Button onClick={handleGuardar} disabled={guardando} className="gap-2">
+                        {guardando ? <Loader2 className="h-4 w-4 animate-spin" /> : <Receipt className="h-4 w-4" />}
+                        {documentacion ? 'Guardar corrección' : 'Guardar RC de reemplazo'}
+                    </Button>
+                </div>
+            </div>
+        </Modal>
+    )
+}
+
 const RecibosConductorModal = ({ grupo, onClose, rango }: { grupo: GrupoConductor | null; onClose: () => void; rango: { fechaInicial?: string; fechaFinal?: string } | undefined }) => {
     const [incluirAnulados, setIncluirAnulados] = useState(false)
+    const [reciboDocumentando, setReciboDocumentando] = useState<ReciboCajaUsuario | null>(null)
+    const queryClient = useQueryClient()
     const siesaNombre = grupo?.conductorSiesaNombre
     const fechaInicial = rango?.fechaInicial
     const fechaFinal = rango?.fechaFinal ?? rango?.fechaInicial
@@ -586,6 +703,17 @@ const RecibosConductorModal = ({ grupo, onClose, rango }: { grupo: GrupoConducto
         queryFn: () => reciboCajaApi.getPorUsuario(siesaNombre as string, { fechaInicial, fechaFinal, tipo: 'RC' }),
         enabled: !!siesaNombre,
     })
+
+    const rowidsAnulados = (data ?? []).filter((recibo) => recibo.Estado === 2).map((recibo) => recibo.Rowid)
+    const documentacionQuery = useQuery({
+        queryKey: ['recibo-caja', 'anulaciones', ...rowidsAnulados],
+        queryFn: () => reciboCajaApi.getDocumentacionAnulaciones(rowidsAnulados),
+        enabled: rowidsAnulados.length > 0,
+    })
+    const documentacionPorRowid = useMemo(
+        () => new Map((documentacionQuery.data ?? []).map((registro) => [registro.rc_rowid_siesa, registro])),
+        [documentacionQuery.data]
+    )
 
     if (!grupo) return null
 
@@ -626,6 +754,9 @@ const RecibosConductorModal = ({ grupo, onClose, rango }: { grupo: GrupoConducto
                         <p className="text-xs text-muted-foreground">
                             Se encontraron <strong className="text-destructive">{conteoAnulados} recibo{conteoAnulados !== 1 ? 's' : ''} ANULADO{conteoAnulados !== 1 ? 'S' : ''}</strong> en SIESA para este conductor en la fecha seleccionada.
                         </p>
+                        <p className="text-xs font-bold text-foreground">
+                            Efectivo vigente en RC: {formatters.currency(0)}
+                        </p>
                     </div>
                     <Button variant="outline" size="sm" onClick={() => setIncluirAnulados(true)}>
                         Ver recibos anulados ({conteoAnulados})
@@ -661,7 +792,7 @@ const RecibosConductorModal = ({ grupo, onClose, rango }: { grupo: GrupoConducto
                                 <Banknote className="h-4 w-4 text-emerald-600" />
                             </div>
                             <div>
-                                <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Total efectivo</p>
+                                <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Efectivo vigente en RC</p>
                                 <p className="text-base font-bold tabular-nums text-foreground">{formatters.currency(totalEfectivo)}</p>
                             </div>
                         </div>
@@ -685,6 +816,18 @@ const RecibosConductorModal = ({ grupo, onClose, rango }: { grupo: GrupoConducto
                         </div>
                     </div>
 
+                    {conteoAnulados > 0 && (
+                        <div className="flex gap-3 rounded-lg border border-destructive/30 bg-destructive/5 p-3 text-xs text-muted-foreground">
+                            <AlertCircle className="h-4 w-4 flex-shrink-0 text-destructive" />
+                            <p>
+                                Los RC anulados ya fueron descontados del recaudo y del efectivo vigente de <strong>{grupo.conductorNombre}</strong>.
+                                {documentacionQuery.isLoading
+                                    ? ' Consultando la documentación de reemplazo...'
+                                    : ' Documente el RC que Tesorería hizo en SIESA para conservar el soporte de cada anulación.'}
+                            </p>
+                        </div>
+                    )}
+
                     <div className="max-h-[50vh] overflow-y-auto rounded-lg border border-border">
                         <table className="w-full text-xs">
                             <thead className="sticky top-0 bg-card">
@@ -696,6 +839,7 @@ const RecibosConductorModal = ({ grupo, onClose, rango }: { grupo: GrupoConducto
                                     <th className="px-3 py-2 text-right font-medium uppercase tracking-wide text-muted-foreground">Transferencia</th>
                                     <th className="px-3 py-2 text-right font-medium uppercase tracking-wide text-muted-foreground">Total</th>
                                     <th className="px-3 py-2 text-center font-medium uppercase tracking-wide text-muted-foreground">Estado</th>
+                                    <th className="px-3 py-2 text-left font-medium uppercase tracking-wide text-muted-foreground">Soporte SIESA</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -721,6 +865,24 @@ const RecibosConductorModal = ({ grupo, onClose, rango }: { grupo: GrupoConducto
                                                 {r.Estado === 2 && r.Usuario_Anulacion ? ` (${r.Usuario_Anulacion})` : ''}
                                             </span>
                                         </td>
+                                        <td className="px-3 py-2 text-left">
+                                            {r.Estado !== 2 ? (
+                                                <span className="text-muted-foreground">—</span>
+                                            ) : (() => {
+                                                const documentacion = documentacionPorRowid.get(r.Rowid)
+                                                return (
+                                                    <Button
+                                                        variant={documentacion ? 'secondary' : 'outline'}
+                                                        size="sm"
+                                                        className="h-7 gap-1 text-[11px]"
+                                                        onClick={() => setReciboDocumentando(r)}
+                                                    >
+                                                        <Receipt className="h-3 w-3" />
+                                                        {documentacion ? `RC #${documentacion.numero_rc_reemplazo} · v${documentacion.version}` : 'Registrar RC'}
+                                                    </Button>
+                                                )
+                                            })()}
+                                        </td>
                                     </tr>
                                 ))}
                             </tbody>
@@ -739,12 +901,23 @@ const RecibosConductorModal = ({ grupo, onClose, rango }: { grupo: GrupoConducto
                                         {formatters.currency(totalGeneral)}
                                     </td>
                                     <td />
+                                    <td />
                                 </tr>
                             </tfoot>
                         </table>
                     </div>
                 </div>
             )}
+            <DocumentarRCAnuladoModal
+                key={reciboDocumentando?.Rowid ?? 'sin-recibo'}
+                recibo={reciboDocumentando}
+                documentacion={reciboDocumentando ? documentacionPorRowid.get(reciboDocumentando.Rowid) : undefined}
+                onClose={() => setReciboDocumentando(null)}
+                onGuardado={() => {
+                    setReciboDocumentando(null)
+                    queryClient.invalidateQueries({ queryKey: ['recibo-caja', 'anulaciones'] })
+                }}
+            />
         </Modal>
     )
 }
