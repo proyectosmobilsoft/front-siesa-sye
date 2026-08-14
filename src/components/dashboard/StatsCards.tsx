@@ -3,14 +3,18 @@ import { ErrorBoundary } from '@/components/ui/error-boundary'
 import { StatCard } from '@/components/dashboard/StatCard'
 import { useClientsCount } from '@/hooks/useClients'
 import { useProductsCount } from '@/hooks/useProducts'
-import { useDailyOrders, useSalesSummary } from '@/hooks/useReports'
+import { useDailyOrdersStatusBreakdown, useSalesSummary } from '@/hooks/useReports'
 import { formatters } from '@/utils/formatters'
 
 const StatsCardsContent = () => {
     const { data: clientsCount, isLoading: loadingClients, error: errorClients } = useClientsCount()
     const { data: productsCount, isLoading: loadingProducts, error: errorProducts } = useProductsCount()
-    const { data: orders, isLoading: loadingOrders, error: errorOrders } = useDailyOrders()
+    const { data: breakdown, isLoading: loadingOrders, error: errorOrders } = useDailyOrdersStatusBreakdown()
     const { data: sales, isLoading: loadingSales, error: errorSales } = useSalesSummary()
+
+    const totalPedidos = Array.isArray(breakdown)
+        ? breakdown.reduce((acc, b) => acc + b.count, 0)
+        : 0
 
     const totalVentas = Array.isArray(sales)
         ? sales.reduce((acc, s) => acc + (s['Vlr. Neto documento'] || 0), 0)
@@ -20,7 +24,7 @@ const StatsCardsContent = () => {
         <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
             <StatCard
                 label="Pedidos Hoy"
-                value={formatters.number(Array.isArray(orders) ? orders.length : 0)}
+                value={formatters.number(totalPedidos)}
                 icon={ShoppingBag}
                 isLoading={loadingOrders}
                 hasError={!!errorOrders}

@@ -32,4 +32,11 @@ export const productsApi = {
     )
     return response.data.data
   },
+
+  getCount: async (): Promise<number> => {
+    const response = await apiClient.get<{ success: boolean; count: number }>(
+      '/products/count'
+    )
+    return response.data.count
+  },
 }

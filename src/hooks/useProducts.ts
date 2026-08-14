@@ -18,19 +18,14 @@ export const useProducts = () => {
   })
 }
 
-/** Igual que useProducts pero solo expone el conteo — evita que un
- * componente que solo necesita el total (ej. KPI del dashboard) vuelva a
- * renderizar cuando cambian los productos individuales. No reduce la
- * descarga de red (React Query igual trae el array completo una vez),
- * solo evita trabajo de render redundante. */
+/** Usa GET /products/count (agregado en DB) en vez de traer el catálogo
+ * completo (~20MB) solo para contar — ver [[API - Endpoint - GET products-count]]. */
 export const useProductsCount = () => {
-  return useQuery<Product[], Error, number>({
-    queryKey: ['products'],
-    queryFn: productsApi.getAll,
-    staleTime: 30 * 60 * 1000,
-    gcTime: 60 * 60 * 1000,
+  return useQuery<number>({
+    queryKey: ['products', 'count'],
+    queryFn: productsApi.getCount,
+    staleTime: 5 * 60 * 1000,
     retry: 3,
-    select: (data) => data.length,
   })
 }
 

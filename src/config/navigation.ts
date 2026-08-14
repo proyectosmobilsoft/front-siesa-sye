@@ -109,6 +109,14 @@ export const navigation: NavItem[] = [
         subtitle: 'Cajas que se muestran en el tablero de tesorería',
         permiso: PERMISOS.CAJAS,
       },
+      // Cuentas Bancarias: permiso VER_CUENTAS_BANCARIAS, asignado solo al rol Administrador
+      {
+        name: 'Cuentas Bancarias',
+        href: '/maestro/cuentas-bancarias',
+        icon: Landmark,
+        subtitle: 'Whitelist de cuentas bancarias válidas para el recibo de caja',
+        permiso: PERMISOS.CUENTAS_BANCARIAS,
+      },
       {
         name: 'Descuentos Financieros',
         href: '/maestro/descuentos-financieros',

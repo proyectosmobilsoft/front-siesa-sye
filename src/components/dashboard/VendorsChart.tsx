@@ -3,30 +3,22 @@ import { ResponsiveBar } from '@nivo/bar'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/lib/skeleton'
 import { ErrorBoundary } from '@/components/ui/error-boundary'
-import { useSalesSummary } from '@/hooks/useReports'
+import { useVendors } from '@/hooks/useReports'
 import { formatters } from '@/utils/formatters'
 
 const VendorsChartContent = () => {
-    // /reports/vendors está vacío en el backend por ahora (ver
-    // docs/rendimiento-catalogos.md); el dato real de ventas por
-    // vendedor viene de /reports/sales-summary, igual que en
-    // SalesSummaryPage.
-    const { data: sales, isLoading, error } = useSalesSummary()
+    // /reports/vendors ahora agrega en DB (GROUP BY vendedor + SUM + TOP N)
+    // — ver [[API - Endpoint - GET reports-vendors]].
+    const { data: vendors, isLoading, error } = useVendors(undefined, 5)
 
-    const chartData = sales && Array.isArray(sales)
-        ? Object.entries(
-            sales.reduce((acc, sale) => {
-                const nombre = sale['Vendedor'] || 'Sin Vendedor'
-                acc[nombre] = (acc[nombre] || 0) + (sale['Vlr. Neto documento'] || 0)
-                return acc
-            }, {} as Record<string, number>)
-        )
-            .map(([vendedor, valor]) => ({
-                vendedor: vendedor.length > 18 ? `${vendedor.substring(0, 18)}...` : vendedor,
-                valor,
-            }))
-            .sort((a, b) => b.valor - a.valor)
-            .slice(0, 5)
+    const chartData = vendors && Array.isArray(vendors)
+        ? vendors.map((v) => {
+            const nombre = v['Nombre vendedor'] || 'Sin Vendedor'
+            return {
+                vendedor: nombre.length > 18 ? `${nombre.substring(0, 18)}...` : nombre,
+                valor: v['Valor neto'] || 0,
+            }
+        })
         : []
 
     if (isLoading) {

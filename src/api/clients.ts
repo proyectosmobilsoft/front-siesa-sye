@@ -31,4 +31,11 @@ export const clientsApi = {
     const response = await apiClient.get<ClientsActivosResponse>('/clients/activos')
     return response.data.data
   },
+
+  getCount: async (): Promise<number> => {
+    const response = await apiClient.get<{ success: boolean; count: number }>(
+      '/clients/count'
+    )
+    return response.data.count
+  },
 }

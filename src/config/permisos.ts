@@ -23,6 +23,7 @@ export const PERMISOS = {
   CONCEPTOS:              'VER_CONCEPTOS',
   MAQUINARIA:             'VER_MAQUINARIA',
   CAJAS:                  'VER_CAJAS',
+  CUENTAS_BANCARIAS:      'VER_CUENTAS_BANCARIAS',
   MODULOS:                'VER_MODULOS',
   USUARIOS:               'VER_USUARIOS',
   ROLES:                  'VER_ROLES',
@@ -77,6 +78,11 @@ export const PERMISOS = {
   CREAR_CAJA:             'CREAR_CAJA',
   EDITAR_CAJA:            'EDITAR_CAJA',                        // Cubre editar y reactivar
   ELIMINAR_CAJA:          'ELIMINAR_CAJA',
+
+  // ─── Maestro de Cuentas Bancarias ───
+  CREAR_CUENTA_BANCARIA:  'CREAR_CUENTA_BANCARIA',
+  EDITAR_CUENTA_BANCARIA: 'EDITAR_CUENTA_BANCARIA',              // Cubre editar y reactivar
+  ELIMINAR_CUENTA_BANCARIA: 'ELIMINAR_CUENTA_BANCARIA',
 
   // ─── Módulos y Permisos ───
   // Un solo juego cubre módulos y permisos: crear un permiso dentro de un

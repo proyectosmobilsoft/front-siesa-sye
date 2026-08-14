@@ -4,11 +4,12 @@ import { ArrowUpRight, ShoppingBag } from 'lucide-react'
 import { ErrorBoundary } from '@/components/ui/error-boundary'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/lib/skeleton'
-import { useDailyOrders } from '@/hooks/useReports'
-import { DailyOrder } from '@/api/types'
+import { useRecentOrders } from '@/hooks/useReports'
 
 const RecentOrdersTableContent = () => {
-    const { data: orders, isLoading, error } = useDailyOrders()
+    // Ya viene ordenado por fecha desc y limitado a 8 desde DB — ver
+    // [[API - Endpoint - GET reports-daily-orders]].
+    const { data: recent, isLoading, error } = useRecentOrders(8)
 
     if (isLoading) {
         return (
@@ -38,11 +39,7 @@ const RecentOrdersTableContent = () => {
         )
     }
 
-    const recent: DailyOrder[] = Array.isArray(orders)
-        ? [...orders]
-            .sort((a, b) => (b['Hora creacion dt'] || '').localeCompare(a['Hora creacion dt'] || ''))
-            .slice(0, 8)
-        : []
+    const recentList = Array.isArray(recent) ? recent : []
 
     return (
         <Card>
@@ -57,13 +54,13 @@ const RecentOrdersTableContent = () => {
                 </Link>
             </CardHeader>
             <CardContent>
-                {recent.length === 0 ? (
+                {recentList.length === 0 ? (
                     <div className="flex h-[220px] items-center justify-center text-sm text-muted-foreground">
                         Sin pedidos disponibles
                     </div>
                 ) : (
                     <div className="divide-y">
-                        {recent.map((order) => (
+                        {recentList.map((order) => (
                             <div
                                 key={order.rowid}
                                 className="flex items-center gap-3 py-3 first:pt-0 last:pb-0"

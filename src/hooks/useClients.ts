@@ -15,15 +15,14 @@ export const useClients = () => {
   })
 }
 
-/** Igual que useClients pero solo expone el conteo (ver useProductsCount). */
+/** Usa GET /clients/count (agregado en DB) en vez de traer el listado
+ * completo solo para contar — ver [[API - Endpoint - GET clients-count]]. */
 export const useClientsCount = () => {
-  return useQuery<Client[], Error, number>({
-    queryKey: ['clients'],
-    queryFn: clientsApi.getAll,
-    staleTime: 30 * 60 * 1000,
-    gcTime: 60 * 60 * 1000,
+  return useQuery<number>({
+    queryKey: ['clients', 'count'],
+    queryFn: clientsApi.getCount,
+    staleTime: 5 * 60 * 1000,
     retry: 3,
-    select: (data) => data.length,
   })
 }
 

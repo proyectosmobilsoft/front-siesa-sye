@@ -94,11 +94,18 @@ export interface SalesSummaryResponse {
 export interface Vendor {
   'Codigo vendedor': string
   'Nombre vendedor': string
-  'Tipo de entrega': string
   'Valor subtotal': number
   'Valor neto': number
-  'compania': number
-  'centro de op': string
+}
+
+export interface DailyOrdersStatusBreakdownItem {
+  estado: string
+  count: number
+}
+
+export interface DailyOrdersStatusBreakdownResponse {
+  success: boolean
+  data: DailyOrdersStatusBreakdownItem[]
 }
 
 export interface VendorsResponse {

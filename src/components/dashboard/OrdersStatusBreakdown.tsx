@@ -2,21 +2,17 @@ import { motion } from 'framer-motion'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/lib/skeleton'
 import { ErrorBoundary } from '@/components/ui/error-boundary'
-import { useDailyOrders } from '@/hooks/useReports'
+import { useDailyOrdersStatusBreakdown } from '@/hooks/useReports'
 import { formatters } from '@/utils/formatters'
 
 const OrdersStatusBreakdownContent = () => {
-    const { data: orders, isLoading, error } = useDailyOrders()
+    // Agregado en DB (GROUP BY estado) — ver
+    // [[API - Endpoint - GET reports-daily-orders]].
+    const { data: statusBreakdown, isLoading, error } = useDailyOrdersStatusBreakdown()
 
-    const breakdown = Array.isArray(orders)
-        ? Object.entries(
-            orders.reduce((acc, order) => {
-                const estado = order.Estado || 'Sin Estado'
-                acc[estado] = (acc[estado] || 0) + 1
-                return acc
-            }, {} as Record<string, number>)
-        )
-            .map(([estado, cantidad]) => ({ estado, cantidad }))
+    const breakdown = Array.isArray(statusBreakdown)
+        ? [...statusBreakdown]
+            .map(({ estado, count }) => ({ estado: estado || 'Sin Estado', cantidad: count }))
             .sort((a, b) => b.cantidad - a.cantidad)
         : []
 

@@ -33,6 +33,7 @@ const SecuritySettingsPage = lazy(() => import('@/pages/SecuritySettingsPage').t
 const MaestroRolesPage = lazy(() => import('@/pages/MaestroRolesPage').then(m => ({ default: m.MaestroRolesPage })))
 const MaestroDescuentosFinancierosPage = lazy(() => import('@/pages/MaestroDescuentosFinancierosPage').then(m => ({ default: m.MaestroDescuentosFinancierosPage })))
 const MaestroCajasPage = lazy(() => import('@/pages/MaestroCajasPage').then(m => ({ default: m.MaestroCajasPage })))
+const MaestroCuentasBancariasPage = lazy(() => import('@/pages/MaestroCuentasBancariasPage').then(m => ({ default: m.MaestroCuentasBancariasPage })))
 const MaestroConceptosPage = lazy(() => import('@/pages/MaestroConceptosPage').then(m => ({ default: m.MaestroConceptosPage })))
 const MaestroMaquinariaPage = lazy(() => import('@/pages/MaestroMaquinariaPage').then(m => ({ default: m.MaestroMaquinariaPage })))
 const InterfazContableVehiculosPage = lazy(() => import('@/pages/InterfazContableVehiculosPage').then(m => ({ default: m.InterfazContableVehiculosPage })))
@@ -92,6 +93,11 @@ function AppLayout() {
                                 {/* Maestro de Cajas: protegido por VER_CAJAS (solo rol Administrador) */}
                                 <Route path="/maestro/cajas" element={
                                     <ProtectedRoute permiso={PERMISOS.CAJAS}><MaestroCajasPage /></ProtectedRoute>
+                                } />
+
+                                {/* Maestro de Cuentas Bancarias: protegido por VER_CUENTAS_BANCARIAS (solo rol Administrador) */}
+                                <Route path="/maestro/cuentas-bancarias" element={
+                                    <ProtectedRoute permiso={PERMISOS.CUENTAS_BANCARIAS}><MaestroCuentasBancariasPage /></ProtectedRoute>
                                 } />
 
                                 {/* Módulos y Permisos (catálogo de seguridad): protegido por VER_MODULOS */}
