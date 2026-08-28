@@ -22,6 +22,7 @@ import { motion } from 'framer-motion'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Select } from '@/components/ui/select'
+import { Modal } from '@/components/ui/modal'
 import { cn } from '@/lib/utils'
 import { apiClient } from '@/api/client'
 import { reciboCajaApi } from '@/api/reciboCaja'
@@ -104,11 +105,15 @@ export const ReciboCajaPage = () => {
 
   const [resumenConductores, setResumenConductores] = useState<ResumenConductoresDia | null>(null)
   const [loadingResumen, setLoadingResumen] = useState(false)
+  const [fechaConductores, setFechaConductores] = useState(hoyISO())
 
   const fetchResumenConductores = async () => {
     setLoadingResumen(true)
     try {
-      const res = await reciboCajaApi.getResumenConductoresDia()
+      const res = await reciboCajaApi.getResumenConductoresDia({
+        fechaInicial: fechaConductores,
+        fechaFinal: fechaConductores,
+      })
       setResumenConductores(res)
     } catch (err) {
       console.error('Error cargando resumen de RC por conductor:', err)
@@ -123,7 +128,7 @@ export const ReciboCajaPage = () => {
     fetchResumenConductores()
     const interval = setInterval(fetchResumenConductores, 30000)
     return () => clearInterval(interval)
-  }, [tab])
+  }, [tab, fechaConductores])
 
   const handleConsultarGeneral = async () => {
     setCargandoGeneral(true)
@@ -466,7 +471,13 @@ export const ReciboCajaPage = () => {
         {/* ── PESTAÑA: CONDUCTORES ── */}
         {tab === 'conductores' && (
           <div className="p-4 sm:p-6">
-            <TableroConductoresRC resumen={resumenConductores} loading={loadingResumen} onRefresh={fetchResumenConductores} />
+            <TableroConductoresRC
+              resumen={resumenConductores}
+              loading={loadingResumen}
+              fecha={fechaConductores}
+              onFechaChange={setFechaConductores}
+              onRefresh={fetchResumenConductores}
+            />
           </div>
         )}
 
@@ -509,10 +520,14 @@ const BoardInput = ({ value, onChange }: { value: number; onChange: (value: numb
 function TableroConductoresRC({
   resumen,
   loading,
+  fecha,
+  onFechaChange,
   onRefresh,
 }: {
   resumen: ResumenConductoresDia | null
   loading: boolean
+  fecha: string
+  onFechaChange: (fecha: string) => void
   onRefresh: () => void
 }) {
   const conductores = resumen?.conductores ?? []
@@ -529,6 +544,11 @@ function TableroConductoresRC({
   const [expandido, setExpandido] = useState<string | null>(null)
   const [detalle, setDetalle] = useState<Record<string, ReciboCajaUsuario[]>>({})
   const [cargando, setCargando] = useState<string | null>(null)
+
+  useEffect(() => {
+    setExpandido(null)
+    setDetalle({})
+  }, [resumen?.fecha_inicial, resumen?.fecha_final])
 
   const toggleConductor = async (usuario: string) => {
     if (expandido === usuario) {
@@ -560,10 +580,18 @@ function TableroConductoresRC({
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-2">
           <Receipt className="h-5 w-5 text-primary" />
-          <h2 className="text-sm font-bold text-foreground">
-            RC de hoy por conductor ({conductores.length})
-          </h2>
-          {resumen && <span className="rounded-md bg-muted px-2 py-0.5 text-xs text-muted-foreground">{resumen.fecha_inicial}</span>}
+          <h2 className="text-sm font-bold text-foreground">RC por conductor ({conductores.length})</h2>
+          <label className="flex items-center gap-1.5 rounded-md bg-muted px-2 py-1 text-xs text-muted-foreground">
+            <Calendar className="h-3.5 w-3.5" />
+            <span className="sr-only">Fecha de los recibos</span>
+            <input
+              type="date"
+              value={fecha}
+              max={hoyISO()}
+              onChange={(event) => onFechaChange(event.target.value)}
+              className="w-[122px] bg-transparent font-medium text-foreground outline-none"
+            />
+          </label>
         </div>
 
         <div className="flex items-center gap-3">
@@ -587,16 +615,16 @@ function TableroConductoresRC({
             <thead>
               <tr className="border-b border-border bg-muted/60">
                 <th className="px-4 py-3 text-left font-semibold uppercase tracking-wider text-muted-foreground">Conductor</th>
-                <th className="px-4 py-3 text-right font-semibold uppercase tracking-wider text-muted-foreground">Efectivo</th>
-                <th className="px-4 py-3 text-right font-semibold uppercase tracking-wider text-muted-foreground">Transferencia</th>
-                <th className="px-4 py-3 text-right font-semibold uppercase tracking-wider text-muted-foreground">Total</th>
+                <th className="px-4 py-3 text-left font-semibold uppercase tracking-wider text-muted-foreground">Efectivo</th>
+                <th className="px-4 py-3 text-left font-semibold uppercase tracking-wider text-muted-foreground">Transferencia</th>
+                <th className="px-4 py-3 text-left font-semibold uppercase tracking-wider text-muted-foreground">Total</th>
               </tr>
             </thead>
             <tbody>
               {conductores.length === 0 ? (
                 <tr>
                   <td colSpan={4} className="py-14 text-center text-xs font-bold uppercase tracking-widest text-muted-foreground">
-                    {loading ? 'Cargando...' : 'Sin RC registrados hoy'}
+                    {loading ? 'Cargando...' : 'Sin RC registrados para la fecha seleccionada'}
                   </td>
                 </tr>
               ) : (
@@ -633,9 +661,9 @@ function TableroConductoresRC({
                           </div>
                         </div>
                       </td>
-                      <td className="px-4 py-3 text-right font-mono font-bold text-foreground">{formatters.currency(c.total_efectivo)}</td>
-                      <td className="px-4 py-3 text-right font-mono font-bold text-foreground">{formatters.currency(c.total_consignacion)}</td>
-                      <td className="px-4 py-3 text-right font-mono font-extrabold text-primary">{formatters.currency(c.total)}</td>
+                      <td className="px-4 py-3 text-left font-semibold text-foreground"><MontoAlineado value={c.total_efectivo} /></td>
+                      <td className="px-4 py-3 text-left font-semibold text-foreground"><MontoAlineado value={c.total_consignacion} /></td>
+                      <td className="px-4 py-3 text-left font-bold text-primary"><MontoAlineado value={c.total} /></td>
                     </motion.tr>
                     {expandido === c.usuario_creacion && (
                       <tr>
@@ -656,12 +684,17 @@ function TableroConductoresRC({
 }
 
 function RcConductorDetalle({ rc, loading }: { rc: ReciboCajaUsuario[] | undefined; loading: boolean }) {
+  const [reciboFacturas, setReciboFacturas] = useState<ReciboCajaUsuario | null>(null)
+
   if (loading) {
     return <div className="px-8 py-6 text-center text-xs font-bold uppercase tracking-widest text-muted-foreground">Cargando RC...</div>
   }
   if (!rc || rc.length === 0) {
     return <div className="px-8 py-6 text-center text-xs font-bold uppercase tracking-widest text-muted-foreground">Sin RC para mostrar</div>
   }
+  const tieneTarjetaCredito = rc.some((recibo) => (recibo.tarjeta_credito ?? 0) > 0)
+  const tieneTarjetaDebito = rc.some((recibo) => (recibo.tarjeta_debito ?? 0) > 0)
+
   return (
     <div className="overflow-x-auto px-4 py-3">
       <table className="w-full text-xs">
@@ -672,36 +705,57 @@ function RcConductorDetalle({ rc, loading }: { rc: ReciboCajaUsuario[] | undefin
             <th className="px-3 py-2 text-left font-semibold uppercase tracking-wider text-muted-foreground">C.O.</th>
             <th className="px-3 py-2 text-left font-semibold uppercase tracking-wider text-muted-foreground">Fecha</th>
             <th className="px-3 py-2 text-left font-semibold uppercase tracking-wider text-muted-foreground">Tercero</th>
-            <th className="px-3 py-2 text-right font-semibold uppercase tracking-wider text-muted-foreground">Efectivo</th>
-            <th className="px-3 py-2 text-right font-semibold uppercase tracking-wider text-muted-foreground">Transferencia</th>
-            <th className="px-3 py-2 text-right font-semibold uppercase tracking-wider text-muted-foreground">Total</th>
-            <th className="px-3 py-2 text-center font-semibold uppercase tracking-wider text-muted-foreground">Estado</th>
+            <th className="px-3 py-2 text-left font-semibold uppercase tracking-wider text-muted-foreground">Efectivo</th>
+            <th className="px-3 py-2 text-left font-semibold uppercase tracking-wider text-muted-foreground">Transferencia</th>
+            {tieneTarjetaCredito && <th className="px-3 py-2 text-left font-semibold uppercase tracking-wider text-muted-foreground">T. crédito</th>}
+            {tieneTarjetaDebito && <th className="px-3 py-2 text-left font-semibold uppercase tracking-wider text-muted-foreground">T. débito</th>}
+            <th className="px-3 py-2 text-left font-semibold uppercase tracking-wider text-muted-foreground">Desc. financiero</th>
+            <th className="px-3 py-2 text-left font-semibold uppercase tracking-wider text-muted-foreground">Total</th>
+            <th className="px-3 py-2 text-left font-semibold uppercase tracking-wider text-muted-foreground">Estado</th>
           </tr>
         </thead>
         <tbody>
           {rc.map((r) => {
-            const factura = Array.isArray(r.Facturas) && r.Facturas.length > 0
-              ? r.Facturas
+            const facturas = r.Facturas ?? []
+            const factura = facturas.length > 0
+              ? facturas
                 .map((f) => `${(f.Tipo || '').trim().toUpperCase()} ${f.Numero}`)
                 .join(', ')
               : '—'
+            const descuentoFinanciero = facturas.reduce((total, factura) => total + (factura.Descuento_Pp || 0), 0)
+            const totalRecaudado = (r.efectivo ?? 0) + (r.consignacion ?? 0) + (r.tarjeta_credito ?? 0) + (r.tarjeta_debito ?? 0)
 
             return (
               <tr key={r.Rowid} className="border-b border-border/30 last:border-0 hover:bg-muted/30">
-                <td className="px-3 py-2 font-mono font-bold text-primary">
+                <td className="px-3 py-2 font-semibold text-primary">
                   <span className="flex items-center gap-1">
                     <Hash className="h-3 w-3" />
                     {(r.Tipo_Docto || 'RC').trim()}#{r.Numero}
                   </span>
                 </td>
-                <td className="max-w-[220px] truncate px-3 py-2 font-mono text-muted-foreground">{factura}</td>
-                <td className="px-3 py-2 font-mono text-muted-foreground">{r['C.O.']}</td>
-                <td className="px-3 py-2 font-mono text-muted-foreground">{r.Fecha?.slice(0, 10)}</td>
+                <td className="max-w-[220px] px-3 py-2 text-muted-foreground">
+                  {facturas.length > 1 ? (
+                    <Button variant="outline" size="sm" className="h-7 px-2 text-[10px]" onClick={() => setReciboFacturas(r)}>
+                      Ver {facturas.length} facturas
+                    </Button>
+                  ) : (
+                    <span className="block truncate">{factura}</span>
+                  )}
+                </td>
+                <td className="px-3 py-2 tabular-nums text-muted-foreground">{r['C.O.']}</td>
+                <td className="px-3 py-2 tabular-nums text-muted-foreground">{r.Fecha?.slice(0, 10)}</td>
                 <td className="max-w-[200px] truncate px-3 py-2 font-medium">{r.Tercero_Nombre}</td>
-                <td className="px-3 py-2 text-right font-mono">{formatters.currency(r.efectivo ?? 0)}</td>
-                <td className="px-3 py-2 text-right font-mono">{formatters.currency(r.consignacion ?? 0)}</td>
-                <td className="px-3 py-2 text-right font-mono font-bold">{formatters.currency(r.Creditos)}</td>
-                <td className="px-3 py-2 text-center">
+                <td className="px-3 py-2 text-left"><MontoAlineado value={r.efectivo ?? 0} /></td>
+                <td className="px-3 py-2 text-left"><MontoAlineado value={r.consignacion ?? 0} /></td>
+                {tieneTarjetaCredito && <td className="px-3 py-2 text-left text-violet-600 dark:text-violet-400">{(r.tarjeta_credito ?? 0) > 0 ? <MontoAlineado value={r.tarjeta_credito ?? 0} /> : '—'}</td>}
+                {tieneTarjetaDebito && <td className="px-3 py-2 text-left text-sky-600 dark:text-sky-400">{(r.tarjeta_debito ?? 0) > 0 ? <MontoAlineado value={r.tarjeta_debito ?? 0} /> : '—'}</td>}
+                <td className="px-3 py-2 text-left text-red-600 dark:text-red-400">
+                  {descuentoFinanciero > 0 ? <MontoAlineado value={descuentoFinanciero} /> : '—'}
+                </td>
+                <td className="px-3 py-2 text-left font-semibold">
+                  <MontoAlineado value={totalRecaudado} />
+                </td>
+                <td className="px-3 py-2 text-left">
                   <span className={cn('rounded-full px-2 py-0.5 text-[10px] font-bold uppercase', estadoBadgeNum(r.Estado))}>
                     {r.Estado === 1 ? 'Aprobado' : r.Estado === 2 ? 'Anulado' : 'En proceso'}
                   </span>
@@ -711,6 +765,33 @@ function RcConductorDetalle({ rc, loading }: { rc: ReciboCajaUsuario[] | undefin
           })}
         </tbody>
       </table>
+      <Modal
+        isOpen={!!reciboFacturas}
+        onClose={() => setReciboFacturas(null)}
+        title={`Facturas de ${(reciboFacturas?.Tipo_Docto || 'RC').trim()}#${reciboFacturas?.Numero ?? ''}`}
+        className="max-w-2xl"
+      >
+        <div className="overflow-hidden rounded-lg border border-border">
+          <table className="w-full text-sm">
+            <thead className="bg-muted/50 text-xs uppercase tracking-wider text-muted-foreground">
+              <tr>
+                <th className="px-4 py-3 text-left">Factura</th>
+                <th className="px-4 py-3 text-left">Valor aplicado</th>
+                <th className="px-4 py-3 text-left">Desc. financiero</th>
+              </tr>
+            </thead>
+            <tbody>
+              {(reciboFacturas?.Facturas ?? []).map((factura) => (
+                <tr key={factura.Rowid} className="border-t border-border/60">
+                  <td className="px-4 py-3 tabular-nums">{(factura.Tipo || '').trim().toUpperCase()} {factura.Numero}</td>
+                  <td className="px-4 py-3 text-left"><MontoAlineado value={factura.Valor_Aplicado} /></td>
+                  <td className="px-4 py-3 text-left text-red-600 dark:text-red-400">{factura.Descuento_Pp > 0 ? <MontoAlineado value={factura.Descuento_Pp} /> : '—'}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </Modal>
     </div>
   )
 }
@@ -721,6 +802,17 @@ const estadoBadgeNum = (estado: number) =>
     : estado === 2
       ? 'bg-red-500/15 text-red-600 dark:text-red-400 border border-red-500/20'
       : 'bg-amber-500/15 text-amber-700 dark:text-amber-400 border border-amber-500/20'
+
+function MontoAlineado({ value }: { value: number }) {
+  const numero = formatters.currency(value).replace(/^\$\s*/, '')
+
+  return (
+    <span className="inline-grid grid-cols-[0.75rem_10ch] justify-start gap-1 tabular-nums">
+      <span>$</span>
+      <span className="text-left">{numero}</span>
+    </span>
+  )
+}
 
 function History(props: {
   data: ReciboCaja[]

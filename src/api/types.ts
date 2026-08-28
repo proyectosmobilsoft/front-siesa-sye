@@ -392,6 +392,8 @@ export interface ReciboCajaUsuario {
   Facturas: FacturaAfectadaRC[]
   efectivo?: number
   consignacion?: number
+  tarjeta_credito?: number
+  tarjeta_debito?: number
   consignacion_cuenta?: string
   consignacion_cuenta_nombre?: string
   consignacion_cuenta_numero?: string

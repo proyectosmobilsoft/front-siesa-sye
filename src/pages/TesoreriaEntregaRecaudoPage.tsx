@@ -196,8 +196,8 @@ const TableroConciliacion = ({ movimientos, onResuelto }: { movimientos: Movimie
                                 <Scale className="h-5 w-5 text-primary" />
                             </div>
                             <div>
-                                <CardTitle className="text-base">Estado de cuenta de conductores</CardTitle>
-                                <p className="mt-0.5 text-xs text-muted-foreground">Seguimiento de diferencias y conciliaciones del periodo seleccionado</p>
+                                <CardTitle className="text-base">Validación física de entregas</CardTitle>
+                                <p className="mt-0.5 text-xs text-muted-foreground">Diferencias entre el valor declarado y el efectivo contado en el periodo seleccionado</p>
                             </div>
                         </div>
                         <div className="flex gap-2">
@@ -272,7 +272,7 @@ const TableroConciliacion = ({ movimientos, onResuelto }: { movimientos: Movimie
                                                             : 'bg-destructive/10 text-destructive'
                                                     )}>
                                                         {alDia ? <ShieldCheck className="h-3.5 w-3.5" /> : <TriangleAlert className="h-3.5 w-3.5" />}
-                                                        {alDia ? 'Al día' : 'Tiene un descuadre'}
+                                                        {alDia ? 'Validado físicamente' : 'Tiene diferencia física'}
                                                     </span>
                                                 </td>
                                                 <td className="px-5 py-3 text-right">
@@ -786,9 +786,16 @@ const RecibosConductorModal = ({ grupo, onClose, rango }: { grupo: GrupoConducto
             ) : error ? (
                 <p className="text-sm font-semibold text-destructive">Error al cargar los recibos.</p>
             ) : todosRecibos.length === 0 ? (
-                <p className="py-10 text-center text-xs font-bold uppercase tracking-widest text-muted-foreground">
-                    Este conductor no tiene recibos de caja en el periodo
-                </p>
+                <div className="flex flex-col items-center gap-2 py-10 text-center">
+                    <AlertCircle className="h-6 w-6 text-amber-600" />
+                    <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
+                        No hay RC de este conductor en SIESA para el periodo
+                    </p>
+                    <p className="max-w-xl text-xs text-muted-foreground">
+                        La entrega física por <strong className="text-foreground">{formatters.currency(valorEntrega)}</strong> está validada,
+                        pero no tiene un recibo de caja creado por este conductor con fecha dentro del rango seleccionado.
+                    </p>
+                </div>
             ) : recibos.length === 0 && conteoAnulados > 0 && !incluirAnulados ? (
                 <div className="flex flex-col items-center justify-center gap-3 py-10 text-center">
                     <div className="flex h-12 w-12 items-center justify-center rounded-full bg-destructive/10">
@@ -1010,7 +1017,7 @@ const EntregasPanel = ({ esPendiente, data, isLoading, error, onValidar, onVerRC
     }, [grupos, busqueda])
 
     return (
-        <div className="flex min-w-0 flex-1 flex-col gap-4">
+        <div className="flex h-full min-w-0 flex-1 flex-col gap-4">
             <Card className={cn('overflow-hidden border-l-4', esPendiente ? 'border-l-amber-500' : 'border-l-emerald-500')}>
                 <CardHeader className="flex flex-row items-center justify-between gap-3 pb-2">
                     <div className="flex items-center gap-3">
@@ -1042,8 +1049,8 @@ const EntregasPanel = ({ esPendiente, data, isLoading, error, onValidar, onVerRC
                 </div>
             )}
 
-            <Card className="flex-1 overflow-hidden">
-                <CardContent className="p-0">
+            <Card className="flex flex-1 overflow-hidden">
+                <CardContent className="flex flex-1 p-0">
                     {isLoading ? (
                         <div className="space-y-px p-4">
                             {[0, 1, 2].map((i) => (
@@ -1063,13 +1070,21 @@ const EntregasPanel = ({ esPendiente, data, isLoading, error, onValidar, onVerRC
                             <p className="text-sm font-semibold text-destructive">Error al cargar las entregas.</p>
                         </div>
                     ) : grupos.length === 0 ? (
-                        <div className="flex flex-col items-center gap-3 py-16">
-                            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-muted">
-                                <Inbox className="h-5 w-5 text-muted-foreground" />
+                        <div className="flex flex-1 flex-col items-center justify-center gap-3 px-6 py-16 text-center">
+                            <div className={cn(
+                                'flex h-12 w-12 items-center justify-center rounded-full',
+                                esPendiente ? 'bg-emerald-500/10' : 'bg-muted'
+                            )}>
+                                {esPendiente ? <CheckCircle2 className="h-5 w-5 text-emerald-600" /> : <Inbox className="h-5 w-5 text-muted-foreground" />}
                             </div>
                             <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
                                 {esPendiente ? 'No hay entregas pendientes' : 'No hay entregas validadas'}
                             </p>
+                            {esPendiente && (
+                                <p className="max-w-xs text-xs leading-5 text-muted-foreground">
+                                    Todo está al día. Las entregas ya validadas se muestran en el panel derecho.
+                                </p>
+                            )}
                         </div>
                     ) : gruposFiltrados.length === 0 ? (
                         <div className="flex flex-col items-center gap-3 py-16">
@@ -1428,7 +1443,7 @@ export const TesoreriaEntregaRecaudoPage = () => {
                 </Button>
             </div>
 
-            <div className="grid items-start gap-5 lg:grid-cols-2">
+            <div className="grid items-stretch gap-5 lg:grid-cols-2">
                 <EntregasPanel
                     esPendiente
                     data={pendientesQuery.data}
