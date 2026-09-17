@@ -150,12 +150,20 @@ const CajaSaldoDashboard = ({
 }) => {
     if (cajas.length === 0) return null
 
+    // Intenta caber todas en una sola línea (hasta 5 cajas); si no, se
+    // reparte en 2 líneas parejas en vez de dejar la última línea con 1
+    // card sola. Tope en 6 columnas para que las cards no queden angostas.
+    const columnas = Math.min(cajas.length <= 5 ? cajas.length : Math.ceil(cajas.length / 2), 6)
+
     return (
         <div className="space-y-1.5">
             <label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                 Saldos de caja · {MEDIOS_PAGO.find((m) => m.value === medioPago)?.label}
             </label>
-            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+            <div
+                className="grid grid-cols-2 gap-2 sm:[grid-template-columns:repeat(var(--cajas-cols),minmax(0,1fr))]"
+                style={{ '--cajas-cols': columnas } as React.CSSProperties}
+            >
                 {cajas.map((c, idx) => {
                     if (!c || c.id_caja === undefined || c.id_caja === null) return null
                     const idVal = String(c.id_caja).trim()
