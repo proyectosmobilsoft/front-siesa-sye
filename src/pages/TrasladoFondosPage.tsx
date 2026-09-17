@@ -31,31 +31,44 @@ const CajaSelector = ({
     onChange: (v: string) => void
     disabledValue?: string
     cajas: CajaTraspaso[]
-}) => (
-    <div className="flex-1 space-y-1.5">
-        <label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-            {label}
-        </label>
-        <div className="relative">
-            <Landmark className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <Select value={value} onChange={(e) => onChange(e.target.value)} className="pl-9">
-                <option value="">Selecciona una caja</option>
-                {cajas.map((c, idx) => {
-                    if (!c || c.id_caja === undefined || c.id_caja === null) return null
-                    const idVal = String(c.id_caja).trim()
-                    const uniqueKey = `${idVal}-${c.id_co || ''}-${idx}`
-                    const auxSuffix = c.auxiliar ? ` · Aux ${c.auxiliar}` : ''
-                    const labelText = c.nombre ? `${c.nombre}${auxSuffix}` : `Caja ${idVal}${auxSuffix}`
-                    return (
-                        <option key={uniqueKey} value={idVal} disabled={idVal === disabledValue}>
-                            {labelText}
-                        </option>
-                    )
-                })}
-            </Select>
+}) => {
+    const cajaSeleccionada = cajas.find((c) => c?.id_caja && String(c.id_caja).trim() === value)
+
+    return (
+        <div className="flex-1 space-y-1.5">
+            <label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                {label}
+            </label>
+            <div className="relative">
+                <Landmark className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Select value={value} onChange={(e) => onChange(e.target.value)} className="pl-9">
+                    <option value="">Selecciona una caja</option>
+                    {cajas.map((c, idx) => {
+                        if (!c || c.id_caja === undefined || c.id_caja === null) return null
+                        const idVal = String(c.id_caja).trim()
+                        const uniqueKey = `${idVal}-${c.id_co || ''}-${idx}`
+                        const auxSuffix = c.auxiliar ? ` · Aux ${c.auxiliar}` : ''
+                        const labelText = c.nombre ? `${c.nombre}${auxSuffix}` : `Caja ${idVal}${auxSuffix}`
+                        const saldoSuffix = ` · ${formatters.currency(c.saldo_efectivo ?? 0)}`
+                        return (
+                            <option key={uniqueKey} value={idVal} disabled={idVal === disabledValue}>
+                                {labelText}{saldoSuffix}
+                            </option>
+                        )
+                    })}
+                </Select>
+            </div>
+            {cajaSeleccionada && (
+                <p className="flex items-center gap-1 text-xs text-muted-foreground">
+                    Saldo disponible:
+                    <span className="font-semibold tabular-nums text-foreground">
+                        {formatters.currency(cajaSeleccionada.saldo_efectivo ?? 0)}
+                    </span>
+                </p>
+            )}
         </div>
-    </div>
-)
+    )
+}
 
 const SectionHeader = ({ icon: Icon, title, extra }: { icon: typeof ArrowRightLeft; title: string; extra?: React.ReactNode }) => (
     <div className="flex shrink-0 items-center justify-between gap-3 border-b pb-4">
@@ -107,6 +120,9 @@ export const TrasladoFondosPage = () => {
 
     const valorNumerico = Number(valor)
     const mismasCajas = cajaOrigen !== '' && cajaOrigen === cajaDestino
+    const cajaOrigenSeleccionada = cajas?.find((c) => c?.id_caja && String(c.id_caja).trim() === cajaOrigen)
+    const saldoOrigen = cajaOrigenSeleccionada?.saldo_efectivo ?? 0
+    const saldoInsuficiente = !!cajaOrigen && valorNumerico > 0 && valorNumerico > saldoOrigen
     const formularioValido = !!cajaOrigen && !!cajaDestino && !mismasCajas && valorNumerico > 0 && !cargandoCajas
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -169,6 +185,13 @@ export const TrasladoFondosPage = () => {
                         <div className="flex items-center gap-2 text-sm text-destructive">
                             <AlertCircle className="h-4 w-4 flex-shrink-0" />
                             La caja origen y destino no pueden ser la misma.
+                        </div>
+                    )}
+
+                    {saldoInsuficiente && (
+                        <div className="flex items-center gap-2 text-sm text-destructive">
+                            <AlertCircle className="h-4 w-4 flex-shrink-0" />
+                            El valor supera el saldo disponible en la caja origen ({formatters.currency(saldoOrigen)}).
                         </div>
                     )}
 

@@ -315,6 +315,8 @@ export interface CajaTraspaso {
   rowid_auxiliar: number
   auxiliar: string | null
   nombre: string | null
+  /** Saldo en efectivo actual de la caja (t372_co_cajas_saldos), snapshot en vivo de SIESA */
+  saldo_efectivo: number
 }
 
 export interface CajasTraspasoResponse {
