@@ -228,7 +228,7 @@ export const TrasladoFondosPage = () => {
     const [exito, setExito] = useState(false)
     const [fechaInicial, setFechaInicial] = useState('')
     const [fechaFinal, setFechaFinal] = useState('')
-    const [historialAbierto, setHistorialAbierto] = useState(true)
+    const [historialAbierto, setHistorialAbierto] = useState(false)
     const [trasladoSeleccionado, setTrasladoSeleccionado] = useState<TrasladoFondosMov | null>(null)
 
     const rangoInvalido = !!fechaInicial && !!fechaFinal && fechaInicial > fechaFinal
@@ -463,7 +463,7 @@ export const TrasladoFondosPage = () => {
                         type="button"
                         onClick={() => setHistorialAbierto(true)}
                         title="Mostrar historial de traslados"
-                        className="flex flex-col items-center gap-2 rounded-lg border bg-muted/20 px-2 py-3 text-muted-foreground transition-colors hover:bg-muted/40 hover:text-foreground"
+                        className="flex flex-col items-center gap-2 rounded-lg bg-primary px-2 py-3 text-primary-foreground shadow-sm transition-colors hover:opacity-90"
                     >
                         <PanelRightOpen className="h-4 w-4 shrink-0" />
                         <span className="[writing-mode:vertical-rl] text-xs font-bold uppercase tracking-wide">
