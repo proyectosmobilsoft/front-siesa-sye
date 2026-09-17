@@ -11,6 +11,8 @@ import {
     ChevronRight,
     Banknote,
     CreditCard,
+    PanelRightClose,
+    PanelRightOpen,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -37,28 +39,35 @@ const saldoPorMedio = (caja: CajaTraspaso | undefined, medioPago: MedioPagoTrasp
 const MedioPagoSelector = ({
     value,
     onChange,
+    compact = false,
 }: {
     value: MedioPagoTraspaso
     onChange: (v: MedioPagoTraspaso) => void
+    compact?: boolean
 }) => (
-    <div className="space-y-1.5">
-        <label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-            Medio
-        </label>
+    <div className={compact ? '' : 'space-y-1.5'}>
+        {!compact && (
+            <label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                Medio
+            </label>
+        )}
         <div className="inline-flex rounded-lg border bg-muted/30 p-1">
             {MEDIOS_PAGO.map(({ value: medio, label, icon: Icon }) => (
                 <button
                     key={medio}
                     type="button"
                     onClick={() => onChange(medio)}
-                    className={`flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-semibold transition-colors ${
+                    title={label}
+                    className={`flex items-center gap-1.5 rounded-md font-semibold transition-colors ${
+                        compact ? 'px-2 py-1 text-[11px]' : 'px-3 py-1.5 text-xs'
+                    } ${
                         value === medio
                             ? 'bg-background text-foreground shadow-sm'
                             : 'text-muted-foreground hover:text-foreground'
                     }`}
                 >
                     <Icon className="h-3.5 w-3.5" />
-                    {label}
+                    {!compact && label}
                 </button>
             ))}
         </div>
@@ -118,6 +127,74 @@ const CajaSelector = ({
     )
 }
 
+/**
+ * Grilla de saldos por caja para el medio elegido. Se muestran TODAS las
+ * cajas del maestro en un grid que se envuelve solo (CSS grid auto-fill) —
+ * a propósito sin carrusel/flechas: si el número de cajas crece, aparecen
+ * más filas, no hay que paginar para "ver todo" (pedido explícito del
+ * usuario). Cada card es clickeable: llena origen primero, luego destino;
+ * si ambos ya están llenos, reinicia en origen.
+ */
+const CajaSaldoDashboard = ({
+    cajas,
+    medioPago,
+    cajaOrigen,
+    cajaDestino,
+    onSeleccionar,
+}: {
+    cajas: CajaTraspaso[]
+    medioPago: MedioPagoTraspaso
+    cajaOrigen: string
+    cajaDestino: string
+    onSeleccionar: (idCaja: string) => void
+}) => {
+    if (cajas.length === 0) return null
+
+    return (
+        <div className="space-y-1.5">
+            <label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                Saldos de caja · {MEDIOS_PAGO.find((m) => m.value === medioPago)?.label}
+            </label>
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                {cajas.map((c, idx) => {
+                    if (!c || c.id_caja === undefined || c.id_caja === null) return null
+                    const idVal = String(c.id_caja).trim()
+                    const saldo = saldoPorMedio(c, medioPago)
+                    const esOrigen = idVal === cajaOrigen
+                    const esDestino = idVal === cajaDestino
+
+                    return (
+                        <motion.button
+                            key={`${idVal}-${c.id_co || ''}-${idx}`}
+                            type="button"
+                            layout
+                            onClick={() => onSeleccionar(idVal)}
+                            className={`flex flex-col items-start gap-1 rounded-lg border p-2.5 text-left transition-colors ${
+                                esOrigen
+                                    ? 'border-primary bg-primary/5 ring-1 ring-primary'
+                                    : esDestino
+                                      ? 'border-blue-500 bg-blue-500/5 ring-1 ring-blue-500'
+                                      : 'border-border bg-muted/20 hover:bg-muted/40'
+                            }`}
+                        >
+                            <span className="flex w-full items-center justify-between gap-1">
+                                <span className="truncate text-[11px] font-semibold text-muted-foreground">
+                                    {c.nombre || `Caja ${idVal}`}
+                                </span>
+                                {esOrigen && <span className="shrink-0 rounded-full bg-primary px-1.5 text-[9px] font-bold text-primary-foreground">ORIGEN</span>}
+                                {esDestino && <span className="shrink-0 rounded-full bg-blue-500 px-1.5 text-[9px] font-bold text-white">DESTINO</span>}
+                            </span>
+                            <span className="text-sm font-bold tabular-nums">
+                                {formatters.currency(saldo)}
+                            </span>
+                        </motion.button>
+                    )
+                })}
+            </div>
+        </div>
+    )
+}
+
 const SectionHeader = ({ icon: Icon, title, extra }: { icon: typeof ArrowRightLeft; title: string; extra?: React.ReactNode }) => (
     <div className="flex shrink-0 items-center justify-between gap-3 border-b pb-4">
         <div className="flex items-center gap-3">
@@ -144,6 +221,7 @@ export const TrasladoFondosPage = () => {
     const [exito, setExito] = useState(false)
     const [fechaInicial, setFechaInicial] = useState('')
     const [fechaFinal, setFechaFinal] = useState('')
+    const [historialAbierto, setHistorialAbierto] = useState(true)
     const [trasladoSeleccionado, setTrasladoSeleccionado] = useState<TrasladoFondosMov | null>(null)
 
     const rangoInvalido = !!fechaInicial && !!fechaFinal && fechaInicial > fechaFinal
@@ -174,6 +252,28 @@ export const TrasladoFondosPage = () => {
     const saldoInsuficiente = !!cajaOrigen && valorNumerico > 0 && valorNumerico > saldoOrigen
     const formularioValido = !!cajaOrigen && !!cajaDestino && !mismasCajas && valorNumerico > 0 && !cargandoCajas
 
+    const seleccionarDesdeDashboard = (idCaja: string) => {
+        if (idCaja === cajaOrigen) {
+            setCajaOrigen('')
+            return
+        }
+        if (idCaja === cajaDestino) {
+            setCajaDestino('')
+            return
+        }
+        if (!cajaOrigen) {
+            setCajaOrigen(idCaja)
+            return
+        }
+        if (!cajaDestino) {
+            setCajaDestino(idCaja)
+            return
+        }
+        // Ambos slots llenos: reinicia el ciclo con esta caja como nuevo origen.
+        setCajaOrigen(idCaja)
+        setCajaDestino('')
+    }
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
         if (!formularioValido) return
@@ -198,15 +298,24 @@ export const TrasladoFondosPage = () => {
     }
 
     return (
-        <div className="grid h-full min-h-0 grid-cols-1 gap-6 p-4 sm:p-6 lg:grid-cols-2 lg:divide-x lg:gap-0">
+        <div
+            className={`grid h-full min-h-0 grid-cols-1 gap-6 p-4 sm:p-6 lg:gap-0 ${
+                historialAbierto ? 'lg:grid-cols-2 lg:divide-x' : 'lg:grid-cols-[1fr_auto]'
+            }`}
+        >
             {/* Formulario */}
             <motion.div
+                layout
                 initial={{ opacity: 0, y: 12 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.35, delay: 0.05 }}
-                className="flex min-h-0 flex-col gap-4 lg:pr-6"
+                className={`flex min-h-0 flex-col gap-4 ${historialAbierto ? 'lg:pr-6' : ''}`}
             >
-                <SectionHeader icon={ArrowRightLeft} title="Nuevo traslado" />
+                <SectionHeader
+                    icon={ArrowRightLeft}
+                    title="Nuevo traslado"
+                    extra={<MedioPagoSelector value={medioPago} onChange={setMedioPago} compact />}
+                />
 
                 {errorCajas && (
                     <div className="flex shrink-0 items-center gap-2 text-sm text-destructive">
@@ -216,7 +325,13 @@ export const TrasladoFondosPage = () => {
                 )}
 
                 <form onSubmit={handleSubmit} className="flex min-h-0 flex-1 flex-col gap-5 overflow-auto">
-                    <MedioPagoSelector value={medioPago} onChange={setMedioPago} />
+                    <CajaSaldoDashboard
+                        cajas={cajas ?? []}
+                        medioPago={medioPago}
+                        cajaOrigen={cajaOrigen}
+                        cajaDestino={cajaDestino}
+                        onSeleccionar={seleccionarDesdeDashboard}
+                    />
 
                     {/* Flujo origen -> destino */}
                     <div className="flex flex-col items-center gap-3 xl:flex-row">
@@ -335,21 +450,48 @@ export const TrasladoFondosPage = () => {
             </motion.div>
 
             {/* Historial */}
+            {!historialAbierto && (
+                <motion.div layout className="hidden lg:flex min-h-0 flex-col items-center justify-start gap-2 pl-4">
+                    <button
+                        type="button"
+                        onClick={() => setHistorialAbierto(true)}
+                        title="Mostrar historial de traslados"
+                        className="flex flex-col items-center gap-2 rounded-lg border bg-muted/20 px-2 py-3 text-muted-foreground transition-colors hover:bg-muted/40 hover:text-foreground"
+                    >
+                        <PanelRightOpen className="h-4 w-4 shrink-0" />
+                        <span className="[writing-mode:vertical-rl] text-xs font-bold uppercase tracking-wide">
+                            Historial{historial?.length ? ` · ${historial.length}` : ''}
+                        </span>
+                    </button>
+                </motion.div>
+            )}
+
             <motion.div
+                layout
                 initial={{ opacity: 0, y: 12 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.35, delay: 0.1 }}
-                className="flex min-h-0 flex-col gap-4 lg:pl-6"
+                className={`flex min-h-0 flex-col gap-4 lg:pl-6 ${historialAbierto ? '' : 'lg:hidden'}`}
             >
                 <SectionHeader
                     icon={History}
                     title="Historial de traslados"
                     extra={
-                        historial?.length ? (
-                            <span className="rounded-full bg-muted px-2.5 py-0.5 text-xs font-bold text-muted-foreground">
-                                {historial.length} registro{historial.length !== 1 ? 's' : ''}
-                            </span>
-                        ) : undefined
+                        <div className="flex items-center gap-2">
+                            {historial?.length ? (
+                                <span className="rounded-full bg-muted px-2.5 py-0.5 text-xs font-bold text-muted-foreground">
+                                    {historial.length} registro{historial.length !== 1 ? 's' : ''}
+                                </span>
+                            ) : null}
+                            <button
+                                type="button"
+                                onClick={() => setHistorialAbierto(false)}
+                                title="Ocultar historial"
+                                className="hidden lg:flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                            >
+                                <PanelRightClose className="h-4 w-4" />
+                            </button>
+                        </div>
                     }
                 />
 
