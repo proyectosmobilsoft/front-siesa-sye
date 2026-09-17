@@ -23,10 +23,10 @@ import { formatters } from '@/utils/formatters'
 import { CajaTraspaso, MedioPagoTraspaso, TrasladoFondosMov } from '@/api/types'
 import { usePermiso } from '@/hooks/usePermiso'
 
-const MEDIOS_PAGO: { value: MedioPagoTraspaso; label: string; icon: typeof Banknote }[] = [
-    { value: 'EFE', label: 'Efectivo', icon: Banknote },
-    { value: 'TD', label: 'Tarjeta débito', icon: CreditCard },
-    { value: 'TC', label: 'Tarjeta crédito', icon: CreditCard },
+const MEDIOS_PAGO: { value: MedioPagoTraspaso; label: string; shortLabel: string; icon: typeof Banknote }[] = [
+    { value: 'EFE', label: 'Efectivo', shortLabel: 'Efectivo', icon: Banknote },
+    { value: 'TD', label: 'Tarjeta débito', shortLabel: 'Débito', icon: CreditCard },
+    { value: 'TC', label: 'Tarjeta crédito', shortLabel: 'Crédito', icon: CreditCard },
 ]
 
 const saldoPorMedio = (caja: CajaTraspaso | undefined, medioPago: MedioPagoTraspaso): number => {
@@ -52,22 +52,21 @@ const MedioPagoSelector = ({
             </label>
         )}
         <div className="inline-flex rounded-lg border bg-muted/30 p-1">
-            {MEDIOS_PAGO.map(({ value: medio, label, icon: Icon }) => (
+            {MEDIOS_PAGO.map(({ value: medio, label, shortLabel }) => (
                 <button
                     key={medio}
                     type="button"
                     onClick={() => onChange(medio)}
                     title={label}
-                    className={`flex items-center gap-1.5 rounded-md font-semibold transition-colors ${
-                        compact ? 'px-2 py-1 text-[11px]' : 'px-3 py-1.5 text-xs'
+                    className={`rounded-md font-semibold transition-colors ${
+                        compact ? 'px-2.5 py-1 text-[11px]' : 'px-3 py-1.5 text-xs'
                     } ${
                         value === medio
                             ? 'bg-background text-foreground shadow-sm'
                             : 'text-muted-foreground hover:text-foreground'
                     }`}
                 >
-                    <Icon className="h-3.5 w-3.5" />
-                    {!compact && label}
+                    {compact ? shortLabel : label}
                 </button>
             ))}
         </div>
