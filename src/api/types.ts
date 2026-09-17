@@ -317,7 +317,13 @@ export interface CajaTraspaso {
   nombre: string | null
   /** Saldo en efectivo actual de la caja (t372_co_cajas_saldos), snapshot en vivo de SIESA */
   saldo_efectivo: number
+  /** Saldo en tarjeta débito (f372_saldo_tdb) */
+  saldo_tarjeta_debito: number
+  /** Saldo en tarjeta crédito (f372_saldo_tcr) */
+  saldo_tarjeta_credito: number
 }
+
+export type MedioPagoTraspaso = 'EFE' | 'TC' | 'TD'
 
 export interface CajasTraspasoResponse {
   success: boolean
@@ -358,6 +364,7 @@ export interface TrasladoFondosMov {
   numero_tc: number | null
   periodo_tc: number | null
   tipo?: string | null
+  medio_pago?: MedioPagoTraspaso | null
 }
 
 export interface TrasladosFondosMovResponse {

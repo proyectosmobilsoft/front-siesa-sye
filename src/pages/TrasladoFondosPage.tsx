@@ -9,6 +9,8 @@ import {
     History,
     ArrowRight,
     ChevronRight,
+    Banknote,
+    CreditCard,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -16,8 +18,52 @@ import { Select } from '@/components/ui/select'
 import { Modal } from '@/components/ui/modal'
 import { useCajasTraspaso, useTrasladosFondos, useCrearTrasladoFondos } from '@/hooks/useTrasladoFondos'
 import { formatters } from '@/utils/formatters'
-import { CajaTraspaso, TrasladoFondosMov } from '@/api/types'
+import { CajaTraspaso, MedioPagoTraspaso, TrasladoFondosMov } from '@/api/types'
 import { usePermiso } from '@/hooks/usePermiso'
+
+const MEDIOS_PAGO: { value: MedioPagoTraspaso; label: string; icon: typeof Banknote }[] = [
+    { value: 'EFE', label: 'Efectivo', icon: Banknote },
+    { value: 'TD', label: 'Tarjeta débito', icon: CreditCard },
+    { value: 'TC', label: 'Tarjeta crédito', icon: CreditCard },
+]
+
+const saldoPorMedio = (caja: CajaTraspaso | undefined, medioPago: MedioPagoTraspaso): number => {
+    if (!caja) return 0
+    if (medioPago === 'TD') return caja.saldo_tarjeta_debito ?? 0
+    if (medioPago === 'TC') return caja.saldo_tarjeta_credito ?? 0
+    return caja.saldo_efectivo ?? 0
+}
+
+const MedioPagoSelector = ({
+    value,
+    onChange,
+}: {
+    value: MedioPagoTraspaso
+    onChange: (v: MedioPagoTraspaso) => void
+}) => (
+    <div className="space-y-1.5">
+        <label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+            Medio
+        </label>
+        <div className="inline-flex rounded-lg border bg-muted/30 p-1">
+            {MEDIOS_PAGO.map(({ value: medio, label, icon: Icon }) => (
+                <button
+                    key={medio}
+                    type="button"
+                    onClick={() => onChange(medio)}
+                    className={`flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-semibold transition-colors ${
+                        value === medio
+                            ? 'bg-background text-foreground shadow-sm'
+                            : 'text-muted-foreground hover:text-foreground'
+                    }`}
+                >
+                    <Icon className="h-3.5 w-3.5" />
+                    {label}
+                </button>
+            ))}
+        </div>
+    </div>
+)
 
 const CajaSelector = ({
     label,
@@ -25,12 +71,14 @@ const CajaSelector = ({
     onChange,
     disabledValue,
     cajas,
+    medioPago,
 }: {
     label: string
     value: string
     onChange: (v: string) => void
     disabledValue?: string
     cajas: CajaTraspaso[]
+    medioPago: MedioPagoTraspaso
 }) => {
     const cajaSeleccionada = cajas.find((c) => c?.id_caja && String(c.id_caja).trim() === value)
 
@@ -49,7 +97,7 @@ const CajaSelector = ({
                         const uniqueKey = `${idVal}-${c.id_co || ''}-${idx}`
                         const auxSuffix = c.auxiliar ? ` · Aux ${c.auxiliar}` : ''
                         const labelText = c.nombre ? `${c.nombre}${auxSuffix}` : `Caja ${idVal}${auxSuffix}`
-                        const saldoSuffix = ` · ${formatters.currency(c.saldo_efectivo ?? 0)}`
+                        const saldoSuffix = ` · ${formatters.currency(saldoPorMedio(c, medioPago))}`
                         return (
                             <option key={uniqueKey} value={idVal} disabled={idVal === disabledValue}>
                                 {labelText}{saldoSuffix}
@@ -62,7 +110,7 @@ const CajaSelector = ({
                 <p className="flex items-center gap-1 text-xs text-muted-foreground">
                     Saldo disponible:
                     <span className="font-semibold tabular-nums text-foreground">
-                        {formatters.currency(cajaSeleccionada.saldo_efectivo ?? 0)}
+                        {formatters.currency(saldoPorMedio(cajaSeleccionada, medioPago))}
                     </span>
                 </p>
             )}
@@ -90,6 +138,7 @@ export const TrasladoFondosPage = () => {
 
     const [cajaOrigen, setCajaOrigen] = useState('')
     const [cajaDestino, setCajaDestino] = useState('')
+    const [medioPago, setMedioPago] = useState<MedioPagoTraspaso>('EFE')
     const [valor, setValor] = useState('')
     const [notas, setNotas] = useState('')
     const [exito, setExito] = useState(false)
@@ -121,7 +170,7 @@ export const TrasladoFondosPage = () => {
     const valorNumerico = Number(valor)
     const mismasCajas = cajaOrigen !== '' && cajaOrigen === cajaDestino
     const cajaOrigenSeleccionada = cajas?.find((c) => c?.id_caja && String(c.id_caja).trim() === cajaOrigen)
-    const saldoOrigen = cajaOrigenSeleccionada?.saldo_efectivo ?? 0
+    const saldoOrigen = saldoPorMedio(cajaOrigenSeleccionada, medioPago)
     const saldoInsuficiente = !!cajaOrigen && valorNumerico > 0 && valorNumerico > saldoOrigen
     const formularioValido = !!cajaOrigen && !!cajaDestino && !mismasCajas && valorNumerico > 0 && !cargandoCajas
 
@@ -135,10 +184,12 @@ export const TrasladoFondosPage = () => {
                 id_caja_destino: cajaDestino,
                 valor: valorNumerico,
                 notas: notas.trim() || undefined,
+                medio_pago: medioPago,
             })
             setExito(true)
             setCajaOrigen('')
             setCajaDestino('')
+            setMedioPago('EFE')
             setValor('')
             setNotas('')
         } catch {
@@ -165,9 +216,11 @@ export const TrasladoFondosPage = () => {
                 )}
 
                 <form onSubmit={handleSubmit} className="flex min-h-0 flex-1 flex-col gap-5 overflow-auto">
+                    <MedioPagoSelector value={medioPago} onChange={setMedioPago} />
+
                     {/* Flujo origen -> destino */}
                     <div className="flex flex-col items-center gap-3 xl:flex-row">
-                        <CajaSelector label="Caja origen" value={cajaOrigen} onChange={setCajaOrigen} disabledValue={cajaDestino} cajas={cajas ?? []} />
+                        <CajaSelector label="Caja origen" value={cajaOrigen} onChange={setCajaOrigen} disabledValue={cajaDestino} cajas={cajas ?? []} medioPago={medioPago} />
 
                         <motion.div
                             animate={{ rotate: [0, 8, -8, 0] }}
@@ -178,7 +231,7 @@ export const TrasladoFondosPage = () => {
                             <ArrowRightLeft className="h-4 w-4 xl:hidden" />
                         </motion.div>
 
-                        <CajaSelector label="Caja destino" value={cajaDestino} onChange={setCajaDestino} disabledValue={cajaOrigen} cajas={cajas ?? []} />
+                        <CajaSelector label="Caja destino" value={cajaDestino} onChange={setCajaDestino} disabledValue={cajaOrigen} cajas={cajas ?? []} medioPago={medioPago} />
                     </div>
 
                     {mismasCajas && (
@@ -241,6 +294,9 @@ export const TrasladoFondosPage = () => {
                                     <span className="font-medium">{nombreCaja(cajaOrigen)}</span>
                                     <ArrowRight className="h-3.5 w-3.5 text-muted-foreground" />
                                     <span className="font-medium">{nombreCaja(cajaDestino)}</span>
+                                    <span className="rounded-full bg-background px-2 py-0.5 text-[11px] font-semibold text-muted-foreground border">
+                                        {MEDIOS_PAGO.find((m) => m.value === medioPago)?.label}
+                                    </span>
                                     <span className="ml-auto font-bold tabular-nums text-primary">
                                         {formatters.currency(valorNumerico)}
                                     </span>
@@ -387,6 +443,11 @@ export const TrasladoFondosPage = () => {
                                                 <ArrowRight className="h-3 w-3 text-muted-foreground" />
                                                 {nombreCaja(t.id_caja_destino)}
                                             </span>
+                                            {t.medio_pago && t.medio_pago !== 'EFE' && (
+                                                <span className="rounded-full bg-muted px-1.5 py-0.5 text-[10px] font-bold uppercase text-muted-foreground">
+                                                    {MEDIOS_PAGO.find((m) => m.value === t.medio_pago)?.label ?? t.medio_pago}
+                                                </span>
+                                            )}
                                         </div>
                                         <p className="text-xs text-muted-foreground">
                                             {formatters.dateTime(t.fecha)} · {t.usuario_nombre || 'Administrador'}

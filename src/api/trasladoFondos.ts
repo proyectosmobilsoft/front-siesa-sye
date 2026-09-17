@@ -2,6 +2,7 @@ import { apiClient } from './client'
 import {
   CajaTraspaso,
   CajasTraspasoResponse,
+  MedioPagoTraspaso,
   TrasladoFondosCreado,
   TrasladoFondosCreadoResponse,
   TrasladoFondosMov,
@@ -24,6 +25,8 @@ export interface CrearTrasladoFondosPayload {
   id_caja_destino: string
   valor: number
   notas?: string
+  /** Default EFE si se omite. TC/TD mueven saldo de tarjeta en vez de efectivo. */
+  medio_pago?: MedioPagoTraspaso
 }
 
 export const trasladoFondosApi = {
