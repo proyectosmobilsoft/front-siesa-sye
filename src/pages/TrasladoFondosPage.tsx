@@ -457,28 +457,38 @@ export const TrasladoFondosPage = () => {
             </motion.div>
 
             {/* Historial */}
-            {!historialAbierto && (
-                <motion.div layout className="hidden lg:flex min-h-0 flex-col items-center justify-start gap-2 pl-4">
-                    <button
-                        type="button"
-                        onClick={() => setHistorialAbierto(true)}
-                        title="Mostrar historial de traslados"
-                        className="flex flex-col items-center gap-2 rounded-lg bg-primary px-2 py-3 text-primary-foreground shadow-sm transition-colors hover:opacity-90"
+            <AnimatePresence mode="popLayout">
+                {!historialAbierto && (
+                    <motion.div
+                        key="historial-colapsado"
+                        initial={{ opacity: 0, x: -16 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        exit={{ opacity: 0, x: 16 }}
+                        transition={{ duration: 0.25, ease: 'easeOut' }}
+                        className="hidden lg:flex min-h-0 flex-col items-center justify-start gap-2 pl-4"
                     >
-                        <PanelRightOpen className="h-4 w-4 shrink-0" />
-                        <span className="[writing-mode:vertical-rl] text-xs font-bold uppercase tracking-wide">
-                            Historial{historial?.length ? ` · ${historial.length}` : ''}
-                        </span>
-                    </button>
-                </motion.div>
-            )}
+                        <button
+                            type="button"
+                            onClick={() => setHistorialAbierto(true)}
+                            title="Mostrar historial de traslados"
+                            className="flex flex-col items-center gap-2 rounded-lg bg-primary px-2 py-3 text-primary-foreground shadow-sm transition-colors hover:opacity-90"
+                        >
+                            <PanelRightOpen className="h-4 w-4 shrink-0" />
+                            <span className="[writing-mode:vertical-rl] text-xs font-bold uppercase tracking-wide">
+                                Historial{historial?.length ? ` · ${historial.length}` : ''}
+                            </span>
+                        </button>
+                    </motion.div>
+                )}
 
+                {historialAbierto && (
             <motion.div
-                layout
-                initial={{ opacity: 0, y: 12 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.35, delay: 0.1 }}
-                className={`flex min-h-0 flex-col gap-4 lg:pl-6 ${historialAbierto ? '' : 'lg:hidden'}`}
+                key="historial-abierto"
+                initial={{ opacity: 0, x: 60 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: 60 }}
+                transition={{ duration: 0.3, ease: 'easeOut' }}
+                className="flex min-h-0 flex-col gap-4 lg:pl-6"
             >
                 <SectionHeader
                     icon={History}
@@ -618,6 +628,8 @@ export const TrasladoFondosPage = () => {
                     )}
                 </div>
             </motion.div>
+                )}
+            </AnimatePresence>
 
             {/* Modal de Resumen */}
             <Modal
