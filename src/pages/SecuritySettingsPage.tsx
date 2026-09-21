@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion'
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react'
 import {
     ColumnDef,
     flexRender,
@@ -7,7 +7,7 @@ import {
     getPaginationRowModel,
     useReactTable,
 } from '@tanstack/react-table'
-import { ArrowLeft, UserPlus, Edit, Activity, Search, RefreshCw, Loader2, Trash2, AlertTriangle } from 'lucide-react'
+import { ArrowLeft, UserPlus, Edit, Activity, Search, RefreshCw, Loader2, UserX, UserCheck, AlertTriangle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { useNavigate } from 'react-router-dom'
@@ -26,22 +26,22 @@ export const SecuritySettingsPage = () => {
     const { puede, P } = usePermiso()
     const puedeCrear = puede(P.CREAR_USUARIO)
     const puedeEditar = puede(P.EDITAR_USUARIO)
-    const puedeEliminar = puede(P.ELIMINAR_USUARIO)
 
     // Estados modal
     const [isFormOpen, setIsFormOpen] = useState(false)
     const [editingUser, setEditingUser] = useState<UsuarioMaster | undefined>(undefined)
 
-    // Estados modal eliminar
-    const [isDeleteOpen, setIsDeleteOpen] = useState(false)
-    const [deletingUser, setDeletingUser] = useState<UsuarioMaster | null>(null)
-    const [deleting, setDeleting] = useState(false)
+    // Estados modal activar/desactivar. El usuario nunca se elimina físicamente.
+    const [isStatusOpen, setIsStatusOpen] = useState(false)
+    const [statusUser, setStatusUser] = useState<UsuarioMaster | null>(null)
+    const [changingStatus, setChangingStatus] = useState(false)
 
     // Estado tabla
     const [globalFilter, setGlobalFilter] = useState('')
     const [usuarios, setUsuarios] = useState<UsuarioMaster[]>([])
     const [loading, setLoading] = useState(true)
     const [total, setTotal] = useState(0)
+    const [filtroEstado, setFiltroEstado] = useState<'activos' | 'inactivos' | 'todos'>('activos')
     const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
     const fetchUsuarios = async (searchTerm = globalFilter) => {
@@ -91,28 +91,27 @@ export const SecuritySettingsPage = () => {
         fetchUsuarios(globalFilter)
     }
 
-    const handleDeleteUser = (user: UsuarioMaster) => {
-        setDeletingUser(user)
-        setIsDeleteOpen(true)
+    const handleStatusUser = (user: UsuarioMaster) => {
+        setStatusUser(user)
+        setIsStatusOpen(true)
     }
 
-    const confirmDelete = async () => {
-        if (!deletingUser) return
+    const confirmStatusChange = async () => {
+        if (!statusUser) return
         try {
-            setDeleting(true)
-            await seguridadApi.eliminarUsuario(deletingUser.id)
-            console.log(`✅ Usuario ${deletingUser.usuario} eliminado`)
-            setIsDeleteOpen(false)
-            setDeletingUser(null)
+            setChangingStatus(true)
+            await seguridadApi.actualizarUsuario(statusUser.id, { activo: !statusUser.activo })
+            setIsStatusOpen(false)
+            setStatusUser(null)
             fetchUsuarios(globalFilter)
         } catch (err: any) {
-            console.error('❌ Error eliminando usuario:', err)
+            console.error('❌ Error cambiando el estado del usuario:', err)
             if (err?.response) {
                 console.error('📋 Status:', err.response.status)
                 console.error('📋 Response:', JSON.stringify(err.response.data, null, 2))
             }
         } finally {
-            setDeleting(false)
+            setChangingStatus(false)
         }
     }
 
@@ -207,18 +206,18 @@ export const SecuritySettingsPage = () => {
                                 <Edit className="h-4 w-4" />
                             </Button>
                         )}
-                        {puedeEliminar && (
+                        {puedeEditar && (
                             <Button
                                 variant="ghost"
                                 size="sm"
-                                onClick={() => handleDeleteUser(user)}
-                                title="Eliminar usuario"
-                                className="h-8 w-8 p-0 text-destructive border border-destructive/20 hover:bg-destructive/10"
+                                onClick={() => handleStatusUser(user)}
+                                title={user.activo ? 'Desactivar usuario' : 'Reactivar usuario'}
+                                className={`h-8 w-8 p-0 border ${user.activo ? 'text-destructive border-destructive/20 hover:bg-destructive/10' : 'text-green-600 border-green-600/20 hover:bg-green-600/10'}`}
                             >
-                                <Trash2 className="h-4 w-4" />
+                                {user.activo ? <UserX className="h-4 w-4" /> : <UserCheck className="h-4 w-4" />}
                             </Button>
                         )}
-                        {!puedeEditar && !puedeEliminar && (
+                        {!puedeEditar && (
                             <span className="text-xs text-muted-foreground">—</span>
                         )}
                     </div>
@@ -227,8 +226,19 @@ export const SecuritySettingsPage = () => {
         },
     ]
 
+    const usuariosFiltrados = useMemo(() => {
+        if (filtroEstado === 'todos') return usuarios
+        const mostrarActivos = filtroEstado === 'activos'
+        return usuarios.filter((usuario) => usuario.activo === mostrarActivos)
+    }, [usuarios, filtroEstado])
+
+    const conteosEstado = useMemo(() => ({
+        activos: usuarios.filter((usuario) => usuario.activo).length,
+        inactivos: usuarios.filter((usuario) => !usuario.activo).length,
+    }), [usuarios])
+
     const table = useReactTable({
-        data: usuarios,
+        data: usuariosFiltrados,
         columns,
         getCoreRowModel: getCoreRowModel(),
         getPaginationRowModel: getPaginationRowModel(),
@@ -241,7 +251,7 @@ export const SecuritySettingsPage = () => {
             transition={{ duration: 0.5 }}
             className="flex h-full min-h-0 flex-col gap-4 p-6"
         >
-            <div className="flex shrink-0 flex-col gap-3 border-b pb-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex shrink-0 flex-col gap-3 border-b pb-4 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
                 {/* Volver atrás: esta pantalla se alcanza desde Configuración → Seguridad
                     y también desde Maestro → Maestro de Usuarios, así que se regresa al
                     origen real en vez de forzar siempre /configuracion. */}
@@ -267,8 +277,28 @@ export const SecuritySettingsPage = () => {
                         Nuevo Usuario
                     </Button>}
                 </div>
+                <div className="inline-flex shrink-0 rounded-lg border bg-muted/30 p-1" aria-label="Filtrar usuarios por estado">
+                    {([
+                        ['activos', 'Activos', conteosEstado.activos],
+                        ['inactivos', 'Inactivos', conteosEstado.inactivos],
+                        ['todos', 'Todos', usuarios.length],
+                    ] as const).map(([valor, etiqueta, cantidad]) => (
+                        <button
+                            key={valor}
+                            type="button"
+                            onClick={() => setFiltroEstado(valor)}
+                            className={`rounded-md px-3 py-1.5 text-xs font-semibold transition-colors ${
+                                filtroEstado === valor
+                                    ? 'bg-background text-foreground shadow-sm'
+                                    : 'text-muted-foreground hover:text-foreground'
+                            }`}
+                        >
+                            {etiqueta} ({cantidad})
+                        </button>
+                    ))}
+                </div>
                 <p className="shrink-0 text-sm text-muted-foreground">
-                    {usuarios.length} {usuarios.length === 1 ? 'usuario' : 'usuarios'}
+                    {usuariosFiltrados.length} {usuariosFiltrados.length === 1 ? 'usuario' : 'usuarios'}
                 </p>
             </div>
 
@@ -359,10 +389,10 @@ export const SecuritySettingsPage = () => {
                 user={editingUser}
             />
 
-            {/* Modal de confirmación de eliminación */}
+            {/* Modal de confirmación de activación/desactivación */}
             <Modal
-                isOpen={isDeleteOpen}
-                onClose={() => { if (!deleting) { setIsDeleteOpen(false); setDeletingUser(null) } }}
+                isOpen={isStatusOpen}
+                onClose={() => { if (!changingStatus) { setIsStatusOpen(false); setStatusUser(null) } }}
                 title=""
                 className="max-w-lg"
             >
@@ -370,65 +400,65 @@ export const SecuritySettingsPage = () => {
                     {/* Icono grande animado */}
                     <div className="relative mb-6">
                         <div className="relative h-20 w-20 rounded-full bg-destructive/10 border-2 border-destructive/30 flex items-center justify-center">
-                            <AlertTriangle className="h-10 w-10 text-destructive" />
+                            {statusUser?.activo ? <AlertTriangle className="h-10 w-10 text-destructive" /> : <UserCheck className="h-10 w-10 text-green-600" />}
                         </div>
                     </div>
 
                     {/* Título */}
                     <h3 className="text-xl font-bold text-foreground mb-2">
-                        ¿Eliminar este usuario?
+                        ¿{statusUser?.activo ? 'Desactivar' : 'Reactivar'} este usuario?
                     </h3>
 
                     {/* Descripción */}
                     <p className="text-muted-foreground mb-5 max-w-sm">
-                        Estás a punto de eliminar permanentemente al usuario:
+                        El usuario {statusUser?.activo ? 'perderá el acceso al sistema' : 'recuperará el acceso al sistema'}:
                     </p>
 
                     {/* Card con info del usuario */}
                     <div className="w-full max-w-sm bg-muted/50 border border-border rounded-xl px-5 py-4 mb-6">
                         <p className="text-lg font-semibold text-foreground">
-                            {deletingUser?.nombre_completo || 'Sin nombre'}
+                            {statusUser?.nombre_completo || 'Sin nombre'}
                         </p>
                         <p className="text-sm text-muted-foreground mt-0.5">
-                            @{deletingUser?.usuario}
+                            @{statusUser?.usuario}
                         </p>
-                        {deletingUser?.email && (
+                        {statusUser?.email && (
                             <p className="text-xs text-muted-foreground mt-1">
-                                {deletingUser.email}
+                                {statusUser.email}
                             </p>
                         )}
                     </div>
 
                     {/* Advertencia */}
-                    <p className="text-xs text-destructive/80 mb-6">
-                        Se eliminarán sus roles. Esta acción no se puede deshacer.
+                    <p className="text-xs text-muted-foreground mb-6">
+                        No se eliminarán datos, roles ni asignaciones. Este cambio puede revertirse.
                     </p>
 
                     {/* Botones */}
                     <div className="flex gap-3 w-full max-w-sm">
                         <Button
                             variant="outline"
-                            onClick={() => { setIsDeleteOpen(false); setDeletingUser(null) }}
-                            disabled={deleting}
+                            onClick={() => { setIsStatusOpen(false); setStatusUser(null) }}
+                            disabled={changingStatus}
                             className="flex-1 h-11"
                         >
                             Cancelar
                         </Button>
                         <Button
-                            variant="destructive"
-                            onClick={confirmDelete}
-                            disabled={deleting}
+                            variant={statusUser?.activo ? 'destructive' : 'default'}
+                            onClick={confirmStatusChange}
+                            disabled={changingStatus}
                             className="flex-1 h-11 gap-2"
                         >
-                            {deleting ? (
+                            {changingStatus ? (
                                 <>
                                     <Loader2 className="h-4 w-4 animate-spin" />
-                                    Eliminando...
+                                    Guardando...
                                 </>
                             ) : (
                                 <>
-                                    <Trash2 className="h-4 w-4" />
-                                    Sí, eliminar
+                                    {statusUser?.activo ? <UserX className="h-4 w-4" /> : <UserCheck className="h-4 w-4" />}
+                                    Sí, {statusUser?.activo ? 'desactivar' : 'reactivar'}
                                 </>
                             )}
                         </Button>
