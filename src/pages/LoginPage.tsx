@@ -54,6 +54,7 @@ export const LoginPage = () => {
                         nombre_completo: res.data.nombre_completo ?? null,
                         rol_id: res.data.rol_id ?? null,
                         rol_nombre: res.data.rol_nombre ?? '',
+                        centros_operacion: res.data.centros_operacion ?? (res.data.centro_operacion_codigo ? [res.data.centro_operacion_codigo] : []),
                     },
                     permisos
                 )
@@ -91,6 +92,7 @@ export const LoginPage = () => {
                         nombre_completo: userData.nombre_completo ?? null,
                         rol_id: rolId ?? null,
                         rol_nombre: rolUsuario?.nombre ?? '',
+                        centros_operacion: userData.centros_operacion ?? (userData.centro_operacion_codigo ? [userData.centro_operacion_codigo] : []),
                     },
                     permisos
                 )
@@ -107,6 +109,7 @@ export const LoginPage = () => {
                         nombre_completo: null,
                         rol_id: null,
                         rol_nombre: '',
+                        centros_operacion: [],
                     },
                     []
                 )

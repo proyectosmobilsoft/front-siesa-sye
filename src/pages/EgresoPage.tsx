@@ -300,6 +300,9 @@ const ConductorRow = ({ item, idx, soportes }: ConductorRowProps) => {
                         </div>
                     </div>
                 </td>
+                <td className="py-2.5 px-4 font-mono font-semibold">
+                    {item.centro_operacion_codigo || <span className="font-sans text-xs italic text-muted-foreground">Sin asignar</span>}
+                </td>
                 <td className="py-2.5 px-4">
                     {item.estado ? (
                         <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${getEstadoBadge(item.estado)}`}>
@@ -334,7 +337,7 @@ const ConductorRow = ({ item, idx, soportes }: ConductorRowProps) => {
             </motion.tr>
             <AnimatePresence>
                 {expanded && (
-                    <SoportesSubAccordion soportes={soportesConductor} colSpan={5} />
+                    <SoportesSubAccordion soportes={soportesConductor} colSpan={6} />
                 )}
             </AnimatePresence>
         </>
@@ -421,6 +424,9 @@ const DistribucionAccordion = ({ anticipo, totalColumnas }: DistribucionAccordio
                                                 Conductor
                                             </th>
                                             <th className="h-9 px-4 text-left font-medium text-muted-foreground text-xs uppercase tracking-wide">
+                                                C.O.
+                                            </th>
+                                            <th className="h-9 px-4 text-left font-medium text-muted-foreground text-xs uppercase tracking-wide">
                                                 Estado
                                             </th>
                                             <th className="h-9 px-4 text-right font-medium text-muted-foreground text-xs uppercase tracking-wide">
@@ -441,7 +447,7 @@ const DistribucionAccordion = ({ anticipo, totalColumnas }: DistribucionAccordio
                                     </tbody>
                                     <tfoot>
                                         <tr className="border-t bg-muted/30">
-                                            <td colSpan={2} className="py-2 px-4 text-xs font-medium text-muted-foreground text-right uppercase tracking-wide">
+                                            <td colSpan={3} className="py-2 px-4 text-xs font-medium text-muted-foreground text-right uppercase tracking-wide">
                                                 Totales:
                                             </td>
                                             <td className="py-2 px-4 text-right">
@@ -733,6 +739,16 @@ export const EgresoPage = () => {
                 </Button>
             ),
             cell: ({ row }) => <span className="text-sm">{row.getValue('usuario_nombre')}</span>,
+        },
+        {
+            accessorKey: 'centro_operacion_codigo',
+            header: 'C.O.',
+            cell: ({ row }) => {
+                const codigo = row.getValue('centro_operacion_codigo') as string | null
+                return codigo
+                    ? <span className="font-mono text-sm font-semibold">{codigo}</span>
+                    : <span className="text-xs italic text-muted-foreground">Sin asignar</span>
+            },
         },
         {
             accessorKey: 'area_departamento',

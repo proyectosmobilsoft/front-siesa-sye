@@ -27,6 +27,8 @@ export interface UsuarioMaster {
     email: string | null
     telefono: string | null
     nombre_completo: string | null
+    centro_operacion_codigo?: string | null
+    centros_operacion?: string[]
     observaciones?: string | null
     forma_pago?: string | null
     activo: boolean
@@ -73,6 +75,8 @@ export interface CreateUsuarioMasterDto {
     email?: string | null
     telefono?: string | null
     nombre_completo?: string | null
+    centro_operacion_codigo?: string
+    centros_operacion_codigos?: string[]
     observaciones?: string | null
     forma_pago?: string | null
     activo: boolean
@@ -93,6 +97,8 @@ export interface UpdateUsuarioMasterDto {
     email?: string | null
     telefono?: string | null
     nombre_completo?: string | null
+    centro_operacion_codigo?: string
+    centros_operacion_codigos?: string[]
     observaciones?: string | null
     forma_pago?: string | null
     activo?: boolean

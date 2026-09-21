@@ -125,7 +125,7 @@ export const InterfazContableVehiculosPage = () => {
                 <table className="w-full text-sm">
                     <thead className="sticky top-0 z-10 bg-card">
                         <tr className="border-b bg-muted/50">
-                            {['Conductor', 'Placa', 'Categoría', 'Cuenta contable', 'Estado', 'Observaciones'].map((h) => (
+                            {['Conductor', 'C.O.', 'Placa', 'Categoría', 'Cuenta contable', 'Estado', 'Observaciones'].map((h) => (
                                 <th key={h} className="h-11 whitespace-nowrap px-4 text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                                     {h}
                                 </th>
@@ -136,7 +136,7 @@ export const InterfazContableVehiculosPage = () => {
                     <tbody>
                         {loading ? (
                             <tr>
-                                <td colSpan={7} className="h-32 text-center">
+                                <td colSpan={8} className="h-32 text-center">
                                     <div className="flex items-center justify-center gap-2 text-muted-foreground">
                                         <Loader2 className="h-5 w-5 animate-spin" />
                                         Cargando relaciones...
@@ -149,6 +149,9 @@ export const InterfazContableVehiculosPage = () => {
                                     <td className="py-3.5 px-4">
                                         <div className="font-medium">{r.nombre_completo || r.usuario}</div>
                                         <div className="text-xs text-muted-foreground">{r.usuario}</div>
+                                    </td>
+                                    <td className="py-3.5 px-4 font-mono font-semibold">
+                                        {r.centro_operacion_codigo || <span className="font-sans text-xs italic text-muted-foreground">Sin asignar</span>}
                                     </td>
                                     <td className="whitespace-nowrap py-3.5 px-4">
                                         <span className="font-mono font-semibold">{r.placa || 'Sin placa'}</span>

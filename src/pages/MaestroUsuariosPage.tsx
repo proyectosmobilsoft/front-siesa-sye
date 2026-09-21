@@ -123,6 +123,7 @@ export const MaestroUsuariosPage = () => {
                         <tr className="border-b bg-muted/50">
                             <th className="h-11 px-4 text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground">ID</th>
                             <th className="h-11 px-4 text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground">Usuario</th>
+                            <th className="h-11 px-4 text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground">C.O.</th>
                             <th className="h-11 px-4 text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground">Nombre Completo</th>
                             <th className="h-11 px-4 text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground">Email</th>
                             <th className="h-11 px-4 text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground">Estado</th>
@@ -133,7 +134,7 @@ export const MaestroUsuariosPage = () => {
                     <tbody>
                         {loading ? (
                             <tr>
-                                <td colSpan={7} className="h-32 text-center">
+                                <td colSpan={8} className="h-32 text-center">
                                     <div className="flex items-center justify-center gap-2 text-muted-foreground">
                                         <Loader2 className="h-5 w-5 animate-spin" />
                                         Cargando usuarios...
@@ -145,6 +146,9 @@ export const MaestroUsuariosPage = () => {
                                 <tr key={user.id} className="border-b transition-colors hover:bg-muted/40">
                                     <td className="py-3.5 px-4 font-mono text-xs text-muted-foreground">{user.id}</td>
                                     <td className="py-3.5 px-4 font-semibold text-primary">{user.usuario}</td>
+                                    <td className="py-3.5 px-4 font-mono font-semibold">
+                                        {user.centro_operacion_codigo || <span className="font-sans text-xs italic text-muted-foreground">Sin asignar</span>}
+                                    </td>
                                     <td className="py-3.5 px-4">
                                         {user.nombre_completo || <span className="text-muted-foreground italic text-xs">Sin definir</span>}
                                     </td>

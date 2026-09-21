@@ -5,6 +5,8 @@ import { Button } from '@/components/ui/button'
 import { ThemeToggle } from './ThemeToggle'
 import { useUIStore } from '@/store/uiStore'
 import { getPageMeta } from '@/config/navigation'
+import { Select } from '@/components/ui/select'
+import { useAuthStore } from '@/store/authStore'
 
 // Decodifica el payload del JWT sin librerías externas
 const decodeJwtPayload = (token: string): Record<string, string> | null => {
@@ -39,11 +41,13 @@ export const Header = () => {
     const { sidebarOpen, setSidebarOpen } = useUIStore()
     const navigate = useNavigate()
     const location = useLocation()
+    const { sesion, centroOperacionActivo, setCentroOperacionActivo, clearSession } = useAuthStore()
 
     const { nombre, inicial } = getUsuarioFromToken()
     const pagina = getPageMeta(location.pathname)
 
     const handleLogout = () => {
+        clearSession()
         localStorage.removeItem('auth_token')
         localStorage.removeItem('last_activity')
         navigate('/login')
@@ -96,6 +100,26 @@ export const Header = () => {
 
                 {/* Right — tema + usuario + logout */}
                 <div className="flex items-center gap-3 flex-shrink-0">
+                    {(sesion?.centros_operacion?.length ?? 0) > 1 ? (
+                        <Select
+                            aria-label="Centro de operación activo"
+                            title="Centro de operación activo"
+                            value={centroOperacionActivo ?? ''}
+                            onChange={(event) => {
+                                setCentroOperacionActivo(event.target.value)
+                                window.location.reload()
+                            }}
+                            className="h-9 w-[92px] font-mono font-semibold"
+                        >
+                            {(sesion?.centros_operacion ?? []).map((codigo) => (
+                                <option key={codigo} value={codigo}>C.O. {codigo}</option>
+                            ))}
+                        </Select>
+                    ) : sesion?.centros_operacion?.[0] ? (
+                        <span className="hidden rounded-md border bg-muted/40 px-2.5 py-1.5 font-mono text-xs font-semibold sm:inline-flex">
+                            C.O. {sesion.centros_operacion[0]}
+                        </span>
+                    ) : null}
                     <ThemeToggle />
 
                     <div className="flex items-center gap-2">

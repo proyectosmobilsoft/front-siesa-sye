@@ -139,6 +139,16 @@ export const SecuritySettingsPage = () => {
             },
         },
         {
+            accessorKey: 'centro_operacion_codigo',
+            header: 'C.O.',
+            cell: ({ row }) => {
+                const centros = row.original.centros_operacion ?? ((row.getValue('centro_operacion_codigo') as string | null) ? [row.getValue('centro_operacion_codigo') as string] : [])
+                return centros.length
+                    ? <span className="font-mono font-medium">{centros.join(', ')}</span>
+                    : <span className="text-muted-foreground italic text-xs">Sin asignar</span>
+            },
+        },
+        {
             id: 'rol',
             header: 'Rol',
             // El listado devuelve roles[] (auth_usuario_rol + auth_roles); se usa el

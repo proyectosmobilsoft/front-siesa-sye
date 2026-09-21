@@ -84,6 +84,8 @@ const Etiqueta = ({ children, requerido }: { children: React.ReactNode; requerid
     </label>
 )
 
+const CENTROS_OPERACION = ['001', '002'] as const
+
 export const UserFormModal = ({ isOpen, onClose, user }: UserFormModalProps) => {
     const isEditing = !!user
 
@@ -92,6 +94,9 @@ export const UserFormModal = ({ isOpen, onClose, user }: UserFormModalProps) => 
     const [email, setEmail] = useState(user?.email || '')
     const [codigoPais, setCodigoPais] = useState('+57')
     const [telefono, setTelefono] = useState('')
+    const [centrosOperacion, setCentrosOperacion] = useState<string[]>(
+        user?.centros_operacion ?? (user?.centro_operacion_codigo ? [user.centro_operacion_codigo] : [])
+    )
     const [roleId, setRoleId] = useState<number | null>(user?.rol_id || null)
     const [credencial, setCredencial] = useState('')
     const [password, setPassword] = useState('')
@@ -181,6 +186,7 @@ export const UserFormModal = ({ isOpen, onClose, user }: UserFormModalProps) => 
                 setEmail('')
                 setCodigoPais('+57')
                 setTelefono('')
+                setCentrosOperacion([])
                 setRoleId(null)
                 setCredencial('')
                 setPassword('')
@@ -204,6 +210,7 @@ export const UserFormModal = ({ isOpen, onClose, user }: UserFormModalProps) => 
                 setPassword('')
                 setObservaciones(user?.observaciones || '')
                 setFormaPago(user?.forma_pago || '')
+                setCentrosOperacion(user?.centros_operacion ?? (user?.centro_operacion_codigo ? [user.centro_operacion_codigo] : []))
 
                 // Inicializar vinculación SIESA
                 if (user?.siesa_rowid && user?.siesa_nombre) {
@@ -276,6 +283,9 @@ export const UserFormModal = ({ isOpen, onClose, user }: UserFormModalProps) => 
             if (fullUser?.email && !email) setEmail(fullUser.email)
             if (fullUser?.observaciones !== undefined) setObservaciones(fullUser.observaciones || '')
             if (fullUser?.forma_pago !== undefined) setFormaPago(fullUser.forma_pago || '')
+            setCentrosOperacion(
+                fullUser?.centros_operacion ?? (fullUser?.centro_operacion_codigo ? [fullUser.centro_operacion_codigo] : [])
+            )
             if (fullUser?.siesa_rowid && fullUser?.siesa_nombre) {
                 setSiesaSelected({
                     f552_rowid: fullUser.siesa_rowid,
@@ -544,7 +554,9 @@ export const UserFormModal = ({ isOpen, onClose, user }: UserFormModalProps) => 
             ? `${codigoPais}${telefono.trim()}` 
             : null
 
-        if (!usuario || !roleId) return
+        // Los usuarios anteriores a la migración pueden seguir editándose aunque
+        // todavía no tengan C.O.; en creación sí es obligatorio asignar alguno.
+        if (!usuario || !roleId || (!isEditing && centrosOperacion.length === 0)) return
 
         if (isEditing && user?.id) {
             // --- MODO EDICIÓN (PATCH) ---
@@ -559,6 +571,11 @@ export const UserFormModal = ({ isOpen, onClose, user }: UserFormModalProps) => 
             }
             if (telefonoCompleto !== (user.telefono || null)) {
                 payload.telefono = telefonoCompleto
+            }
+            const centrosAnteriores = user.centros_operacion ?? (user.centro_operacion_codigo ? [user.centro_operacion_codigo] : [])
+            if ([...centrosOperacion].sort().join(',') !== [...centrosAnteriores].sort().join(',')) {
+                payload.centros_operacion_codigos = centrosOperacion
+                payload.centro_operacion_codigo = centrosOperacion[0]
             }
             if (roleId !== user.rol_id) {
                 payload.rol_id = roleId
@@ -627,6 +644,8 @@ export const UserFormModal = ({ isOpen, onClose, user }: UserFormModalProps) => 
                 email: email.trim() || null,
                 telefono: telefonoCompleto,
                 nombre_completo: name.trim() || null,
+                centros_operacion_codigos: centrosOperacion,
+                centro_operacion_codigo: centrosOperacion[0],
                 observaciones: observaciones.trim() || null,
                 forma_pago: rolTieneModuloConductor(rolSeleccionado)
                     ? formaPago.trim() || null
@@ -664,7 +683,7 @@ export const UserFormModal = ({ isOpen, onClose, user }: UserFormModalProps) => 
             <div className="mt-2 space-y-7">
                 {/* ─── Información personal ─── */}
                 <SeccionTitulo>Información personal</SeccionTitulo>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
                     <div className="space-y-2">
                         <Etiqueta requerido>Nombre Completo</Etiqueta>
                         <Input
@@ -747,6 +766,26 @@ export const UserFormModal = ({ isOpen, onClose, user }: UserFormModalProps) => 
                                 className="h-10 flex-1"
                                 type="tel"
                             />
+                        </div>
+                    </div>
+                    <div className="space-y-2">
+                        <Etiqueta requerido>C.O.</Etiqueta>
+                        <div className="flex h-10 items-center gap-4 rounded-md border border-input bg-background px-3">
+                            {CENTROS_OPERACION.map((codigo) => (
+                                <label key={codigo} className="flex cursor-pointer items-center gap-2 text-sm font-medium">
+                                    <input
+                                        type="checkbox"
+                                        checked={centrosOperacion.includes(codigo)}
+                                        onChange={(event) => setCentrosOperacion((actuales) =>
+                                            event.target.checked
+                                                ? [...actuales, codigo]
+                                                : actuales.filter((item) => item !== codigo)
+                                        )}
+                                        className="h-4 w-4 rounded border-input accent-primary"
+                                    />
+                                    {codigo}
+                                </label>
+                            ))}
                         </div>
                     </div>
                 </div>
@@ -1089,7 +1128,11 @@ export const UserFormModal = ({ isOpen, onClose, user }: UserFormModalProps) => 
                     </p>
                     <div className="flex justify-end gap-2">
                         <Button variant="outline" onClick={onClose} className="min-w-[110px]">Cancelar</Button>
-                        <Button onClick={handleSave} className="min-w-[160px]">
+                        <Button
+                            onClick={handleSave}
+                            disabled={!usuario || !roleId || (!isEditing && centrosOperacion.length === 0)}
+                            className="min-w-[160px]"
+                        >
                             {isEditing ? 'Actualizar Usuario' : 'Guardar Usuario'}
                         </Button>
                     </div>

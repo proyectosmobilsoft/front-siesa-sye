@@ -1,11 +1,8 @@
 import { motion } from 'framer-motion'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Settings, Database, Palette, Bell, Shield } from 'lucide-react'
-import { useNavigate } from 'react-router-dom'
+import { Settings, Database, Palette, Bell } from 'lucide-react'
 
 export const SettingsPage = () => {
-    const navigate = useNavigate()
-
     const settingsSections = [
         {
             title: 'Configuración General',
@@ -34,13 +31,6 @@ export const SettingsPage = () => {
             icon: Bell,
             items: ['Email notifications', 'Push notifications', 'Alertas del sistema'],
             path: null
-        },
-        {
-            title: 'Seguridad',
-            description: 'Configuración de seguridad, roles, y usuarios',
-            icon: Shield,
-            items: ['Usuarios (Conductores)', 'Autenticación', 'Permisos y Módulos', 'Auditoría'],
-            path: '/configuracion/seguridad'
         }
     ]
 
@@ -59,13 +49,11 @@ export const SettingsPage = () => {
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ duration: 0.5, delay: index * 0.1 }}
-                        onClick={() => section.path && navigate(section.path)}
-                        className={section.path ? "cursor-pointer" : ""}
                     >
-                        <Card className={`hover:shadow-lg transition-all duration-200 h-full ${section.path ? 'hover:border-primary/50 ring-1 ring-transparent hover:ring-primary/20' : ''}`}>
+                        <Card className="hover:shadow-lg transition-all duration-200 h-full">
                             <CardHeader>
                                 <div className="flex items-center space-x-3">
-                                    <section.icon className={`h-6 w-6 ${section.path ? 'text-primary' : 'text-muted-foreground'}`} />
+                                    <section.icon className="h-6 w-6 text-muted-foreground" />
                                     <div>
                                         <CardTitle className="text-lg">{section.title}</CardTitle>
                                         <p className="text-sm text-muted-foreground">{section.description}</p>
@@ -75,8 +63,8 @@ export const SettingsPage = () => {
                             <CardContent>
                                 <ul className="space-y-2">
                                     {section.items.map((item) => (
-                                        <li key={item} className={`text-sm flex items-center ${section.title === 'Seguridad' && item.includes('Usuarios') ? 'text-primary font-medium' : 'text-muted-foreground'}`}>
-                                            <div className={`w-1.5 h-1.5 rounded-full mr-2 ${section.title === 'Seguridad' && item.includes('Usuarios') ? 'bg-primary' : 'bg-muted-foreground'}`} />
+                                        <li key={item} className="text-sm flex items-center text-muted-foreground">
+                                            <div className="w-1.5 h-1.5 rounded-full mr-2 bg-muted-foreground" />
                                             {item}
                                         </li>
                                     ))}

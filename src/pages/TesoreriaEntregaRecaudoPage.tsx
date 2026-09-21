@@ -41,6 +41,7 @@ interface GrupoConductor {
     conductorId: number
     conductorNombre: string
     conductorSiesaNombre?: string
+    centroOperacion?: string | null
     entregas: MovimientoEfectivo[]
     total: number
 }
@@ -57,6 +58,7 @@ const agruparPorConductor = (movimientos: MovimientoEfectivo[]): GrupoConductor[
                 conductorId: mov.conductor_id,
                 conductorNombre: mov.conductor_nombre || `Conductor ${mov.conductor_id}`,
                 conductorSiesaNombre: mov.conductor_siesa_nombre,
+                centroOperacion: mov.conductor_centro_operacion,
                 entregas: [mov],
                 total: mov.valor,
             })
@@ -225,6 +227,7 @@ const TableroConciliacion = ({ movimientos, onResuelto }: { movimientos: Movimie
                                 <thead>
                                     <tr className="border-b border-border bg-muted/30">
                                         <th className="px-5 py-3 text-left text-[10px] font-black uppercase tracking-wider text-muted-foreground">Conductor</th>
+                                        <th className="px-5 py-3 text-left text-[10px] font-black uppercase tracking-wider text-muted-foreground">C.O.</th>
                                         <th className="px-5 py-3 text-left text-[10px] font-black uppercase tracking-wider text-muted-foreground">Total</th>
                                         <th className="px-5 py-3 text-left text-[10px] font-black uppercase tracking-wider text-muted-foreground">Estado</th>
                                         <th className="px-5 py-3 text-left text-[10px] font-black uppercase tracking-wider text-muted-foreground">Diferencia</th>
@@ -260,6 +263,9 @@ const TableroConciliacion = ({ movimientos, onResuelto }: { movimientos: Movimie
                                                             })()}
                                                         </div>
                                                     </div>
+                                                </td>
+                                                <td className="px-5 py-3 text-left font-mono font-semibold">
+                                                    {conductor.centroOperacion || <span className="font-sans text-[11px] italic text-muted-foreground">Sin asignar</span>}
                                                 </td>
                                                 <td className="px-5 py-3 text-left">
                                                     <p className="font-bold tabular-nums text-foreground">{formatters.currency(conductor.total)}</p>
@@ -455,6 +461,7 @@ const EntregasSubAccordion = ({ entregas, colSpan, onValidar, entregasConHistori
                                     <>
                                         <th className="h-8 px-4 text-left font-medium uppercase tracking-wide text-muted-foreground">Diferencia</th>
                                         <th className="h-8 px-4 text-left font-medium uppercase tracking-wide text-muted-foreground">Aprobado por</th>
+                                        <th className="h-8 px-4 text-left font-medium uppercase tracking-wide text-muted-foreground">C.O.</th>
                                     </>
                                 ) : (
                                     <th className="h-8 px-4 text-left font-medium uppercase tracking-wide text-muted-foreground">Acción</th>
@@ -491,6 +498,9 @@ const EntregasSubAccordion = ({ entregas, colSpan, onValidar, entregasConHistori
                                                 )}
                                             </td>
                                             <td className="px-4 py-2 text-left text-muted-foreground">{mov.usuario_confirma_nombre || '—'}</td>
+                                            <td className="px-4 py-2 text-left font-mono font-semibold">
+                                                {mov.usuario_confirma_centro_operacion || <span className="font-sans italic text-muted-foreground">Sin asignar</span>}
+                                            </td>
                                         </>
                                     ) : (
                                         <td className="px-4 py-2 text-left">
@@ -560,6 +570,9 @@ const ConductorGrupoRow = ({ grupo, idx, onValidar, onVerRC, etiqueta, tieneAnul
                         </div>
                     </div>
                 </td>
+                <td className="px-4 py-3 text-left font-mono font-semibold">
+                    {grupo.centroOperacion || <span className="font-sans text-[11px] italic text-muted-foreground">Sin asignar</span>}
+                </td>
                 <td className="px-4 py-3 text-left">
                     <span className="text-sm font-bold tabular-nums text-foreground">{formatters.currency(grupo.total)}</span>
                 </td>
@@ -575,7 +588,7 @@ const ConductorGrupoRow = ({ grupo, idx, onValidar, onVerRC, etiqueta, tieneAnul
                 </td>
             </motion.tr>
             <AnimatePresence>
-                {expanded && <EntregasSubAccordion entregas={grupo.entregas} colSpan={3} onValidar={onValidar} entregasConHistorialAnulado={entregasConHistorialAnulado} />}
+                {expanded && <EntregasSubAccordion entregas={grupo.entregas} colSpan={4} onValidar={onValidar} entregasConHistorialAnulado={entregasConHistorialAnulado} />}
             </AnimatePresence>
         </>
     )
@@ -1100,6 +1113,7 @@ const EntregasPanel = ({ esPendiente, data, isLoading, error, onValidar, onVerRC
                             <thead>
                                 <tr className="border-b border-border bg-muted/40">
                                     <th className="px-4 py-3 text-left text-[10px] font-black uppercase tracking-wider text-muted-foreground">Conductor</th>
+                                    <th className="px-4 py-3 text-left text-[10px] font-black uppercase tracking-wider text-muted-foreground">C.O.</th>
                                     <th className="px-4 py-3 text-left text-[10px] font-black uppercase tracking-wider text-muted-foreground">Total</th>
                                     <th className="px-4 py-3 text-left text-[10px] font-black uppercase tracking-wider text-muted-foreground">Recibos</th>
                                 </tr>

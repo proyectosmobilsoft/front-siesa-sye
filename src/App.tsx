@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom'
+import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom'
 import { Sidebar } from '@/components/layout/Sidebar'
 import { Header } from '@/components/layout/Header'
 import { DashboardPage } from '@/pages/DashboardPage'
@@ -133,16 +133,14 @@ function AppLayout() {
 
                                 <Route path="/tesoreria/traslado-fondos" element={<ProtectedRoute permiso={PERMISOS.TRASLADO_FONDOS}><TrasladoFondosPage /></ProtectedRoute>} />
                                 <Route path="/maestro/roles" element={<ProtectedRoute permiso={PERMISOS.ROLES}><MaestroRolesPage /></ProtectedRoute>} />
-                                {/* Maestro de Usuarios y Configuración → Seguridad son la MISMA
-                                pantalla (SecuritySettingsPage). Antes /maestro/usuarios abría
-                                MaestroUsuariosPage, una versión distinta con otro modal.
-                                Ambas rutas se protegen con VER_USUARIOS. */}
+                                {/* Maestro de Usuarios es el acceso único a la administración de usuarios. */}
                                 <Route path="/maestro/usuarios" element={<ProtectedRoute permiso={PERMISOS.USUARIOS}><SecuritySettingsPage /></ProtectedRoute>} />
                                 <Route path="/maestro/descuentos-financieros" element={<ProtectedRoute permiso={PERMISOS.DESCUENTOS}><MaestroDescuentosFinancierosPage /></ProtectedRoute>} />
                                 <Route path="/tesoreria/recibo-caja" element={<ProtectedRoute permiso={PERMISOS.RECIBO_CAJA}><ReciboCajaPage /></ProtectedRoute>} />
                                 <Route path="/tesoreria/entrega-recaudo" element={<ProtectedRoute permiso={PERMISOS.ENTREGA_RECAUDO}><TesoreriaEntregaRecaudoPage /></ProtectedRoute>} />
                                 <Route path="/configuracion" element={<ProtectedRoute permiso={PERMISOS.CONFIGURACION}><SettingsPage /></ProtectedRoute>} />
-                                <Route path="/configuracion/seguridad" element={<ProtectedRoute permiso={PERMISOS.USUARIOS}><SecuritySettingsPage /></ProtectedRoute>} />
+                                {/* Compatibilidad con enlaces antiguos, sin mantener un módulo duplicado. */}
+                                <Route path="/configuracion/seguridad" element={<Navigate to="/maestro/usuarios" replace />} />
                                 <Route path="/ayuda" element={<HelpPage />} />
                             </Routes>
                         </Suspense>

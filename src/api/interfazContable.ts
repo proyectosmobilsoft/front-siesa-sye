@@ -6,6 +6,7 @@ export interface InterfazContableVehiculo {
     usuario_id: number
     usuario: string
     nombre_completo: string | null
+    centro_operacion_codigo?: string | null
     maquinaria_cod: number
     placa: string | null
     categoria: string | null

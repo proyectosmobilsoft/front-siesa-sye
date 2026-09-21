@@ -199,6 +199,7 @@ export interface AnticipoOperativo {
   id: number
   usuario_id: number
   usuario_nombre: string
+  centro_operacion_codigo?: string | null
   valor_distribuido: number
   numero_anticipo: string
   fecha_solicitud: string
@@ -237,6 +238,7 @@ export interface DistribucionItem {
   nombre?: string
   usuario_nombre?: string
   conductor_nombre?: string
+  centro_operacion_codigo?: string | null
   valor_asignado?: number
   valor?: number
   concepto?: string
@@ -278,6 +280,7 @@ export interface MovimientoEfectivo {
   conductor_id: number
   conductor_nombre?: string
   conductor_siesa_nombre?: string
+  conductor_centro_operacion?: string | null
   tipo: MovimientoEfectivoTipo
   valor: number
   valor_confirmado: number | null
@@ -292,6 +295,7 @@ export interface MovimientoEfectivo {
   usuario_registro: number | null
   usuario_confirma: number | null
   usuario_confirma_nombre?: string
+  usuario_confirma_centro_operacion?: string | null
   fecha_confirma: string | null
   created_at: string
 }
@@ -356,6 +360,7 @@ export interface TrasladoFondosMov {
   motivo: string | null
   usuario_id: number
   usuario_nombre?: string
+  centro_operacion_codigo?: string | null
   fecha: string
   created_at: string
   rowid_auxiliar_origen: number | null
@@ -440,6 +445,7 @@ export interface DocumentacionRCAnuladoResponse {
 export interface ResumenConductoresDiaItem {
   usuario_creacion: string
   conductor_nombre: string
+  centro_operacion_codigo?: string | null
   total_efectivo: number
   total_consignacion: number
   total: number

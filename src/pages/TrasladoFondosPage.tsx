@@ -228,7 +228,8 @@ export const TrasladoFondosPage = () => {
     const [exito, setExito] = useState(false)
     const [fechaInicial, setFechaInicial] = useState('')
     const [fechaFinal, setFechaFinal] = useState('')
-    const [historialAbierto, setHistorialAbierto] = useState(false)
+    // El historial inicia visible; el usuario puede contraerlo para ganar espacio.
+    const [historialAbierto, setHistorialAbierto] = useState(true)
     const [trasladoSeleccionado, setTrasladoSeleccionado] = useState<TrasladoFondosMov | null>(null)
 
     const rangoInvalido = !!fechaInicial && !!fechaFinal && fechaInicial > fechaFinal
@@ -609,7 +610,7 @@ export const TrasladoFondosPage = () => {
                                             )}
                                         </div>
                                         <p className="text-xs text-muted-foreground">
-                                            {formatters.dateTime(t.fecha)} · {t.usuario_nombre || 'Administrador'}
+                                            {formatters.dateTime(t.fecha)} · {t.usuario_nombre || 'Administrador'} · C.O. {t.centro_operacion_codigo || 'Sin asignar'}
                                             {t.motivo ? ` · ${t.motivo}` : ''}
                                         </p>
                                     </div>
@@ -719,6 +720,10 @@ export const TrasladoFondosPage = () => {
                                 <div>
                                     <p className="text-xs text-muted-foreground font-medium">Usuario / Registrado por</p>
                                     <p className="font-semibold">{trasladoSeleccionado.usuario_nombre || `ID: ${trasladoSeleccionado.usuario_id}`}</p>
+                                </div>
+                                <div>
+                                    <p className="text-xs text-muted-foreground font-medium">C.O. del usuario</p>
+                                    <p className="font-mono font-semibold">{trasladoSeleccionado.centro_operacion_codigo || 'Sin asignar'}</p>
                                 </div>
                                 <div>
                                     <p className="text-xs text-muted-foreground font-medium">Fecha Movimiento</p>

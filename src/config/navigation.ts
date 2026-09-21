@@ -291,21 +291,6 @@ export const navigation: NavItem[] = [
   },
 ]
 
-/**
- * Rutas alcanzables desde el front que no aparecen en el menú lateral.
- * /configuracion/seguridad renderiza la misma pantalla que Maestros → Usuarios,
- * así que se mantiene accesible (card de Configuración) pero sin duplicar la
- * entrada en el menú.
- */
-export const EXTRA_ROUTES: SubNavItem[] = [
-  {
-    name: 'Usuarios',
-    href: '/configuracion/seguridad',
-    icon: UserPlus,
-    subtitle: 'Administración de usuarios del sistema',
-  },
-]
-
 export interface PageMeta {
   name: string
   icon: LucideIcon
@@ -317,7 +302,6 @@ const flatRoutes: (SubNavItem | (NavItem & { href: string }))[] = [
     (item): item is NavItem & { href: string } => !!item.href
   ),
   ...navigation.flatMap(item => item.subItems ?? []),
-  ...EXTRA_ROUTES,
 ]
 
 const routesByPath = new Map(flatRoutes.map(r => [r.href, r]))

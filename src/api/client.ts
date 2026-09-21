@@ -1,5 +1,6 @@
 import axios, { AxiosError, InternalAxiosRequestConfig } from 'axios'
 import { API_CONFIG } from '@/config/api'
+import { useAuthStore } from '@/store/authStore'
 
 /**
  * Cliente HTTP configurado para toda la aplicación
@@ -28,6 +29,8 @@ apiClient.interceptors.request.use(
     const token = localStorage.getItem('auth_token')
     if (token && config.headers) {
       config.headers.Authorization = `Bearer ${token}`
+      const centroOperacion = useAuthStore.getState().centroOperacionActivo
+      if (centroOperacion) config.headers['X-Centro-Operacion'] = centroOperacion
       // Log en desarrollo para verificar que el token se está enviando
       if (import.meta.env.DEV) {
         console.log(`🔑 Token agregado a la petición: ${token.substring(0, 20)}...`)

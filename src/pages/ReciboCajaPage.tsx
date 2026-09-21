@@ -615,6 +615,7 @@ function TableroConductoresRC({
             <thead>
               <tr className="border-b border-border bg-muted/60">
                 <th className="px-4 py-3 text-left font-semibold uppercase tracking-wider text-muted-foreground">Conductor</th>
+                <th className="px-4 py-3 text-left font-semibold uppercase tracking-wider text-muted-foreground">C.O.</th>
                 <th className="px-4 py-3 text-left font-semibold uppercase tracking-wider text-muted-foreground">Efectivo</th>
                 <th className="px-4 py-3 text-left font-semibold uppercase tracking-wider text-muted-foreground">Transferencia</th>
                 <th className="px-4 py-3 text-left font-semibold uppercase tracking-wider text-muted-foreground">Total</th>
@@ -623,7 +624,7 @@ function TableroConductoresRC({
             <tbody>
               {conductores.length === 0 ? (
                 <tr>
-                  <td colSpan={4} className="py-14 text-center text-xs font-bold uppercase tracking-widest text-muted-foreground">
+                  <td colSpan={5} className="py-14 text-center text-xs font-bold uppercase tracking-widest text-muted-foreground">
                     {loading ? 'Cargando...' : 'Sin RC registrados para la fecha seleccionada'}
                   </td>
                 </tr>
@@ -661,13 +662,16 @@ function TableroConductoresRC({
                           </div>
                         </div>
                       </td>
+                      <td className="px-4 py-3 text-left font-mono font-semibold text-foreground">
+                        {c.centro_operacion_codigo || <span className="font-sans text-[11px] italic text-muted-foreground">Sin asignar</span>}
+                      </td>
                       <td className="px-4 py-3 text-left font-semibold text-foreground"><MontoAlineado value={c.total_efectivo} /></td>
                       <td className="px-4 py-3 text-left font-semibold text-foreground"><MontoAlineado value={c.total_consignacion} /></td>
                       <td className="px-4 py-3 text-left font-bold text-primary"><MontoAlineado value={c.total} /></td>
                     </motion.tr>
                     {expandido === c.usuario_creacion && (
                       <tr>
-                        <td colSpan={4} className="bg-muted/20 p-0">
+                        <td colSpan={5} className="bg-muted/20 p-0">
                           <RcConductorDetalle rc={detalle[c.usuario_creacion]} loading={cargando === c.usuario_creacion} />
                         </td>
                       </tr>
