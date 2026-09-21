@@ -71,7 +71,7 @@ const estadoBadge = (estado: string) =>
       : 'bg-amber-500/15 text-amber-700 dark:text-amber-400 border border-amber-500/20'
 
 export const ReciboCajaPage = () => {
-  const { sesion } = useAuthStore()
+  const { sesion, centroOperacionActivo } = useAuthStore()
   const responsableNombre = sesion?.nombre_completo || sesion?.usuario || 'Usuario Autenticado'
   const responsableCedula = sesion?.id ? String(sesion.id) : '—'
 
@@ -172,7 +172,7 @@ export const ReciboCajaPage = () => {
     try {
       const body: Record<string, unknown> = {
         p_cia: 1,
-        p_idco: '001',
+        p_idco: centroOperacionActivo ?? '001',
         p_origen: 13,
         p_numero: numero,
         p_rowid_tercero: '0',
