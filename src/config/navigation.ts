@@ -271,6 +271,19 @@ export const navigation: NavItem[] = [
     ],
   },
   {
+    name: 'Logística',
+    icon: Truck,
+    subItems: [
+      {
+        name: 'Asignar Facturas',
+        href: '/logistica/asignar-facturas',
+        icon: ListChecks,
+        subtitle: 'Asignar facturas pendientes a conductores para cobro en ruta',
+        permiso: PERMISOS.ASIGNACION_COBRO,
+      },
+    ],
+  },
+  {
     name: 'Sistema',
     icon: Settings,
     subItems: [

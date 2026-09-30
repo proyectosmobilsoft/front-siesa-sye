@@ -27,6 +27,7 @@ import { cn } from '@/lib/utils'
 import { apiClient } from '@/api/client'
 import { reciboCajaApi } from '@/api/reciboCaja'
 import { ResumenConductoresDia, ReciboCajaUsuario } from '@/api/types'
+import { DetalleFacturasAsignadasModal } from '@/components/asignacionCobro/DetalleFacturasAsignadasModal'
 import { formatters } from '@/utils/formatters'
 import { useAuthStore } from '@/store/authStore'
 
@@ -75,7 +76,7 @@ export const ReciboCajaPage = () => {
   const responsableNombre = sesion?.nombre_completo || sesion?.usuario || 'Usuario Autenticado'
   const responsableCedula = sesion?.id ? String(sesion.id) : '—'
 
-  const [tab, setTab] = useState<'general' | 'conductores' | 'recibos'>('general')
+  const [tab, setTab] = useState<'general' | 'conductores' | 'recibos'>('conductores')
 
   // Filtros de fecha General
   const [fechaDesde, setFechaDesde] = useState(hoyISO())
@@ -241,17 +242,6 @@ export const ReciboCajaPage = () => {
         <div className="flex items-center border-b border-border/60 px-4 pt-3">
           <div className="flex space-x-1 rounded-xl bg-muted/60 p-1">
             <button
-              onClick={() => setTab('general')}
-              className={cn(
-                'flex items-center gap-2 rounded-lg px-4 py-2 text-xs font-semibold transition-all',
-                tab === 'general'
-                  ? 'bg-card text-foreground shadow-xs'
-                  : 'text-muted-foreground hover:bg-card/50 hover:text-foreground'
-              )}
-            >
-              <Landmark className="h-3.5 w-3.5" /> General
-            </button>
-            <button
               onClick={() => setTab('conductores')}
               className={cn(
                 'flex items-center gap-2 rounded-lg px-4 py-2 text-xs font-semibold transition-all',
@@ -261,6 +251,17 @@ export const ReciboCajaPage = () => {
               )}
             >
               <User className="h-3.5 w-3.5" /> Conductores
+            </button>
+            <button
+              onClick={() => setTab('general')}
+              className={cn(
+                'flex items-center gap-2 rounded-lg px-4 py-2 text-xs font-semibold transition-all',
+                tab === 'general'
+                  ? 'bg-card text-foreground shadow-xs'
+                  : 'text-muted-foreground hover:bg-card/50 hover:text-foreground'
+              )}
+            >
+              <Landmark className="h-3.5 w-3.5" /> General
             </button>
             <button
               onClick={() => setTab('recibos')}
@@ -537,11 +538,14 @@ function TableroConductoresRC({
       efectivo: acc.efectivo + c.total_efectivo,
       consignacion: acc.consignacion + c.total_consignacion,
       total: acc.total + c.total,
+      pendientes: acc.pendientes + c.asignacion_pendientes,
+      valorPendiente: acc.valorPendiente + c.asignacion_valor_pendiente,
     }),
-    { recibos: 0, efectivo: 0, consignacion: 0, total: 0 }
+    { recibos: 0, efectivo: 0, consignacion: 0, total: 0, pendientes: 0, valorPendiente: 0 }
   )
 
   const [expandido, setExpandido] = useState<string | null>(null)
+  const [detalleConductor, setDetalleConductor] = useState<{ id: number; nombre: string } | null>(null)
   const [detalle, setDetalle] = useState<Record<string, ReciboCajaUsuario[]>>({})
   const [cargando, setCargando] = useState<string | null>(null)
 
@@ -600,6 +604,11 @@ function TableroConductoresRC({
             <span className="text-emerald-600 dark:text-emerald-400">Efectivo {formatters.currency(totales.efectivo)}</span>
             <span className="text-blue-600 dark:text-blue-400">Transferencia {formatters.currency(totales.consignacion)}</span>
             <span className="font-bold text-foreground">Total {formatters.currency(totales.total)}</span>
+            {totales.pendientes > 0 && (
+              <span className="text-amber-600 dark:text-amber-400">
+                Pendiente por cobrar {totales.pendientes} fact. · {formatters.currency(totales.valorPendiente)}
+              </span>
+            )}
           </div>
 
           <Button variant="outline" size="sm" className="h-8 w-8 p-0" onClick={onRefresh} disabled={loading} title="Actualizar">
@@ -616,6 +625,7 @@ function TableroConductoresRC({
               <tr className="border-b border-border bg-muted/60">
                 <th className="px-4 py-3 text-left font-semibold uppercase tracking-wider text-muted-foreground">Conductor</th>
                 <th className="px-4 py-3 text-left font-semibold uppercase tracking-wider text-muted-foreground">C.O.</th>
+                <th className="px-4 py-3 text-left font-semibold uppercase tracking-wider text-muted-foreground">Asignado pendiente</th>
                 <th className="px-4 py-3 text-left font-semibold uppercase tracking-wider text-muted-foreground">Efectivo</th>
                 <th className="px-4 py-3 text-left font-semibold uppercase tracking-wider text-muted-foreground">Transferencia</th>
                 <th className="px-4 py-3 text-left font-semibold uppercase tracking-wider text-muted-foreground">Total</th>
@@ -624,7 +634,7 @@ function TableroConductoresRC({
             <tbody>
               {conductores.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="py-14 text-center text-xs font-bold uppercase tracking-widest text-muted-foreground">
+                  <td colSpan={6} className="py-14 text-center text-xs font-bold uppercase tracking-widest text-muted-foreground">
                     {loading ? 'Cargando...' : 'Sin RC registrados para la fecha seleccionada'}
                   </td>
                 </tr>
@@ -665,13 +675,33 @@ function TableroConductoresRC({
                       <td className="px-4 py-3 text-left font-mono font-semibold text-foreground">
                         {c.centro_operacion_codigo || <span className="font-sans text-[11px] italic text-muted-foreground">Sin asignar</span>}
                       </td>
+                      <td className="px-4 py-3 text-left">
+                        {c.asignacion_pendientes > 0 && c.conductor_id ? (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              setDetalleConductor({ id: c.conductor_id!, nombre: c.conductor_nombre })
+                            }}
+                            className="flex flex-col text-left hover:underline"
+                          >
+                            <span className="font-semibold text-amber-600">
+                              {c.asignacion_pendientes} factura{c.asignacion_pendientes !== 1 ? 's' : ''}
+                            </span>
+                            <span className="text-[11px] text-muted-foreground">
+                              <MontoAlineado value={c.asignacion_valor_pendiente} />
+                            </span>
+                          </button>
+                        ) : (
+                          <span className="text-[11px] italic text-muted-foreground">Sin pendientes</span>
+                        )}
+                      </td>
                       <td className="px-4 py-3 text-left font-semibold text-foreground"><MontoAlineado value={c.total_efectivo} /></td>
                       <td className="px-4 py-3 text-left font-semibold text-foreground"><MontoAlineado value={c.total_consignacion} /></td>
                       <td className="px-4 py-3 text-left font-bold text-primary"><MontoAlineado value={c.total} /></td>
                     </motion.tr>
                     {expandido === c.usuario_creacion && (
                       <tr>
-                        <td colSpan={5} className="bg-muted/20 p-0">
+                        <td colSpan={6} className="bg-muted/20 p-0">
                           <RcConductorDetalle rc={detalle[c.usuario_creacion]} loading={cargando === c.usuario_creacion} />
                         </td>
                       </tr>
@@ -683,6 +713,14 @@ function TableroConductoresRC({
           </table>
         </div>
       </div>
+
+      {detalleConductor && (
+        <DetalleFacturasAsignadasModal
+          conductorId={detalleConductor.id}
+          conductorNombre={detalleConductor.nombre}
+          onClose={() => setDetalleConductor(null)}
+        />
+      )}
     </div>
   )
 }

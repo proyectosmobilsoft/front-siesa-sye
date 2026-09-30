@@ -445,11 +445,18 @@ export interface DocumentacionRCAnuladoResponse {
 export interface ResumenConductoresDiaItem {
   usuario_creacion: string
   conductor_nombre: string
+  conductor_id?: number | null
   centro_operacion_codigo?: string | null
   total_efectivo: number
   total_consignacion: number
   total: number
   recibos_count: number
+  /** Facturas asignadas por la cajera que aún no se cobran (backlog total, no solo del rango). */
+  asignacion_pendientes: number
+  asignacion_valor_pendiente: number
+  /** Facturas asignadas cobradas dentro de [fecha_inicial, fecha_final]. */
+  asignacion_cobradas_rango: number
+  asignacion_valor_cobrado_rango: number
 }
 
 export interface ResumenConductoresDia {
