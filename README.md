@@ -51,14 +51,15 @@ Copia el archivo `.env.example` a `.env` y ajusta las variables según tu entorn
 
 **Variables disponibles:**
 
-- `VITE_API_BASE_URL_DEV`: URL del backend en desarrollo (por defecto: `http://localhost:3000`)
-- `VITE_API_BASE_URL_PROD`: URL del backend en producción (por defecto: `https://softwareqa.dev`)
+- `ENV`: Selecciona `local` o `prod` como destino del API (en `.env` de desarrollo: `local`)
+- `VITE_API_BASE_URL_DEV`: URL del backend local (por defecto: `http://localhost:3020`)
+- `VITE_API_BASE_URL_PROD`: URL del backend de producción (por defecto: `https://apisye.mobilsoft.co`)
 - `VITE_PORT`: Puerto del servidor de desarrollo de Vite (por defecto: `5173`)
-- `VITE_BACKEND_PORT`: Puerto del backend local (por defecto: `3000`)
 
 **Nota importante:**
-- En desarrollo (`npm run dev`): Las peticiones van a `/api` y Vite las redirige a `localhost` usando el proxy
-- En producción (`npm run build`): Las peticiones van directamente a `https://softwareqa.dev`
+- Con `ENV=local` y `npm run dev`, el front abre en `http://localhost:5173`; las peticiones a `/api` pasan por el proxy de Vite hacia `http://localhost:3020`.
+- Con `ENV=prod`, el destino es `https://apisye.mobilsoft.co`. Para un build de producción, configura `ENV=prod` antes de ejecutar `npm run build`.
+- Si aparece `Port 3020 is already in use` al iniciar el API, comprueba el proceso con `lsof -nP -iTCP:3020 -sTCP:LISTEN` y cierra una instancia anterior de `nodemon` antes de reiniciarlo.
 
 4. **Ejecutar en modo desarrollo**
 
@@ -76,9 +77,9 @@ npm run build
 
 El dashboard consume los siguientes endpoints:
 
-- `GET http://localhost:3000/api/clients` - Lista de clientes
-- `GET http://localhost:3000/api/companies` - Lista de compañías
-- `GET http://localhost:3000/api/products` - Lista de productos
+- `GET http://localhost:3020/api/clients` - Lista de clientes
+- `GET http://localhost:3020/api/companies` - Lista de compañías
+- `GET http://localhost:3020/api/products` - Lista de productos
 
 ### Estructura de Datos Esperada
 

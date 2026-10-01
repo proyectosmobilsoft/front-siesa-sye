@@ -3,7 +3,7 @@ import react from '@vitejs/plugin-react'
 import path from 'path'
 
 /** Orígenes por defecto si el .env no los define. */
-const DEFAULT_API_LOCAL = 'http://localhost:3010'
+const DEFAULT_API_LOCAL = 'http://localhost:3020'
 const DEFAULT_API_PROD = 'https://apisye.mobilsoft.co'
 
 /** Quita las barras finales para poder concatenar '/api' sin duplicarlas. */

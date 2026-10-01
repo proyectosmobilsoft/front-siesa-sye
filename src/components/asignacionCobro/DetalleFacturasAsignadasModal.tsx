@@ -76,7 +76,7 @@ export function DetalleFacturasAsignadasModal({
                     <p className="py-8 text-center text-sm text-muted-foreground">Sin facturas pendientes.</p>
                 ) : (
                     lotesConPendientes.map((lote) => (
-                        <div key={lote.id} className="rounded-md border">
+                        <div key={lote.id} className="nu-card">
                             <div className="border-b bg-muted/40 px-3 py-2 text-sm font-semibold">
                                 {lote.cliente_nombre || `Cliente #${lote.rowid_tercero}`}
                             </div>

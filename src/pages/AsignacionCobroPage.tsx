@@ -1,81 +1,21 @@
 import { motion } from 'framer-motion'
 import { useState, useEffect, useRef, useMemo } from 'react'
-import { Search, Loader2, Send, RefreshCw, Users, ShieldCheck } from 'lucide-react'
+import { Search, Loader2, Send, RefreshCw, Users, ShieldCheck, Eye } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Select } from '@/components/ui/select'
 import { Badge } from '@/components/ui/badge'
+import { Modal } from '@/components/ui/modal'
 import { apiClient } from '@/api/client'
 import { Client, ClientsResponse } from '@/api/types'
 import { seguridadApi, UsuarioMaster } from '@/api/seguridad'
 import { asignacionCobroApi, TableroConductorRow } from '@/api/asignacionCobro'
 import { useAuthStore } from '@/store/authStore'
 import { usePermiso } from '@/hooks/usePermiso'
+import { FacturaPendiente, formatearFecha, formatearFacturaPendiente, normalizarFactura } from '@/components/asignacionCobro/facturaPendiente'
+import { FacturasPendientesTab } from '@/components/asignacionCobro/FacturasPendientesTab'
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import { DetalleFacturasAsignadasModal } from '@/components/asignacionCobro/DetalleFacturasAsignadasModal'
-
-// Campos confirmados contra el SP real (sp_cons_est_cta_saldo_doct), viendo el
-// mapeo que ya hace flutter-siesa (FacturaModel.fromJson): rowidsa, saldo
-// (a veces string con coma decimal), doccruce ("BQE-00026024-000" → número
-// de factura en la parte del medio).
-interface FacturaPendiente {
-    rowid_sa: number
-    numero: string | null
-    prefijo: string | null
-    valor: number
-    raw: Record<string, unknown>
-}
-
-/** "BQE-00026024", o solo el número si no hay prefijo, o SA-<rowid> si no hay nada. */
-function formatearFacturaPendiente(f: FacturaPendiente): string {
-    if (f.prefijo && f.numero) return `${f.prefijo}-${f.numero}`
-    if (f.numero) return f.numero
-    return `SA-${f.rowid_sa}`
-}
-
-function primerValor<T = unknown>(row: Record<string, unknown>, claves: string[]): T | undefined {
-    for (const k of claves) {
-        if (row[k] !== undefined && row[k] !== null) return row[k] as T
-    }
-    return undefined
-}
-
-/** Soporta tanto número plano como string con coma decimal ("10000,00"). */
-function parseValor(valor: unknown): number {
-    if (valor == null) return 0
-    if (typeof valor === 'number') return valor
-    const limpio = String(valor).trim().replace(',', '.')
-    const n = Number(limpio)
-    return Number.isFinite(n) ? n : 0
-}
-
-function normalizarFactura(row: Record<string, unknown>): FacturaPendiente | null {
-    const rowidSa = primerValor<number>(row, ['rowidsa', 'rowid_sa', 'RowIdSa', 'RowidSA'])
-    if (rowidSa == null) return null
-
-    const doccruce = primerValor<string>(row, ['doccruce'])
-    let numero: string | null = null
-    let prefijo: string | null = null
-    if (doccruce) {
-        const partes = doccruce.split('-')
-        if (partes.length >= 2) {
-            prefijo = partes[0]
-            numero = partes[1]
-        } else {
-            numero = doccruce
-        }
-    }
-    if (!numero) {
-        const fallback = primerValor<number | string>(row, ['numero', 'consecutivo', 'nro_docto', 'numero_docto', 'Numero'])
-        numero = fallback != null ? String(fallback) : null
-    }
-    if (!prefijo) {
-        const fallbackPrefijo = primerValor<string>(row, ['tipo', 'idTipoDocto', 'prefijo', 'Tipo'])
-        prefijo = fallbackPrefijo ?? null
-    }
-
-    const valorRaw = primerValor(row, ['saldo', 'valor', 'vlr_saldo', 'valor_saldo', 'Valor', 'Saldo'])
-    return { rowid_sa: Number(rowidSa), numero, prefijo, valor: parseValor(valorRaw), raw: row }
-}
 
 export const AsignacionCobroPage = () => {
     const { puede, P } = usePermiso()
@@ -134,6 +74,7 @@ export const AsignacionCobroPage = () => {
     const [facturas, setFacturas] = useState<FacturaPendiente[]>([])
     const [cargandoFacturas, setCargandoFacturas] = useState(false)
     const [seleccionadas, setSeleccionadas] = useState<Set<number>>(new Set())
+    const [facturaDetalle, setFacturaDetalle] = useState<FacturaPendiente | null>(null)
 
     // Conductores
     const [conductores, setConductores] = useState<UsuarioMaster[]>([])
@@ -269,152 +210,168 @@ export const AsignacionCobroPage = () => {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5 }}
-            className="flex h-full min-h-0 flex-col gap-4 overflow-auto p-6"
+            className="nu flex h-full min-h-0 flex-col gap-5 overflow-auto p-6"
         >
-            <div className="shrink-0 border-b pb-4">
-                <h1 className="text-xl font-bold">Asignar Facturas</h1>
-                <p className="text-sm text-muted-foreground">
-                    Busca un cliente, selecciona las facturas pendientes que debe llevar el conductor y asígnalas.
-                </p>
-            </div>
-
-            <div className="grid min-h-[420px] shrink-0 grid-cols-1 gap-4 lg:grid-cols-3">
-                {/* Columna búsqueda cliente */}
-                <div className="flex flex-col gap-3 rounded-md border p-4 lg:col-span-1">
-                    <label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Cliente</label>
-                    <div className="relative">
-                        <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                        <Input
-                            placeholder="Buscar por razón social o NIT..."
-                            value={busquedaCliente}
-                            onChange={(e) => {
-                                setBusquedaCliente(e.target.value)
-                                setClienteSeleccionado(null)
-                            }}
-                            className="pl-9"
-                            autoComplete="off"
-                        />
-                        {buscandoClientes && <Loader2 className="absolute right-2.5 top-2.5 h-4 w-4 animate-spin text-muted-foreground" />}
-                    </div>
-
-                    {clientes.length > 0 && !clienteSeleccionado && (
-                        <div className="max-h-64 overflow-auto rounded-md border">
-                            {clientes.map((c) => (
-                                <button
-                                    key={c.f9740_id}
-                                    onClick={() => handleSeleccionarCliente(c)}
-                                    className="block w-full border-b px-3 py-2 text-left text-sm last:border-b-0 hover:bg-muted/50"
-                                >
-                                    <div className="font-medium">{c.f9740_razon_social}</div>
-                                    <div className="text-xs text-muted-foreground font-mono">{c.f9740_nit}</div>
-                                </button>
-                            ))}
+            <Tabs defaultValue="cliente" className="shrink-0">
+                <TabsList className="nu-seg">
+                    <TabsTrigger value="cliente" className="nu-seg-item">Por cliente</TabsTrigger>
+                    <TabsTrigger value="pendientes" className="nu-seg-item">Facturas pendientes</TabsTrigger>
+                </TabsList>
+                <TabsContent value="cliente" className="mt-4">
+                <div className="grid min-h-[420px] shrink-0 grid-cols-1 gap-4 lg:grid-cols-3">
+                    {/* Columna búsqueda cliente */}
+                    <div className="flex flex-col gap-3 nu-card p-5 lg:col-span-1">
+                        <label className="nu-label">Cliente</label>
+                        <div className="relative">
+                            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                            <Input
+                                placeholder="Buscar por razón social o NIT..."
+                                value={busquedaCliente}
+                                onChange={(e) => {
+                                    setBusquedaCliente(e.target.value)
+                                    setClienteSeleccionado(null)
+                                }}
+                                className="nu-control pl-10"
+                                autoComplete="off"
+                            />
+                            {buscandoClientes && <Loader2 className="absolute right-2.5 top-2.5 h-4 w-4 animate-spin text-muted-foreground" />}
                         </div>
-                    )}
 
-                    {clienteSeleccionado && (
-                        <div className="rounded-md border bg-muted/40 px-3 py-2">
-                            <div className="text-sm font-semibold">{clienteSeleccionado.f9740_razon_social}</div>
-                            <div className="text-xs text-muted-foreground font-mono">{clienteSeleccionado.f9740_nit}</div>
-                        </div>
-                    )}
-
-                    <div className="mt-2 flex flex-col gap-2">
-                        <label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Conductor</label>
-                        <Select value={conductorId} onChange={(e) => setConductorId(e.target.value)}>
-                            <option value="">Seleccionar conductor...</option>
-                            {conductores.map((c) => (
-                                <option key={c.id} value={c.id}>
-                                    {c.nombre_completo || c.usuario}
-                                </option>
-                            ))}
-                        </Select>
-                    </div>
-
-                    <div className="flex flex-col gap-2">
-                        <label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Observación (opcional)</label>
-                        <Input value={observacion} onChange={(e) => setObservacion(e.target.value)} placeholder="Ej: ruta zona norte" autoComplete="off" />
-                    </div>
-
-                    {error && <div className="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">{error}</div>}
-                    {exito && <div className="rounded-md border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-sm text-emerald-600">{exito}</div>}
-
-                    <Button
-                        onClick={handleAsignar}
-                        disabled={!clienteSeleccionado || !conductorId || seleccionadas.size === 0 || enviando}
-                        className="mt-2 gap-2"
-                    >
-                        {enviando ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-                        Asignar {seleccionadas.size > 0 ? `(${seleccionadas.size})` : ''}
-                    </Button>
-                </div>
-
-                {/* Columna facturas pendientes */}
-                <div className="flex min-h-0 flex-col rounded-md border lg:col-span-2">
-                    <div className="flex shrink-0 items-center justify-between border-b px-4 py-3">
-                        <span className="text-sm font-semibold">Facturas pendientes del cliente</span>
-                        <div className="flex items-center gap-2">
-                            {seleccionadas.size > 0 && (
-                                <Badge variant="secondary">
-                                    Total seleccionado: {totalSeleccionado.toLocaleString('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 })}
-                                </Badge>
-                            )}
-                            {clienteSeleccionado && (
-                                <Button variant="outline" size="icon" onClick={() => cargarFacturas(clienteSeleccionado)} disabled={cargandoFacturas} title="Recargar">
-                                    <RefreshCw className={`h-4 w-4 ${cargandoFacturas ? 'animate-spin' : ''}`} />
-                                </Button>
-                            )}
-                        </div>
-                    </div>
-                    <div className="min-h-0 flex-1 overflow-auto">
-                        {!clienteSeleccionado ? (
-                            <div className="flex h-full items-center justify-center p-8 text-center text-sm text-muted-foreground">
-                                Busca y selecciona un cliente para ver sus facturas pendientes.
+                        {clientes.length > 0 && !clienteSeleccionado && (
+                            <div className="max-h-64 overflow-auto nu-card">
+                                {clientes.map((c) => (
+                                    <button
+                                        key={c.f9740_id}
+                                        onClick={() => handleSeleccionarCliente(c)}
+                                        className="block w-full border-b px-3 py-2 text-left text-sm last:border-b-0 hover:bg-muted/50"
+                                    >
+                                        <div className="font-medium">{c.f9740_razon_social}</div>
+                                        <div className="text-xs text-muted-foreground font-mono">{c.f9740_nit}</div>
+                                    </button>
+                                ))}
                             </div>
-                        ) : cargandoFacturas ? (
-                            <div className="flex h-full items-center justify-center gap-2 p-8 text-muted-foreground">
-                                <Loader2 className="h-5 w-5 animate-spin" /> Cargando facturas...
-                            </div>
-                        ) : facturas.length === 0 ? (
-                            <div className="flex h-full items-center justify-center p-8 text-sm text-muted-foreground">
-                                Este cliente no tiene facturas pendientes.
-                            </div>
-                        ) : (
-                            <table className="w-full text-sm">
-                                <thead className="sticky top-0 bg-card">
-                                    <tr className="border-b bg-muted/50">
-                                        <th className="h-10 w-10 px-3"></th>
-                                        <th className="h-10 px-3 text-left text-xs font-semibold uppercase text-muted-foreground">Factura</th>
-                                        <th className="h-10 px-3 text-right text-xs font-semibold uppercase text-muted-foreground">Valor</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {facturas.map((f) => (
-                                        <tr key={f.rowid_sa} className="border-b hover:bg-muted/30">
-                                            <td className="px-3 py-2">
-                                                <input
-                                                    type="checkbox"
-                                                    checked={seleccionadas.has(f.rowid_sa)}
-                                                    onChange={() => toggleFactura(f.rowid_sa)}
-                                                    className="h-4 w-4"
-                                                />
-                                            </td>
-                                            <td className="px-3 py-2 font-mono text-xs">{formatearFacturaPendiente(f)}</td>
-                                            <td className="px-3 py-2 text-right">
-                                                {f.valor.toLocaleString('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 })}
-                                            </td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
                         )}
+
+                        {clienteSeleccionado && (
+                            <div className="rounded-xl bg-[var(--nu-fill)] px-3 py-2">
+                                <div className="text-sm font-semibold">{clienteSeleccionado.f9740_razon_social}</div>
+                                <div className="text-xs text-muted-foreground font-mono">{clienteSeleccionado.f9740_nit}</div>
+                            </div>
+                        )}
+
+                        <div className="mt-2 flex flex-col gap-2">
+                            <label className="nu-label">Conductor</label>
+                            <Select className="nu-control" value={conductorId} onChange={(e) => setConductorId(e.target.value)}>
+                                <option value="">Seleccionar conductor...</option>
+                                {conductores.map((c) => (
+                                    <option key={c.id} value={c.id}>
+                                        {c.nombre_completo || c.usuario}
+                                    </option>
+                                ))}
+                            </Select>
+                        </div>
+
+                        <div className="flex flex-col gap-2">
+                            <label className="nu-label">Observación <span className="nu-opcional">opcional</span></label>
+                            <Input className="nu-control" value={observacion} onChange={(e) => setObservacion(e.target.value)} placeholder="Ej: ruta zona norte" autoComplete="off" />
+                        </div>
+
+                        {error && <div className="rounded-xl bg-destructive/10 px-3 py-2 text-sm text-destructive">{error}</div>}
+                        {exito && <div className="rounded-xl bg-emerald-500/10 px-3 py-2 text-sm text-emerald-600">{exito}</div>}
+
+                        <Button
+                            onClick={handleAsignar}
+                            disabled={!clienteSeleccionado || !conductorId || seleccionadas.size === 0 || enviando}
+                            className="nu-btn nu-btn-primary mt-2 gap-2"
+                        >
+                            {enviando ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                            Asignar {seleccionadas.size > 0 ? `(${seleccionadas.size})` : ''}
+                        </Button>
+                    </div>
+
+                    {/* Columna facturas pendientes */}
+                    <div className="flex min-h-0 flex-col nu-card lg:col-span-2">
+                        <div className="flex shrink-0 items-center justify-between border-b px-4 py-3">
+                            <span className="text-sm font-semibold">Facturas pendientes del cliente</span>
+                            <div className="flex items-center gap-2">
+                                {seleccionadas.size > 0 && (
+                                    <Badge variant="secondary">
+                                        Total seleccionado: {totalSeleccionado.toLocaleString('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 })}
+                                    </Badge>
+                                )}
+                                {clienteSeleccionado && (
+                                    <Button variant="ghost" size="icon" className="nu-btn nu-btn-soft" onClick={() => cargarFacturas(clienteSeleccionado)} disabled={cargandoFacturas} title="Recargar">
+                                        <RefreshCw className={`h-4 w-4 ${cargandoFacturas ? 'animate-spin' : ''}`} />
+                                    </Button>
+                                )}
+                            </div>
+                        </div>
+                        <div className="min-h-0 flex-1 overflow-auto">
+                            {!clienteSeleccionado ? (
+                                <div className="flex h-full items-center justify-center p-8 text-center text-sm text-muted-foreground">
+                                    Busca y selecciona un cliente para ver sus facturas pendientes.
+                                </div>
+                            ) : cargandoFacturas ? (
+                                <div className="flex h-full items-center justify-center gap-2 p-8 text-muted-foreground">
+                                    <Loader2 className="h-5 w-5 animate-spin" /> Cargando facturas...
+                                </div>
+                            ) : facturas.length === 0 ? (
+                                <div className="flex h-full items-center justify-center p-8 text-sm text-muted-foreground">
+                                    Este cliente no tiene facturas pendientes.
+                                </div>
+                            ) : (
+                                <table className="w-full text-sm">
+                                    <thead className="sticky top-0 bg-card">
+                                        <tr className="border-b bg-muted/50">
+                                            <th className="h-10 w-10 px-3"></th>
+                                            <th className="h-10 px-3 text-left nu-th">Factura</th>
+                                            <th className="h-10 px-3 text-left nu-th">C.O.</th>
+                                            <th className="h-10 px-3 text-left nu-th">Emisión</th>
+                                            <th className="h-10 px-3 text-left nu-th">Vence</th>
+                                            <th className="h-10 px-3 text-right nu-th">Valor</th>
+                                            <th className="h-10 w-10 px-3"></th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {facturas.map((f) => (
+                                            <tr key={f.rowid_sa} className="border-b hover:bg-muted/30">
+                                                <td className="px-3 py-2">
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={seleccionadas.has(f.rowid_sa)}
+                                                        onChange={() => toggleFactura(f.rowid_sa)}
+                                                        className="h-4 w-4"
+                                                    />
+                                                </td>
+                                                <td className="px-3 py-2 font-mono text-xs">{formatearFacturaPendiente(f)}</td>
+                                                <td className="px-3 py-2 font-mono text-xs">{f.idco ?? '—'}</td>
+                                                <td className="px-3 py-2 text-xs">{formatearFecha(f.fecha)}</td>
+                                                <td className="px-3 py-2 text-xs">{formatearFecha(f.vence)}</td>
+                                                <td className="px-3 py-2 text-right">
+                                                    {f.valor.toLocaleString('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 })}
+                                                </td>
+                                                <td className="px-3 py-2">
+                                                    <Button variant="ghost" size="icon" className="nu-btn nu-btn-soft h-8 w-8" title="Ver detalle" onClick={() => setFacturaDetalle(f)}>
+                                                        <Eye className="h-4 w-4" />
+                                                    </Button>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            )}
+                        </div>
                     </div>
                 </div>
-            </div>
+                </TabsContent>
+                <TabsContent value="pendientes" className="mt-4">
+                    <FacturasPendientesTab conductores={conductores} onAsignado={cargarTablero} />
+                </TabsContent>
+            </Tabs>
 
             {/* Tablero: conductores programados y su avance */}
             {puedeVerTablero && (
-                <div className="shrink-0 rounded-md border">
+                <div className="shrink-0 nu-card">
                     <div className="flex items-center justify-between border-b px-4 py-3">
                         <div className="flex items-center gap-2">
                             <Users className="h-4 w-4 text-muted-foreground" />
@@ -422,17 +379,17 @@ export const AsignacionCobroPage = () => {
                         </div>
                         <div className="flex items-center gap-2">
                             <Button
-                                variant="outline"
+                                variant="ghost"
                                 size="sm"
                                 onClick={handleReconciliar}
                                 disabled={reconciliando}
                                 title="Verificar contra SIESA cuáles ya no están abiertas (anuladas o cobradas por otra vía) y cancelarlas"
-                                className="gap-1.5"
+                                className="nu-btn nu-btn-soft gap-1.5"
                             >
                                 {reconciliando ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <ShieldCheck className="h-3.5 w-3.5" />}
                                 Verificar contra SIESA
                             </Button>
-                            <Button variant="outline" size="icon" onClick={cargarTablero} disabled={cargandoTablero} title="Actualizar tablero">
+                            <Button variant="ghost" size="icon" className="nu-btn nu-btn-soft" onClick={cargarTablero} disabled={cargandoTablero} title="Actualizar tablero">
                                 <RefreshCw className={`h-4 w-4 ${cargandoTablero ? 'animate-spin' : ''}`} />
                             </Button>
                         </div>
@@ -453,11 +410,11 @@ export const AsignacionCobroPage = () => {
                             <table className="w-full text-sm">
                                 <thead className="bg-muted/50">
                                     <tr className="border-b">
-                                        <th className="h-10 px-4 text-left text-xs font-semibold uppercase text-muted-foreground">Conductor</th>
-                                        <th className="h-10 px-3 text-right text-xs font-semibold uppercase text-muted-foreground">Pendientes</th>
-                                        <th className="h-10 px-3 text-right text-xs font-semibold uppercase text-muted-foreground">Cobradas</th>
-                                        <th className="h-10 px-3 text-right text-xs font-semibold uppercase text-muted-foreground">Valor pendiente</th>
-                                        <th className="h-10 px-3 text-right text-xs font-semibold uppercase text-muted-foreground">Valor cobrado</th>
+                                        <th className="h-10 px-4 text-left nu-th">Conductor</th>
+                                        <th className="h-10 px-3 text-right nu-th">Pendientes</th>
+                                        <th className="h-10 px-3 text-right nu-th">Cobradas</th>
+                                        <th className="h-10 px-3 text-right nu-th">Valor pendiente</th>
+                                        <th className="h-10 px-3 text-right nu-th">Valor cobrado</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -498,6 +455,30 @@ export const AsignacionCobroPage = () => {
                     onClose={() => setDetalleConductor(null)}
                 />
             )}
+
+            <Modal
+                isOpen={!!facturaDetalle}
+                onClose={() => setFacturaDetalle(null)}
+                title={facturaDetalle ? `Factura ${formatearFacturaPendiente(facturaDetalle)}` : ''}
+                className="nu max-w-lg !rounded-3xl"
+            >
+                {facturaDetalle && (
+                    <dl className="grid grid-cols-[auto_1fr] gap-x-6 gap-y-2 text-sm">
+                        <dt className="text-muted-foreground">Cliente</dt>
+                        <dd>{clienteSeleccionado?.f9740_razon_social}</dd>
+                        <dt className="text-muted-foreground">C.O.</dt>
+                        <dd className="font-mono">{facturaDetalle.idco ?? '—'}</dd>
+                        <dt className="text-muted-foreground">Fecha de emisión</dt>
+                        <dd>{formatearFecha(facturaDetalle.fecha)}</dd>
+                        <dt className="text-muted-foreground">Fecha de vencimiento</dt>
+                        <dd>{formatearFecha(facturaDetalle.vence)}</dd>
+                        <dt className="text-muted-foreground">Saldo</dt>
+                        <dd className="font-semibold">
+                            {facturaDetalle.valor.toLocaleString('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 })}
+                        </dd>
+                    </dl>
+                )}
+            </Modal>
         </motion.div>
     )
 }

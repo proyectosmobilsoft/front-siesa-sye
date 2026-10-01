@@ -115,3 +115,267 @@
   align-items: flex-start !important;
   gap: 6px !important;
 }
+
+/* Sidebar: riel de iconos que se expande al hover (estilo vehiman_react).
+   En escritorio flota sobre el contenido (no redimensiona <main>); en móvil es un drawer. */
+.sidebar {
+    position: fixed;
+    inset: 0 auto 0 0;
+    z-index: 50;
+    display: flex;
+    flex-direction: column;
+    width: 256px;
+    padding: 16px 9px;
+    background: hsl(var(--card));
+    border-right: 1px solid hsl(var(--border));
+    transition: transform 0.2s ease;
+}
+@media (min-width: 1024px) {
+    .sidebar {
+        width: 60px;
+        transition: width 0.2s ease;
+    }
+    .sidebar.expandido {
+        width: 248px;
+    }
+}
+.sidebar-item {
+    position: relative;
+    display: flex;
+    height: 40px;
+    width: 100%;
+    flex-shrink: 0;
+    align-items: center;
+    gap: 12px;
+    border: 1px solid transparent;
+    border-radius: 9px;
+    padding: 0 11px;
+    color: hsl(var(--muted-foreground));
+    transition: color 0.15s, background-color 0.15s;
+}
+.sidebar-item:hover {
+    background: hsl(var(--accent));
+    color: hsl(var(--accent-foreground));
+}
+.sidebar-item.activo {
+    background: hsl(var(--accent));
+    color: hsl(var(--accent-foreground));
+    box-shadow: inset 3px 0 0 hsl(var(--primary));
+}
+.sidebar-item svg {
+    width: 18px;
+    height: 18px;
+    flex-shrink: 0;
+}
+.sidebar-etiqueta {
+    overflow: hidden;
+    white-space: nowrap;
+    font-size: 13px;
+    font-weight: 600;
+    transition: max-width 0.2s ease, opacity 0.15s ease, visibility 0.15s ease;
+}
+@media (min-width: 1024px) {
+    .sidebar:not(.expandido) .sidebar-etiqueta {
+        visibility: hidden;
+        max-width: 0;
+        opacity: 0;
+    }
+    .sidebar.expandido .sidebar-etiqueta {
+        max-width: 170px;
+    }
+}
+.sidebar-submenu {
+    margin: 4px 0 6px 21px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    border-left: 1px solid hsl(var(--border));
+    padding-left: 10px;
+}
+.sidebar-subitem {
+    display: flex;
+    height: 32px;
+    align-items: center;
+    gap: 8px;
+    border-radius: 6px;
+    padding: 0 10px;
+    white-space: nowrap;
+    font-size: 12.5px;
+    color: hsl(var(--muted-foreground));
+    transition: color 0.15s, background-color 0.15s;
+}
+.sidebar-subitem:hover {
+    background: hsl(var(--accent));
+    color: hsl(var(--accent-foreground));
+}
+.sidebar-subitem.activo {
+    background: hsl(var(--accent));
+    font-weight: 600;
+    color: hsl(var(--accent-foreground));
+    box-shadow: inset 2px 0 0 hsl(var(--primary));
+}
+.sidebar-tooltip {
+    position: absolute;
+    top: 50%;
+    left: calc(100% + 12px);
+    z-index: 60;
+    pointer-events: none;
+    visibility: hidden;
+    border-radius: 6px;
+    background: hsl(var(--foreground));
+    padding: 6px 10px;
+    font-size: 12px;
+    font-weight: 600;
+    line-height: 1;
+    white-space: nowrap;
+    color: hsl(var(--background));
+    opacity: 0;
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.25);
+    transform: translate(4px, -50%);
+    transition: opacity 0.15s ease, transform 0.15s ease, visibility 0.15s ease;
+}
+@media (min-width: 1024px) {
+    .sidebar:not(.expandido) .sidebar-item:hover .sidebar-tooltip {
+        visibility: visible;
+        opacity: 1;
+        transform: translate(0, -50%);
+    }
+}
+.sidebar-item.sidebar-item-peligro:hover {
+    background: hsl(var(--destructive) / 0.1);
+    color: hsl(var(--destructive));
+}
+
+/* Estilo "Nu" (sistema Cielo de vehiman_react): minimalista, controles rellenos, píldoras y tarjetas suaves.
+   Colores: neutros + rojo corporativo SYE (tokens del tema), no el azul de Cielo. Se activa con la clase `.nu` en el contenedor; hoy solo lo usa Logística > Asignar Facturas. */
+.nu {
+    --nu-fill: hsl(0 0% 95.5%);
+    --nu-fill-2: hsl(0 0% 92%);
+    --nu-line: hsl(var(--border));
+    --nu-mute: hsl(var(--muted-foreground));
+    --nu-acc: hsl(var(--primary));
+    --nu-btn: hsl(var(--primary));
+    --nu-btn-hover: hsl(0 79% 34%);
+    --nu-tint: hsl(var(--primary) / 0.15);
+    --nu-surface: hsl(var(--card));
+}
+.dark .nu {
+    --nu-fill: rgba(255, 255, 255, 0.06);
+    --nu-fill-2: rgba(255, 255, 255, 0.1);
+    --nu-btn-hover: hsl(0 70% 42%);
+    --nu-tint: hsl(var(--primary) / 0.25);
+}
+.nu *,
+.nu *::before,
+.nu *::after {
+    border-color: var(--nu-line);
+}
+.nu .nu-card {
+    border-radius: 16px;
+    background: var(--nu-surface);
+    box-shadow: 0 0 0 1px var(--nu-line);
+}
+.nu .nu-label {
+    font-size: 13px;
+    font-weight: 500;
+}
+.nu .nu-opcional {
+    margin-left: 6px;
+    font-size: 12px;
+    font-weight: 400;
+    color: var(--nu-mute);
+}
+.nu .nu-th {
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--nu-mute);
+}
+.nu .nu-control {
+    height: 44px !important;
+    border-radius: 12px !important;
+    border: 1px solid transparent !important;
+    background-color: var(--nu-fill) !important;
+    padding-left: 14px;
+    font-size: 14px !important;
+    outline: none !important;
+    transition: background-color 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+}
+.nu .nu-control.pl-10 {
+    padding-left: 40px;
+}
+.nu .nu-control:hover:not(:focus):not(:disabled) {
+    background-color: var(--nu-fill-2) !important;
+}
+.nu .nu-control:focus,
+.nu .nu-control:focus-visible {
+    border-color: var(--nu-acc) !important;
+    background-color: var(--nu-surface) !important;
+    box-shadow: 0 0 0 4px var(--nu-tint) !important;
+}
+.nu select.nu-control + svg {
+    top: 15px;
+}
+.nu .nu-btn {
+    border-radius: 9999px;
+    font-weight: 600;
+    transition: background-color 0.15s ease, color 0.15s ease, transform 0.1s ease;
+}
+.nu .nu-btn:active:not(:disabled) {
+    transform: scale(0.97);
+}
+.nu .nu-btn-primary {
+    min-height: 40px;
+    background: var(--nu-btn);
+    color: #fff;
+}
+.nu .nu-btn-primary:hover:not(:disabled) {
+    background: var(--nu-btn-hover);
+}
+.nu .nu-btn-primary:disabled {
+    opacity: 0.45;
+}
+.nu .nu-btn-soft {
+    background: var(--nu-fill);
+    color: inherit;
+}
+.nu .nu-btn-soft:hover:not(:disabled) {
+    background: var(--nu-fill-2);
+}
+.nu .nu-seg {
+    height: 44px;
+    border-radius: 9999px;
+    background: var(--nu-fill);
+    padding: 4px;
+}
+.nu .nu-seg-item {
+    height: 36px;
+    border-radius: 9999px;
+    padding: 0 18px;
+    font-size: 13px;
+    font-weight: 500;
+}
+.nu .nu-seg-item[data-state='active'] {
+    background: var(--nu-surface);
+    box-shadow: 0 1px 3px rgba(14, 23, 38, 0.12);
+}
+.nu table thead tr {
+    background: transparent;
+}
+.nu table tbody tr:hover {
+    background: var(--nu-fill);
+}
+.nu input[type='checkbox'] {
+    accent-color: var(--nu-acc);
+    border-radius: 6px;
+}
+/* Tipografía redondeada para los tableros (tarjetas) de Asignar Facturas. */
+.nu .nu-card {
+    font-family: 'Nunito', 'Inter', ui-sans-serif, system-ui, sans-serif;
+}
+.nu .nu-card .font-mono {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+.nu .nu-control.nu-control-sm {
+    height: 36px !important;
+    font-size: 13px !important;
+}

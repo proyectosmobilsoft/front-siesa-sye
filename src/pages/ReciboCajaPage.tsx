@@ -202,7 +202,7 @@ export const ReciboCajaPage = () => {
   const fechaFinalAplicada = fechaHasta || fechaDesde || hoyISO()
 
   return (
-    <div className="mx-auto max-w-[1400px] space-y-6 p-4 sm:p-6 lg:p-8">
+    <div className="nu mx-auto max-w-[1400px] space-y-6 p-4 sm:p-6 lg:p-8">
       {/* ── Header de la vista ── */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-3">
@@ -217,13 +217,13 @@ export const ReciboCajaPage = () => {
 
         {/* Indicadores clave superiores */}
         <div className="flex flex-wrap items-center gap-2 text-xs">
-          <div className="flex items-center gap-2 rounded-xl border border-border/80 bg-card px-3.5 py-2 shadow-xs">
+          <div className="flex items-center gap-2 nu-card px-3.5 py-2">
             <Wallet className="h-4 w-4 text-muted-foreground" />
             <span className="font-medium text-muted-foreground">Saldo Anterior:</span>
             <span className="font-mono font-bold text-primary">{money(saldoAnterior)}</span>
           </div>
 
-          <div className="flex items-center gap-2 rounded-xl border border-border/80 bg-card px-3.5 py-2 shadow-xs">
+          <div className="flex items-center gap-2 nu-card px-3.5 py-2">
             <Hash className="h-4 w-4 text-muted-foreground" />
             <span className="font-medium text-muted-foreground">Cuadre N°:</span>
             <span className="font-mono font-bold text-red-600 dark:text-red-400">00000641</span>
@@ -237,14 +237,14 @@ export const ReciboCajaPage = () => {
       </div>
 
       {/* ── Contenedor principal con Navegación por pestañas ── */}
-      <div className="space-y-6 rounded-2xl border border-border/60 bg-card shadow-sm">
+      <div className="space-y-6 nu-card">
         {/* Barra de Pestañas estilo píldora */}
-        <div className="flex items-center border-b border-border/60 px-4 pt-3">
-          <div className="flex space-x-1 rounded-xl bg-muted/60 p-1">
+        <div className="flex items-center px-4 pt-4">
+          <div className="flex space-x-1 nu-seg">
             <button
               onClick={() => setTab('conductores')}
               className={cn(
-                'flex items-center gap-2 rounded-lg px-4 py-2 text-xs font-semibold transition-all',
+                'flex items-center gap-2 rounded-full px-4 py-2 text-xs font-semibold transition-all',
                 tab === 'conductores'
                   ? 'bg-card text-foreground shadow-xs'
                   : 'text-muted-foreground hover:bg-card/50 hover:text-foreground'
@@ -255,7 +255,7 @@ export const ReciboCajaPage = () => {
             <button
               onClick={() => setTab('general')}
               className={cn(
-                'flex items-center gap-2 rounded-lg px-4 py-2 text-xs font-semibold transition-all',
+                'flex items-center gap-2 rounded-full px-4 py-2 text-xs font-semibold transition-all',
                 tab === 'general'
                   ? 'bg-card text-foreground shadow-xs'
                   : 'text-muted-foreground hover:bg-card/50 hover:text-foreground'
@@ -266,7 +266,7 @@ export const ReciboCajaPage = () => {
             <button
               onClick={() => setTab('recibos')}
               className={cn(
-                'flex items-center gap-2 rounded-lg px-4 py-2 text-xs font-semibold transition-all',
+                'flex items-center gap-2 rounded-full px-4 py-2 text-xs font-semibold transition-all',
                 tab === 'recibos'
                   ? 'bg-card text-foreground shadow-xs'
                   : 'text-muted-foreground hover:bg-card/50 hover:text-foreground'
@@ -281,7 +281,7 @@ export const ReciboCajaPage = () => {
         {tab === 'general' && (
           <div className="space-y-6 p-4 sm:p-6">
             {/* Filtros de la pestaña General */}
-            <div className="grid items-end gap-4 rounded-xl border border-border/60 bg-muted/20 p-4 sm:grid-cols-2 lg:grid-cols-[1fr_1fr_auto]">
+            <div className="grid items-end gap-4 rounded-2xl bg-[var(--nu-fill)] p-4 sm:grid-cols-2 lg:grid-cols-[1fr_1fr_auto]">
               <div className="space-y-1.5">
                 <label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Fecha Inicial</label>
                 <div className="relative">
@@ -309,14 +309,14 @@ export const ReciboCajaPage = () => {
                 </div>
               </div>
 
-              <Button onClick={handleConsultarGeneral} disabled={cargandoGeneral} className="gap-2 self-end shadow-xs">
+              <Button onClick={handleConsultarGeneral} disabled={cargandoGeneral} className="nu-btn nu-btn-primary gap-2 self-end shadow-xs">
                 <Search className={cn('h-3.5 w-3.5', cargandoGeneral && 'animate-spin')} />
                 {cargandoGeneral ? 'Consultando...' : 'Consultar'}
               </Button>
             </div>
 
             {/* Fila de metadatos de último cuadre */}
-            <div className="flex flex-col gap-3 rounded-xl border border-border/60 bg-card p-4 text-xs lg:flex-row lg:items-center lg:justify-between">
+            <div className="flex flex-col gap-3 nu-card p-4 text-xs lg:flex-row lg:items-center lg:justify-between">
               <div className="flex items-center gap-2 font-semibold text-muted-foreground">
                 <span>Periodo consultado:</span>
                 <span className="rounded-lg bg-muted/60 px-3 py-1 font-mono font-medium text-foreground">
@@ -358,14 +358,14 @@ export const ReciboCajaPage = () => {
                     Seleccione el rango de fechas (si no especifica fecha final se tomará la fecha inicial/hoy por defecto) y presione <strong>Consultar</strong>. Suma TODOS los RC de todas las cajas en ese rango.
                   </p>
                 </div>
-                <Button onClick={handleConsultarGeneral} disabled={cargandoGeneral} className="mt-2 gap-2 text-xs shadow-xs">
+                <Button onClick={handleConsultarGeneral} disabled={cargandoGeneral} className="nu-btn nu-btn-primary mt-2 gap-2 text-xs shadow-xs">
                   <Search className={cn('h-3.5 w-3.5', cargandoGeneral && 'animate-spin')} /> Consultar Arqueo
                 </Button>
               </div>
             ) : (
               <>
                 {/* Tabla Principal del Arqueo / Flujo General */}
-                <div className="overflow-hidden rounded-xl border border-border/60 shadow-xs">
+                <div className="nu-card overflow-hidden">
                   <div className="overflow-x-auto">
                     <table className="w-full text-xs">
                       <thead>
@@ -419,7 +419,7 @@ export const ReciboCajaPage = () => {
                 </div>
 
                 {/* Fila de datos del Responsable (Persona autenticada en la sesión) */}
-                <div className="grid gap-4 rounded-xl border border-border/60 bg-muted/20 p-4 sm:grid-cols-2">
+                <div className="grid gap-4 rounded-2xl bg-[var(--nu-fill)] p-4 sm:grid-cols-2">
                   <div className="flex items-center gap-2 text-xs">
                     <User className="h-4 w-4 text-primary" />
                     <span className="font-semibold text-muted-foreground">Responsable Caja (Usuario actual):</span>
@@ -433,13 +433,13 @@ export const ReciboCajaPage = () => {
 
                 {/* Tarjetas KPI de Totales de Arqueo y Botones de Acción */}
                 <div className="grid gap-4 lg:grid-cols-4">
-                  <div className="rounded-xl border border-border/60 bg-card p-4 shadow-xs">
-                    <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Disponible En Caja Según Sistema</p>
+                  <div className="nu-card p-4">
+                    <p className="text-[10px] nu-th">Disponible En Caja Según Sistema</p>
                     <p className="mt-1 font-mono text-lg font-extrabold text-primary">{money(disponible)}</p>
                   </div>
 
-                  <div className="rounded-xl border border-border/60 bg-card p-4 shadow-xs">
-                    <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Efectivo según Arqueo de Caja</p>
+                  <div className="nu-card p-4">
+                    <p className="text-[10px] nu-th">Efectivo según Arqueo de Caja</p>
                     <p className="mt-1 font-mono text-lg font-extrabold text-foreground">{money(0)}</p>
                   </div>
 
@@ -449,17 +449,17 @@ export const ReciboCajaPage = () => {
                   </div>
 
                   {/* Botones de acción rápida */}
-                  <div className="flex items-center justify-end gap-2 rounded-xl border border-border/60 bg-card p-4 shadow-xs">
-                    <Button variant="outline" size="sm" title="Imprimir" className="h-9 w-9 p-0">
+                  <div className="flex items-center justify-end gap-2 nu-card p-4">
+                    <Button variant="ghost" size="sm" title="Imprimir" className="nu-btn nu-btn-soft h-9 w-9 p-0">
                       <Printer className="h-4 w-4" />
                     </Button>
-                    <Button variant="outline" size="sm" title="Imprimir Anexo" className="h-9 w-9 p-0">
+                    <Button variant="ghost" size="sm" title="Imprimir Anexo" className="nu-btn nu-btn-soft h-9 w-9 p-0">
                       <FileText className="h-4 w-4" />
                     </Button>
-                    <Button variant="outline" size="sm" title="Exportar" className="h-9 w-9 p-0">
+                    <Button variant="ghost" size="sm" title="Exportar" className="nu-btn nu-btn-soft h-9 w-9 p-0">
                       <FileSpreadsheet className="h-4 w-4" />
                     </Button>
-                    <Button variant="outline" size="sm" title="Abrir" className="h-9 w-9 p-0">
+                    <Button variant="ghost" size="sm" title="Abrir" className="nu-btn nu-btn-soft h-9 w-9 p-0">
                       <FolderOpen className="h-4 w-4" />
                     </Button>
                   </div>
@@ -599,36 +599,24 @@ function TableroConductoresRC({
         </div>
 
         <div className="flex items-center gap-3">
-          <div className="flex flex-wrap items-center gap-3 text-xs font-semibold">
-            <span className="text-muted-foreground">{totales.recibos} RC</span>
-            <span className="text-emerald-600 dark:text-emerald-400">Efectivo {formatters.currency(totales.efectivo)}</span>
-            <span className="text-blue-600 dark:text-blue-400">Transferencia {formatters.currency(totales.consignacion)}</span>
-            <span className="font-bold text-foreground">Total {formatters.currency(totales.total)}</span>
-            {totales.pendientes > 0 && (
-              <span className="text-amber-600 dark:text-amber-400">
-                Pendiente por cobrar {totales.pendientes} fact. · {formatters.currency(totales.valorPendiente)}
-              </span>
-            )}
-          </div>
-
-          <Button variant="outline" size="sm" className="h-8 w-8 p-0" onClick={onRefresh} disabled={loading} title="Actualizar">
+          <Button variant="ghost" size="sm" className="nu-btn nu-btn-soft h-9 w-9 p-0" onClick={onRefresh} disabled={loading} title="Actualizar">
             <RefreshCw className={cn('h-4 w-4', loading && 'animate-spin')} />
           </Button>
         </div>
       </div>
 
       {/* Tabla de conductores */}
-      <div className="overflow-hidden rounded-xl border border-border/60 shadow-xs">
+      <div className="nu-card overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-xs">
             <thead>
               <tr className="border-b border-border bg-muted/60">
-                <th className="px-4 py-3 text-left font-semibold uppercase tracking-wider text-muted-foreground">Conductor</th>
-                <th className="px-4 py-3 text-left font-semibold uppercase tracking-wider text-muted-foreground">C.O.</th>
-                <th className="px-4 py-3 text-left font-semibold uppercase tracking-wider text-muted-foreground">Asignado pendiente</th>
-                <th className="px-4 py-3 text-left font-semibold uppercase tracking-wider text-muted-foreground">Efectivo</th>
-                <th className="px-4 py-3 text-left font-semibold uppercase tracking-wider text-muted-foreground">Transferencia</th>
-                <th className="px-4 py-3 text-left font-semibold uppercase tracking-wider text-muted-foreground">Total</th>
+                <th className="px-4 py-3 text-left nu-th">Conductor</th>
+                <th className="px-4 py-3 text-left nu-th">C.O.</th>
+                <th className="px-4 py-3 text-left nu-th">Asignado pendiente</th>
+                <th className="px-4 py-3 text-left nu-th">Efectivo</th>
+                <th className="px-4 py-3 text-left nu-th">Transferencia</th>
+                <th className="px-4 py-3 text-left nu-th">Total</th>
               </tr>
             </thead>
             <tbody>
@@ -710,6 +698,35 @@ function TableroConductoresRC({
                 ))
               )}
             </tbody>
+            {conductores.length > 0 && (
+              <tfoot>
+                <tr className="border-t-2 border-border bg-muted/60 font-bold">
+                  <td colSpan={2} className="px-4 py-3 text-foreground">
+                    Totales
+                    <span className="ml-2 text-[11px] font-semibold text-muted-foreground">
+                      {conductores.length} conductor{conductores.length !== 1 ? 'es' : ''} · {totales.recibos} RC
+                    </span>
+                  </td>
+                  <td className="px-4 py-3 text-left">
+                    {totales.pendientes > 0 ? (
+                      <div className="flex flex-col">
+                        <span className="text-amber-600 dark:text-amber-400">
+                          {totales.pendientes} factura{totales.pendientes !== 1 ? 's' : ''}
+                        </span>
+                        <span className="text-[11px] font-semibold text-muted-foreground">
+                          <MontoAlineado value={totales.valorPendiente} />
+                        </span>
+                      </div>
+                    ) : (
+                      <span className="text-[11px] font-normal italic text-muted-foreground">Sin pendientes</span>
+                    )}
+                  </td>
+                  <td className="px-4 py-3 text-left text-emerald-600 dark:text-emerald-400"><MontoAlineado value={totales.efectivo} /></td>
+                  <td className="px-4 py-3 text-left text-blue-600 dark:text-blue-400"><MontoAlineado value={totales.consignacion} /></td>
+                  <td className="px-4 py-3 text-left text-primary"><MontoAlineado value={totales.total} /></td>
+                </tr>
+              </tfoot>
+            )}
           </table>
         </div>
       </div>
@@ -742,18 +759,18 @@ function RcConductorDetalle({ rc, loading }: { rc: ReciboCajaUsuario[] | undefin
       <table className="w-full text-xs">
         <thead>
           <tr className="border-b border-border/60">
-            <th className="px-3 py-2 text-left font-semibold uppercase tracking-wider text-muted-foreground">Documento</th>
-            <th className="px-3 py-2 text-left font-semibold uppercase tracking-wider text-muted-foreground">Factura</th>
-            <th className="px-3 py-2 text-left font-semibold uppercase tracking-wider text-muted-foreground">C.O.</th>
-            <th className="px-3 py-2 text-left font-semibold uppercase tracking-wider text-muted-foreground">Fecha</th>
-            <th className="px-3 py-2 text-left font-semibold uppercase tracking-wider text-muted-foreground">Tercero</th>
-            <th className="px-3 py-2 text-left font-semibold uppercase tracking-wider text-muted-foreground">Efectivo</th>
-            <th className="px-3 py-2 text-left font-semibold uppercase tracking-wider text-muted-foreground">Transferencia</th>
-            {tieneTarjetaCredito && <th className="px-3 py-2 text-left font-semibold uppercase tracking-wider text-muted-foreground">T. crédito</th>}
-            {tieneTarjetaDebito && <th className="px-3 py-2 text-left font-semibold uppercase tracking-wider text-muted-foreground">T. débito</th>}
-            <th className="px-3 py-2 text-left font-semibold uppercase tracking-wider text-muted-foreground">Desc. financiero</th>
-            <th className="px-3 py-2 text-left font-semibold uppercase tracking-wider text-muted-foreground">Total</th>
-            <th className="px-3 py-2 text-left font-semibold uppercase tracking-wider text-muted-foreground">Estado</th>
+            <th className="px-3 py-2 text-left nu-th">Documento</th>
+            <th className="px-3 py-2 text-left nu-th">Factura</th>
+            <th className="px-3 py-2 text-left nu-th">C.O.</th>
+            <th className="px-3 py-2 text-left nu-th">Fecha</th>
+            <th className="px-3 py-2 text-left nu-th">Tercero</th>
+            <th className="px-3 py-2 text-left nu-th">Efectivo</th>
+            <th className="px-3 py-2 text-left nu-th">Transferencia</th>
+            {tieneTarjetaCredito && <th className="px-3 py-2 text-left nu-th">T. crédito</th>}
+            {tieneTarjetaDebito && <th className="px-3 py-2 text-left nu-th">T. débito</th>}
+            <th className="px-3 py-2 text-left nu-th">Desc. financiero</th>
+            <th className="px-3 py-2 text-left nu-th">Total</th>
+            <th className="px-3 py-2 text-left nu-th">Estado</th>
           </tr>
         </thead>
         <tbody>
@@ -777,7 +794,7 @@ function RcConductorDetalle({ rc, loading }: { rc: ReciboCajaUsuario[] | undefin
                 </td>
                 <td className="max-w-[220px] px-3 py-2 text-muted-foreground">
                   {facturas.length > 1 ? (
-                    <Button variant="outline" size="sm" className="h-7 px-2 text-[10px]" onClick={() => setReciboFacturas(r)}>
+                    <Button variant="ghost" size="sm" className="nu-btn nu-btn-soft h-7 px-2 text-[10px]" onClick={() => setReciboFacturas(r)}>
                       Ver {facturas.length} facturas
                     </Button>
                   ) : (
@@ -902,7 +919,7 @@ function History(props: {
 
         <div className="flex flex-wrap items-center gap-2">
           <Input
-            className="h-8 w-24 text-xs"
+            className="nu-control nu-control-sm w-24 text-xs"
             value={tipodoc}
             onChange={(e) => setTipodoc(e.target.value)}
             placeholder="Tipo"
@@ -911,7 +928,7 @@ function History(props: {
           <Select
             value={estado}
             onChange={(e) => setEstado(Number(e.target.value))}
-            className="h-8 text-xs"
+            className="nu-control nu-control-sm text-xs"
           >
             {ESTADO_OPTIONS.map((o) => (
               <option key={o.value} value={o.value}>
@@ -921,7 +938,7 @@ function History(props: {
           </Select>
 
           <Input
-            className="h-8 w-24 text-xs"
+            className="nu-control nu-control-sm w-24 text-xs"
             type="number"
             value={numero}
             onChange={(e) => setNumero(Number(e.target.value))}
@@ -931,14 +948,14 @@ function History(props: {
           <div className="relative">
             <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
             <Input
-              className="h-8 w-40 pl-8 text-xs"
+              className="nu-control nu-control-sm w-40 pl-10 text-xs"
               value={razonSocial}
               onChange={(e) => setRazonSocial(e.target.value)}
               placeholder="Tercero"
             />
           </div>
 
-          <Button size="sm" className="h-8 gap-1 text-xs" onClick={() => fetchRecibos(1)} disabled={loading}>
+          <Button size="sm" className="nu-btn nu-btn-primary gap-1 text-xs" onClick={() => fetchRecibos(1)} disabled={loading}>
             <Search className="h-3.5 w-3.5" /> Consultar
           </Button>
         </div>
@@ -951,7 +968,7 @@ function History(props: {
       )}
 
       {/* Tabla de Historial */}
-      <div className="overflow-hidden rounded-xl border border-border/60 shadow-xs">
+      <div className="nu-card overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-xs">
             <thead>
@@ -960,7 +977,7 @@ function History(props: {
                   <th
                     key={h}
                     className={cn(
-                      'px-4 py-3 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground',
+                      'px-4 py-3 text-[10px] nu-th',
                       i === 5 ? 'text-right' : i === 6 ? 'text-center' : 'text-left'
                     )}
                   >
@@ -1013,18 +1030,18 @@ function History(props: {
             </p>
             <div className="flex items-center gap-1">
               <Button
-                variant="outline"
+                variant="ghost"
                 size="sm"
-                className="h-7 w-7 p-0"
+                className="nu-btn nu-btn-soft h-8 w-8 p-0"
                 disabled={page <= 1 || loading}
                 onClick={() => fetchRecibos(page - 1)}
               >
                 <ChevronLeft className="h-4 w-4" />
               </Button>
               <Button
-                variant="outline"
+                variant="ghost"
                 size="sm"
-                className="h-7 w-7 p-0"
+                className="nu-btn nu-btn-soft h-8 w-8 p-0"
                 disabled={page >= totalPages || loading}
                 onClick={() => fetchRecibos(page + 1)}
               >

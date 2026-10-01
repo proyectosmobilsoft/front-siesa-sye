@@ -3,7 +3,7 @@
  *
  * El entorno lo decide la variable ENV del .env (la resuelve vite.config.ts y
  * la inyecta como VITE_APP_ENV junto con VITE_API_ORIGIN):
- *   ENV=local → http://localhost:3010
+ *   ENV=local → http://localhost:3020
  *   ENV=prod  → https://apisye.mobilsoft.co
  *
  * - Con `npm run dev` las peticiones salen a /api y el proxy de Vite las
@@ -15,7 +15,7 @@
 export const APP_ENV = import.meta.env.VITE_APP_ENV ?? 'local'
 
 /** Origen del backend (sin '/api') según ENV. */
-export const API_ORIGIN = import.meta.env.VITE_API_ORIGIN ?? 'http://localhost:3010'
+export const API_ORIGIN = import.meta.env.VITE_API_ORIGIN ?? 'http://localhost:3020'
 
 const getApiBaseUrl = (): string => {
   // Override manual: si se define VITE_API_BASE_URL, gana sobre ENV.

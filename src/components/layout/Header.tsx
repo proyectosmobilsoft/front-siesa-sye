@@ -1,6 +1,6 @@
 import { motion, AnimatePresence } from 'framer-motion'
-import { LogOut, PanelLeftClose, PanelLeftOpen } from 'lucide-react'
-import { useNavigate, useLocation } from 'react-router-dom'
+import { PanelLeftClose, PanelLeftOpen } from 'lucide-react'
+import { useLocation } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { ThemeToggle } from './ThemeToggle'
 import { useUIStore } from '@/store/uiStore'
@@ -39,19 +39,11 @@ const getUsuarioFromToken = (): { nombre: string; inicial: string } => {
 
 export const Header = () => {
     const { sidebarOpen, setSidebarOpen } = useUIStore()
-    const navigate = useNavigate()
     const location = useLocation()
-    const { sesion, centroOperacionActivo, setCentroOperacionActivo, clearSession } = useAuthStore()
+    const { sesion, centroOperacionActivo, setCentroOperacionActivo } = useAuthStore()
 
     const { nombre, inicial } = getUsuarioFromToken()
     const pagina = getPageMeta(location.pathname)
-
-    const handleLogout = () => {
-        clearSession()
-        localStorage.removeItem('auth_token')
-        localStorage.removeItem('last_activity')
-        navigate('/login')
-    }
 
     return (
         <header className="relative sticky top-0 z-40 w-full bg-card">
@@ -69,7 +61,7 @@ export const Header = () => {
                     <Button
                         variant="ghost"
                         size="icon"
-                        className="flex-shrink-0 rounded-xl"
+                        className="flex-shrink-0 rounded-xl lg:hidden"
                         onClick={() => setSidebarOpen(!sidebarOpen)}
                         title={sidebarOpen ? 'Contraer menú' : 'Expandir menú'}
                         aria-label={sidebarOpen ? 'Contraer menú' : 'Expandir menú'}
@@ -129,15 +121,6 @@ export const Header = () => {
                         <span className="hidden md:block text-sm font-medium">{nombre}</span>
                     </div>
 
-                    <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={handleLogout}
-                        title="Cerrar sesión"
-                        className="text-muted-foreground hover:text-destructive hover:bg-destructive/10"
-                    >
-                        <LogOut className="h-4 w-4" />
-                    </Button>
                 </div>
             </div>
         </header>
