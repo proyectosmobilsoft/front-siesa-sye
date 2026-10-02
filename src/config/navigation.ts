@@ -1,4 +1,5 @@
 import {
+  BarChart3,
   LayoutDashboard,
   Store,
   User,
@@ -237,6 +238,13 @@ export const navigation: NavItem[] = [
     name: 'Tesorería',
     icon: Landmark,
     subItems: [
+      {
+        name: 'Dashboard de Recaudo',
+        href: '/tesoreria/dashboard-recaudo',
+        icon: BarChart3,
+        subtitle: 'Cobro de cartera, anulaciones, conductores, carga y clientes',
+        permiso: PERMISOS.RECIBO_CAJA,
+      },
       {
         name: 'Recibo de Caja',
         href: '/tesoreria/recibo-caja',

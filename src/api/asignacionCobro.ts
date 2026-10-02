@@ -10,6 +10,8 @@ export interface FacturaAsignada {
     numero_factura: number | null
     prefijo_docto?: string
     valor: number
+    /** Peso (kg) de la factura: cantidad facturada × peso del ítem en SIESA. */
+    peso_kg?: number
     estado: EstadoFacturaAsignada
     rc_rowid: number | null
     fecha_cobro: string | null
@@ -39,6 +41,19 @@ export interface TableroConductorRow {
     canceladas: number
     valor_pendiente: number
     valor_cobrado: number
+    /** Carga (kg) de las facturas pendientes, solo mercancía. */
+    kg_pendiente?: number
+    /** Pendientes ya vencidas en SIESA. */
+    vencidas?: number
+    /** Días desde la asignación de la pendiente más vieja. */
+    mas_antigua_dias?: number
+    /** Saldo real en SIESA de las pendientes (puede ser menor si hubo abonos). */
+    saldo_pendiente?: number
+    clientes_pendientes?: number
+    ultima_asignacion?: string
+    centro_operacion?: string | null
+    /** cobradas / (cobradas + pendientes); null si no hay ninguna. */
+    cumplimiento?: number | null
 }
 
 export interface CrearAsignacionDto {

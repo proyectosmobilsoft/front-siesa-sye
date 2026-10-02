@@ -365,6 +365,9 @@ export interface TrasladoFondosMov {
   created_at: string
   rowid_auxiliar_origen: number | null
   rowid_auxiliar_destino: number | null
+  /** Código contable del auxiliar (f253_id), ej. "11050501". */
+  auxiliar_origen?: string | null
+  auxiliar_destino?: string | null
   rowid_docto_siesa: number | null
   numero_tc: number | null
   periodo_tc: number | null
@@ -389,6 +392,10 @@ export interface FacturaAfectadaRC {
 export interface ReciboCajaUsuario {
   Rowid: number
   Fecha: string
+  /** Timestamp de creación en SIESA (hora local guardada como si fuera UTC). */
+  Fecha_Creacion?: string | null
+  /** Notas del RC (f350_notas). En anulados es lo único que conserva las facturas. */
+  Notas?: string | null
   'C.O.': string
   Tipo_Docto: string
   Numero: number
@@ -449,6 +456,11 @@ export interface ResumenConductoresDiaItem {
   centro_operacion_codigo?: string | null
   total_efectivo: number
   total_consignacion: number
+  total_tarjeta_credito?: number
+  total_tarjeta_debito?: number
+  /** Valor de las facturas cruzadas en los RC, antes de descuento PP. */
+  total_facturas?: number
+  total_descuento_pp?: number
   total: number
   recibos_count: number
   /** Facturas asignadas por la cajera que aún no se cobran (backlog total, no solo del rango). */

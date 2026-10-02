@@ -12,12 +12,14 @@ import {
   Plus, X
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { FechaInput } from '@/components/ui/fecha-input'
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
 import { usePermiso } from '@/hooks/usePermiso';
+import { formatters } from '@/utils/formatters';
 
 // --- TIPOS ---
 interface Prize {
@@ -461,7 +463,7 @@ const FerregangaPage: React.FC = () => {
                               ) : camp.nombre}
                             </h3>
                             <p className={cn('text-muted-foreground mt-0.5', compact ? 'text-[10px]' : 'text-sm')}>
-                              {camp.fecha_inicio.slice(0, 10)} — {camp.fecha_fin.slice(0, 10)}
+                              {formatters.dateOnly(camp.fecha_inicio)} — {formatters.dateOnly(camp.fecha_fin)}
                               {(() => {
                                 const dias = Math.ceil((new Date(camp.fecha_fin).getTime() - Date.now()) / 86400000);
                                 if (dias < 0) return <span className="ml-2 text-destructive font-black">Vencida</span>;
@@ -678,7 +680,7 @@ const FerregangaPage: React.FC = () => {
                 </div>
                 <CardTitle className="text-xl">{camp.nombre}</CardTitle>
                 <p className="text-sm text-muted-foreground">
-                  {camp.fecha_inicio.slice(0, 10)} al {camp.fecha_fin.slice(0, 10)}
+                  {formatters.dateOnly(camp.fecha_inicio)} al {formatters.dateOnly(camp.fecha_fin)}
                 </p>
               </CardHeader>
               <CardContent>
@@ -1094,21 +1096,11 @@ const FerregangaPage: React.FC = () => {
                       </div>
                       <div className="space-y-1.5">
                         <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Fecha Inicio *</label>
-                        <Input
-                          type="date"
-                          value={formData.fecha_inicio}
-                          onChange={(e) => updateField('fecha_inicio', e.target.value)}
-                          required
-                        />
+                        <FechaInput value={formData.fecha_inicio} onChange={(v) => updateField('fecha_inicio', v)} required />
                       </div>
                       <div className="space-y-1.5">
                         <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Fecha Fin *</label>
-                        <Input
-                          type="date"
-                          value={formData.fecha_fin}
-                          onChange={(e) => updateField('fecha_fin', e.target.value)}
-                          required
-                        />
+                        <FechaInput value={formData.fecha_fin} onChange={(v) => updateField('fecha_fin', v)} required />
                       </div>
                     </div>
                   </div>

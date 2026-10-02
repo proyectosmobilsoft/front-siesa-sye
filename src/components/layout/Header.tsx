@@ -6,7 +6,7 @@ import { ThemeToggle } from './ThemeToggle'
 import { useUIStore } from '@/store/uiStore'
 import { getPageMeta } from '@/config/navigation'
 import { Select } from '@/components/ui/select'
-import { useAuthStore } from '@/store/authStore'
+import { useAuthStore, CO_AMBOS } from '@/store/authStore'
 
 // Decodifica el payload del JWT sin librerías externas
 const decodeJwtPayload = (token: string): Record<string, string> | null => {
@@ -101,11 +101,12 @@ export const Header = () => {
                                 setCentroOperacionActivo(event.target.value)
                                 window.location.reload()
                             }}
-                            className="h-9 w-[92px] font-mono font-semibold"
+                            className="h-9 w-[104px] font-mono font-semibold"
                         >
                             {(sesion?.centros_operacion ?? []).map((codigo) => (
                                 <option key={codigo} value={codigo}>C.O. {codigo}</option>
                             ))}
+                            <option value={CO_AMBOS}>Ambos</option>
                         </Select>
                     ) : sesion?.centros_operacion?.[0] ? (
                         <span className="hidden rounded-md border bg-muted/40 px-2.5 py-1.5 font-mono text-xs font-semibold sm:inline-flex">

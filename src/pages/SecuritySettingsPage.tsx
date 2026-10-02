@@ -9,6 +9,7 @@ import {
 } from '@tanstack/react-table'
 import { ArrowLeft, UserPlus, Edit, Activity, Search, RefreshCw, Loader2, UserX, UserCheck, AlertTriangle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { formatters } from '@/utils/formatters'
 import { Input } from '@/components/ui/input'
 import { useNavigate } from 'react-router-dom'
 import { UserFormModal } from '@/components/security/UserFormModal'
@@ -183,7 +184,7 @@ export const SecuritySettingsPage = () => {
                 return (
                     <div className="flex items-center space-x-2 text-muted-foreground text-sm">
                         <Activity className="h-4 w-4 opacity-50" />
-                        <span>{ultimoAcceso ? new Date(ultimoAcceso).toLocaleString('es-ES') : <span className="italic text-xs">Nunca</span>}</span>
+                        <span>{ultimoAcceso ? formatters.dateTime(ultimoAcceso) : <span className="italic text-xs">Nunca</span>}</span>
                     </div>
                 )
             },

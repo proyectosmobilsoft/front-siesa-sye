@@ -786,15 +786,15 @@ export const AnalisisFinancieroPage = () => {
                                         <CardHeader className="border-b border-border pb-4">
                                             <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
                                                 <div>
-                                                    <CardTitle className="text-2xl font-bold mb-2 text-foreground" style={{ fontFamily: 'Inter, Roboto, "Open Sans", system-ui, sans-serif' }}>
+                                                    <CardTitle className="text-2xl font-bold mb-2 text-foreground" style={{ fontFamily: 'Ubuntu, system-ui, sans-serif' }}>
                                                         Top Cuentas - Tipo de Saldo: Deudor
                                                     </CardTitle>
-                                                    <p className="text-sm text-muted-foreground font-semibold" style={{ fontFamily: 'Inter, Roboto, "Open Sans", system-ui, sans-serif' }}>
+                                                    <p className="text-sm text-muted-foreground font-semibold" style={{ fontFamily: 'Ubuntu, system-ui, sans-serif' }}>
                                                         CI DISTRIBUCIONES SYE S.A.S.
                                                     </p>
                                                 </div>
                                                 <div className="max-w-md">
-                                                    <p className="text-xs text-muted-foreground leading-relaxed italic" style={{ fontFamily: 'Inter, Roboto, "Open Sans", system-ui, sans-serif' }}>
+                                                    <p className="text-xs text-muted-foreground leading-relaxed italic" style={{ fontFamily: 'Ubuntu, system-ui, sans-serif' }}>
                                                         Mostrar de forma clara y visualmente impactante cuáles son las cuentas contables con los saldos más altos dentro del tipo Deudor, facilitando la toma de decisiones financieras y el análisis de concentración de cuentas.
                                                     </p>
                                                 </div>
@@ -849,7 +849,7 @@ export const AnalisisFinancieroPage = () => {
                                                                         fill="hsl(var(--foreground))"
                                                                         fontSize={12}
                                                                         fontWeight={500}
-                                                                        style={{ fontFamily: 'Inter, Roboto, "Open Sans", system-ui, sans-serif' }}
+                                                                        style={{ fontFamily: 'Ubuntu, system-ui, sans-serif' }}
                                                                     >
                                                                         {displayLabel}
                                                                     </text>
@@ -863,7 +863,7 @@ export const AnalisisFinancieroPage = () => {
                                                                 text: {
                                                                     fill: 'hsl(var(--foreground))',
                                                                     fontSize: 11,
-                                                                    fontFamily: 'Inter, Roboto, "Open Sans", system-ui, sans-serif',
+                                                                    fontFamily: 'Ubuntu, system-ui, sans-serif',
                                                                     fontWeight: 500
                                                                 }
                                                             },
@@ -872,7 +872,7 @@ export const AnalisisFinancieroPage = () => {
                                                                     fill: 'hsl(var(--foreground))',
                                                                     fontSize: 13,
                                                                     fontWeight: 700,
-                                                                    fontFamily: 'Inter, Roboto, "Open Sans", system-ui, sans-serif'
+                                                                    fontFamily: 'Ubuntu, system-ui, sans-serif'
                                                                 }
                                                             },
                                                         },
@@ -892,7 +892,7 @@ export const AnalisisFinancieroPage = () => {
                                                                 padding: '12px 16px',
                                                                 boxShadow: '0 6px 20px rgba(0,0,0,0.25)',
                                                                 color: 'hsl(var(--foreground))',
-                                                                fontFamily: 'Inter, Roboto, "Open Sans", system-ui, sans-serif',
+                                                                fontFamily: 'Ubuntu, system-ui, sans-serif',
                                                             }
                                                         }
                                                     }}
@@ -937,7 +937,7 @@ export const AnalisisFinancieroPage = () => {
                                                                                     fill="hsl(var(--foreground))"
                                                                                     fontSize={12}
                                                                                     fontWeight={600}
-                                                                                    style={{ fontFamily: 'Inter, Roboto, "Open Sans", system-ui, sans-serif' }}
+                                                                                    style={{ fontFamily: 'Ubuntu, system-ui, sans-serif' }}
                                                                                 >
                                                                                     {formatCurrencyColombian(item.total)}
                                                                                 </text>
@@ -963,7 +963,7 @@ export const AnalisisFinancieroPage = () => {
                                                                     borderRadius: 8,
                                                                     boxShadow: '0 6px 20px rgba(0,0,0,0.25)',
                                                                     color: 'hsl(var(--foreground))',
-                                                                    fontFamily: 'Inter, Roboto, "Open Sans", system-ui, sans-serif',
+                                                                    fontFamily: 'Ubuntu, system-ui, sans-serif',
                                                                 }}
                                                             >
                                                                 <div style={{ fontWeight: 700, fontSize: 15, marginBottom: 4, color: 'hsl(var(--foreground))' }}>
@@ -1010,11 +1010,11 @@ export const AnalisisFinancieroPage = () => {
                                                 <div className="mt-6 flex items-center justify-between border-t border-border pt-4">
                                                     <div className="flex items-center gap-3">
                                                         <div className="h-5 w-5 rounded" style={{ background: 'linear-gradient(135deg, #1a365d 0%, #2c5282 100%)' }}></div>
-                                                        <span className="text-sm font-semibold text-foreground" style={{ fontFamily: 'Inter, Roboto, "Open Sans", system-ui, sans-serif' }}>
+                                                        <span className="text-sm font-semibold text-foreground" style={{ fontFamily: 'Ubuntu, system-ui, sans-serif' }}>
                                                             Tipo de Saldo: Deudor
                                                         </span>
                                                     </div>
-                                                    <div className="flex items-center gap-4 text-xs text-muted-foreground" style={{ fontFamily: 'Inter, Roboto, "Open Sans", system-ui, sans-serif' }}>
+                                                    <div className="flex items-center gap-4 text-xs text-muted-foreground" style={{ fontFamily: 'Ubuntu, system-ui, sans-serif' }}>
                                                         <span className="font-semibold">Total: {formatCurrencyColombian(totalGeneral)}</span>
                                                         <span>•</span>
                                                         <span>Top {cuentasDeudoras.length} cuentas</span>

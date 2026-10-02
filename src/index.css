@@ -287,8 +287,8 @@
 }
 .nu .nu-th {
     font-size: 12px;
-    font-weight: 500;
-    color: var(--nu-mute);
+    font-weight: 600;
+    color: hsl(var(--foreground) / 0.85);
 }
 .nu .nu-control {
     height: 44px !important;
@@ -367,13 +367,6 @@
 .nu input[type='checkbox'] {
     accent-color: var(--nu-acc);
     border-radius: 6px;
-}
-/* Tipografía redondeada para los tableros (tarjetas) de Asignar Facturas. */
-.nu .nu-card {
-    font-family: 'Nunito', 'Inter', ui-sans-serif, system-ui, sans-serif;
-}
-.nu .nu-card .font-mono {
-    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
 }
 .nu .nu-control.nu-control-sm {
     height: 36px !important;

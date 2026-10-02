@@ -7,6 +7,7 @@ export interface FacturaPendiente {
     numero: string | null
     prefijo: string | null
     valor: number
+    peso_kg: number
     fecha: string | null
     vence: string | null
     idco: string | null
@@ -14,6 +15,11 @@ export interface FacturaPendiente {
     nit: string | null
     razon: string | null
     raw: Record<string, unknown>
+}
+
+/** 1234.5 → "1.234,5 kg". */
+export function formatearPeso(kg: number): string {
+    return `${kg.toLocaleString('es-CO', { maximumFractionDigits: 2 })} kg`
 }
 
 /** "2025-06-30 00:00:00.000" → "30/06/2025". */
@@ -83,6 +89,7 @@ export function normalizarFactura(row: Record<string, unknown>): FacturaPendient
         numero,
         prefijo,
         valor: parseValor(valorRaw),
+        peso_kg: parseValor(primerValor(row, ['peso_kg'])),
         fecha: fecha != null ? String(fecha) : null,
         vence: vence != null ? String(vence) : null,
         idco: idco != null ? String(idco) : null,

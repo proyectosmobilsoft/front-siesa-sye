@@ -27,9 +27,9 @@ export const formatters = {
       return 'Fecha inválida'
     }
     return new Intl.DateTimeFormat('es-CO', {
+      day: '2-digit',
+      month: '2-digit',
       year: 'numeric',
-      month: 'short',
-      day: 'numeric',
     }).format(date)
   },
 
@@ -50,9 +50,9 @@ export const formatters = {
       return 'Fecha inválida'
     }
     return new Intl.DateTimeFormat('es-CO', {
+      day: '2-digit',
+      month: '2-digit',
       year: 'numeric',
-      month: 'short',
-      day: 'numeric',
     }).format(date)
   },
 
@@ -66,11 +66,12 @@ export const formatters = {
       return 'Fecha inválida'
     }
     return new Intl.DateTimeFormat('es-CO', {
+      day: '2-digit',
+      month: '2-digit',
       year: 'numeric',
-      month: 'short',
-      day: 'numeric',
       hour: '2-digit',
       minute: '2-digit',
+      hour12: false,
     }).format(date)
   },
 

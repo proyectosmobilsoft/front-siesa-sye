@@ -7,13 +7,14 @@ import { Modal } from '@/components/ui/modal'
 import { apiClient } from '@/api/client'
 import { UsuarioMaster } from '@/api/seguridad'
 import { asignacionCobroApi } from '@/api/asignacionCobro'
-import { useAuthStore } from '@/store/authStore'
+import { useAuthStore, coPuntual } from '@/store/authStore'
 import {
     FacturaPendiente,
     coincideBusquedaFactura,
     formatearFacturaPendiente,
     formatearFecha,
     normalizarFactura,
+    formatearPeso,
 } from './facturaPendiente'
 
 interface Props {
@@ -33,7 +34,7 @@ const moneda = (n: number) => n.toLocaleString('es-CO', { style: 'currency', cur
 const tiempo = (f: string | null) => (f ? Date.parse(f.replace(' ', 'T')) || 0 : 0)
 
 export const FacturasPendientesTab = ({ conductores, onAsignado }: Props) => {
-    const centroOperacionActivo = useAuthStore((s) => s.centroOperacionActivo)
+    const centroOperacionActivo = useAuthStore((s) => coPuntual(s.centroOperacionActivo))
 
     const [facturas, setFacturas] = useState<FacturaPendiente[]>([])
     const [cargando, setCargando] = useState(false)
@@ -121,10 +122,11 @@ export const FacturasPendientesTab = ({ conductores, onAsignado }: Props) => {
             return next
         })
 
-    const { totalSeleccionado, clientesSeleccionados } = useMemo(() => {
+    const { totalSeleccionado, pesoSeleccionado, clientesSeleccionados } = useMemo(() => {
         const sel = facturas.filter((f) => seleccionadas.has(f.rowid_sa))
         return {
             totalSeleccionado: sel.reduce((acc, f) => acc + (f.valor || 0), 0),
+            pesoSeleccionado: sel.reduce((acc, f) => acc + (f.peso_kg || 0), 0),
             clientesSeleccionados: new Set(sel.map((f) => f.idtercero)).size,
         }
     }, [facturas, seleccionadas])
@@ -144,7 +146,8 @@ export const FacturasPendientesTab = ({ conductores, onAsignado }: Props) => {
             let asignadas = 0
             for (const [rowidTercero, lista] of porCliente) {
                 await asignacionCobroApi.crear({
-                    id_co: centroOperacionActivo || '001',
+                    // Con "Ambos" se usa el C.O. de la propia factura.
+                    id_co: centroOperacionActivo || lista[0]?.idco?.trim() || '001',
                     rowid_tercero: rowidTercero,
                     conductor_id: Number(conductorId),
                     observacion: observacion.trim() || undefined,
@@ -242,6 +245,18 @@ export const FacturasPendientesTab = ({ conductores, onAsignado }: Props) => {
                                         </div>
                                         {abierto && (
                                             <table className="w-full text-sm">
+                                                <thead>
+                                                    <tr className="border-t">
+                                                        <th className="w-10 px-3 py-2 pl-6"></th>
+                                                        <th className="px-3 py-2 text-left nu-th">Factura</th>
+                                                        <th className="px-3 py-2 text-left nu-th">C.O.</th>
+                                                        <th className="px-3 py-2 text-left nu-th">Emisión</th>
+                                                        <th className="px-3 py-2 text-left nu-th">Vence</th>
+                                                        <th className="px-3 py-2 text-right nu-th">Peso</th>
+                                                        <th className="px-3 py-2 text-right nu-th">Valor</th>
+                                                        <th className="w-10 px-3 py-2"></th>
+                                                    </tr>
+                                                </thead>
                                                 <tbody>
                                                     {g.facturas.map((f) => (
                                                         <tr key={f.rowid_sa} className="border-t hover:bg-muted/30">
@@ -257,6 +272,7 @@ export const FacturasPendientesTab = ({ conductores, onAsignado }: Props) => {
                                                             <td className="px-3 py-2 font-mono text-xs">{f.idco ?? '—'}</td>
                                                             <td className="px-3 py-2 text-xs">{formatearFecha(f.fecha)}</td>
                                                             <td className="px-3 py-2 text-xs">{formatearFecha(f.vence)}</td>
+                                                            <td className="px-3 py-2 text-right text-xs tabular-nums text-muted-foreground">{formatearPeso(f.peso_kg)}</td>
                                                             <td className="px-3 py-2 text-right">{moneda(f.valor)}</td>
                                                             <td className="w-10 px-3 py-2">
                                                                 <Button
@@ -285,7 +301,7 @@ export const FacturasPendientesTab = ({ conductores, onAsignado }: Props) => {
                     <div className="rounded-xl bg-[var(--nu-fill)] px-3 py-2 text-sm">
                         <div className="font-semibold">{seleccionadas.size} factura(s) seleccionada(s)</div>
                         <div className="text-xs text-muted-foreground">
-                            {clientesSeleccionados} cliente(s) · {moneda(totalSeleccionado)}
+                            {clientesSeleccionados} cliente(s) · {moneda(totalSeleccionado)} · {formatearPeso(pesoSeleccionado)}
                         </div>
                     </div>
 
@@ -336,6 +352,8 @@ export const FacturasPendientesTab = ({ conductores, onAsignado }: Props) => {
                         <dd>{formatearFecha(facturaDetalle.vence)}</dd>
                         <dt className="text-muted-foreground">Saldo</dt>
                         <dd className="font-semibold">{moneda(facturaDetalle.valor)}</dd>
+                        <dt className="text-muted-foreground">Peso</dt>
+                        <dd className="font-semibold">{formatearPeso(facturaDetalle.peso_kg)}</dd>
                     </dl>
                 )}
             </Modal>

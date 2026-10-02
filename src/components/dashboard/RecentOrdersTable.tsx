@@ -5,6 +5,7 @@ import { ErrorBoundary } from '@/components/ui/error-boundary'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/lib/skeleton'
 import { useRecentOrders } from '@/hooks/useReports'
+import { formatters } from '@/utils/formatters'
 
 const RecentOrdersTableContent = () => {
     // Ya viene ordenado por fecha desc y limitado a 8 desde DB — ver
@@ -73,7 +74,7 @@ const RecentOrdersTableContent = () => {
                                         {order['Desc. CO'] || 'Sin descripción'}
                                     </p>
                                     <p className="text-xs text-muted-foreground">
-                                        C.O. {order['ID. CO'] || 'N/A'} · {order['Fecha docto']} · {order['Hora creacion']}
+                                        C.O. {order['ID. CO'] || 'N/A'} · {formatters.dateOnly(order['Fecha docto'])} · {order['Hora creacion']}
                                     </p>
                                 </div>
                                 <span className="inline-flex shrink-0 items-center rounded-full bg-primary/10 px-2.5 py-1 text-xs font-medium text-primary">

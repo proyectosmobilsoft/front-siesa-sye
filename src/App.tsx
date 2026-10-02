@@ -42,6 +42,7 @@ const MaestroModulosPage = lazy(() => import('@/pages/MaestroModulosPage').then(
 const EgresoPage = lazy(() => import('@/pages/EgresoPage').then(m => ({ default: m.EgresoPage })))
 const FerregangaPage = lazy(() => import('@/pages/FerregangaPage'))
 const ReciboCajaPage = lazy(() => import('@/pages/ReciboCajaPage').then(m => ({ default: m.ReciboCajaPage })))
+const DashboardReciboCajaPage = lazy(() => import('@/pages/DashboardReciboCajaPage').then(m => ({ default: m.DashboardReciboCajaPage })))
 const TesoreriaEntregaRecaudoPage = lazy(() => import('@/pages/TesoreriaEntregaRecaudoPage').then(m => ({ default: m.TesoreriaEntregaRecaudoPage })))
 const TrasladoFondosPage = lazy(() => import('@/pages/TrasladoFondosPage').then(m => ({ default: m.TrasladoFondosPage })))
 
@@ -138,6 +139,7 @@ function AppLayout() {
                                 <Route path="/maestro/usuarios" element={<ProtectedRoute permiso={PERMISOS.USUARIOS}><SecuritySettingsPage /></ProtectedRoute>} />
                                 <Route path="/maestro/descuentos-financieros" element={<ProtectedRoute permiso={PERMISOS.DESCUENTOS}><MaestroDescuentosFinancierosPage /></ProtectedRoute>} />
                                 <Route path="/tesoreria/recibo-caja" element={<ProtectedRoute permiso={PERMISOS.RECIBO_CAJA}><ReciboCajaPage /></ProtectedRoute>} />
+                                <Route path="/tesoreria/dashboard-recaudo" element={<ProtectedRoute permiso={PERMISOS.RECIBO_CAJA}><DashboardReciboCajaPage /></ProtectedRoute>} />
                                 <Route path="/tesoreria/entrega-recaudo" element={<ProtectedRoute permiso={PERMISOS.ENTREGA_RECAUDO}><TesoreriaEntregaRecaudoPage /></ProtectedRoute>} />
                                 <Route path="/logistica/asignar-facturas" element={<ProtectedRoute permiso={PERMISOS.ASIGNACION_COBRO}><AsignacionCobroPage /></ProtectedRoute>} />
                                 {/* Compatibilidad con el enlace/ruta anterior. */}

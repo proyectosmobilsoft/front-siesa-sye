@@ -3,6 +3,8 @@ import { Loader2, X } from 'lucide-react'
 import { Modal } from '@/components/ui/modal'
 import { asignacionCobroApi, AsignacionCobro, FacturaAsignada } from '@/api/asignacionCobro'
 import { usePermiso } from '@/hooks/usePermiso'
+import { formatters } from '@/utils/formatters'
+import { formatearPeso } from './facturaPendiente'
 
 export function formatearFactura(f: FacturaAsignada): string {
     if (f.prefijo_docto && f.numero_factura != null) return `${f.prefijo_docto}-${String(f.numero_factura).padStart(8, '0')}`
@@ -75,16 +77,35 @@ export function DetalleFacturasAsignadasModal({
                 ) : lotesConPendientes.length === 0 ? (
                     <p className="py-8 text-center text-sm text-muted-foreground">Sin facturas pendientes.</p>
                 ) : (
-                    lotesConPendientes.map((lote) => (
+                    <>
+                    <div className="flex items-center justify-between rounded-xl bg-muted/40 px-3 py-2 text-sm">
+                        <span className="text-muted-foreground">Carga total pendiente</span>
+                        <span className="font-bold tabular-nums">
+                            {formatearPeso(lotesConPendientes.reduce((acc, l) => acc + l.facturas.reduce((s2, f) => s2 + (f.peso_kg ?? 0), 0), 0))}
+                        </span>
+                    </div>
+                    {lotesConPendientes.map((lote) => (
                         <div key={lote.id} className="nu-card">
-                            <div className="border-b bg-muted/40 px-3 py-2 text-sm font-semibold">
-                                {lote.cliente_nombre || `Cliente #${lote.rowid_tercero}`}
+                            <div className="flex items-center justify-between gap-3 border-b bg-muted/40 px-3 py-2 text-sm">
+                                <span className="font-semibold">{lote.cliente_nombre || `Cliente #${lote.rowid_tercero}`}</span>
+                                <span className="shrink-0 text-xs text-muted-foreground">
+                                    Asignada: <span className="font-medium text-foreground">{formatters.dateTime(lote.created_at)}</span>
+                                </span>
                             </div>
                             <table className="w-full text-sm">
+                                <thead>
+                                    <tr className="border-b text-xs text-muted-foreground">
+                                        <th className="px-3 py-2 text-left font-medium">Factura</th>
+                                        <th className="px-3 py-2 text-right font-medium">Peso</th>
+                                        <th className="px-3 py-2 text-right font-medium">Valor</th>
+                                        {puedeQuitar && <th className="w-8 px-2 py-2" />}
+                                    </tr>
+                                </thead>
                                 <tbody>
                                     {lote.facturas.map((f) => (
                                         <tr key={f.id} className="border-b last:border-b-0">
                                             <td className="px-3 py-2 font-mono text-xs">{formatearFactura(f)}</td>
+                                            <td className="px-3 py-2 text-right text-xs tabular-nums text-muted-foreground">{formatearPeso(f.peso_kg ?? 0)}</td>
                                             <td className="px-3 py-2 text-right">
                                                 {f.valor.toLocaleString('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 })}
                                             </td>
@@ -103,9 +124,22 @@ export function DetalleFacturasAsignadasModal({
                                         </tr>
                                     ))}
                                 </tbody>
+                                {lote.facturas.length > 1 && (
+                                    <tfoot>
+                                        <tr className="border-t bg-muted/30 text-xs font-semibold">
+                                            <td className="px-3 py-2">Total</td>
+                                            <td className="px-3 py-2 text-right tabular-nums">{formatearPeso(lote.facturas.reduce((acc, f) => acc + (f.peso_kg ?? 0), 0))}</td>
+                                            <td className="px-3 py-2 text-right">
+                                                {lote.facturas.reduce((acc, f) => acc + f.valor, 0).toLocaleString('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 })}
+                                            </td>
+                                            {puedeQuitar && <td />}
+                                        </tr>
+                                    </tfoot>
+                                )}
                             </table>
                         </div>
-                    ))
+                    ))}
+                    </>
                 )}
             </div>
         </Modal>

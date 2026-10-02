@@ -1,5 +1,5 @@
 import { motion, AnimatePresence } from 'framer-motion'
-import { useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import {
     ArrowRightLeft,
     AlertCircle,
@@ -13,8 +13,12 @@ import {
     CreditCard,
     PanelRightClose,
     PanelRightOpen,
+    Download,
+    Zap,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { FechaInput } from '@/components/ui/fecha-input'
+import { useFechasLimite, hoyLocalIso } from '@/hooks/useFechasLimite'
 import { Input } from '@/components/ui/input'
 import { Select } from '@/components/ui/select'
 import { Modal } from '@/components/ui/modal'
@@ -22,6 +26,9 @@ import { useCajasTraspaso, useTrasladosFondos, useCrearTrasladoFondos } from '@/
 import { formatters } from '@/utils/formatters'
 import { CajaTraspaso, MedioPagoTraspaso, TrasladoFondosMov } from '@/api/types'
 import { usePermiso } from '@/hooks/usePermiso'
+import { useAuthStore, coPuntual } from '@/store/authStore'
+import ExcelJS from 'exceljs'
+import { saveAs } from 'file-saver'
 
 const MEDIOS_PAGO: { value: MedioPagoTraspaso; label: string; shortLabel: string; icon: typeof Banknote }[] = [
     { value: 'EFE', label: 'Efectivo', shortLabel: 'Efectivo', icon: Banknote },
@@ -80,6 +87,7 @@ const CajaSelector = ({
     disabledValue,
     cajas,
     medioPago,
+    agruparPorCo,
 }: {
     label: string
     value: string
@@ -87,7 +95,21 @@ const CajaSelector = ({
     disabledValue?: string
     cajas: CajaTraspaso[]
     medioPago: MedioPagoTraspaso
+    /** Agrupa las opciones por C.O. (destino: se puede trasladar a cajas de otro C.O.). */
+    agruparPorCo?: boolean
 }) => {
+    const opcion = (c: CajaTraspaso, idx: number) => {
+        if (!c || c.id_caja === undefined || c.id_caja === null) return null
+        const idVal = String(c.id_caja).trim()
+        const auxSuffix = c.auxiliar ? ` · Aux ${c.auxiliar}` : ''
+        const labelText = c.nombre ? `${c.nombre}${auxSuffix}` : `Caja ${idVal}${auxSuffix}`
+        return (
+            <option key={`${idVal}-${c.id_co || ''}-${idx}`} value={idVal} disabled={idVal === disabledValue}>
+                {labelText} · {formatters.currency(saldoPorMedio(c, medioPago))}
+            </option>
+        )
+    }
+    const centros = [...new Set(cajas.map((c) => String(c.id_co ?? '').trim()))].sort()
     const cajaSeleccionada = cajas.find((c) => c?.id_caja && String(c.id_caja).trim() === value)
 
     return (
@@ -99,19 +121,13 @@ const CajaSelector = ({
                 <Landmark className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                 <Select value={value} onChange={(e) => onChange(e.target.value)} className="pl-9">
                     <option value="">Selecciona una caja</option>
-                    {cajas.map((c, idx) => {
-                        if (!c || c.id_caja === undefined || c.id_caja === null) return null
-                        const idVal = String(c.id_caja).trim()
-                        const uniqueKey = `${idVal}-${c.id_co || ''}-${idx}`
-                        const auxSuffix = c.auxiliar ? ` · Aux ${c.auxiliar}` : ''
-                        const labelText = c.nombre ? `${c.nombre}${auxSuffix}` : `Caja ${idVal}${auxSuffix}`
-                        const saldoSuffix = ` · ${formatters.currency(saldoPorMedio(c, medioPago))}`
-                        return (
-                            <option key={uniqueKey} value={idVal} disabled={idVal === disabledValue}>
-                                {labelText}{saldoSuffix}
-                            </option>
-                        )
-                    })}
+                    {agruparPorCo && centros.length > 1
+                        ? centros.map((co) => (
+                              <optgroup key={co} label={`Centro operativo ${co}`}>
+                                  {cajas.filter((c) => String(c.id_co ?? '').trim() === co).map(opcion)}
+                              </optgroup>
+                          ))
+                        : cajas.map(opcion)}
                 </Select>
             </div>
             {cajaSeleccionada && (
@@ -215,6 +231,7 @@ const SectionHeader = ({ icon: Icon, title, extra }: { icon: typeof ArrowRightLe
 )
 
 export const TrasladoFondosPage = () => {
+    const { data: limites } = useFechasLimite()
     // Ejecutar el traslado también se exige en la API
     // (requirePermiso CREAR_TRASLADO_FONDOS en POST /caja-traspaso).
     const { puede, P } = usePermiso()
@@ -231,6 +248,10 @@ export const TrasladoFondosPage = () => {
     // El historial inicia visible; el usuario puede contraerlo para ganar espacio.
     const [historialAbierto, setHistorialAbierto] = useState(true)
     const [trasladoSeleccionado, setTrasladoSeleccionado] = useState<TrasladoFondosMov | null>(null)
+    // El traslado crea un documento contable en SIESA: se confirma antes de enviarlo.
+    const [confirmando, setConfirmando] = useState(false)
+    const [filtroCaja, setFiltroCaja] = useState('')
+    const [filtroMedio, setFiltroMedio] = useState<'' | MedioPagoTraspaso>('')
 
     const rangoInvalido = !!fechaInicial && !!fechaFinal && fechaInicial > fechaFinal
 
@@ -239,6 +260,19 @@ export const TrasladoFondosPage = () => {
         rangoInvalido ? undefined : { fechaInicial: fechaInicial || undefined, fechaFinal: fechaFinal || undefined }
     )
     const crearTraslado = useCrearTrasladoFondos()
+
+    // Saldos y caja origen: solo las del C.O. elegido arriba (sin C.O., todas).
+    // El destino muestra todas, agrupadas por C.O., porque hay traslados entre
+    // centros (ej. Ferretería 80 del 002 → Caja General 001).
+    const centroOperacionActivo = useAuthStore((s) => coPuntual(s.centroOperacionActivo))
+    const cajasCo = useMemo(
+        () => (cajas ?? []).filter((c) => !centroOperacionActivo || String(c.id_co ?? '').trim() === centroOperacionActivo),
+        [cajas, centroOperacionActivo]
+    )
+    useEffect(() => {
+        setCajaOrigen('')
+        setCajaDestino('')
+    }, [centroOperacionActivo])
 
     const nombreCaja = (id?: string | null) => {
         if (!id || typeof id !== 'string') return ''
@@ -259,6 +293,92 @@ export const TrasladoFondosPage = () => {
     const saldoOrigen = saldoPorMedio(cajaOrigenSeleccionada, medioPago)
     const saldoInsuficiente = !!cajaOrigen && valorNumerico > 0 && valorNumerico > saldoOrigen
     const formularioValido = !!cajaOrigen && !!cajaDestino && !mismasCajas && valorNumerico > 0 && !cargandoCajas
+    const cajaDestinoSeleccionada = cajas?.find((c) => c?.id_caja && String(c.id_caja).trim() === cajaDestino)
+    const saldoDestino = saldoPorMedio(cajaDestinoSeleccionada, medioPago)
+
+    // Barrido sugerido: la ruta (origen → destino) más usada en los últimos
+    // traslados de este medio, cuando la caja origen tiene saldo para mover.
+    const barrido = useMemo(() => {
+        const conteo = new Map<string, number>()
+        for (const t of (historial ?? []).slice(0, 40)) {
+            if ((t.medio_pago || 'EFE') !== medioPago) continue
+            const k = `${String(t.id_caja_origen).trim()}|${String(t.id_caja_destino).trim()}`
+            conteo.set(k, (conteo.get(k) ?? 0) + 1)
+        }
+        const ordenadas = [...conteo.entries()].sort((a, b) => b[1] - a[1])
+        for (const [k] of ordenadas) {
+            const [origen, destino] = k.split('|')
+            const caja = cajasCo.find((c) => String(c.id_caja).trim() === origen)
+            const saldo = saldoPorMedio(caja, medioPago)
+            if (caja && saldo > 0 && (cajas ?? []).some((c) => String(c.id_caja).trim() === destino)) {
+                return { origen, destino, saldo }
+            }
+        }
+        return null
+    }, [historial, medioPago, cajasCo, cajas])
+
+    const aplicarBarrido = () => {
+        if (!barrido) return
+        setCajaOrigen(barrido.origen)
+        setCajaDestino(barrido.destino)
+        setValor(String(barrido.saldo))
+    }
+
+    // Historial filtrado por caja y medio, con totales por medio.
+    const historialFiltrado = useMemo(
+        () =>
+            (historial ?? []).filter(
+                (t) =>
+                    (!filtroCaja || String(t.id_caja_origen).trim() === filtroCaja || String(t.id_caja_destino).trim() === filtroCaja) &&
+                    (!filtroMedio || (t.medio_pago || 'EFE') === filtroMedio)
+            ),
+        [historial, filtroCaja, filtroMedio]
+    )
+    const totalesHistorial = useMemo(() => {
+        const porMedio: Record<string, number> = {}
+        let total = 0
+        for (const t of historialFiltrado) {
+            const m = t.medio_pago || 'EFE'
+            porMedio[m] = (porMedio[m] ?? 0) + Number(t.valor)
+            total += Number(t.valor)
+        }
+        return { porMedio, total }
+    }, [historialFiltrado])
+
+    const exportarHistorial = async () => {
+        const libro = new ExcelJS.Workbook()
+        const hoja = libro.addWorksheet('Traslados')
+        hoja.columns = [
+            { header: 'Traslado', key: 'tc', width: 12 },
+            { header: 'Fecha', key: 'fecha', width: 20 },
+            { header: 'Caja origen', key: 'origen', width: 28 },
+            { header: 'C.O. origen', key: 'co_origen', width: 11 },
+            { header: 'Caja destino', key: 'destino', width: 28 },
+            { header: 'C.O. destino', key: 'co_destino', width: 12 },
+            { header: 'Medio', key: 'medio', width: 14 },
+            { header: 'Valor', key: 'valor', width: 16 },
+            { header: 'Registró', key: 'usuario', width: 24 },
+            { header: 'Notas', key: 'notas', width: 32 },
+        ]
+        for (const t of historialFiltrado) {
+            hoja.addRow({
+                tc: `TC-${t.numero_tc ?? t.id}`,
+                fecha: formatters.dateTime(t.fecha),
+                origen: nombreCaja(t.id_caja_origen),
+                co_origen: t.id_co_origen,
+                destino: nombreCaja(t.id_caja_destino),
+                co_destino: t.id_co_destino,
+                medio: MEDIOS_PAGO.find((m) => m.value === (t.medio_pago || 'EFE'))?.label ?? t.medio_pago,
+                valor: Number(t.valor),
+                usuario: t.usuario_nombre || '',
+                notas: t.motivo || '',
+            })
+        }
+        hoja.getRow(1).font = { bold: true }
+        hoja.getColumn('valor').numFmt = '#,##0'
+        const buffer = await libro.xlsx.writeBuffer()
+        saveAs(new Blob([buffer]), `traslados_${fechaInicial || 'inicio'}_${fechaFinal || hoyLocalIso()}.xlsx`)
+    }
 
     const seleccionarDesdeDashboard = (idCaja: string) => {
         if (idCaja === cajaOrigen) {
@@ -282,9 +402,14 @@ export const TrasladoFondosPage = () => {
         setCajaDestino('')
     }
 
-    const handleSubmit = async (e: React.FormEvent) => {
+    const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault()
         if (!formularioValido) return
+        setConfirmando(true)
+    }
+
+    const ejecutarTraslado = async () => {
+        setConfirmando(false)
         setExito(false)
         try {
             await crearTraslado.mutateAsync({
@@ -334,16 +459,31 @@ export const TrasladoFondosPage = () => {
 
                 <form onSubmit={handleSubmit} className="flex min-h-0 flex-1 flex-col gap-5 overflow-auto">
                     <CajaSaldoDashboard
-                        cajas={cajas ?? []}
+                        cajas={cajasCo}
                         medioPago={medioPago}
                         cajaOrigen={cajaOrigen}
                         cajaDestino={cajaDestino}
                         onSeleccionar={seleccionarDesdeDashboard}
                     />
 
+                    {barrido && !cajaOrigen && (
+                        <button
+                            type="button"
+                            onClick={aplicarBarrido}
+                            className="flex items-center gap-2 self-start rounded-xl border border-primary/30 bg-primary/5 px-3 py-2 text-left text-xs transition hover:bg-primary/10"
+                            title="Llena origen, destino y valor con el traslado que más se repite"
+                        >
+                            <Zap className="h-4 w-4 shrink-0 text-primary" />
+                            <span>
+                                <span className="font-semibold text-foreground">Barrido sugerido:</span> {nombreCaja(barrido.origen)} → {nombreCaja(barrido.destino)} ·{' '}
+                                <span className="font-bold text-primary">{formatters.currency(barrido.saldo)}</span>
+                            </span>
+                        </button>
+                    )}
+
                     {/* Flujo origen -> destino */}
                     <div className="flex flex-col items-center gap-3 xl:flex-row">
-                        <CajaSelector label="Caja origen" value={cajaOrigen} onChange={setCajaOrigen} disabledValue={cajaDestino} cajas={cajas ?? []} medioPago={medioPago} />
+                        <CajaSelector label="Caja origen" value={cajaOrigen} onChange={setCajaOrigen} disabledValue={cajaDestino} cajas={cajasCo} medioPago={medioPago} />
 
                         <motion.div
                             animate={{ rotate: [0, 8, -8, 0] }}
@@ -354,7 +494,7 @@ export const TrasladoFondosPage = () => {
                             <ArrowRightLeft className="h-4 w-4 xl:hidden" />
                         </motion.div>
 
-                        <CajaSelector label="Caja destino" value={cajaDestino} onChange={setCajaDestino} disabledValue={cajaOrigen} cajas={cajas ?? []} medioPago={medioPago} />
+                        <CajaSelector label="Caja destino" value={cajaDestino} onChange={setCajaDestino} disabledValue={cajaOrigen} cajas={cajas ?? []} medioPago={medioPago} agruparPorCo />
                     </div>
 
                     {mismasCajas && (
@@ -373,9 +513,20 @@ export const TrasladoFondosPage = () => {
 
                     {/* Monto */}
                     <div className="space-y-1.5 border-t pt-5">
-                        <label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                            Valor a trasladar
-                        </label>
+                        <div className="flex items-center justify-between gap-2">
+                            <label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                                Valor a trasladar
+                            </label>
+                            {cajaOrigen && saldoOrigen > 0 && (
+                                <button
+                                    type="button"
+                                    onClick={() => setValor(String(saldoOrigen))}
+                                    className="rounded-full bg-primary/10 px-2.5 py-1 text-[11px] font-semibold text-primary transition hover:bg-primary/20"
+                                >
+                                    Todo el saldo ({formatters.currency(saldoOrigen)})
+                                </button>
+                            )}
+                        </div>
                         <div className="relative">
                             <span className="pointer-events-none absolute left-0 top-1/2 -translate-y-1/2 text-2xl font-bold text-primary/50">$</span>
                             <input
@@ -518,23 +669,13 @@ export const TrasladoFondosPage = () => {
                         <label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                             Desde
                         </label>
-                        <Input
-                            type="date"
-                            value={fechaInicial}
-                            onChange={(e) => setFechaInicial(e.target.value)}
-                            className="h-9 w-40"
-                        />
+                        <FechaInput value={fechaInicial} onChange={setFechaInicial} min={limites?.traslados ?? undefined} max={hoyLocalIso()} className="h-9 w-40" />
                     </div>
                     <div className="space-y-1">
                         <label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                             Hasta
                         </label>
-                        <Input
-                            type="date"
-                            value={fechaFinal}
-                            onChange={(e) => setFechaFinal(e.target.value)}
-                            className="h-9 w-40"
-                        />
+                        <FechaInput value={fechaFinal} onChange={setFechaFinal} min={fechaInicial || limites?.traslados || undefined} max={hoyLocalIso()} className="h-9 w-40" />
                     </div>
                     {(fechaInicial || fechaFinal) && (
                         <Button type="button" variant="ghost" size="sm" onClick={limpiarFiltroFechas} className="h-9">
@@ -548,6 +689,39 @@ export const TrasladoFondosPage = () => {
                         </span>
                     )}
                 </div>
+
+                <div className="flex shrink-0 flex-wrap items-center gap-2">
+                    <Select value={filtroCaja} onChange={(e) => setFiltroCaja(e.target.value)} className="h-9 w-48 text-xs" aria-label="Filtrar por caja">
+                        <option value="">Todas las cajas</option>
+                        {(cajas ?? []).map((c) => (
+                            <option key={`${c.id_caja}-${c.id_co}`} value={String(c.id_caja).trim()}>
+                                {c.nombre?.trim() || `Caja ${String(c.id_caja).trim()}`}
+                            </option>
+                        ))}
+                    </Select>
+                    <Select value={filtroMedio} onChange={(e) => setFiltroMedio(e.target.value as '' | MedioPagoTraspaso)} className="h-9 w-36 text-xs" aria-label="Filtrar por medio">
+                        <option value="">Todos los medios</option>
+                        {MEDIOS_PAGO.map((m) => (
+                            <option key={m.value} value={m.value}>{m.label}</option>
+                        ))}
+                    </Select>
+                    <Button type="button" variant="ghost" size="sm" onClick={exportarHistorial} disabled={historialFiltrado.length === 0} className="h-9 gap-1.5 text-xs">
+                        <Download className="h-3.5 w-3.5" /> Excel
+                    </Button>
+                </div>
+
+                {historialFiltrado.length > 0 && (
+                    <div className="flex shrink-0 flex-wrap items-center gap-2 rounded-lg bg-muted/40 px-3 py-2 text-xs">
+                        <span className="font-semibold">
+                            Total: <span className="tabular-nums text-primary">{formatters.currency(totalesHistorial.total)}</span>
+                        </span>
+                        {Object.entries(totalesHistorial.porMedio).map(([m, v]) => (
+                            <span key={m} className="rounded-full border bg-background px-2 py-0.5 text-muted-foreground">
+                                {MEDIOS_PAGO.find((x) => x.value === m)?.label ?? m}: <span className="font-semibold tabular-nums text-foreground">{formatters.currency(v)}</span>
+                            </span>
+                        ))}
+                    </div>
+                )}
 
                 <div className="min-h-0 flex-1 overflow-auto rounded-md border">
                     {cargandoHistorial ? (
@@ -570,7 +744,7 @@ export const TrasladoFondosPage = () => {
                             </div>
                             <p className="text-sm font-semibold text-destructive">No se pudo cargar el historial de traslados.</p>
                         </div>
-                    ) : !historial || historial.length === 0 ? (
+                    ) : historialFiltrado.length === 0 ? (
                         <div className="flex flex-col items-center gap-3 py-16">
                             <div className="flex h-12 w-12 items-center justify-center rounded-full bg-muted">
                                 <Landmark className="h-5 w-5 text-muted-foreground" />
@@ -581,7 +755,7 @@ export const TrasladoFondosPage = () => {
                         </div>
                     ) : (
                         <div className="divide-y">
-                            {historial.map((t, idx) => (
+                            {historialFiltrado.map((t, idx) => (
                                 <motion.div
                                     key={t.id}
                                     initial={{ opacity: 0, x: -6 }}
@@ -610,7 +784,8 @@ export const TrasladoFondosPage = () => {
                                             )}
                                         </div>
                                         <p className="text-xs text-muted-foreground">
-                                            {formatters.dateTime(t.fecha)} · {t.usuario_nombre || 'Administrador'} · C.O. {t.centro_operacion_codigo || 'Sin asignar'}
+                                            {formatters.dateTime(t.fecha)} · {t.usuario_nombre || 'Administrador'}
+                                            {String(t.id_co_origen).trim() !== String(t.id_co_destino).trim() && ` · C.O. ${t.id_co_origen} → ${t.id_co_destino}`}
                                             {t.motivo ? ` · ${t.motivo}` : ''}
                                         </p>
                                     </div>
@@ -631,6 +806,47 @@ export const TrasladoFondosPage = () => {
             </motion.div>
                 )}
             </AnimatePresence>
+
+            {/* Confirmación antes de crear el traslado en SIESA */}
+            <Modal isOpen={confirmando} onClose={() => setConfirmando(false)} title="Confirmar traslado" className="max-w-lg">
+                <div className="space-y-4 text-sm">
+                    <div className="rounded-xl bg-primary/5 p-4 text-center">
+                        <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                            Vas a trasladar en {MEDIOS_PAGO.find((m) => m.value === medioPago)?.label.toLowerCase()}
+                        </p>
+                        <p className="mt-1 text-3xl font-extrabold tabular-nums text-primary">{formatters.currency(valorNumerico)}</p>
+                    </div>
+                    <div className="grid grid-cols-2 gap-3">
+                        {[
+                            { titulo: 'Sale de', caja: cajaOrigenSeleccionada, antes: saldoOrigen, despues: saldoOrigen - valorNumerico },
+                            { titulo: 'Entra a', caja: cajaDestinoSeleccionada, antes: saldoDestino, despues: saldoDestino + valorNumerico },
+                        ].map((x) => (
+                            <div key={x.titulo} className="rounded-xl border p-3">
+                                <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">{x.titulo}</p>
+                                <p className="font-bold">{x.caja?.nombre?.trim() || '—'}</p>
+                                <p className="text-xs text-muted-foreground">Centro operativo {x.caja?.id_co}</p>
+                                <p className="mt-2 text-xs text-muted-foreground">
+                                    Saldo: <span className="tabular-nums">{formatters.currency(x.antes)}</span> →{' '}
+                                    <span className={`font-semibold tabular-nums ${x.despues < 0 ? 'text-destructive' : 'text-foreground'}`}>{formatters.currency(x.despues)}</span>
+                                </p>
+                            </div>
+                        ))}
+                    </div>
+                    {cajaOrigenSeleccionada && cajaDestinoSeleccionada && String(cajaOrigenSeleccionada.id_co).trim() !== String(cajaDestinoSeleccionada.id_co).trim() && (
+                        <p className="flex items-center gap-2 rounded-lg bg-amber-500/10 px-3 py-2 text-xs font-medium text-amber-700 dark:text-amber-400">
+                            <AlertCircle className="h-4 w-4 shrink-0" /> Traslado entre centros operativos distintos.
+                        </p>
+                    )}
+                    {notas.trim() && <p className="text-xs text-muted-foreground">Notas: <span className="text-foreground">{notas.trim()}</span></p>}
+                    <p className="text-xs text-muted-foreground">Se crea y aprueba el documento en SIESA. Para deshacerlo hay que anularlo allá.</p>
+                    <div className="flex justify-end gap-2 border-t pt-4">
+                        <Button type="button" variant="ghost" onClick={() => setConfirmando(false)}>Revisar</Button>
+                        <Button type="button" onClick={ejecutarTraslado} className="gap-2">
+                            <ArrowRightLeft className="h-4 w-4" /> Confirmar traslado
+                        </Button>
+                    </div>
+                </div>
+            </Modal>
 
             {/* Modal de Resumen */}
             <Modal
@@ -674,33 +890,31 @@ export const TrasladoFondosPage = () => {
                         {/* Origen vs Destino */}
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                             <div className="rounded-lg border border-border bg-muted/20 p-3.5 space-y-1.5">
-                                <div className="flex items-center justify-between">
-                                    <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Caja Origen</span>
-                                    <span className="text-xs font-semibold px-2 py-0.5 rounded bg-muted border border-border/50">
-                                        CO {trasladoSeleccionado.id_co_origen}
+                                <div className="flex items-center">
+                                    <span className="text-xs font-semibold text-foreground">
+                                        Centro operativo {trasladoSeleccionado.id_co_origen}
                                     </span>
                                 </div>
                                 <p className="text-sm font-bold">{nombreCaja(trasladoSeleccionado.id_caja_origen)}</p>
-                                <div className="text-xs text-muted-foreground pt-1.5 border-t border-border/50 flex justify-between">
+                                <div className="text-xs text-muted-foreground pt-1.5 border-t border-border/50 flex justify-start gap-6">
                                     <span>Caja ID: <strong className="text-foreground">{trasladoSeleccionado.id_caja_origen ? String(trasladoSeleccionado.id_caja_origen).trim() : 'N/A'}</strong></span>
                                     {trasladoSeleccionado.rowid_auxiliar_origen && (
-                                        <span>Aux: <strong className="text-foreground">{trasladoSeleccionado.rowid_auxiliar_origen}</strong></span>
+                                        <span>Aux: <strong className="text-foreground">{trasladoSeleccionado.auxiliar_origen ?? trasladoSeleccionado.rowid_auxiliar_origen}</strong></span>
                                     )}
                                 </div>
                             </div>
 
                             <div className="rounded-lg border border-border bg-muted/20 p-3.5 space-y-1.5">
-                                <div className="flex items-center justify-between">
-                                    <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Caja Destino</span>
-                                    <span className="text-xs font-semibold px-2 py-0.5 rounded bg-muted border border-border/50">
-                                        CO {trasladoSeleccionado.id_co_destino}
+                                <div className="flex items-center">
+                                    <span className="text-xs font-semibold text-foreground">
+                                        Centro operativo {trasladoSeleccionado.id_co_destino}
                                     </span>
                                 </div>
                                 <p className="text-sm font-bold">{nombreCaja(trasladoSeleccionado.id_caja_destino)}</p>
-                                <div className="text-xs text-muted-foreground pt-1.5 border-t border-border/50 flex justify-between">
+                                <div className="text-xs text-muted-foreground pt-1.5 border-t border-border/50 flex justify-start gap-6">
                                     <span>Caja ID: <strong className="text-foreground">{trasladoSeleccionado.id_caja_destino ? String(trasladoSeleccionado.id_caja_destino).trim() : 'N/A'}</strong></span>
                                     {trasladoSeleccionado.rowid_auxiliar_destino && (
-                                        <span>Aux: <strong className="text-foreground">{trasladoSeleccionado.rowid_auxiliar_destino}</strong></span>
+                                        <span>Aux: <strong className="text-foreground">{trasladoSeleccionado.auxiliar_destino ?? trasladoSeleccionado.rowid_auxiliar_destino}</strong></span>
                                     )}
                                 </div>
                             </div>
@@ -720,10 +934,6 @@ export const TrasladoFondosPage = () => {
                                 <div>
                                     <p className="text-xs text-muted-foreground font-medium">Usuario / Registrado por</p>
                                     <p className="font-semibold">{trasladoSeleccionado.usuario_nombre || `ID: ${trasladoSeleccionado.usuario_id}`}</p>
-                                </div>
-                                <div>
-                                    <p className="text-xs text-muted-foreground font-medium">C.O. del usuario</p>
-                                    <p className="font-mono font-semibold">{trasladoSeleccionado.centro_operacion_codigo || 'Sin asignar'}</p>
                                 </div>
                                 <div>
                                     <p className="text-xs text-muted-foreground font-medium">Fecha Movimiento</p>

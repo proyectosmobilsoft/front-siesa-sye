@@ -22,6 +22,8 @@ import {
     Hash,
 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { FechaInput } from '@/components/ui/fecha-input'
+import { useFechasLimite, hoyLocalIso } from '@/hooks/useFechasLimite'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Modal } from '@/components/ui/modal'
@@ -599,7 +601,7 @@ const ConductorGrupoRow = ({ grupo, idx, onValidar, onVerRC, etiqueta, tieneAnul
 const exportarRecibosCSV = (recibos: ReciboCajaUsuario[], conductorNombre: string) => {
     const encabezados = ['Fecha', 'Numero', 'Tercero', 'Efectivo', 'Transferencia', 'Total', 'Estado']
     const filas = recibos.map((r) => [
-        r.Fecha?.slice(0, 10) ?? '',
+        r.Fecha ? formatters.dateOnly(r.Fecha) : '',
         r.Numero,
         r.Tercero_Nombre || r.Id_tercero,
         r.efectivo ?? 0,
@@ -784,7 +786,7 @@ const RecibosConductorModal = ({ grupo, onClose, rango }: { grupo: GrupoConducto
     const totalEfectivo = Math.min(valorEntrega, totalActivo)
     const totalConsignacion = 0
     const totalGeneral = totalEfectivo
-    const etiquetaPeriodo = fechaInicial === fechaFinal ? `del ${fechaInicial}` : `${fechaInicial} — ${fechaFinal}`
+    const etiquetaPeriodo = fechaInicial === fechaFinal ? `del ${formatters.dateOnly(fechaInicial)}` : `${formatters.dateOnly(fechaInicial)} — ${formatters.dateOnly(fechaFinal)}`
 
     return (
         <Modal isOpen onClose={onClose} title={`Recibos de caja ${etiquetaPeriodo} — ${grupo.conductorNombre}`} className="max-w-5xl">
@@ -925,7 +927,7 @@ const RecibosConductorModal = ({ grupo, onClose, rango }: { grupo: GrupoConducto
                                     const descuentoFinanciero = (r.Facturas ?? []).reduce((s, f) => s + (f.Descuento_Pp || 0), 0)
                                     return (
                                     <tr key={r.Rowid} className={cn("border-b border-border/50 hover:bg-muted/20", r.Estado === 2 && "opacity-60 bg-red-500/5")}>
-                                        <td className="whitespace-nowrap px-3 py-2 font-mono text-muted-foreground">{r.Fecha?.slice(0, 10)}</td>
+                                        <td className="whitespace-nowrap px-3 py-2 font-mono text-muted-foreground">{formatters.dateOnly(r.Fecha)}</td>
                                         <td className="px-3 py-2 font-mono font-bold text-primary">{r.Numero}</td>
                                         <td className="max-w-[160px] truncate px-3 py-2">{r.Tercero_Nombre || r.Id_tercero}</td>
                                         <td className="px-3 py-2 text-right font-mono font-semibold">
@@ -1196,6 +1198,7 @@ const ResumenPeriodo = ({ pendientes, confirmadas, totalVigente }: { pendientes:
 const hoyISO = () => new Date().toISOString().slice(0, 10)
 
 export const TesoreriaEntregaRecaudoPage = () => {
+    const { data: limites } = useFechasLimite()
     const [fechaDesde, setFechaDesde] = useState(hoyISO())
     const [fechaHasta, setFechaHasta] = useState('')
     const rango = fechaDesde ? { fechaInicial: fechaDesde, fechaFinal: fechaHasta || undefined } : undefined
@@ -1423,23 +1426,11 @@ export const TesoreriaEntregaRecaudoPage = () => {
                 <div className="flex flex-wrap items-center gap-3">
                     <label className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
                         Desde
-                        <Input
-                            type="date"
-                            value={fechaDesde}
-                            onChange={(e) => setFechaDesde(e.target.value)}
-                            className="h-8 w-auto text-xs"
-                        />
+                        <FechaInput value={fechaDesde} onChange={setFechaDesde} min={limites?.recibos_app ?? undefined} max={hoyLocalIso()} className="h-8 w-36 text-xs" />
                     </label>
                     <label className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
                         Hasta
-                        <Input
-                            type="date"
-                            value={fechaHasta}
-                            onChange={(e) => setFechaHasta(e.target.value)}
-                            min={fechaDesde}
-                            className="h-8 w-auto text-xs"
-                            placeholder="Hoy"
-                        />
+                        <FechaInput value={fechaHasta} onChange={setFechaHasta} min={fechaDesde || limites?.recibos_app || undefined} max={hoyLocalIso()} className="h-8 w-36 text-xs" placeholder="Hoy" />
                     </label>
                     {filtroActivo && (
                         <Button

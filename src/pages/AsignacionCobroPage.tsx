@@ -6,22 +6,26 @@ import { Input } from '@/components/ui/input'
 import { Select } from '@/components/ui/select'
 import { Badge } from '@/components/ui/badge'
 import { Modal } from '@/components/ui/modal'
+import { formatters } from '@/utils/formatters'
 import { apiClient } from '@/api/client'
 import { Client, ClientsResponse } from '@/api/types'
 import { seguridadApi, UsuarioMaster } from '@/api/seguridad'
 import { asignacionCobroApi, TableroConductorRow } from '@/api/asignacionCobro'
-import { useAuthStore } from '@/store/authStore'
+import { useAuthStore, coPuntual } from '@/store/authStore'
 import { usePermiso } from '@/hooks/usePermiso'
-import { FacturaPendiente, formatearFecha, formatearFacturaPendiente, normalizarFactura } from '@/components/asignacionCobro/facturaPendiente'
+import { FacturaPendiente, formatearFecha, formatearPeso, formatearFacturaPendiente, normalizarFactura } from '@/components/asignacionCobro/facturaPendiente'
 import { FacturasPendientesTab } from '@/components/asignacionCobro/FacturasPendientesTab'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import { DetalleFacturasAsignadasModal } from '@/components/asignacionCobro/DetalleFacturasAsignadasModal'
+
+const moneda = (n: number) => n.toLocaleString('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 })
+const kilosTexto = (kg: number) => `${new Intl.NumberFormat('es-CO', { maximumFractionDigits: 0 }).format(kg)} kg`
 
 export const AsignacionCobroPage = () => {
     const { puede, P } = usePermiso()
     const puedeAsignar = puede(P.ASIGNACION_COBRO)
     const puedeVerTablero = puede(P.TABLERO_COBROS)
-    const centroOperacionActivo = useAuthStore((s) => s.centroOperacionActivo)
+    const centroOperacionActivo = useAuthStore((s) => coPuntual(s.centroOperacionActivo))
 
     // Tablero: conductores programados (asignados) y su avance
     const [tablero, setTablero] = useState<TableroConductorRow[]>([])
@@ -53,7 +57,8 @@ export const AsignacionCobroPage = () => {
         setCargandoTablero(true)
         asignacionCobroApi
             .tablero()
-            .then(setTablero)
+            // Solo conductores con facturas asignadas pendientes de cobro.
+            .then((rows) => setTablero(rows.filter((row) => row.pendientes > 0)))
             .catch((err) => console.error('Error cargando tablero de cobros:', err))
             .finally(() => setCargandoTablero(false))
     }
@@ -160,6 +165,11 @@ export const AsignacionCobroPage = () => {
         [facturas, seleccionadas]
     )
 
+    const pesoSeleccionado = useMemo(
+        () => facturas.filter((f) => seleccionadas.has(f.rowid_sa)).reduce((acc, f) => acc + (f.peso_kg || 0), 0),
+        [facturas, seleccionadas]
+    )
+
     const handleAsignar = async () => {
         if (!clienteSeleccionado || !conductorId || seleccionadas.size === 0) return
         try {
@@ -178,7 +188,8 @@ export const AsignacionCobroPage = () => {
                 })
 
             await asignacionCobroApi.crear({
-                id_co: centroOperacionActivo || '001',
+                // Con "Ambos" se usa el C.O. de la primera factura seleccionada.
+                id_co: centroOperacionActivo || facturas.find((f) => seleccionadas.has(f.rowid_sa))?.idco?.trim() || '001',
                 rowid_tercero: clienteSeleccionado.f9740_id,
                 conductor_id: Number(conductorId),
                 observacion: observacion.trim() || undefined,
@@ -299,6 +310,11 @@ export const AsignacionCobroPage = () => {
                                         Total seleccionado: {totalSeleccionado.toLocaleString('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 })}
                                     </Badge>
                                 )}
+                                {seleccionadas.size > 0 && (
+                                    <Badge variant="secondary">
+                                        Peso: {formatearPeso(pesoSeleccionado)}
+                                    </Badge>
+                                )}
                                 {clienteSeleccionado && (
                                     <Button variant="ghost" size="icon" className="nu-btn nu-btn-soft" onClick={() => cargarFacturas(clienteSeleccionado)} disabled={cargandoFacturas} title="Recargar">
                                         <RefreshCw className={`h-4 w-4 ${cargandoFacturas ? 'animate-spin' : ''}`} />
@@ -328,6 +344,7 @@ export const AsignacionCobroPage = () => {
                                             <th className="h-10 px-3 text-left nu-th">C.O.</th>
                                             <th className="h-10 px-3 text-left nu-th">Emisión</th>
                                             <th className="h-10 px-3 text-left nu-th">Vence</th>
+                                            <th className="h-10 px-3 text-right nu-th">Peso</th>
                                             <th className="h-10 px-3 text-right nu-th">Valor</th>
                                             <th className="h-10 w-10 px-3"></th>
                                         </tr>
@@ -347,6 +364,7 @@ export const AsignacionCobroPage = () => {
                                                 <td className="px-3 py-2 font-mono text-xs">{f.idco ?? '—'}</td>
                                                 <td className="px-3 py-2 text-xs">{formatearFecha(f.fecha)}</td>
                                                 <td className="px-3 py-2 text-xs">{formatearFecha(f.vence)}</td>
+                                                <td className="px-3 py-2 text-right tabular-nums">{formatearPeso(f.peso_kg)}</td>
                                                 <td className="px-3 py-2 text-right">
                                                     {f.valor.toLocaleString('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 })}
                                                 </td>
@@ -403,44 +421,94 @@ export const AsignacionCobroPage = () => {
                         </div>
                     ) : tablero.length === 0 ? (
                         <div className="p-8 text-center text-sm text-muted-foreground">
-                            Ningún conductor tiene facturas asignadas todavía.
+                            Ningún conductor tiene facturas asignadas pendientes.
                         </div>
                     ) : (
                         <div className="overflow-auto">
+                            {/* Totales del tablero */}
+                            <div className="flex flex-wrap gap-2 border-b px-4 py-3 text-xs">
+                                {[
+                                    { t: 'Pendientes', v: String(tablero.reduce((a, r) => a + r.pendientes, 0)) },
+                                    { t: 'Por cobrar', v: moneda(tablero.reduce((a, r) => a + (r.saldo_pendiente ?? r.valor_pendiente), 0)) },
+                                    { t: 'Carga en ruta', v: kilosTexto(tablero.reduce((a, r) => a + (r.kg_pendiente ?? 0), 0)) },
+                                    { t: 'Vencidas', v: String(tablero.reduce((a, r) => a + (r.vencidas ?? 0), 0)), alerta: tablero.some((r) => (r.vencidas ?? 0) > 0) },
+                                    { t: 'Cobradas (30 días)', v: `${tablero.reduce((a, r) => a + r.cobradas, 0)} · ${moneda(tablero.reduce((a, r) => a + r.valor_cobrado, 0))}` },
+                                ].map((x) => (
+                                    <span key={x.t} className={`rounded-full px-3 py-1 ${x.alerta ? 'bg-red-500/10 text-red-600 dark:text-red-400' : 'bg-muted text-muted-foreground'}`}>
+                                        {x.t}: <span className="font-semibold text-foreground">{x.v}</span>
+                                    </span>
+                                ))}
+                            </div>
                             <table className="w-full text-sm">
                                 <thead className="bg-muted/50">
                                     <tr className="border-b">
                                         <th className="h-10 px-4 text-left nu-th">Conductor</th>
+                                        <th className="h-10 px-3 text-left nu-th">C.O.</th>
                                         <th className="h-10 px-3 text-right nu-th">Pendientes</th>
+                                        <th className="h-10 px-3 text-right nu-th">Clientes</th>
+                                        <th className="h-10 px-3 text-right nu-th">Por cobrar</th>
+                                        <th className="h-10 px-3 text-right nu-th">Carga</th>
+                                        <th className="h-10 px-3 text-right nu-th">Vencidas</th>
+                                        <th className="h-10 px-3 text-right nu-th">Más antigua</th>
                                         <th className="h-10 px-3 text-right nu-th">Cobradas</th>
-                                        <th className="h-10 px-3 text-right nu-th">Valor pendiente</th>
                                         <th className="h-10 px-3 text-right nu-th">Valor cobrado</th>
+                                        <th className="h-10 px-3 text-right nu-th">Canceladas</th>
+                                        <th className="h-10 px-3 text-left nu-th">Cumplimiento</th>
+                                        <th className="h-10 px-4 text-right nu-th">Última asignación</th>
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {tablero.map((row) => (
-                                        <tr
-                                            key={row.conductor_id}
-                                            className={`border-b hover:bg-muted/30 ${row.pendientes > 0 ? 'cursor-pointer' : ''}`}
-                                            onClick={() => {
-                                                if (row.pendientes > 0) {
-                                                    setDetalleConductor({ id: row.conductor_id, nombre: row.conductor_nombre || `Conductor #${row.conductor_id}` })
-                                                }
-                                            }}
-                                        >
-                                            <td className="px-4 py-2.5 font-medium">{row.conductor_nombre || `Conductor #${row.conductor_id}`}</td>
-                                            <td className="px-3 py-2.5 text-right">
-                                                <Badge variant={row.pendientes > 0 ? 'default' : 'secondary'}>{row.pendientes}</Badge>
-                                            </td>
-                                            <td className="px-3 py-2.5 text-right text-muted-foreground">{row.cobradas}</td>
-                                            <td className="px-3 py-2.5 text-right">
-                                                {row.valor_pendiente.toLocaleString('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 })}
-                                            </td>
-                                            <td className="px-3 py-2.5 text-right text-muted-foreground">
-                                                {row.valor_cobrado.toLocaleString('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 })}
-                                            </td>
-                                        </tr>
-                                    ))}
+                                    {tablero.map((row) => {
+                                        const cumplimiento = row.cumplimiento ?? null
+                                        return (
+                                            <tr
+                                                key={row.conductor_id}
+                                                className={`border-b hover:bg-muted/30 ${row.pendientes > 0 ? 'cursor-pointer' : ''}`}
+                                                onClick={() => {
+                                                    if (row.pendientes > 0) {
+                                                        setDetalleConductor({ id: row.conductor_id, nombre: row.conductor_nombre || `Conductor #${row.conductor_id}` })
+                                                    }
+                                                }}
+                                                title={row.pendientes > 0 ? 'Ver facturas pendientes' : undefined}
+                                            >
+                                                <td className="px-4 py-2.5 font-medium">{row.conductor_nombre || `Conductor #${row.conductor_id}`}</td>
+                                                <td className="px-3 py-2.5 font-mono text-xs text-muted-foreground">{row.centro_operacion ?? '—'}</td>
+                                                <td className="px-3 py-2.5 text-right">
+                                                    <Badge variant={row.pendientes > 0 ? 'default' : 'secondary'}>{row.pendientes}</Badge>
+                                                </td>
+                                                <td className="px-3 py-2.5 text-right tabular-nums">{row.clientes_pendientes ?? 0}</td>
+                                                <td className="px-3 py-2.5 text-right font-semibold tabular-nums">{moneda(row.saldo_pendiente ?? row.valor_pendiente)}</td>
+                                                <td className="px-3 py-2.5 text-right tabular-nums">{kilosTexto(row.kg_pendiente ?? 0)}</td>
+                                                <td className={`px-3 py-2.5 text-right tabular-nums ${(row.vencidas ?? 0) > 0 ? 'font-semibold text-red-600 dark:text-red-400' : 'text-muted-foreground'}`}>
+                                                    {row.vencidas ?? 0}
+                                                </td>
+                                                <td className={`px-3 py-2.5 text-right tabular-nums ${(row.mas_antigua_dias ?? 0) > 3 ? 'font-semibold text-amber-600 dark:text-amber-400' : 'text-muted-foreground'}`}>
+                                                    {row.pendientes > 0 ? `${row.mas_antigua_dias ?? 0} día${row.mas_antigua_dias === 1 ? '' : 's'}` : '—'}
+                                                </td>
+                                                <td className="px-3 py-2.5 text-right tabular-nums text-muted-foreground">{row.cobradas}</td>
+                                                <td className="px-3 py-2.5 text-right tabular-nums text-muted-foreground">{moneda(row.valor_cobrado)}</td>
+                                                <td className="px-3 py-2.5 text-right tabular-nums text-muted-foreground">{row.canceladas}</td>
+                                                <td className="px-3 py-2.5">
+                                                    {cumplimiento == null ? (
+                                                        <span className="text-xs text-muted-foreground">—</span>
+                                                    ) : (
+                                                        <div className="flex items-center gap-2">
+                                                            <div className="h-1.5 w-20 overflow-hidden rounded-full bg-muted">
+                                                                <div
+                                                                    className={`h-full rounded-full ${cumplimiento >= 0.8 ? 'bg-emerald-500' : cumplimiento >= 0.5 ? 'bg-amber-500' : 'bg-red-500'}`}
+                                                                    style={{ width: `${Math.round(cumplimiento * 100)}%` }}
+                                                                />
+                                                            </div>
+                                                            <span className="text-xs tabular-nums">{Math.round(cumplimiento * 100)} %</span>
+                                                        </div>
+                                                    )}
+                                                </td>
+                                                <td className="whitespace-nowrap px-4 py-2.5 text-right text-xs text-muted-foreground">
+                                                    {row.ultima_asignacion ? formatters.dateTime(row.ultima_asignacion) : '—'}
+                                                </td>
+                                            </tr>
+                                        )
+                                    })}
                                 </tbody>
                             </table>
                         </div>
@@ -476,6 +544,8 @@ export const AsignacionCobroPage = () => {
                         <dd className="font-semibold">
                             {facturaDetalle.valor.toLocaleString('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 })}
                         </dd>
+                        <dt className="text-muted-foreground">Peso</dt>
+                        <dd className="font-semibold">{formatearPeso(facturaDetalle.peso_kg)}</dd>
                     </dl>
                 )}
             </Modal>
