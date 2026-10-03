@@ -44,6 +44,7 @@ const FerregangaPage = lazy(() => import('@/pages/FerregangaPage'))
 const ReciboCajaPage = lazy(() => import('@/pages/ReciboCajaPage').then(m => ({ default: m.ReciboCajaPage })))
 const DashboardReciboCajaPage = lazy(() => import('@/pages/DashboardReciboCajaPage').then(m => ({ default: m.DashboardReciboCajaPage })))
 const TesoreriaEntregaRecaudoPage = lazy(() => import('@/pages/TesoreriaEntregaRecaudoPage').then(m => ({ default: m.TesoreriaEntregaRecaudoPage })))
+const PropuestaPage = lazy(() => import('@/pages/PropuestaPage').then(m => ({ default: m.PropuestaPage })))
 const TrasladoFondosPage = lazy(() => import('@/pages/TrasladoFondosPage').then(m => ({ default: m.TrasladoFondosPage })))
 
 const queryClient = new QueryClient({
@@ -148,6 +149,7 @@ function AppLayout() {
                                 {/* Compatibilidad con enlaces antiguos, sin mantener un módulo duplicado. */}
                                 <Route path="/configuracion/seguridad" element={<Navigate to="/maestro/usuarios" replace />} />
                                 <Route path="/ayuda" element={<HelpPage />} />
+                                <Route path="/propuesta" element={<PropuestaPage />} />
                             </Routes>
                         </Suspense>
                     </main>

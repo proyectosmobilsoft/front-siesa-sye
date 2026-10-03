@@ -29,6 +29,7 @@ import {
   Settings,
   SlidersHorizontal,
   CircleHelp,
+  Presentation,
   type LucideIcon,
 } from 'lucide-react'
 import { PERMISOS } from '@/config/permisos'
@@ -49,6 +50,7 @@ import { PERMISOS } from '@/config/permisos'
  *   5. Tesorería     → todo el movimiento de dinero (entra, sale y se traslada)
  *   6. Reportes      → consultas de solo lectura
  *   7. Sistema       → preferencias y soporte
+ *   8. Propuesta     → enlace directo a la propuesta comercial
  */
 export interface SubNavItem {
   name: string
@@ -309,6 +311,12 @@ export const navigation: NavItem[] = [
         subtitle: 'Documentación y soporte',
       },
     ],
+  },
+  {
+    name: 'Propuesta',
+    href: '/propuesta',
+    icon: Presentation,
+    subtitle: 'Propuesta de integración ERP Siesa Zero-Impact',
   },
 ]
 
