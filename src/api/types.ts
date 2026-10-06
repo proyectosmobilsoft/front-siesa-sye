@@ -272,7 +272,7 @@ export interface SoportesResponse {
   data: Soporte[]
 }
 
-export type MovimientoEfectivoEstado = 'PENDIENTE' | 'CONFIRMADO'
+export type MovimientoEfectivoEstado = 'PENDIENTE' | 'CONFIRMADO' | 'ANULADO'
 export type MovimientoEfectivoTipo = 'CREDITO' | 'DEBITO'
 
 export interface MovimientoEfectivo {
@@ -297,6 +297,10 @@ export interface MovimientoEfectivo {
   usuario_confirma_nombre?: string
   usuario_confirma_centro_operacion?: string | null
   fecha_confirma: string | null
+  usuario_anula?: number | null
+  usuario_anula_nombre?: string | null
+  fecha_anulacion?: string | null
+  motivo_anulacion?: string | null
   created_at: string
 }
 

@@ -31,6 +31,7 @@ import type { CajaTraspaso, TrasladoFondosMov } from '@/api/types'
 import { ResumenConductoresDia, ReciboCajaUsuario } from '@/api/types'
 import { formatters } from '@/utils/formatters'
 import { useAuthStore, coPuntual } from '@/store/authStore'
+import { NuevoReciboTab } from '@/components/reciboCaja/NuevoReciboTab'
 
 interface ReciboCaja {
   Rowid: number
@@ -150,7 +151,8 @@ export const ReciboCajaPage = () => {
   const responsableNombre = sesion?.nombre_completo || sesion?.usuario || 'Usuario Autenticado'
   const responsableCedula = sesion?.id ? String(sesion.id) : '—'
 
-  const [tab, setTab] = useState<'general' | 'conductores' | 'recibos'>('conductores')
+  const [tab, setTab] = useState<'general' | 'conductores' | 'recibos' | 'nuevo'>('conductores')
+  const [nuevoAbierto, setNuevoAbierto] = useState(false)
 
   // Filtros de fecha General
   const [fechaDesde, setFechaDesde] = useState(hoyISO())
@@ -311,7 +313,7 @@ export const ReciboCajaPage = () => {
       <div className="space-y-6 nu-card">
         {/* Barra de Pestañas estilo píldora */}
         <div className="flex items-center px-4 pt-4">
-          <div className="flex space-x-1 nu-seg">
+          <div className="flex flex-wrap gap-1 nu-seg">
             <button
               onClick={() => setTab('conductores')}
               className={cn(
@@ -344,6 +346,12 @@ export const ReciboCajaPage = () => {
               )}
             >
               <FileText className="h-3.5 w-3.5" /> Recibos
+            </button>
+            <button
+              onClick={() => { setNuevoAbierto(true); setTab('nuevo') }}
+              className={cn('flex items-center gap-2 rounded-full px-4 py-2 text-xs font-semibold transition-all', tab === 'nuevo' ? 'bg-card text-foreground shadow-xs' : 'text-muted-foreground hover:bg-card/50 hover:text-foreground')}
+            >
+              <Receipt className="h-3.5 w-3.5" /> Nuevo recibo
             </button>
           </div>
         </div>
@@ -465,6 +473,7 @@ export const ReciboCajaPage = () => {
         )}
 
         {/* ── PESTAÑA: RECIBOS ── */}
+        {nuevoAbierto && <div className={tab === 'nuevo' ? '' : 'hidden'}><NuevoReciboTab onCreated={() => { void fetchResumenConductores(); if (consultado) void handleConsultarGeneral(); void fetchRecibos(1) }} /></div>}
         {tab === 'recibos' && (
           <div className="p-4 sm:p-6">
             <History

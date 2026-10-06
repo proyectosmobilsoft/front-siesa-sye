@@ -28,6 +28,7 @@ import {
   Calculator,
   Settings,
   SlidersHorizontal,
+  Settings2,
   CircleHelp,
   Presentation,
   type LucideIcon,
@@ -269,6 +270,13 @@ export const navigation: NavItem[] = [
         icon: ArrowRightLeft,
         subtitle: 'Movimientos manuales de efectivo entre cajas',
         permiso: PERMISOS.TRASLADO_FONDOS,
+      },
+      {
+        name: 'Parámetros RC',
+        href: '/tesoreria/parametros-rc',
+        icon: Settings2,
+        subtitle: 'Cuentas contables y límite de ajuste al peso del recibo de caja',
+        permiso: PERMISOS.PARAMETROS_RC,
       },
       // Egreso/Anticipos vive aquí porque es salida de dinero: requiere VER_ANTICIPO
       {

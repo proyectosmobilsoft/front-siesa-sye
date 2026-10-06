@@ -33,6 +33,17 @@ export const conductorEfectivoApi = {
     return response.data.data
   },
 
+  anularEntrega: async (id: number, motivo: string): Promise<MovimientoEfectivo> => {
+    const response = await apiClient.post<{ success: boolean; data?: MovimientoEfectivo; message?: string }>(
+      `/conductor-efectivo/entrega/${id}/anular`,
+      { motivo }
+    )
+    if (!response.data.success || !response.data.data) {
+      throw new Error(response.data.message ?? 'Error al anular la entrega')
+    }
+    return response.data.data
+  },
+
   resolverDiferencia: async (movimientoIds: number[]): Promise<MovimientoEfectivo[]> => {
     const response = await apiClient.post<{ success: boolean; data: MovimientoEfectivo[] }>(
       '/conductor-efectivo/entrega/resolver-diferencia',

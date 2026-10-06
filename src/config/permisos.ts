@@ -39,6 +39,7 @@ export const PERMISOS = {
   RECIBO_CAJA:            'VER_RECIBO_CAJA',
   ENTREGA_RECAUDO:        'VER_ENTREGA_RECAUDO',
   ASIGNACION_COBRO:       'ASIGNAR_COBRO',                      // Página de asignación de facturas a conductores
+  PARAMETROS_RC:          'PARAMETRIZAR_RC',                    // Parámetros contables del Recibo de Caja
   TABLERO_COBROS:         'VER_TABLERO_COBROS',
   CONFIGURACION:          'VER_CONFIGURACION',
   INTERFAZ_CONTABLE:      'VER_INTERFAZ_CONTABLE',
@@ -119,6 +120,7 @@ export const PERMISOS = {
   // ─── Entrega de Recaudo ───
   CONFIRMAR_ENTREGA:      'CONFIRMAR_ENTREGA_RECAUDO',
   RESOLVER_DIFERENCIA:    'RESOLVER_DIFERENCIA_RECAUDO',
+  ANULAR_ENTREGA:         'ANULAR_ENTREGA_RECAUDO',
   EXPORTAR_ENTREGA:       'EXPORTAR_ENTREGA_RECAUDO',
 
   // ─── Traslado de Fondos ───
