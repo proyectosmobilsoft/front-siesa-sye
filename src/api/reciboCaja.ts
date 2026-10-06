@@ -9,6 +9,38 @@ import {
 } from './types'
 import { withRetry } from '@/utils/retry'
 
+/** Cuenta contable resuelta contra SIESA (f253_id + metadata). */
+export interface CuentaParametroRC {
+  cuenta: string
+  rowid: number | null
+  descripcion: string | null
+}
+
+export interface ParametrosReciboCaja {
+  limite_ajuste_peso: number
+  cuentas: {
+    cuenta_ajuste_peso_descuento: CuentaParametroRC
+    cuenta_ajuste_peso_ingreso: CuentaParametroRC
+    cuenta_descuento_financiero: CuentaParametroRC
+    cuenta_descuento_financiero_nif: CuentaParametroRC
+    cuenta_anticipo: CuentaParametroRC
+  }
+}
+
+export interface ParametrosReciboCajaUpdate {
+  limite_ajuste_peso?: number
+  cuenta_ajuste_peso_descuento?: string
+  cuenta_ajuste_peso_ingreso?: string
+  cuenta_descuento_financiero?: string
+  cuenta_descuento_financiero_nif?: string
+  cuenta_anticipo?: string
+}
+
+interface ParametrosReciboCajaResponse {
+  success: boolean
+  data: ParametrosReciboCaja
+}
+
 export const reciboCajaApi = {
   getPorUsuario: async (
     usuario: string,
@@ -72,5 +104,20 @@ export const reciboCajaApi = {
       )
       return response.data.data
     })
+  },
+
+  getParametros: async (): Promise<ParametrosReciboCaja> => {
+    const response = await apiClient.get<ParametrosReciboCajaResponse>('/recibo-caja/parametros')
+    return response.data.data
+  },
+
+  actualizarParametros: async (
+    body: ParametrosReciboCajaUpdate
+  ): Promise<ParametrosReciboCaja> => {
+    const response = await apiClient.put<ParametrosReciboCajaResponse>(
+      '/recibo-caja/parametros',
+      body
+    )
+    return response.data.data
   },
 }

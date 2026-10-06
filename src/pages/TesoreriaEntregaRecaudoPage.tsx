@@ -1,5 +1,5 @@
 import { motion, AnimatePresence } from 'framer-motion'
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import {
     ChevronRight,
     Loader2,
@@ -20,6 +20,7 @@ import {
     Download,
     Wallet,
     Hash,
+    Ban,
 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { FechaInput } from '@/components/ui/fecha-input'
@@ -429,9 +430,69 @@ const ValidarEntregaModal = ({ entrega, onClose, onConfirmado }: ValidarEntregaM
     )
 }
 
+const AnularEntregaModal = ({ entrega, onClose, onAnulada, onError }: {
+    entrega: MovimientoEfectivo
+    onClose: () => void
+    onAnulada: () => void
+    onError: (message: string) => void
+}) => {
+    const [motivo, setMotivo] = useState('')
+    const [loading, setLoading] = useState(false)
+    const motivoValido = motivo.trim().length >= 5
+
+    const handleAnular = async () => {
+        if (!motivoValido || loading) return
+        setLoading(true)
+        try {
+            await conductorEfectivoApi.anularEntrega(entrega.id, motivo.trim())
+            onAnulada()
+        } catch (err: unknown) {
+            const apiError = err as { response?: { data?: { message?: string } }; message?: string }
+            onError(apiError.response?.data?.message ?? apiError.message ?? 'Error al anular la entrega')
+        } finally {
+            setLoading(false)
+        }
+    }
+
+    return (
+        <Modal isOpen onClose={() => { if (!loading) onClose() }} title="Anular entrega de efectivo" className="max-w-md">
+            <div className="space-y-4">
+                <div className="rounded-xl border border-destructive/20 bg-destructive/5 p-4 text-sm">
+                    <p><span className="text-muted-foreground">Conductor:</span> <strong>{entrega.conductor_nombre || `Conductor ${entrega.conductor_id}`}</strong></p>
+                    <p><span className="text-muted-foreground">Fecha:</span> {formatters.dateTime(entrega.fecha)}</p>
+                    <p><span className="text-muted-foreground">Valor:</span> <strong>{formatters.currency(entrega.valor)}</strong></p>
+                </div>
+                <p className="text-sm text-muted-foreground">La entrega dejará de sumar en todos los totales y en la app del conductor. El registro queda para auditoría.</p>
+                <div>
+                    <label htmlFor="motivo-anulacion-entrega" className="mb-1 block text-xs font-semibold uppercase tracking-wide text-muted-foreground">Motivo</label>
+                    <textarea
+                        id="motivo-anulacion-entrega"
+                        required
+                        minLength={5}
+                        rows={3}
+                        value={motivo}
+                        onChange={(event) => setMotivo(event.target.value)}
+                        disabled={loading}
+                        placeholder="Ej: RC anulado en SIESA"
+                        className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                        autoFocus
+                    />
+                </div>
+                <div className="flex justify-end gap-2 pt-1">
+                    <Button variant="outline" onClick={onClose} disabled={loading}>Cancelar</Button>
+                    <Button variant="destructive" className="gap-2" onClick={handleAnular} disabled={!motivoValido || loading}>
+                        {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Ban className="h-4 w-4" />}
+                        Anular entrega
+                    </Button>
+                </div>
+            </div>
+        </Modal>
+    )
+}
+
 // ─── Sub-tabla de entregas de un conductor ───────────────────────────────────
 
-const EntregasSubAccordion = ({ entregas, colSpan, onValidar, entregasConHistorialAnulado }: { entregas: MovimientoEfectivo[]; colSpan: number; onValidar?: (mov: MovimientoEfectivo) => void; entregasConHistorialAnulado?: Set<number> }) => {
+const EntregasSubAccordion = ({ entregas, colSpan, onValidar, onAnular, puedeAnular, entregasConHistorialAnulado }: { entregas: MovimientoEfectivo[]; colSpan: number; onValidar?: (mov: MovimientoEfectivo) => void; onAnular: (mov: MovimientoEfectivo) => void; puedeAnular: boolean; entregasConHistorialAnulado?: Set<number> }) => {
     const confirmadas = !onValidar
     return (
     <tr>
@@ -464,6 +525,7 @@ const EntregasSubAccordion = ({ entregas, colSpan, onValidar, entregasConHistori
                                         <th className="h-8 px-4 text-left font-medium uppercase tracking-wide text-muted-foreground">Diferencia</th>
                                         <th className="h-8 px-4 text-left font-medium uppercase tracking-wide text-muted-foreground">Aprobado por</th>
                                         <th className="h-8 px-4 text-left font-medium uppercase tracking-wide text-muted-foreground">C.O.</th>
+                                        {puedeAnular && <th className="h-8 px-4 text-left font-medium uppercase tracking-wide text-muted-foreground">Acción</th>}
                                     </>
                                 ) : (
                                     <th className="h-8 px-4 text-left font-medium uppercase tracking-wide text-muted-foreground">Acción</th>
@@ -503,12 +565,26 @@ const EntregasSubAccordion = ({ entregas, colSpan, onValidar, entregasConHistori
                                             <td className="px-4 py-2 text-left font-mono font-semibold">
                                                 {mov.usuario_confirma_centro_operacion || <span className="font-sans italic text-muted-foreground">Sin asignar</span>}
                                             </td>
+                                            {puedeAnular && (
+                                                <td className="px-4 py-2 text-left">
+                                                    <Button variant="ghost" size="sm" className="h-7 gap-1 text-xs text-destructive hover:bg-destructive/10 hover:text-destructive" onClick={(e) => { e.stopPropagation(); onAnular(mov) }}>
+                                                        <Ban className="h-3 w-3" /> Anular
+                                                    </Button>
+                                                </td>
+                                            )}
                                         </>
                                     ) : (
                                         <td className="px-4 py-2 text-left">
-                                            <Button size="sm" className="h-7 gap-1 text-xs" onClick={(e) => { e.stopPropagation(); onValidar!(mov) }}>
-                                                <CheckCircle2 className="h-3 w-3" /> Validar
-                                            </Button>
+                                            <div className="flex flex-wrap items-center gap-1">
+                                                <Button size="sm" className="h-7 gap-1 text-xs" onClick={(e) => { e.stopPropagation(); onValidar!(mov) }}>
+                                                    <CheckCircle2 className="h-3 w-3" /> Validar
+                                                </Button>
+                                                {puedeAnular && (
+                                                    <Button variant="ghost" size="sm" className="h-7 gap-1 text-xs text-destructive hover:bg-destructive/10 hover:text-destructive" onClick={(e) => { e.stopPropagation(); onAnular(mov) }}>
+                                                        <Ban className="h-3 w-3" /> Anular
+                                                    </Button>
+                                                )}
+                                            </div>
                                         </td>
                                     )}
                                 </motion.tr>
@@ -524,7 +600,7 @@ const EntregasSubAccordion = ({ entregas, colSpan, onValidar, entregasConHistori
 
 // ─── Fila de conductor ────────────────────────────────────────────────────────
 
-const ConductorGrupoRow = ({ grupo, idx, onValidar, onVerRC, etiqueta, tieneAnulacionPosterior, entregasConHistorialAnulado }: { grupo: GrupoConductor; idx: number; onValidar?: (mov: MovimientoEfectivo) => void; onVerRC: (grupo: GrupoConductor) => void; etiqueta: string; tieneAnulacionPosterior?: boolean; entregasConHistorialAnulado?: Set<number> }) => {
+const ConductorGrupoRow = ({ grupo, idx, onValidar, onAnular, puedeAnular, onVerRC, etiqueta, tieneAnulacionPosterior, entregasConHistorialAnulado }: { grupo: GrupoConductor; idx: number; onValidar?: (mov: MovimientoEfectivo) => void; onAnular: (mov: MovimientoEfectivo) => void; puedeAnular: boolean; onVerRC: (grupo: GrupoConductor) => void; etiqueta: string; tieneAnulacionPosterior?: boolean; entregasConHistorialAnulado?: Set<number> }) => {
     const [expanded, setExpanded] = useState(false)
     const confirmadas = !onValidar
 
@@ -590,7 +666,7 @@ const ConductorGrupoRow = ({ grupo, idx, onValidar, onVerRC, etiqueta, tieneAnul
                 </td>
             </motion.tr>
             <AnimatePresence>
-                {expanded && <EntregasSubAccordion entregas={grupo.entregas} colSpan={4} onValidar={onValidar} entregasConHistorialAnulado={entregasConHistorialAnulado} />}
+                {expanded && <EntregasSubAccordion entregas={grupo.entregas} colSpan={4} onValidar={onValidar} onAnular={onAnular} puedeAnular={puedeAnular} entregasConHistorialAnulado={entregasConHistorialAnulado} />}
             </AnimatePresence>
         </>
     )
@@ -1016,12 +1092,14 @@ interface EntregasPanelProps {
     isLoading: boolean
     error: unknown
     onValidar?: (mov: MovimientoEfectivo) => void
+    onAnular: (mov: MovimientoEfectivo) => void
+    puedeAnular: boolean
     onVerRC: (grupo: GrupoConductor) => void
     anulacionesPosteriores: Set<number>
     entregasConHistorialAnulado?: Set<number>
 }
 
-const EntregasPanel = ({ esPendiente, data, isLoading, error, onValidar, onVerRC, anulacionesPosteriores, entregasConHistorialAnulado }: EntregasPanelProps) => {
+const EntregasPanel = ({ esPendiente, data, isLoading, error, onValidar, onAnular, puedeAnular, onVerRC, anulacionesPosteriores, entregasConHistorialAnulado }: EntregasPanelProps) => {
     const [busqueda, setBusqueda] = useState('')
     const grupos = useMemo(() => agruparPorConductor(data ?? []), [data])
     const total = useMemo(() => grupos.reduce((sum, g) => sum + g.total, 0), [grupos])
@@ -1127,6 +1205,8 @@ const EntregasPanel = ({ esPendiente, data, isLoading, error, onValidar, onVerRC
                                         grupo={grupo}
                                         idx={idx}
                                         onValidar={onValidar}
+                                        onAnular={onAnular}
+                                        puedeAnular={puedeAnular}
                                         onVerRC={onVerRC}
                                         etiqueta={esPendiente ? 'pendiente' : 'confirmada'}
                                         tieneAnulacionPosterior={anulacionesPosteriores.has(grupo.conductorId)}
@@ -1198,6 +1278,8 @@ const ResumenPeriodo = ({ pendientes, confirmadas, totalVigente }: { pendientes:
 const hoyISO = () => new Date().toISOString().slice(0, 10)
 
 export const TesoreriaEntregaRecaudoPage = () => {
+    const { puede, P } = usePermiso()
+    const puedeAnular = puede(P.ANULAR_ENTREGA)
     const { data: limites } = useFechasLimite()
     const [fechaDesde, setFechaDesde] = useState(hoyISO())
     const [fechaHasta, setFechaHasta] = useState('')
@@ -1291,9 +1373,17 @@ export const TesoreriaEntregaRecaudoPage = () => {
     )
 
     const [movValidando, setMovValidando] = useState<MovimientoEfectivo | null>(null)
+    const [movAnulando, setMovAnulando] = useState<MovimientoEfectivo | null>(null)
+    const [toast, setToast] = useState<{ type: 'success' | 'error'; message: string } | null>(null)
     const [grupoViendoRC, setGrupoViendoRC] = useState<GrupoConductor | null>(null)
     const [tabPrincipal, setTabPrincipal] = useState<'flujo' | 'incidentes'>('flujo')
     const queryClient = useQueryClient()
+
+    useEffect(() => {
+        if (!toast) return
+        const timeout = setTimeout(() => setToast(null), 4000)
+        return () => clearTimeout(timeout)
+    }, [toast])
 
     const refrescarTodo = () => {
         pendientesQuery.refetch()
@@ -1306,8 +1396,19 @@ export const TesoreriaEntregaRecaudoPage = () => {
         queryClient.invalidateQueries({ queryKey: ['conductor-efectivo'] })
     }
 
+    const handleAnulada = () => {
+        setMovAnulando(null)
+        setToast({ type: 'success', message: 'Entrega anulada correctamente' })
+        queryClient.invalidateQueries({ queryKey: ['conductor-efectivo'] })
+    }
+
     return (
         <div className="mx-auto max-w-7xl space-y-5 p-4 sm:p-6">
+            {toast && (
+                <div role="status" className={cn('fixed right-4 top-4 z-[10000] max-w-sm rounded-lg border px-4 py-3 text-sm font-semibold shadow-lg', toast.type === 'success' ? 'border-emerald-300 bg-emerald-50 text-emerald-800 dark:border-emerald-800 dark:bg-emerald-950 dark:text-emerald-300' : 'border-destructive/30 bg-destructive/10 text-destructive')}>
+                    {toast.message}
+                </div>
+            )}
             <ResumenPeriodo pendientes={pendientesQuery.data} confirmadas={confirmadasQuery.data} totalVigente={resumenRC.totalVigente} />
 
             <div className="flex items-center border-b border-border/60">
@@ -1455,6 +1556,8 @@ export const TesoreriaEntregaRecaudoPage = () => {
                     isLoading={pendientesQuery.isLoading}
                     error={pendientesQuery.error}
                     onValidar={setMovValidando}
+                    onAnular={setMovAnulando}
+                    puedeAnular={puedeAnular}
                     onVerRC={setGrupoViendoRC}
                     anulacionesPosteriores={SIN_ANULACIONES}
                 />
@@ -1464,6 +1567,8 @@ export const TesoreriaEntregaRecaudoPage = () => {
                     isLoading={confirmadasQuery.isLoading}
                     error={confirmadasQuery.error}
                     onVerRC={setGrupoViendoRC}
+                    onAnular={setMovAnulando}
+                    puedeAnular={puedeAnular}
                     anulacionesPosteriores={SIN_ANULACIONES}
                     entregasConHistorialAnulado={resumenRC.movimientosConHistorialAnulado}
                 />
@@ -1477,6 +1582,7 @@ export const TesoreriaEntregaRecaudoPage = () => {
             )}
 
             <ValidarEntregaModal entrega={movValidando} onClose={() => setMovValidando(null)} onConfirmado={handleConfirmado} />
+            {movAnulando && <AnularEntregaModal entrega={movAnulando} onClose={() => setMovAnulando(null)} onAnulada={handleAnulada} onError={(message) => setToast({ type: 'error', message })} />}
             <RecibosConductorModal grupo={grupoViendoRC} onClose={() => setGrupoViendoRC(null)} rango={rango} />
         </div>
     )
