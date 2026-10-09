@@ -7,7 +7,7 @@ export interface ResumenAnomalia { codigo: CodigoAnomalia; titulo: string; sever
 export interface RcAnomalo {
   rowid: number; co: string; tipo: string; numero: string | number; fecha: string; estado: string
   tercero_rowid: number | null; nit: string | null; cliente: string | null; usuario_creacion: string | null
-  origen: 'API' | 'SIESA'; total_db: number; total_cr: number; anomalias: AnomaliaRc[]
+  origen: 'API' | 'SIESA'; canal?: 'APP' | 'WEB' | 'SIESA'; total_db: number; total_cr: number; anomalias: AnomaliaRc[]
 }
 export interface ProcesoAnomalo {
   idempotency_key: string; usuario_nombre: string | null; estado: 'FAILED' | 'PROCESSING'
