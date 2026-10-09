@@ -1,6 +1,6 @@
 import { buildRcNotas } from './rcNotasBuilder'
 
-export interface FacturaRC { rowid: number; tipo: string; consecutivo: string; prefijo: string; saldo: number; valor: number; seleccionada: boolean; idCia: number }
+export interface FacturaRC { rowid: number; tipo: string; consecutivo: string; prefijo: string; saldo: number; valor: number; seleccionada: boolean; idCia: number; idCo: string }
 export interface PagoRC { id: string; codigo: 'EFE' | 'CG1' | 'TC' | 'TD'; valor: number; cuenta: string; fechaConsignacion: string; nroTarjeta: string; autorizacion: string; vencimiento: string; voucher: string }
 export interface ParametrosRC { limite: number; ajusteDescuento: number; ajusteIngreso: number; descuentoFinanciero: number; anticipo: number }
 export const FALLBACK_RC: ParametrosRC = { limite: 1000, ajusteDescuento: 546, ajusteIngreso: 235, descuentoFinanciero: 697, anticipo: 193 }

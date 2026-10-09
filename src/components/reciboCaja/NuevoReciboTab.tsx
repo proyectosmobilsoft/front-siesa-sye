@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import axios from 'axios'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { apiClient } from '@/api/client'
 import { reciboCajaApi } from '@/api/reciboCaja'
@@ -22,12 +23,19 @@ import { ResumenRecibo } from './ResumenRecibo'
 type MeResponse = { data?: { siesa_rowid?: number | null; siesa_nombre?: string | null }; siesa_rowid?: number | null; siesa_nombre?: string | null }
 type FacturaRaw = Record<string, unknown>
 const hoy = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}` }
-const errorMensaje = (e: unknown) => (e as { response?: { data?: { message?: string; error?: string } }; message?: string }).response?.data?.message ?? (e as { response?: { data?: { error?: string } } }).response?.data?.error ?? (e as Error).message ?? 'Error inesperado'
+const errorMensaje = (e: unknown) => {
+  if (axios.isAxiosError(e) && (!e.response || e.code === 'ECONNABORTED' || e.code === 'ERR_NETWORK')) return 'Se perdió la conexión con el servidor'
+  return (e as { response?: { data?: { message?: string; error?: string } }; message?: string }).response?.data?.message ?? (e as { response?: { data?: { error?: string } } }).response?.data?.error ?? (e as Error).message ?? 'Error inesperado'
+}
+const CAJA_POR_CO: Record<'001' | '002', string> = { '001': '40', '002': '80' }
+const coInicial = (activo: string | null) => activo === '001' || activo === '002' ? activo : '001'
+const estadoIncierto = (e: unknown) => axios.isAxiosError(e) && (!e.response || e.code === 'ECONNABORTED' || e.code === 'ERR_NETWORK' || [502, 503, 504].includes(e.response.status))
+const pausa = (ms: number) => new Promise(resolve => setTimeout(resolve, ms))
 const numero = (v: unknown) => Number(v) || 0
 const mapFactura = (r: FacturaRaw): FacturaRC => {
   const doc = String(r.doccruce ?? '')
   const partes = doc.split('-')
-  return { rowid: numero(r.rowidsa ?? r.rowid), tipo: partes[0] || String(r.tipo ?? r.idTipoDocto ?? ''), consecutivo: partes[1] || String(r.factura ?? r.consecDocto ?? ''), prefijo: String(r.prefijo ?? partes[0] ?? '').toUpperCase(), saldo: parseMonto(r.saldo), valor: 0, seleccionada: false, idCia: numero(r.f350_id_cia ?? r.idCia) || 1 }
+  return { rowid: numero(r.rowidsa ?? r.rowid), tipo: partes[0] || String(r.tipo ?? r.idTipoDocto ?? ''), consecutivo: partes[1] || String(r.factura ?? r.consecDocto ?? ''), prefijo: String(r.prefijo ?? partes[0] ?? '').toUpperCase(), saldo: parseMonto(r.saldo), valor: 0, seleccionada: false, idCia: numero(r.f350_id_cia ?? r.idCia) || 1, idCo: String(r.idco ?? '').trim() }
 }
 const pagoVacio = (codigo: PagoRC['codigo'] = 'EFE'): PagoRC => ({ id: crypto.randomUUID(), codigo, valor: 0, cuenta: '', fechaConsignacion: hoy(), nroTarjeta: '', autorizacion: '', vencimiento: '', voucher: '' })
 const section = 'p-4 sm:p-5'
@@ -36,6 +44,7 @@ const title = 'mb-3 text-xs font-semibold uppercase tracking-wider text-muted-fo
 export function NuevoReciboTab({ onCreated }: { onCreated: () => void }) {
   const queryClient = useQueryClient()
   const sesion = useAuthStore(s => s.sesion)
+  const centroOperacionActivo = useAuthStore(s => s.centroOperacionActivo)
   const [busqueda, setBusqueda] = useState('')
   const [cliente, setCliente] = useState<Client | null>(null)
   const [facturas, setFacturas] = useState<FacturaRC[]>([])
@@ -43,17 +52,18 @@ export function NuevoReciboTab({ onCreated }: { onCreated: () => void }) {
   const [masFacturas, setMasFacturas] = useState(false)
   const [cargandoFacturas, setCargandoFacturas] = useState(false)
   const [descuentos, setDescuentos] = useState<Record<number, number>>({})
+  const [descuentosManuales, setDescuentosManuales] = useState<Record<number, number>>({})
   const [cargandoDescuentos, setCargandoDescuentos] = useState(false)
-  const [aplicar, setAplicar] = useState(false)
   const [pagos, setPagos] = useState<PagoRC[]>(() => [pagoVacio()])
   const [editados, setEditados] = useState<Set<string>>(() => new Set())
   const [observacion, setObservacion] = useState('')
-  const [co, setCo] = useState('001')
-  const [caja, setCaja] = useState('40')
-  const [cajaManual, setCajaManual] = useState(false)
+  const [co, setCo] = useState(() => coInicial(centroOperacionActivo))
+  const [caja, setCaja] = useState(() => CAJA_POR_CO[coInicial(centroOperacionActivo)])
+  const [encabezadoManual, setEncabezadoManual] = useState(false)
   const [error, setError] = useState('')
   const [exito, setExito] = useState('')
   const [guardando, setGuardando] = useState(false)
+  const [verificando, setVerificando] = useState(false)
   const descuentoVersion = useRef(0)
   const facturasVersion = useRef(0)
   const intento = useRef<{ key: string; payload: PayloadRC } | null>(null)
@@ -67,8 +77,10 @@ export function NuevoReciboTab({ onCreated }: { onCreated: () => void }) {
     const p = parametrosQuery.data
     return { limite: (p?.limite_ajuste_peso ?? 0) > 0 ? p!.limite_ajuste_peso : FALLBACK_RC.limite, ajusteDescuento: p?.cuentas?.cuenta_ajuste_peso_descuento?.rowid ?? FALLBACK_RC.ajusteDescuento, ajusteIngreso: p?.cuentas?.cuenta_ajuste_peso_ingreso?.rowid ?? FALLBACK_RC.ajusteIngreso, descuentoFinanciero: p?.cuentas?.cuenta_descuento_financiero?.rowid ?? FALLBACK_RC.descuentoFinanciero, anticipo: p?.cuentas?.cuenta_anticipo?.rowid ?? FALLBACK_RC.anticipo }
   }, [parametrosQuery.data])
-  const neto = useMemo(() => totalesRC(facturas, descuentos, aplicar, [], parametros.limite).neto, [facturas, descuentos, aplicar, parametros.limite])
-  const totales = useMemo(() => totalesRC(facturas, descuentos, aplicar, pagos, parametros.limite), [facturas, descuentos, aplicar, pagos, parametros.limite])
+  const descuentosEfectivos = useMemo(() => ({ ...descuentos, ...descuentosManuales }), [descuentos, descuentosManuales])
+  const aplicar = facturas.some(f => elegibleDescuento(f, descuentosEfectivos[f.rowid] ?? 0) && (descuentosEfectivos[f.rowid] ?? 0) > 0)
+  const neto = useMemo(() => totalesRC(facturas, descuentosEfectivos, aplicar, [], parametros.limite).neto, [facturas, descuentosEfectivos, aplicar, parametros.limite])
+  const totales = useMemo(() => totalesRC(facturas, descuentosEfectivos, aplicar, pagos, parametros.limite), [facturas, descuentosEfectivos, aplicar, pagos, parametros.limite])
   const totalTransferencia = pagos.filter(p => p.codigo === 'CG1' && p.valor > 0).reduce((sum, p) => sum + p.valor, 0)
   const requiereConfirmacion = Boolean(parametrosQuery.data?.exigir_aprobacion_transferencia && cliente && totalTransferencia > 0)
   const disponibles = useQuery({ queryKey: ['transferencias-confirmacion', 'disponibles', cliente?.f9740_id], queryFn: () => transferenciasConfirmacionApi.disponibles(cliente!.f9740_id), enabled: requiereConfirmacion, retry: false })
@@ -86,8 +98,8 @@ export function NuevoReciboTab({ onCreated }: { onCreated: () => void }) {
   const reset = () => {
     cambio(); facturasVersion.current++; descuentoVersion.current++
     setBusqueda(''); setCliente(null); setFacturas([]); setPagina(1); setMasFacturas(false)
-    setDescuentos({}); setAplicar(false); setPagos([pagoVacio()]); setEditados(new Set())
-    setObservacion(''); setCo('001'); setCaja('40'); setCajaManual(false)
+    setDescuentos({}); setDescuentosManuales({}); setPagos([pagoVacio()]); setEditados(new Set())
+    setObservacion(''); setCo(coInicial(centroOperacionActivo)); setCaja(CAJA_POR_CO[coInicial(centroOperacionActivo)]); setEncabezadoManual(false)
     setSeleccionManual(null)
   }
   const cargarFacturas = async (id: number, page: number, acumular = false) => {
@@ -105,10 +117,10 @@ export function NuevoReciboTab({ onCreated }: { onCreated: () => void }) {
   }
   const limpiarCliente = () => {
     cambio(); facturasVersion.current++; descuentoVersion.current++
-    setCliente(null); setFacturas([]); setDescuentos({}); setAplicar(false)
+    setCliente(null); setFacturas([]); setDescuentos({}); setDescuentosManuales({})
     setPagos([pagoVacio()]); setEditados(new Set()); setObservacion('')
     setMasFacturas(false); setCargandoFacturas(false); setCargandoDescuentos(false)
-    setCo('001'); setCaja('40'); setCajaManual(false)
+    setCo(coInicial(centroOperacionActivo)); setCaja(CAJA_POR_CO[coInicial(centroOperacionActivo)]); setEncabezadoManual(false)
     setSeleccionManual(null)
   }
   const elegirCliente = (c: Client) => {
@@ -118,29 +130,27 @@ export function NuevoReciboTab({ onCreated }: { onCreated: () => void }) {
   const actualizarFactura = (rowid: number, valor: number, seleccionada: boolean) => {
     cambio()
     setFacturas(prev => prev.map(f => f.rowid === rowid ? { ...f, valor: seleccionada ? valor : 0, seleccionada } : f))
-    setDescuentos({}); setAplicar(false)
   }
   useEffect(() => {
     const version = ++descuentoVersion.current
     const elegibles = facturas.filter(f => elegibleDescuento(f))
-    if (!elegibles.length) { setDescuentos({}); setAplicar(false); setCargandoDescuentos(false); return }
+    if (!elegibles.length) { setDescuentos({}); setCargandoDescuentos(false); return }
     setCargandoDescuentos(true)
     Promise.all(elegibles.map(async f => {
       const r = await apiClient.post<{ data?: { valor_descuento?: number | string }; valor_descuento?: number | string }>('/financiero/hallar-dsctos-sas', { p_id_cia: f.idCia, p_fecha: hoy(), p_rowid_sa: f.rowid, p_id_medio_pago: 'CG1', p_ind_tipo_tercero: 1 })
       return [f.rowid, Math.max(0, parseMonto(r.data.data?.valor_descuento ?? r.data.valor_descuento))] as const
     })).then(entries => {
       if (version !== descuentoVersion.current) return
-      setDescuentos(Object.fromEntries(entries)); setAplicar(entries.some(([, n]) => n > 0))
+      setDescuentos(Object.fromEntries(entries))
     }).catch(e => {
-      if (version === descuentoVersion.current) { setDescuentos({}); setAplicar(false); setError(`No se pudo consultar el descuento financiero: ${errorMensaje(e)}`) }
+      if (version === descuentoVersion.current) { setDescuentos({}); setError(`No se pudo consultar el descuento financiero: ${errorMensaje(e)}`) }
     }).finally(() => { if (version === descuentoVersion.current) setCargandoDescuentos(false) })
   }, [facturas])
   useEffect(() => {
-    if (cajaManual || !seleccionadas.length) return
-    const prefijos = new Set(seleccionadas.map(f => f.prefijo))
-    if (prefijos.has('BQE')) { setCo('001'); setCaja('40') }
-    else if (prefijos.has('FM') || prefijos.has('FCE')) { setCo('002'); setCaja('80') }
-  }, [seleccionadas, cajaManual])
+    if (encabezadoManual || !seleccionadas.length) return
+    const idCo = seleccionadas[0].idCo
+    if (idCo === '001' || idCo === '002') { setCo(idCo); setCaja(CAJA_POR_CO[idCo]) }
+  }, [seleccionadas, encabezadoManual])
   const codigosPago = pagos.map(p => p.codigo).join(',')
   useEffect(() => {
     setPagos(prev => {
@@ -166,40 +176,66 @@ export function NuevoReciboTab({ onCreated }: { onCreated: () => void }) {
   const agregarPago = () => { cambio(); setPagos(prev => [...prev, pagoVacio()]) }
   const quitarPago = (id: string) => { cambio(); setPagos(prev => prev.filter(p => p.id !== id)); setEditados(prev => { const next = new Set(prev); next.delete(id); return next }) }
   const facturasValidas = seleccionadas.length > 0 && seleccionadas.every(f => Number.isFinite(f.valor) && f.valor > 0 && f.valor <= f.saldo)
+  const coFacturas = [...new Set(seleccionadas.map(f => f.idCo))]
+  const descuentosValidos = seleccionadas.every(f => { const n = descuentosEfectivos[f.rowid] ?? 0; return Number.isFinite(n) && n >= 0 && n < f.saldo })
   const pagosValidos = pagos.length > 0 && pagos.every(p => Number.isFinite(p.valor) && p.valor > 0 && (p.codigo !== 'CG1' || !!p.cuenta && !!p.fechaConsignacion) && (p.codigo !== 'TC' && p.codigo !== 'TD' || /^\d{4}$/.test(p.nroTarjeta.trim()) && p.autorizacion.trim().length >= 6 && !!p.vencimiento))
-  const faltantes = [!cliente && 'Cliente', !facturasValidas && 'Al menos 1 factura', !pagosValidos && 'Pagos válidos', !observacion.trim() && 'Observación', cargandoDescuentos && 'Esperando descuento financiero', totales.clasificacion.tipo === 'faltanteExcesivo' && `Faltante supera el límite de ${formatters.currency(parametros.limite)}`, requiereConfirmacion && (disponibles.isLoading || disponibles.isFetching || disponibles.isError || totalConfirmado < totalTransferencia - 1) && 'Transferencia sin confirmación aprobada'].filter((v): v is string => !!v)
+  const faltantes = [!cliente && 'Cliente', !facturasValidas && 'Al menos 1 factura', coFacturas.length > 1 && 'Facturas de distintos C.O. (haz un recibo por C.O.)', !descuentosValidos && 'El descuento debe ser mayor o igual a 0 y menor que el valor de la factura', !pagosValidos && 'Pagos válidos', !observacion.trim() && 'Observación', cargandoDescuentos && 'Esperando descuento financiero', totales.clasificacion.tipo === 'faltanteExcesivo' && `Faltante supera el límite de ${formatters.currency(parametros.limite)}`, requiereConfirmacion && (disponibles.isLoading || disponibles.isFetching || disponibles.isError || totalConfirmado < totalTransferencia - 1) && 'Transferencia sin confirmación aprobada'].filter((v): v is string => !!v)
   const notasPreview = useMemo(() => {
     if (!observacion.trim()) return ''
     try {
       if (cliente && facturasValidas && pagosValidos && totales.clasificacion.tipo !== 'faltanteExcesivo') {
-        return armarPayloadRC({ clienteId: cliente.f9740_id, facturas, descuentos, aplicar, pagos, parametros, observacion, usuario: sesion?.usuario ?? '?', co, caja, consecutivo: 1, ahora: new Date() }).p_notas
+        return armarPayloadRC({ clienteId: cliente.f9740_id, facturas, descuentos: descuentosEfectivos, aplicar, pagos, parametros, observacion, usuario: sesion?.usuario ?? '?', co, caja, consecutivo: 1, ahora: new Date() }).p_notas
       }
       return buildRcNotas({ observacion, facturas: [], mediosPago: [], ajusteTipo: 'none', ajusteMonto: 0, usuario: sesion?.usuario ?? '?', fechaHora: new Date() })
     } catch (e) { return errorMensaje(e) }
-  }, [cliente, facturas, descuentos, aplicar, pagos, parametros, observacion, sesion?.usuario, co, caja, facturasValidas, pagosValidos, totales.clasificacion.tipo])
+  }, [cliente, facturas, descuentosEfectivos, aplicar, pagos, parametros, observacion, sesion?.usuario, co, caja, facturasValidas, pagosValidos, totales.clasificacion.tipo])
+  const confirmarCreacion = (numeroRc: string | number) => {
+    reset(); setExito(`RC ${numeroRc} creado`)
+    void queryClient.invalidateQueries({ queryKey: ['recibo-caja'] })
+    void queryClient.invalidateQueries({ queryKey: ['rc'] })
+    void queryClient.invalidateQueries({ queryKey: ['transferencias-confirmacion'] })
+    onCreated()
+  }
+  const verificarCreacion = async (key: string) => {
+    setVerificando(true)
+    const limite = Date.now() + 120000
+    try {
+      while (Date.now() < limite) {
+        try {
+          const res = await apiClient.get<{ status: 'PROCESSING' | 'COMPLETED' | 'FAILED'; rowid?: number; numero?: string | number; message?: string; data?: { status: 'PROCESSING' | 'COMPLETED' | 'FAILED'; rowid?: number; numero?: string | number; message?: string } }>(`/recibo-caja/procesar/estado/${encodeURIComponent(key)}`, { timeout: Math.min(10000, Math.max(1000, limite - Date.now())) })
+          const estado = res.data.data ?? res.data
+          if (estado.status === 'COMPLETED') { confirmarCreacion(estado.numero ?? intento.current?.payload.p_numero_docto ?? ''); return }
+          if (estado.status === 'FAILED') { intento.current = null; setError(estado.message || 'No se pudo crear el recibo'); return }
+        } catch (e) {
+          if (axios.isAxiosError(e) && e.response?.status === 404) { setError('El servidor no recibió el recibo. Puedes reintentar con seguridad.'); return }
+          if (!estadoIncierto(e)) { setError(errorMensaje(e)); return }
+        }
+        const restante = limite - Date.now()
+        if (restante > 0) await pausa(Math.min(3000, restante))
+      }
+      setError('No se pudo confirmar si el recibo se creó. Revisa la pestaña Recibos antes de reintentar.')
+    } finally { setVerificando(false) }
+  }
   const guardar = async () => {
     if (faltantes.length) { setError(`Completa: ${faltantes.join(', ')}`); return }
-    if (!cliente || !asociado || guardando) return
+    if (!cliente || !asociado || guardando || verificando) return
     setGuardando(true); setError('')
     try {
       if (!intento.current) {
         const res = await apiClient.get<{ proximoConsecutivo?: { f022_cons_proximo?: number }; data?: { f022_cons_proximo?: number }; f022_cons_proximo?: number }>('/recibo-caja/proximo-consecutivo', { params: { id_cia: 1, id_tipo_docto: 'RC', id_co: co, p_bloquear: 0, p_leer_mandato_tipo: 0 } })
         const consecutivo = numero(res.data.proximoConsecutivo?.f022_cons_proximo ?? res.data.data?.f022_cons_proximo ?? res.data.f022_cons_proximo)
         if (!consecutivo) throw new Error('No se recibió un consecutivo válido')
-        const payload = armarPayloadRC({ clienteId: cliente.f9740_id, facturas, descuentos, aplicar, pagos, parametros, observacion, usuario: sesion?.usuario ?? '?', co, caja, consecutivo, ahora: new Date() })
+        const payload = armarPayloadRC({ clienteId: cliente.f9740_id, facturas, descuentos: descuentosEfectivos, aplicar, pagos, parametros, observacion, usuario: sesion?.usuario ?? '?', co, caja, consecutivo, ahora: new Date() })
         if (requiereConfirmacion) payload.p_confirmaciones_transferencia = confirmacionesIds
         intento.current = { key: crypto.randomUUID(), payload }
       }
       const actual = intento.current
-      const res = await apiClient.post<{ success?: boolean; data?: Record<string, unknown>; message?: string }>('/recibo-caja/procesar', actual.payload, { headers: { 'Idempotency-Key': actual.key } })
+      const res = await apiClient.post<{ success?: boolean; status?: string; data?: Record<string, unknown>; message?: string }>('/recibo-caja/procesar', actual.payload, { headers: { 'Idempotency-Key': actual.key }, timeout: 120000 })
+      if (res.status === 202 || res.data.status === 'PROCESSING') { await verificarCreacion(actual.key); return }
       if (res.data.success === false) throw new Error(res.data.message || 'No se pudo crear el recibo')
       const numeroRc = String(res.data.data?.numero_docto ?? res.data.data?.p_numero_docto ?? actual.payload.p_numero_docto)
-      reset(); setExito(`RC ${numeroRc} creado`)
-      void queryClient.invalidateQueries({ queryKey: ['recibo-caja'] })
-      void queryClient.invalidateQueries({ queryKey: ['rc'] })
-      void queryClient.invalidateQueries({ queryKey: ['transferencias-confirmacion'] })
-      onCreated()
-    } catch (e) { setError(errorMensaje(e)) } finally { setGuardando(false) }
+      confirmarCreacion(numeroRc)
+    } catch (e) { if (estadoIncierto(e) && intento.current) await verificarCreacion(intento.current.key); else setError(errorMensaje(e)) } finally { setGuardando(false) }
   }
   if (me.isLoading) return <p className="p-6 text-sm text-muted-foreground">Consultando usuario SIESA…</p>
   if (me.isError) return <div className="p-6 text-sm text-red-600 dark:text-red-400">No se pudo verificar la asociación SIESA: {errorMensaje(me.error)} <Button variant="outline" onClick={() => void me.refetch()}>Reintentar</Button></div>
@@ -212,9 +248,10 @@ export function NuevoReciboTab({ onCreated }: { onCreated: () => void }) {
     {exito && <div role="status" className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-4 text-sm font-semibold text-emerald-700 dark:text-emerald-400">
       <span>{exito}</span><Button variant="outline" onClick={reset}>Nuevo recibo</Button>
     </div>}
+    {verificando && <div role="status" className="mb-4 rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 text-sm text-amber-700 dark:text-amber-400">Verificando si el recibo se creó…</div>}
     {error && <div role="alert" className="mb-4 rounded-xl border border-red-500/30 bg-red-500/10 p-3 text-sm text-red-700 dark:text-red-400">{error}</div>}
     <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,1fr)_320px] xl:grid-cols-[minmax(0,1fr)_360px]">
-      <div className="min-w-0 space-y-4">
+      <fieldset disabled={guardando || verificando} className="min-w-0 space-y-4">
         <Card className={`${section} rounded-2xl`}>
           <h2 className={title}>01 · Encabezado</h2>
           <div className="flex flex-wrap items-center gap-2 text-sm">
@@ -222,16 +259,17 @@ export function NuevoReciboTab({ onCreated }: { onCreated: () => void }) {
           </div>
           <div className="mt-4 grid gap-3 sm:grid-cols-2">
             <label className="space-y-1 text-xs font-medium text-muted-foreground">C.O.
-              <Select value={co} onChange={e => { cambio(); setCo(e.target.value); setCajaManual(true) }}>
+              <Select value={co} onChange={e => { cambio(); setCo(e.target.value); setCaja(CAJA_POR_CO[e.target.value as '001' | '002']); setEncabezadoManual(true) }}>
                 <option value="001">001 · Principal</option><option value="002">002 · Almateriales</option>
               </Select>
             </label>
             <label className="space-y-1 text-xs font-medium text-muted-foreground">Caja
-              <Select value={caja} onChange={e => { cambio(); setCaja(e.target.value); setCajaManual(true) }}>
+              <Select value={caja} onChange={e => { cambio(); setCaja(e.target.value); setEncabezadoManual(true) }}>
                 <option value="40">40 · Vía 40</option><option value="80">80 · Ferretería</option>
               </Select>
             </label>
           </div>
+          {encabezadoManual && coFacturas.length === 1 && coFacturas[0] && coFacturas[0] !== co && <p role="status" className="mt-3 rounded-lg border border-amber-500/30 bg-amber-500/10 p-2 text-xs text-amber-700 dark:text-amber-400">Las facturas son del C.O. {coFacturas[0]} y el recibo quedará en {co}</p>}
         </Card>
         <Card className={`${section} rounded-2xl`}>
           <h2 className={title}>02 · Cliente</h2>
@@ -242,20 +280,17 @@ export function NuevoReciboTab({ onCreated }: { onCreated: () => void }) {
         <Card className={`${section} rounded-2xl ${!cliente ? 'opacity-60' : ''}`}>
           <h2 className={title}>03 · Facturas</h2>
           {!cliente ? <p className="text-sm text-muted-foreground">Elige un cliente para cargar sus facturas.</p> :
-            <FacturasTabla facturas={facturas} descuentos={descuentos} aplicar={aplicar} cargando={cargandoFacturas} mas={masFacturas}
+            <FacturasTabla facturas={facturas} descuentos={descuentosEfectivos} descuentosSugeridos={descuentos} descuentosManuales={descuentosManuales} aplicar={aplicar} cargando={cargandoFacturas} mas={masFacturas}
               onChange={actualizarFactura}
+              onDescuento={(rowid, valor) => { cambio(); setDescuentosManuales(prev => ({ ...prev, [rowid]: valor })) }}
+              onRestaurar={rowid => { cambio(); setDescuentosManuales(prev => { const next = { ...prev }; delete next[rowid]; return next }) }}
               onAll={() => { cambio(); setFacturas(prev => prev.map(f => ({ ...f, seleccionada: true, valor: f.saldo }))) }}
               onClear={() => { cambio(); setFacturas(prev => prev.map(f => ({ ...f, seleccionada: false, valor: 0 }))) }}
               onMore={() => void cargarFacturas(cliente.f9740_id, pagina + 1, true)} />}
         </Card>
         <Card className={`${section} rounded-2xl ${!cliente ? 'opacity-60' : ''}`}>
           <h2 className={title}>04 · Descuento financiero</h2>
-          <label className="flex items-center justify-between gap-3 text-sm">
-            <span>Aplicar descuento financiero <strong className="ml-1 tabular-nums">{formatters.currency(Object.values(descuentos).reduce((s, n) => s + n, 0))}</strong></span>
-            <input type="checkbox" role="switch" checked={aplicar}
-              disabled={!cliente || cargandoDescuentos || !Object.values(descuentos).some(n => n > 0)}
-              onChange={e => { cambio(); setAplicar(e.target.checked) }} className="relative h-6 w-11 shrink-0 cursor-pointer appearance-none rounded-full bg-muted ring-1 ring-border transition-colors checked:bg-primary disabled:cursor-not-allowed disabled:opacity-50 after:absolute after:left-0.5 after:top-0.5 after:h-5 after:w-5 after:rounded-full after:bg-background after:shadow-sm after:transition-transform after:content-[''] checked:after:translate-x-5" />
-          </label>
+          <p className="text-sm">Descuento aplicado <strong className="ml-1 tabular-nums">{formatters.currency(totales.descuento)}</strong></p>
           {cargandoDescuentos && <p className="mt-2 text-xs text-muted-foreground">◌ Consultando descuento SAS…</p>}
           <p className="mt-3 text-xs text-muted-foreground">Solo aplica a facturas pagadas completas y a tiempo. Ajuste al peso hasta {formatters.currency(parametros.limite)}.</p>
         </Card>
@@ -290,8 +325,8 @@ export function NuevoReciboTab({ onCreated }: { onCreated: () => void }) {
             </div>
           </>}
         </Card>
-      </div>
-      <ResumenRecibo totales={totales} faltantes={faltantes} guardando={guardando} onSave={() => void guardar()} />
+      </fieldset>
+      <ResumenRecibo totales={totales} faltantes={faltantes} guardando={guardando} verificando={verificando} onSave={() => void guardar()} />
     </div>
   </div>
 }

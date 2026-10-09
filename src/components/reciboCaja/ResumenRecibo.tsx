@@ -8,10 +8,10 @@ const etiquetas: Record<TipoDiferencia, string> = {
   none: 'Sin diferencia', ajusteDescuento: 'Ajuste al peso faltante', ajusteIngreso: 'Ajuste al peso sobrante',
   anticipo: 'Anticipo cliente', faltanteExcesivo: 'Faltante supera el límite',
 }
-export function ResumenRecibo({ totales, faltantes, guardando, onSave }: {
-  totales: Totales; faltantes: string[]; guardando: boolean; onSave: () => void
+export function ResumenRecibo({ totales, faltantes, guardando, verificando, onSave }: {
+  totales: Totales; faltantes: string[]; guardando: boolean; verificando: boolean; onSave: () => void
 }) {
-  const button = <span className="block" title={faltantes[0]}><Button className="w-full" size="lg" disabled={guardando || faltantes.length > 0} onClick={onSave}>{guardando ? 'Guardando…' : 'Crear recibo'}</Button></span>
+  const button = <span className="block" title={faltantes[0]}><Button className="w-full" size="lg" disabled={guardando || verificando || faltantes.length > 0} onClick={onSave}>{verificando ? 'Verificando…' : guardando ? 'Guardando…' : 'Crear recibo'}</Button></span>
   const clasificacion = <span className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${totales.clasificacion.tipo === 'faltanteExcesivo' ? 'bg-red-500/10 text-red-700 dark:text-red-400' : totales.clasificacion.tipo === 'none' ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400' : 'bg-amber-500/10 text-amber-700 dark:text-amber-400'}`}>{etiquetas[totales.clasificacion.tipo]}</span>
   return <>
     <Card className="hidden h-fit space-y-4 rounded-2xl p-5 lg:sticky lg:top-4 lg:block">
