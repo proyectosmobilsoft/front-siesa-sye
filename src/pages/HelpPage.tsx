@@ -23,6 +23,12 @@ export const HelpPage = () => {
             items: ['Tutoriales', 'Casos de uso', 'Mejores prácticas']
         },
         {
+            title: 'Confirmación de transferencias',
+            description: 'Tesorería',
+            icon: FileText,
+            items: ['Registra el cliente, valor y soportes de la transferencia.', 'Tesorería aprueba o rechaza la solicitud.', 'Una confirmación aprobada puede respaldar un recibo de caja.']
+        },
+        {
             title: 'Videos',
             description: 'Contenido multimedia',
             icon: Video,

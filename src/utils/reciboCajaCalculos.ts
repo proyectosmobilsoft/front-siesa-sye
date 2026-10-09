@@ -31,6 +31,7 @@ export function totalesRC(facturas: FacturaRC[], descuentos: Record<number, numb
   return { subtotal, descuento, neto, recibido, diferencia: redondear(recibido - neto), clasificacion: clasificarDiferencia(recibido, neto, limite) }
 }
 export interface PayloadRC {
+  p_confirmaciones_transferencia?: number[]
   p_cia: number; p_fecha: string; p_clase_modulo: number; p_id_co: string; p_id_tipo_docto: string; p_numero_docto: number; p_clase_docto: number; p_rowid_tercero: number; p_periodo_docto: number; p_prefijo: string; p_notas: string; p_id_caja: string; p_moneda: string; p_valor: number; p_rowid_cobrador: number; p_rowid_fe: number; p_id_un: string; p_referencia_med: string
   p_rowid_auxiliar_anticipo?: number; p_rowid_auxiliar_pp?: number; p_rowid_auxiliar_aprovecha?: number; p_tipo_aprovecha?: 'descuento' | 'ingreso'
   p_medio_pago: Array<{ p_id_medio_pago: string; p_id_cta_bancaria: string; p_valor: number; p_referencia_med: string; p_fecha_consignacion?: string; p_nro_tarjeta?: string; p_nro_autorizacion?: string; p_fecha_vcto_tarjeta?: string }>

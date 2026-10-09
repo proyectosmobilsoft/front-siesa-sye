@@ -11,6 +11,7 @@ import {
   TrendingDown,
   Landmark,
   Banknote,
+  BadgeCheck,
   ArrowRightLeft,
   Archive,
   Wallet,
@@ -261,6 +262,13 @@ export const navigation: NavItem[] = [
         icon: Banknote,
         subtitle: 'Validación y conciliación de efectivo de conductores',
         permiso: PERMISOS.ENTREGA_RECAUDO,
+      },
+      {
+        name: 'Confirmación de Transferencias',
+        href: '/tesoreria/confirmacion-transferencias',
+        icon: BadgeCheck,
+        subtitle: 'Soportes de transferencias de clientes y su aprobación',
+        permiso: PERMISOS.CONFIRMACION_TRANSFERENCIA,
       },
       // Sin permiso todavía en backend (ver docs/traslado-fondos.md): visible para
       // cualquier autenticado, igual que el resto de módulos sin permiso aún.

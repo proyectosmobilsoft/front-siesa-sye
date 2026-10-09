@@ -20,6 +20,7 @@ type CuentaKey =
   | 'cuenta_anticipo'
 
 interface FormState {
+  exigir_aprobacion_transferencia: boolean
   limite_ajuste_peso: string
   cuenta_ajuste_peso_descuento: string
   cuenta_ajuste_peso_ingreso: string
@@ -40,6 +41,7 @@ const CUENTA_FIELDS: { key: CuentaKey; label: string }[] = [
 ]
 
 const emptyForm = (): FormState => ({
+  exigir_aprobacion_transferencia: false,
   limite_ajuste_peso: '',
   cuenta_ajuste_peso_descuento: '',
   cuenta_ajuste_peso_ingreso: '',
@@ -49,6 +51,7 @@ const emptyForm = (): FormState => ({
 })
 
 const formFromData = (data: ParametrosReciboCaja): FormState => ({
+  exigir_aprobacion_transferencia: Boolean(data.exigir_aprobacion_transferencia),
   limite_ajuste_peso: String(data.limite_ajuste_peso ?? ''),
   cuenta_ajuste_peso_descuento: data.cuentas.cuenta_ajuste_peso_descuento?.cuenta ?? '',
   cuenta_ajuste_peso_ingreso: data.cuentas.cuenta_ajuste_peso_ingreso?.cuenta ?? '',
@@ -125,7 +128,8 @@ export const ParametrosReciboCajaPage = () => {
     ({ key }) => form[key] !== (data?.cuentas[key]?.cuenta ?? '')
   )
 
-  const hasChanges = limiteChanged || cuentasChanged
+  const aprobacionChanged = data != null && form.exigir_aprobacion_transferencia !== Boolean(data.exigir_aprobacion_transferencia)
+  const hasChanges = limiteChanged || cuentasChanged || aprobacionChanged
   const limiteInvalido =
     form.limite_ajuste_peso.trim() !== '' && (Number.isNaN(limiteActual) || limiteActual < 0)
 
@@ -134,6 +138,7 @@ export const ParametrosReciboCajaPage = () => {
 
     const body: ParametrosReciboCajaUpdate = {}
     if (limiteChanged) body.limite_ajuste_peso = limiteActual
+    if (aprobacionChanged) body.exigir_aprobacion_transferencia = form.exigir_aprobacion_transferencia
 
     for (const { key } of CUENTA_FIELDS) {
       const actual = form[key]
@@ -221,6 +226,22 @@ export const ParametrosReciboCajaPage = () => {
         </div>
       ) : (
         <div className="min-h-0 flex-1 space-y-4 overflow-auto">
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-lg">Confirmación de transferencias</CardTitle>
+              <CardDescription>Con esto activo, un RC con transferencia/consignación solo se crea si el cliente tiene confirmaciones aprobadas que cubran el valor. Aplica también a la app de conductores.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-center justify-between gap-4">
+                <span id="exigir-transferencia-label" className="text-sm font-medium">Exigir aprobación de transferencias para crear el recibo de caja</span>
+                <button type="button" role="switch" aria-labelledby="exigir-transferencia-label" aria-checked={form.exigir_aprobacion_transferencia} disabled={saving}
+                  onClick={() => setForm(f => ({ ...f, exigir_aprobacion_transferencia: !f.exigir_aprobacion_transferencia }))}
+                  className={`relative h-6 w-11 shrink-0 rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50 ${form.exigir_aprobacion_transferencia ? 'bg-primary' : 'bg-muted'}`}>
+                  <span className={`absolute top-0.5 h-5 w-5 rounded-full bg-background shadow transition-transform ${form.exigir_aprobacion_transferencia ? 'left-5' : 'left-0.5'}`} />
+                </button>
+              </div>
+            </CardContent>
+          </Card>
           <Card>
             <CardHeader className="pb-3">
               <CardTitle className="text-lg">Límite de ajuste al peso</CardTitle>
