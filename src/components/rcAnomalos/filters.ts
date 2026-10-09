@@ -44,3 +44,5 @@ export function diferenciaAnomalia(anomalia: AnomaliaRc): number | null {
   }
   return buscar(anomalia.detalle ?? {})
 }
+
+export const etiquetaEstado = (estado: unknown) => ({ '0': 'En elaboración', '1': 'Aprobado', '2': 'Anulado' } as Record<string, string>)[String(estado ?? '').trim()] ?? String(estado ?? '—')

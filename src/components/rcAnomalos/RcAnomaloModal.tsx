@@ -1,3 +1,4 @@
+import { etiquetaEstado } from './filters'
 import { useQuery } from '@tanstack/react-query'
 import { rcAnomaliasApi, type RcAnomalo } from '@/api/rcAnomalias'
 import { Modal } from '@/components/ui/modal'
@@ -35,7 +36,7 @@ export function RcAnomaloModal({ rc, onClose }: { rc: RcAnomalo; onClose: () => 
       <div className="grid gap-2 rounded-lg bg-muted/40 p-3 text-xs sm:grid-cols-3">
         <div><span className="text-muted-foreground">Fecha</span><p className="font-medium">{formatters.dateOnly(rc.fecha)}</p></div>
         <div><span className="text-muted-foreground">Cliente</span><p className="font-medium">{rc.cliente || '—'} · NIT {rc.nit || '—'}</p></div>
-        <div><span className="text-muted-foreground">Estado / origen</span><p className="font-medium">{rc.estado} · {rc.origen}</p></div>
+        <div><span className="text-muted-foreground">Estado / origen</span><p className="font-medium">{etiquetaEstado(rc.estado)} · {rc.canal ?? rc.origen}</p></div>
       </div>
       <section className="space-y-2"><h3 className="font-semibold">Anomalías ({rc.anomalias.length})</h3>{rc.anomalias.map((a, i) => <div key={`${a.codigo}-${i}`} className={`rounded-lg border p-3 ${severidadColor[a.severidad]}`}><div className="flex flex-wrap items-center gap-2"><strong>{a.codigo.replace(/_/g, ' ')}</strong><span className="text-xs uppercase">{a.severidad}</span></div><p className="mt-1">{a.mensaje}</p><p className="mt-1 text-xs opacity-85">{ayudaAnomalias[a.codigo]}</p>{Object.keys(a.detalle ?? {}).length > 0 && <div className="mt-2 rounded-md bg-card p-2 text-foreground">{a.codigo === 'DESCUENTO_DISTINTO' && tablaDescuento(a.detalle)}<Datos data={a.detalle} /></div>}</div>)}</section>
       <section className="space-y-2"><h3 className="font-semibold">Líneas contables</h3>
