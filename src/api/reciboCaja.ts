@@ -18,6 +18,7 @@ export interface CuentaParametroRC {
 
 export interface ParametrosReciboCaja {
   limite_ajuste_peso: number
+  exigir_aprobacion_transferencia: boolean
   cuentas: {
     cuenta_ajuste_peso_descuento: CuentaParametroRC
     cuenta_ajuste_peso_ingreso: CuentaParametroRC
@@ -29,6 +30,7 @@ export interface ParametrosReciboCaja {
 
 export interface ParametrosReciboCajaUpdate {
   limite_ajuste_peso?: number
+  exigir_aprobacion_transferencia?: boolean
   cuenta_ajuste_peso_descuento?: string
   cuenta_ajuste_peso_ingreso?: string
   cuenta_descuento_financiero?: string

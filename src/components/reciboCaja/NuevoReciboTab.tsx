@@ -2,6 +2,8 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { apiClient } from '@/api/client'
 import { reciboCajaApi } from '@/api/reciboCaja'
+import { transferenciasConfirmacionApi } from '@/api/transferenciasConfirmacion'
+import { Link } from 'react-router-dom'
 import { maestroCuentasBancariasApi } from '@/api/maestroCuentasBancarias'
 import type { Client, ClientsResponse } from '@/api/types'
 import { useAuthStore } from '@/store/authStore'
@@ -67,13 +69,26 @@ export function NuevoReciboTab({ onCreated }: { onCreated: () => void }) {
   }, [parametrosQuery.data])
   const neto = useMemo(() => totalesRC(facturas, descuentos, aplicar, [], parametros.limite).neto, [facturas, descuentos, aplicar, parametros.limite])
   const totales = useMemo(() => totalesRC(facturas, descuentos, aplicar, pagos, parametros.limite), [facturas, descuentos, aplicar, pagos, parametros.limite])
-  const seleccionadas = facturas.filter(f => f.seleccionada && f.valor > 0)
+  const totalTransferencia = pagos.filter(p => p.codigo === 'CG1' && p.valor > 0).reduce((sum, p) => sum + p.valor, 0)
+  const requiereConfirmacion = Boolean(parametrosQuery.data?.exigir_aprobacion_transferencia && cliente && totalTransferencia > 0)
+  const disponibles = useQuery({ queryKey: ['transferencias-confirmacion', 'disponibles', cliente?.f9740_id], queryFn: () => transferenciasConfirmacionApi.disponibles(cliente!.f9740_id), enabled: requiereConfirmacion, retry: false })
+  const disponiblesOrdenadas = useMemo(() => [...(disponibles.data ?? [])].sort((a, b) => a.created_at.localeCompare(b.created_at) || a.id - b.id), [disponibles.data])
+  const seleccionAuto = useMemo(() => {
+    let suma = 0
+    return disponiblesOrdenadas.filter(row => { if (suma >= totalTransferencia - 1) return false; suma += Number(row.valor) || 0; return true }).map(row => row.id)
+  }, [disponiblesOrdenadas, totalTransferencia])
+  const seleccionKey = `${cliente?.f9740_id ?? ''}:${totalTransferencia}:${disponiblesOrdenadas.map(row => `${row.id}:${row.valor}`).join(',')}`
+  const [seleccionManual, setSeleccionManual] = useState<{ key: string; ids: number[] } | null>(null)
+  const confirmacionesIds = seleccionManual?.key === seleccionKey ? seleccionManual.ids : seleccionAuto
+  const totalConfirmado = disponiblesOrdenadas.filter(row => confirmacionesIds.includes(row.id)).reduce((sum, row) => sum + (Number(row.valor) || 0), 0)
+  const seleccionadas = useMemo(() => facturas.filter(f => f.seleccionada && f.valor > 0), [facturas])
   const cambio = () => { intento.current = null; setError(''); setExito('') }
   const reset = () => {
     cambio(); facturasVersion.current++; descuentoVersion.current++
     setBusqueda(''); setCliente(null); setFacturas([]); setPagina(1); setMasFacturas(false)
     setDescuentos({}); setAplicar(false); setPagos([pagoVacio()]); setEditados(new Set())
     setObservacion(''); setCo('001'); setCaja('40'); setCajaManual(false)
+    setSeleccionManual(null)
   }
   const cargarFacturas = async (id: number, page: number, acumular = false) => {
     const version = ++facturasVersion.current
@@ -94,6 +109,7 @@ export function NuevoReciboTab({ onCreated }: { onCreated: () => void }) {
     setPagos([pagoVacio()]); setEditados(new Set()); setObservacion('')
     setMasFacturas(false); setCargandoFacturas(false); setCargandoDescuentos(false)
     setCo('001'); setCaja('40'); setCajaManual(false)
+    setSeleccionManual(null)
   }
   const elegirCliente = (c: Client) => {
     limpiarCliente(); setCliente(c); setObservacion(`Recaudo ${c.f9740_razon_social || c.f9740_nombre}`)
@@ -124,7 +140,8 @@ export function NuevoReciboTab({ onCreated }: { onCreated: () => void }) {
     const prefijos = new Set(seleccionadas.map(f => f.prefijo))
     if (prefijos.has('BQE')) { setCo('001'); setCaja('40') }
     else if (prefijos.has('FM') || prefijos.has('FCE')) { setCo('002'); setCaja('80') }
-  }, [facturas, cajaManual])
+  }, [seleccionadas, cajaManual])
+  const codigosPago = pagos.map(p => p.codigo).join(',')
   useEffect(() => {
     setPagos(prev => {
       const ultimo = [...prev].reverse().find(p => !editados.has(p.id))
@@ -139,7 +156,7 @@ export function NuevoReciboTab({ onCreated }: { onCreated: () => void }) {
     if (bancos.data?.length !== 1) return
     const cuenta = bancos.data[0].f026_id
     setPagos(prev => prev.map(p => p.codigo === 'CG1' && !p.cuenta ? { ...p, cuenta } : p))
-  }, [bancos.data, pagos.map(p => p.codigo).join(',')])
+  }, [bancos.data, codigosPago])
   const cambiarPago = (id: string, patch: Partial<PagoRC>, valorManual = false) => {
     cambio()
     if (valorManual) setEditados(prev => new Set(prev).add(id))
@@ -150,7 +167,7 @@ export function NuevoReciboTab({ onCreated }: { onCreated: () => void }) {
   const quitarPago = (id: string) => { cambio(); setPagos(prev => prev.filter(p => p.id !== id)); setEditados(prev => { const next = new Set(prev); next.delete(id); return next }) }
   const facturasValidas = seleccionadas.length > 0 && seleccionadas.every(f => Number.isFinite(f.valor) && f.valor > 0 && f.valor <= f.saldo)
   const pagosValidos = pagos.length > 0 && pagos.every(p => Number.isFinite(p.valor) && p.valor > 0 && (p.codigo !== 'CG1' || !!p.cuenta && !!p.fechaConsignacion) && (p.codigo !== 'TC' && p.codigo !== 'TD' || /^\d{4}$/.test(p.nroTarjeta.trim()) && p.autorizacion.trim().length >= 6 && !!p.vencimiento))
-  const faltantes = [!cliente && 'Cliente', !facturasValidas && 'Al menos 1 factura', !pagosValidos && 'Pagos válidos', !observacion.trim() && 'Observación', cargandoDescuentos && 'Esperando descuento financiero', totales.clasificacion.tipo === 'faltanteExcesivo' && `Faltante supera el límite de ${formatters.currency(parametros.limite)}`].filter((v): v is string => !!v)
+  const faltantes = [!cliente && 'Cliente', !facturasValidas && 'Al menos 1 factura', !pagosValidos && 'Pagos válidos', !observacion.trim() && 'Observación', cargandoDescuentos && 'Esperando descuento financiero', totales.clasificacion.tipo === 'faltanteExcesivo' && `Faltante supera el límite de ${formatters.currency(parametros.limite)}`, requiereConfirmacion && (disponibles.isLoading || disponibles.isFetching || disponibles.isError || totalConfirmado < totalTransferencia - 1) && 'Transferencia sin confirmación aprobada'].filter((v): v is string => !!v)
   const notasPreview = useMemo(() => {
     if (!observacion.trim()) return ''
     try {
@@ -170,6 +187,7 @@ export function NuevoReciboTab({ onCreated }: { onCreated: () => void }) {
         const consecutivo = numero(res.data.proximoConsecutivo?.f022_cons_proximo ?? res.data.data?.f022_cons_proximo ?? res.data.f022_cons_proximo)
         if (!consecutivo) throw new Error('No se recibió un consecutivo válido')
         const payload = armarPayloadRC({ clienteId: cliente.f9740_id, facturas, descuentos, aplicar, pagos, parametros, observacion, usuario: sesion?.usuario ?? '?', co, caja, consecutivo, ahora: new Date() })
+        if (requiereConfirmacion) payload.p_confirmaciones_transferencia = confirmacionesIds
         intento.current = { key: crypto.randomUUID(), payload }
       }
       const actual = intento.current
@@ -179,6 +197,7 @@ export function NuevoReciboTab({ onCreated }: { onCreated: () => void }) {
       reset(); setExito(`RC ${numeroRc} creado`)
       void queryClient.invalidateQueries({ queryKey: ['recibo-caja'] })
       void queryClient.invalidateQueries({ queryKey: ['rc'] })
+      void queryClient.invalidateQueries({ queryKey: ['transferencias-confirmacion'] })
       onCreated()
     } catch (e) { setError(errorMensaje(e)) } finally { setGuardando(false) }
   }
@@ -245,6 +264,18 @@ export function NuevoReciboTab({ onCreated }: { onCreated: () => void }) {
           {!cliente ? <p className="text-sm text-muted-foreground">Elige un cliente para registrar el pago.</p> :
             <MediosPago pagos={pagos} editados={editados} cuentas={bancos.data ?? []}
               onChange={cambiarPago} onAdd={agregarPago} onRemove={quitarPago} />}
+          {requiereConfirmacion && <div className="mt-4 rounded-xl border border-border p-3">
+            <h3 className="text-sm font-semibold">Transferencias aprobadas del cliente</h3>
+            {disponibles.isFetching && <p className="mt-2 text-xs text-muted-foreground">Consultando confirmaciones…</p>}
+            {disponibles.isError && <p className="mt-2 text-xs text-destructive">No se pudieron consultar las confirmaciones.</p>}
+            {!disponibles.isFetching && !disponibles.isError && disponiblesOrdenadas.length === 0 && <p className="mt-2 text-sm text-muted-foreground">No hay transferencias aprobadas. <Link className="text-primary underline" to="/tesoreria/confirmacion-transferencias">Ir a confirmación de transferencias</Link></p>}
+            <div className="mt-2 space-y-2">{disponiblesOrdenadas.map(row => <label key={row.id} className="flex cursor-pointer items-start gap-3 rounded-lg border border-border p-2 text-sm">
+              <input type="checkbox" className="mt-1" checked={confirmacionesIds.includes(row.id)} onChange={() => { cambio(); setSeleccionManual({ key: seleccionKey, ids: confirmacionesIds.includes(row.id) ? confirmacionesIds.filter(id => id !== row.id) : [...confirmacionesIds, row.id] }) }} />
+              <span className="min-w-0 flex-1">{formatters.dateOnly(row.fecha_transferencia)} · {row.id_cta_bancaria} · {row.referencia || 'Sin referencia'}<span className="block text-xs text-muted-foreground">Aprobó {row.revisado_by_usuario || '—'}</span></span>
+              <span className="text-right font-semibold tabular-nums">{formatters.currency(Number(row.valor) || 0)}</span>
+            </label>)}</div>
+            <p className={`mt-3 text-right text-sm tabular-nums ${totalConfirmado < totalTransferencia - 1 ? 'text-destructive' : 'text-foreground'}`}>Seleccionado {formatters.currency(totalConfirmado)} / Transferencia {formatters.currency(totalTransferencia)}</p>
+          </div>}
         </Card>
         <Card className={`${section} rounded-2xl ${!cliente ? 'opacity-60' : ''}`}>
           <h2 className={title}>06 · Observación</h2>

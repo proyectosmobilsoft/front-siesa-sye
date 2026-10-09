@@ -38,6 +38,8 @@ export const PERMISOS = {
   REPORTE_VENDEDORES:     'VER_REPORTE_VENDEDORES',
   RECIBO_CAJA:            'VER_RECIBO_CAJA',
   ENTREGA_RECAUDO:        'VER_ENTREGA_RECAUDO',
+  CONFIRMACION_TRANSFERENCIA: 'VER_CONFIRMACION_TRANSFERENCIA',
+  APROBAR_TRANSFERENCIA:  'APROBAR_TRANSFERENCIA',
   ASIGNACION_COBRO:       'ASIGNAR_COBRO',                      // Página de asignación de facturas a conductores
   PARAMETROS_RC:          'PARAMETRIZAR_RC',                    // Parámetros contables del Recibo de Caja
   TABLERO_COBROS:         'VER_TABLERO_COBROS',

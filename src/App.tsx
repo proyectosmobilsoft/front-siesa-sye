@@ -47,6 +47,7 @@ const TesoreriaEntregaRecaudoPage = lazy(() => import('@/pages/TesoreriaEntregaR
 const PropuestaPage = lazy(() => import('@/pages/PropuestaPage').then(m => ({ default: m.PropuestaPage })))
 const TrasladoFondosPage = lazy(() => import('@/pages/TrasladoFondosPage').then(m => ({ default: m.TrasladoFondosPage })))
 const ParametrosReciboCajaPage = lazy(() => import('@/pages/ParametrosReciboCajaPage').then(m => ({ default: m.ParametrosReciboCajaPage })))
+const ConfirmacionTransferenciasPage = lazy(() => import('@/pages/ConfirmacionTransferenciasPage').then(m => ({ default: m.ConfirmacionTransferenciasPage })))
 
 const queryClient = new QueryClient({
     defaultOptions: {
@@ -143,6 +144,7 @@ function AppLayout() {
                                 <Route path="/tesoreria/recibo-caja" element={<ProtectedRoute permiso={PERMISOS.RECIBO_CAJA}><ReciboCajaPage /></ProtectedRoute>} />
                                 <Route path="/tesoreria/dashboard-recaudo" element={<ProtectedRoute permiso={PERMISOS.RECIBO_CAJA}><DashboardReciboCajaPage /></ProtectedRoute>} />
                                 <Route path="/tesoreria/entrega-recaudo" element={<ProtectedRoute permiso={PERMISOS.ENTREGA_RECAUDO}><TesoreriaEntregaRecaudoPage /></ProtectedRoute>} />
+                                <Route path="/tesoreria/confirmacion-transferencias" element={<ProtectedRoute permiso={PERMISOS.CONFIRMACION_TRANSFERENCIA}><ConfirmacionTransferenciasPage /></ProtectedRoute>} />
                                 <Route path="/tesoreria/parametros-rc" element={<ProtectedRoute permiso={PERMISOS.PARAMETROS_RC}><ParametrosReciboCajaPage /></ProtectedRoute>} />
                                 <Route path="/logistica/asignar-facturas" element={<ProtectedRoute permiso={PERMISOS.ASIGNACION_COBRO}><AsignacionCobroPage /></ProtectedRoute>} />
                                 {/* Compatibilidad con el enlace/ruta anterior. */}
