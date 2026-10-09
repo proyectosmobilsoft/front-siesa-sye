@@ -1,13 +1,15 @@
 # Stage 1: Build
 FROM node:20-alpine AS builder
 
+RUN corepack enable
+
 WORKDIR /app
 
-COPY package*.json ./
-RUN npm ci
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+RUN pnpm install --frozen-lockfile
 
 COPY . .
-RUN npx vite build
+RUN pnpm exec vite build
 
 # Stage 2: Serve
 FROM nginx:alpine
