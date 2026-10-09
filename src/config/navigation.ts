@@ -22,6 +22,7 @@ import {
   Database,
   UserPlus,
   Shield,
+  ShieldAlert,
   KeyRound,
   Percent,
   ListChecks,
@@ -255,6 +256,13 @@ export const navigation: NavItem[] = [
         icon: Receipt,
         subtitle: 'Consulta y arqueo de recibos de caja',
         permiso: PERMISOS.RECIBO_CAJA,
+      },
+      {
+        name: 'RC Anómalos',
+        href: '/tesoreria/rc-anomalos',
+        icon: ShieldAlert,
+        subtitle: 'Recibos descuadrados, anticipos y descuentos a revisar',
+        permiso: PERMISOS.RC_ANOMALOS,
       },
       {
         name: 'Entrega de Recaudo',
