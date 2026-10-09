@@ -48,6 +48,7 @@ const PropuestaPage = lazy(() => import('@/pages/PropuestaPage').then(m => ({ de
 const TrasladoFondosPage = lazy(() => import('@/pages/TrasladoFondosPage').then(m => ({ default: m.TrasladoFondosPage })))
 const ParametrosReciboCajaPage = lazy(() => import('@/pages/ParametrosReciboCajaPage').then(m => ({ default: m.ParametrosReciboCajaPage })))
 const ConfirmacionTransferenciasPage = lazy(() => import('@/pages/ConfirmacionTransferenciasPage').then(m => ({ default: m.ConfirmacionTransferenciasPage })))
+const RcAnomalosPage = lazy(() => import('@/pages/RcAnomalosPage').then(m => ({ default: m.RcAnomalosPage })))
 
 const queryClient = new QueryClient({
     defaultOptions: {
@@ -142,6 +143,7 @@ function AppLayout() {
                                 <Route path="/maestro/usuarios" element={<ProtectedRoute permiso={PERMISOS.USUARIOS}><SecuritySettingsPage /></ProtectedRoute>} />
                                 <Route path="/maestro/descuentos-financieros" element={<ProtectedRoute permiso={PERMISOS.DESCUENTOS}><MaestroDescuentosFinancierosPage /></ProtectedRoute>} />
                                 <Route path="/tesoreria/recibo-caja" element={<ProtectedRoute permiso={PERMISOS.RECIBO_CAJA}><ReciboCajaPage /></ProtectedRoute>} />
+                                <Route path="/tesoreria/rc-anomalos" element={<ProtectedRoute permiso={PERMISOS.RC_ANOMALOS}><RcAnomalosPage /></ProtectedRoute>} />
                                 <Route path="/tesoreria/dashboard-recaudo" element={<ProtectedRoute permiso={PERMISOS.RECIBO_CAJA}><DashboardReciboCajaPage /></ProtectedRoute>} />
                                 <Route path="/tesoreria/entrega-recaudo" element={<ProtectedRoute permiso={PERMISOS.ENTREGA_RECAUDO}><TesoreriaEntregaRecaudoPage /></ProtectedRoute>} />
                                 <Route path="/tesoreria/confirmacion-transferencias" element={<ProtectedRoute permiso={PERMISOS.CONFIRMACION_TRANSFERENCIA}><ConfirmacionTransferenciasPage /></ProtectedRoute>} />
