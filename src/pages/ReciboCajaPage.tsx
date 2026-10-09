@@ -275,9 +275,9 @@ export const ReciboCajaPage = () => {
   const fechaFinalAplicada = fechaHasta || fechaDesde || hoyISO()
 
   return (
-    <div className="nu mx-auto max-w-[1400px] space-y-6 p-4 sm:p-6 lg:p-8 xl:[zoom:1.12] 2xl:max-w-[1600px] 2xl:[zoom:1.15]">
+    <div className={cn('nu mx-auto max-w-[1400px] space-y-6 p-4 sm:p-6 lg:p-8 2xl:max-w-[1600px]', tab === 'nuevo' ? 'lg:flex lg:h-full lg:min-h-0 lg:flex-col lg:gap-3 lg:space-y-0 lg:p-4' : 'xl:[zoom:1.12] 2xl:[zoom:1.15]')}>
       {/* ── Header de la vista ── */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+      <div className={cn('flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between', tab === 'nuevo' && 'lg:shrink-0 lg:gap-2')}>
         <div className="flex items-center gap-3">
           <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-primary/10 text-primary shadow-sm ring-1 ring-primary/20">
             <Receipt className="h-5 w-5" />
@@ -310,9 +310,9 @@ export const ReciboCajaPage = () => {
       </div>
 
       {/* ── Contenedor principal con Navegación por pestañas ── */}
-      <div className="space-y-6 nu-card">
+      <div className={cn('space-y-6 nu-card', tab === 'nuevo' && 'lg:flex lg:min-h-0 lg:flex-1 lg:flex-col lg:space-y-0')}>
         {/* Barra de Pestañas estilo píldora */}
-        <div className="flex items-center px-4 pt-4">
+        <div className={cn('flex items-center px-4 pt-4', tab === 'nuevo' && 'lg:shrink-0 lg:px-3 lg:pt-2')}>
           <div className="flex flex-wrap gap-1 nu-seg">
             <button
               onClick={() => setTab('conductores')}
@@ -473,7 +473,7 @@ export const ReciboCajaPage = () => {
         )}
 
         {/* ── PESTAÑA: RECIBOS ── */}
-        {nuevoAbierto && <div className={tab === 'nuevo' ? '' : 'hidden'}><NuevoReciboTab onCreated={() => { void fetchResumenConductores(); if (consultado) void handleConsultarGeneral(); void fetchRecibos(1) }} /></div>}
+        {nuevoAbierto && <div className={tab === 'nuevo' ? 'lg:min-h-0 lg:flex-1' : 'hidden'}><NuevoReciboTab onCreated={() => { void fetchResumenConductores(); if (consultado) void handleConsultarGeneral(); void fetchRecibos(1) }} /></div>}
         {tab === 'recibos' && (
           <div className="p-4 sm:p-6">
             <History

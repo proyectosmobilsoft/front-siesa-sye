@@ -29,16 +29,16 @@ export function ClienteAutocomplete({ cliente, resultados, termino, buscando, er
     setTexto('')
     setAbierto(false)
   }
-  return <div>
-    {cliente ? <div className="flex flex-wrap items-center gap-3 rounded-xl border border-primary/20 bg-primary/5 p-3">
-      <Badge variant="secondary">Cliente</Badge>
-      <span className="min-w-0 flex-1 text-sm font-semibold">{cliente.f9740_razon_social || cliente.f9740_nombre} <span className="font-normal text-muted-foreground">· NIT {cliente.f9740_nit}</span></span>
-      <Button variant="outline" size="sm" onClick={() => { onChange(); setTexto(''); setAbierto(true) }}>Cambiar</Button>
+  return <div className="min-w-0">
+    {cliente ? <div className="flex min-w-0 items-center gap-2 rounded-lg border border-primary/20 bg-primary/5 px-2 py-1">
+      <Badge variant="secondary" className="shrink-0">Cliente</Badge>
+      <span className="min-w-0 flex-1 truncate text-sm font-semibold" title={`${cliente.f9740_razon_social || cliente.f9740_nombre} · NIT ${cliente.f9740_nit}`}>{cliente.f9740_razon_social || cliente.f9740_nombre} <span className="font-normal text-muted-foreground">· NIT {cliente.f9740_nit}</span></span>
+      <Button variant="outline" size="sm" className="h-7 shrink-0 px-2 text-xs" onClick={() => { onChange(); setTexto(''); setAbierto(true) }}>Cambiar</Button>
     </div> : <div className="relative">
       <Input
         role="combobox" aria-expanded={abierto && texto.trim().length >= 2} aria-controls={listId}
         aria-activedescendant={abierto && coincidencias[activo] ? `${listId}-${coincidencias[activo].f9740_id}` : undefined}
-        aria-autocomplete="list" autoComplete="off" value={texto}
+        aria-autocomplete="list" autoComplete="off" value={texto} className="h-9"
         placeholder="Escribe razón social o NIT"
         onChange={e => { setTexto(e.target.value); setActivo(0); setAbierto(true) }}
         onFocus={() => setAbierto(true)} onBlur={() => window.setTimeout(() => setAbierto(false), 150)}
@@ -49,7 +49,7 @@ export function ClienteAutocomplete({ cliente, resultados, termino, buscando, er
           if (e.key === 'Enter' && abierto && coincidencias[activo]) { e.preventDefault(); elegir(coincidencias[activo]) }
         }}
       />
-      {texto.trim().length < 2 && <p className="mt-2 text-xs text-muted-foreground">Escribe al menos 2 caracteres para buscar.</p>}
+      {texto.trim().length < 2 && <p className="sr-only">Escribe al menos 2 caracteres para buscar.</p>}
       {abierto && texto.trim().length >= 2 && <div id={listId} role="listbox" className="absolute z-30 mt-1 max-h-72 w-full overflow-auto rounded-xl border border-border bg-card p-1 shadow-lg">
         {(buscando || esperando) && <p className="p-3 text-sm text-muted-foreground">Buscando clientes…</p>}
         {error && <p className="p-3 text-sm text-red-600 dark:text-red-400">{error}</p>}

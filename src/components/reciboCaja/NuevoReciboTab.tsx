@@ -1,3 +1,4 @@
+import { AlertCircle, X } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import axios from 'axios'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
@@ -38,8 +39,8 @@ const mapFactura = (r: FacturaRaw): FacturaRC => {
   return { rowid: numero(r.rowidsa ?? r.rowid), tipo: partes[0] || String(r.tipo ?? r.idTipoDocto ?? ''), consecutivo: partes[1] || String(r.factura ?? r.consecDocto ?? ''), prefijo: String(r.prefijo ?? partes[0] ?? '').toUpperCase(), saldo: parseMonto(r.saldo), valor: 0, seleccionada: false, idCia: numero(r.f350_id_cia ?? r.idCia) || 1, idCo: String(r.idco ?? '').trim() }
 }
 const pagoVacio = (codigo: PagoRC['codigo'] = 'EFE'): PagoRC => ({ id: crypto.randomUUID(), codigo, valor: 0, cuenta: '', fechaConsignacion: hoy(), nroTarjeta: '', autorizacion: '', vencimiento: '', voucher: '' })
-const section = 'p-4 sm:p-5'
-const title = 'mb-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground'
+const section = 'p-3'
+const title = 'text-xs font-semibold uppercase tracking-wider text-muted-foreground'
 
 export function NuevoReciboTab({ onCreated }: { onCreated: () => void }) {
   const queryClient = useQueryClient()
@@ -207,7 +208,7 @@ export function NuevoReciboTab({ onCreated }: { onCreated: () => void }) {
           if (estado.status === 'COMPLETED') { confirmarCreacion(estado.numero ?? intento.current?.payload.p_numero_docto ?? ''); return }
           if (estado.status === 'FAILED') { intento.current = null; setError(estado.message || 'No se pudo crear el recibo'); return }
         } catch (e) {
-          if (axios.isAxiosError(e) && e.response?.status === 404) { setError('El servidor no recibió el recibo. Puedes reintentar con seguridad.'); return }
+          if (axios.isAxiosError(e) && e.response?.status === 404) { setError('El recibo no se creó porque no llegó al servidor. Puedes volver a intentarlo; no se duplicará.'); return }
           if (!estadoIncierto(e)) { setError(errorMensaje(e)); return }
         }
         const restante = limite - Date.now()
@@ -240,46 +241,39 @@ export function NuevoReciboTab({ onCreated }: { onCreated: () => void }) {
   if (me.isLoading) return <p className="p-6 text-sm text-muted-foreground">Consultando usuario SIESA…</p>
   if (me.isError) return <div className="p-6 text-sm text-red-600 dark:text-red-400">No se pudo verificar la asociación SIESA: {errorMensaje(me.error)} <Button variant="outline" onClick={() => void me.refetch()}>Reintentar</Button></div>
   if (!asociado) return <p className="m-4 rounded-xl border border-amber-500/30 bg-amber-500/10 p-4 text-sm font-medium text-amber-700 dark:text-amber-400">Tu usuario no está asociado a un usuario de SIESA; pide al administrador que lo asocie en Maestro de usuarios.</p>
-  return <div className="p-4 pb-28 sm:p-6 lg:pb-6">
-    <div className="mb-5">
-      <h1 className="text-xl font-bold">Nuevo recibo de caja</h1>
-      <p className="text-sm text-muted-foreground">Completa los datos en una sola vista.</p>
-    </div>
-    {exito && <div role="status" className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-4 text-sm font-semibold text-emerald-700 dark:text-emerald-400">
+  return <div className="p-3 pb-28 lg:flex lg:h-full lg:min-h-0 lg:flex-col lg:pb-3">
+    {exito && <div role="status" className="mb-3 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-3 text-sm font-semibold text-emerald-700 dark:text-emerald-400">
       <span>{exito}</span><Button variant="outline" onClick={reset}>Nuevo recibo</Button>
     </div>}
-    {verificando && <div role="status" className="mb-4 rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 text-sm text-amber-700 dark:text-amber-400">Verificando si el recibo se creó…</div>}
-    {error && <div role="alert" className="mb-4 rounded-xl border border-red-500/30 bg-red-500/10 p-3 text-sm text-red-700 dark:text-red-400">{error}</div>}
-    <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,1fr)_320px] xl:grid-cols-[minmax(0,1fr)_360px]">
-      <fieldset disabled={guardando || verificando} className="min-w-0 space-y-4">
-        <Card className={`${section} rounded-2xl`}>
-          <h2 className={title}>01 · Encabezado</h2>
-          <div className="flex flex-wrap items-center gap-2 text-sm">
-            Quedará a nombre de <Badge variant="secondary" className="max-w-full truncate">{usuarioSiesa?.siesa_nombre}</Badge>
-          </div>
-          <div className="mt-4 grid gap-3 sm:grid-cols-2">
-            <label className="space-y-1 text-xs font-medium text-muted-foreground">C.O.
-              <Select value={co} onChange={e => { cambio(); setCo(e.target.value); setCaja(CAJA_POR_CO[e.target.value as '001' | '002']); setEncabezadoManual(true) }}>
+    {verificando && <div role="status" className="mb-3 rounded-xl border border-amber-500/30 bg-amber-500/10 p-2 text-sm text-amber-700 dark:text-amber-400">Verificando si el recibo se creó…</div>}
+    {error && <div role="alert" className="mb-4 flex items-start gap-3 rounded-xl border border-red-500/30 bg-red-500/10 p-4 text-red-700 dark:text-red-400 lg:hidden">
+      <AlertCircle className="mt-0.5 h-5 w-5 shrink-0" />
+      <p className="min-w-0 flex-1 text-sm">{error}</p>
+      <button type="button" aria-label="Cerrar" onClick={() => setError('')} className="rounded p-1 opacity-70 hover:opacity-100"><X className="h-4 w-4" /></button>
+    </div>}
+    <div className="grid items-start gap-3 lg:min-h-0 lg:flex-1 lg:grid-cols-[minmax(0,1fr)_300px] lg:items-stretch">
+      <fieldset disabled={guardando || verificando} className="min-w-0 space-y-3 lg:flex lg:min-h-0 lg:flex-col lg:space-y-0 lg:gap-3">
+        <Card className={`${section} rounded-xl lg:shrink-0`}>
+          <div className="grid gap-3 lg:grid-cols-[auto_125px_130px_minmax(0,1fr)] lg:items-center">
+            <div className="flex min-w-0 items-center gap-2 whitespace-nowrap text-xs">A nombre de <Badge variant="secondary" className="max-w-24 truncate" title={usuarioSiesa?.siesa_nombre ?? undefined}>{usuarioSiesa?.siesa_nombre}</Badge></div>
+            <label className="flex min-w-0 items-center gap-2 text-xs font-medium text-muted-foreground">C.O.
+              <span className="min-w-0 flex-1"><Select className="h-9 text-sm" value={co} onChange={e => { cambio(); setCo(e.target.value); setCaja(CAJA_POR_CO[e.target.value as '001' | '002']); setEncabezadoManual(true) }}>
                 <option value="001">001 · Principal</option><option value="002">002 · Almateriales</option>
-              </Select>
+              </Select></span>
             </label>
-            <label className="space-y-1 text-xs font-medium text-muted-foreground">Caja
-              <Select value={caja} onChange={e => { cambio(); setCaja(e.target.value); setEncabezadoManual(true) }}>
+            <label className="flex min-w-0 items-center gap-2 text-xs font-medium text-muted-foreground">Caja
+              <span className="min-w-0 flex-1"><Select className="h-9 text-sm" value={caja} onChange={e => { cambio(); setCaja(e.target.value); setEncabezadoManual(true) }}>
                 <option value="40">40 · Vía 40</option><option value="80">80 · Ferretería</option>
-              </Select>
+              </Select></span>
             </label>
+            <div className="min-w-0"><ClienteAutocomplete cliente={cliente} resultados={clientes.data ?? []} termino={busqueda} buscando={clientes.isFetching}
+              error={clientes.isError ? errorMensaje(clientes.error) : undefined}
+              onSearch={setBusqueda} onSelect={elegirCliente} onChange={limpiarCliente} /></div>
           </div>
-          {encabezadoManual && coFacturas.length === 1 && coFacturas[0] && coFacturas[0] !== co && <p role="status" className="mt-3 rounded-lg border border-amber-500/30 bg-amber-500/10 p-2 text-xs text-amber-700 dark:text-amber-400">Las facturas son del C.O. {coFacturas[0]} y el recibo quedará en {co}</p>}
+          {encabezadoManual && coFacturas.length === 1 && coFacturas[0] && coFacturas[0] !== co && <p role="status" className="mt-1 text-xs text-amber-700 dark:text-amber-400">Las facturas son del C.O. {coFacturas[0]} y el recibo quedará en {co}</p>}
         </Card>
-        <Card className={`${section} rounded-2xl`}>
-          <h2 className={title}>02 · Cliente</h2>
-          <ClienteAutocomplete cliente={cliente} resultados={clientes.data ?? []} termino={busqueda} buscando={clientes.isFetching}
-            error={clientes.isError ? errorMensaje(clientes.error) : undefined}
-            onSearch={setBusqueda} onSelect={elegirCliente} onChange={limpiarCliente} />
-        </Card>
-        <Card className={`${section} rounded-2xl ${!cliente ? 'opacity-60' : ''}`}>
-          <h2 className={title}>03 · Facturas</h2>
-          {!cliente ? <p className="text-sm text-muted-foreground">Elige un cliente para cargar sus facturas.</p> :
+        <Card className={`${section} rounded-xl ${!cliente ? 'opacity-60' : ''} lg:flex lg:min-h-0 lg:flex-1 lg:flex-col`}>
+          {!cliente ? <><h2 className={`${title} mb-2`}>Facturas</h2><p className="text-sm text-muted-foreground">Elige un cliente para cargar sus facturas.</p></> :
             <FacturasTabla facturas={facturas} descuentos={descuentosEfectivos} descuentosSugeridos={descuentos} descuentosManuales={descuentosManuales} aplicar={aplicar} cargando={cargandoFacturas} mas={masFacturas}
               onChange={actualizarFactura}
               onDescuento={(rowid, valor) => { cambio(); setDescuentosManuales(prev => ({ ...prev, [rowid]: valor })) }}
@@ -287,46 +281,43 @@ export function NuevoReciboTab({ onCreated }: { onCreated: () => void }) {
               onAll={() => { cambio(); setFacturas(prev => prev.map(f => ({ ...f, seleccionada: true, valor: f.saldo }))) }}
               onClear={() => { cambio(); setFacturas(prev => prev.map(f => ({ ...f, seleccionada: false, valor: 0 }))) }}
               onMore={() => void cargarFacturas(cliente.f9740_id, pagina + 1, true)} />}
+          <p className="mt-1 text-[11px] text-muted-foreground">{cargandoDescuentos ? 'Consultando descuento SAS… · ' : ''}El descuento aplica a facturas pagadas completas y a tiempo. Ajuste al peso hasta {formatters.currency(parametros.limite)}.</p>
         </Card>
-        <Card className={`${section} rounded-2xl ${!cliente ? 'opacity-60' : ''}`}>
-          <h2 className={title}>04 · Descuento financiero</h2>
-          <p className="text-sm">Descuento aplicado <strong className="ml-1 tabular-nums">{formatters.currency(totales.descuento)}</strong></p>
-          {cargandoDescuentos && <p className="mt-2 text-xs text-muted-foreground">◌ Consultando descuento SAS…</p>}
-          <p className="mt-3 text-xs text-muted-foreground">Solo aplica a facturas pagadas completas y a tiempo. Ajuste al peso hasta {formatters.currency(parametros.limite)}.</p>
-        </Card>
-        <Card className={`${section} rounded-2xl ${!cliente ? 'opacity-60' : ''}`}>
-          <h2 className={title}>05 · Pago</h2>
+        <div className="grid gap-3 lg:shrink-0 lg:grid-cols-2">
+        <Card className={`${section} rounded-xl ${!cliente ? 'opacity-60' : ''}`}>
+          <h2 className={`${title} mb-2`}>Pago</h2>
           {!cliente ? <p className="text-sm text-muted-foreground">Elige un cliente para registrar el pago.</p> :
             <MediosPago pagos={pagos} editados={editados} cuentas={bancos.data ?? []}
               onChange={cambiarPago} onAdd={agregarPago} onRemove={quitarPago} />}
-          {requiereConfirmacion && <div className="mt-4 rounded-xl border border-border p-3">
-            <h3 className="text-sm font-semibold">Transferencias aprobadas del cliente</h3>
+          {requiereConfirmacion && <div className="mt-2 rounded-lg border border-border p-2">
+            <h3 className="text-xs font-semibold">Transferencias aprobadas del cliente</h3>
             {disponibles.isFetching && <p className="mt-2 text-xs text-muted-foreground">Consultando confirmaciones…</p>}
             {disponibles.isError && <p className="mt-2 text-xs text-destructive">No se pudieron consultar las confirmaciones.</p>}
             {!disponibles.isFetching && !disponibles.isError && disponiblesOrdenadas.length === 0 && <p className="mt-2 text-sm text-muted-foreground">No hay transferencias aprobadas. <Link className="text-primary underline" to="/tesoreria/confirmacion-transferencias">Ir a confirmación de transferencias</Link></p>}
-            <div className="mt-2 space-y-2">{disponiblesOrdenadas.map(row => <label key={row.id} className="flex cursor-pointer items-start gap-3 rounded-lg border border-border p-2 text-sm">
+            <div className="mt-2 max-h-28 space-y-1 overflow-y-auto">{disponiblesOrdenadas.map(row => <label key={row.id} className="flex cursor-pointer items-start gap-2 rounded-lg border border-border p-1.5 text-xs">
               <input type="checkbox" className="mt-1" checked={confirmacionesIds.includes(row.id)} onChange={() => { cambio(); setSeleccionManual({ key: seleccionKey, ids: confirmacionesIds.includes(row.id) ? confirmacionesIds.filter(id => id !== row.id) : [...confirmacionesIds, row.id] }) }} />
               <span className="min-w-0 flex-1">{formatters.dateOnly(row.fecha_transferencia)} · {row.id_cta_bancaria} · {row.referencia || 'Sin referencia'}<span className="block text-xs text-muted-foreground">Aprobó {row.revisado_by_usuario || '—'}</span></span>
               <span className="text-right font-semibold tabular-nums">{formatters.currency(Number(row.valor) || 0)}</span>
             </label>)}</div>
-            <p className={`mt-3 text-right text-sm tabular-nums ${totalConfirmado < totalTransferencia - 1 ? 'text-destructive' : 'text-foreground'}`}>Seleccionado {formatters.currency(totalConfirmado)} / Transferencia {formatters.currency(totalTransferencia)}</p>
+            <p className={`mt-2 text-right text-xs tabular-nums ${totalConfirmado < totalTransferencia - 1 ? 'text-destructive' : 'text-foreground'}`}>Seleccionado {formatters.currency(totalConfirmado)} / Transferencia {formatters.currency(totalTransferencia)}</p>
           </div>}
         </Card>
-        <Card className={`${section} rounded-2xl ${!cliente ? 'opacity-60' : ''}`}>
-          <h2 className={title}>06 · Observación</h2>
+        <Card className={`${section} rounded-xl ${!cliente ? 'opacity-60' : ''}`}>
+          <h2 className={`${title} mb-2`}>Observación</h2>
           {!cliente ? <p className="text-sm text-muted-foreground">Elige un cliente para completar la observación.</p> : <>
-            <textarea value={observacion} onChange={e => { cambio(); setObservacion(e.target.value) }} rows={3}
-              className="w-full rounded-md border border-input bg-background p-3 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            <textarea value={observacion} onChange={e => { cambio(); setObservacion(e.target.value) }} rows={2}
+              className="w-full rounded-md border border-input bg-background p-2 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               placeholder="Motivo del recaudo" />
             <p className="mt-1 text-right text-xs text-muted-foreground">{observacion.length} caracteres</p>
-            <div className="mt-3 rounded-lg bg-muted/50 p-3">
-              <p className="mb-1 text-xs font-semibold text-muted-foreground">Vista previa de notas · {notasPreview.length}/255</p>
-              <p className="break-words text-xs text-muted-foreground">{notasPreview || 'La vista previa aparecerá aquí.'}</p>
-            </div>
+            <details className="mt-2 rounded-lg bg-muted/50 p-2 text-xs text-muted-foreground">
+              <summary className="cursor-pointer font-semibold">Ver notas · {notasPreview.length}/255</summary>
+              <p className="mt-1 break-words">{notasPreview || 'La vista previa aparecerá aquí.'}</p>
+            </details>
           </>}
         </Card>
+        </div>
       </fieldset>
-      <ResumenRecibo totales={totales} faltantes={faltantes} guardando={guardando} verificando={verificando} onSave={() => void guardar()} />
+      <ResumenRecibo totales={totales} faltantes={faltantes} guardando={guardando} verificando={verificando} error={error} onDismissError={() => setError('')} onSave={() => void guardar()} />
     </div>
   </div>
 }
