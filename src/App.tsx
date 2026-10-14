@@ -34,6 +34,7 @@ const MaestroRolesPage = lazy(() => import('@/pages/MaestroRolesPage').then(m =>
 const MaestroDescuentosFinancierosPage = lazy(() => import('@/pages/MaestroDescuentosFinancierosPage').then(m => ({ default: m.MaestroDescuentosFinancierosPage })))
 const MaestroCajasPage = lazy(() => import('@/pages/MaestroCajasPage').then(m => ({ default: m.MaestroCajasPage })))
 const AsignacionCobroPage = lazy(() => import('@/pages/AsignacionCobroPage').then(m => ({ default: m.AsignacionCobroPage })))
+const MvpLogisticaPage = lazy(() => import('@/pages/MvpLogisticaPage').then(m => ({ default: m.MvpLogisticaPage })))
 const MaestroCuentasBancariasPage = lazy(() => import('@/pages/MaestroCuentasBancariasPage').then(m => ({ default: m.MaestroCuentasBancariasPage })))
 const MaestroConceptosPage = lazy(() => import('@/pages/MaestroConceptosPage').then(m => ({ default: m.MaestroConceptosPage })))
 const MaestroMaquinariaPage = lazy(() => import('@/pages/MaestroMaquinariaPage').then(m => ({ default: m.MaestroMaquinariaPage })))
@@ -149,6 +150,7 @@ function AppLayout() {
                                 <Route path="/tesoreria/confirmacion-transferencias" element={<ProtectedRoute permiso={PERMISOS.CONFIRMACION_TRANSFERENCIA}><ConfirmacionTransferenciasPage /></ProtectedRoute>} />
                                 <Route path="/tesoreria/parametros-rc" element={<ProtectedRoute permiso={PERMISOS.PARAMETROS_RC}><ParametrosReciboCajaPage /></ProtectedRoute>} />
                                 <Route path="/logistica/asignar-facturas" element={<ProtectedRoute permiso={PERMISOS.ASIGNACION_COBRO}><AsignacionCobroPage /></ProtectedRoute>} />
+                                <Route path="/logistica/mvp" element={<ProtectedRoute permiso={PERMISOS.ASIGNACION_COBRO}><MvpLogisticaPage /></ProtectedRoute>} />
                                 {/* Compatibilidad con el enlace/ruta anterior. */}
                                 <Route path="/tesoreria/asignacion-cobro" element={<Navigate to="/logistica/asignar-facturas" replace />} />
                                 <Route path="/configuracion" element={<ProtectedRoute permiso={PERMISOS.CONFIGURACION}><SettingsPage /></ProtectedRoute>} />
