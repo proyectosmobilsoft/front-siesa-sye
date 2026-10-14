@@ -32,6 +32,11 @@ import { ResumenConductoresDia, ReciboCajaUsuario } from '@/api/types'
 import { formatters } from '@/utils/formatters'
 import { useAuthStore, coPuntual } from '@/store/authStore'
 import { NuevoReciboTab } from '@/components/reciboCaja/NuevoReciboTab'
+import { cuadreCajaApi, type CuadreCaja as CuadreCajaDatos } from '@/api/cuadreCaja'
+import { CuadreCaja } from '@/components/reciboCaja/CuadreCaja'
+import { enriquecerTraslados } from '@/components/reciboCaja/cuadreCajaCalculos'
+import { MontoAlineado } from '@/components/ui/monto-alineado'
+import { descargarAnexoCuadrePdf } from '@/utils/cuadreCajaPdf'
 
 interface ReciboCaja {
   Rowid: number
@@ -162,6 +167,8 @@ export const ReciboCajaPage = () => {
 
   const [resumenGeneral, setResumenGeneral] = useState<ResumenGeneralRC | null>(null)
   const [errorGeneral, setErrorGeneral] = useState<string | null>(null)
+  const [cuadre, setCuadre] = useState<CuadreCajaDatos | null>(null)
+  const [errorCuadre, setErrorCuadre] = useState<string | null>(null)
   const [trasladosGeneral, setTrasladosGeneral] = useState<TrasladoFondosMov[]>([])
   const [cajasTraslado, setCajasTraslado] = useState<CajaTraspaso[]>([])
   const [asignadas, setAsignadas] = useState<PendientesDetalle | null>(null)
@@ -209,35 +216,53 @@ export const ReciboCajaPage = () => {
   const handleConsultarGeneral = async () => {
     setCargandoGeneral(true)
     setErrorGeneral(null)
-    try {
-      const fInicial = fechaDesde || hoyISO()
-      const fFinal = fechaHasta || fInicial
-      const res = await apiClient.get<{ success: boolean; data: ResumenGeneralRC }>('/recibo-caja/resumen-general', {
-        params: { fecha_inicial: fInicial, fecha_final: fFinal },
-      })
-      setResumenGeneral(res.data.data)
-      // Traslados del mismo periodo (si fallan, el arqueo sale igual sin ese bloque).
-      const [traslados, cajas, pendientes] = await Promise.all([
-        trasladoFondosApi.listar({ fechaInicial: fInicial, fechaFinal: fFinal }).catch(() => []),
-        cajasTraslado.length ? Promise.resolve(cajasTraslado) : trasladoFondosApi.listarCajas(true).catch(() => []),
-        apiClient
-          .get<{ success: boolean; data: PendientesDetalle }>('/asignacion-cobro/pendientes-detalle', { params: { desde: fInicial, hasta: fFinal } })
-          .then((r) => r.data.data)
-          .catch(() => null),
-      ])
-      setAsignadas(pendientes)
-      const co = coPuntual(centroOperacionActivo)
-      setTrasladosGeneral(
-        traslados.filter((t) => !co || String(t.id_co_origen).trim() === co || String(t.id_co_destino).trim() === co)
-      )
-      setCajasTraslado(cajas)
-    } catch (err) {
-      console.error('Error al consultar arqueo general:', err)
-      setErrorGeneral('No se pudo consultar el recaudo del periodo')
-    } finally {
-      setConsultado(true)
-      setCargandoGeneral(false)
-    }
+    setErrorCuadre(null)
+    setCuadre(null)
+    // Sin fecha final se acumula hasta hoy (como dice el campo).
+    const fInicial = fechaDesde || hoyLocalIso()
+    const fFinal = fechaHasta || hoyLocalIso()
+    const consultaCuadre = cuadreCajaApi.obtener({ fechaInicial: fInicial, fechaFinal: fFinal })
+      .then((datos) => setCuadre(datos))
+      .catch((err) => { console.error('Error al consultar cuadre de caja:', err); setErrorCuadre('No se pudo consultar el cuadre de caja del período') })
+    const consultaGeneral = (async () => {
+      try {
+        const res = await apiClient.get<{ success: boolean; data: ResumenGeneralRC }>('/recibo-caja/resumen-general', {
+          params: { fecha_inicial: fInicial, fecha_final: fFinal },
+        })
+        setResumenGeneral(res.data.data)
+        const [traslados, cajas, pendientes] = await Promise.all([
+          trasladoFondosApi.listar({ fechaInicial: fInicial, fechaFinal: fFinal }).catch(() => []),
+          cajasTraslado.length ? Promise.resolve(cajasTraslado) : trasladoFondosApi.listarCajas(true).catch(() => []),
+          apiClient
+            .get<{ success: boolean; data: PendientesDetalle }>('/asignacion-cobro/pendientes-detalle', { params: { desde: fInicial, hasta: fFinal } })
+            .then((r) => r.data.data)
+            .catch(() => null),
+        ])
+        setAsignadas(pendientes)
+        const co = coPuntual(centroOperacionActivo)
+        setTrasladosGeneral(
+          traslados.filter((t) => !co || String(t.id_co_origen).trim() === co || String(t.id_co_destino).trim() === co)
+        )
+        setCajasTraslado(cajas)
+      } catch (err) {
+        console.error('Error al consultar arqueo general:', err)
+        setErrorGeneral('No se pudo consultar el recaudo del período')
+      }
+    })()
+    await Promise.all([consultaCuadre, consultaGeneral])
+    setConsultado(true)
+    setCargandoGeneral(false)
+  }
+
+  // Los TC hechos desde Traslado de Fondos ya sabemos de qué caja a qué caja fueron.
+  const cuadreConTraslados = useMemo(
+    () => (cuadre ? enriquecerTraslados(cuadre, trasladosGeneral, cajasTraslado) : null),
+    [cuadre, trasladosGeneral, cajasTraslado]
+  )
+
+  const descargarCuadre = () => {
+    if (!cuadreConTraslados) return
+    descargarAnexoCuadrePdf(cuadreConTraslados, { responsable: responsableNombre, cedula: responsableCedula, cajaDescripcion: 'Todas las cajas' })
   }
 
   const fetchRecibos = async (p = 1) => {
@@ -272,7 +297,7 @@ export const ReciboCajaPage = () => {
     [data, razonSocial]
   )
 
-  const fechaFinalAplicada = fechaHasta || fechaDesde || hoyISO()
+  const fechaFinalAplicada = fechaHasta || hoyLocalIso()
 
   return (
     <div className={cn('nu mx-auto max-w-[1400px] space-y-6 p-4 sm:p-6 lg:p-8 2xl:max-w-[1600px]', tab === 'nuevo' ? 'lg:flex lg:h-full lg:min-h-0 lg:flex-col lg:gap-3 lg:space-y-0 lg:p-4' : 'xl:[zoom:1.12] 2xl:[zoom:1.15]')}>
@@ -408,7 +433,7 @@ export const ReciboCajaPage = () => {
                 <div className="space-y-1">
                   <p className="text-base font-bold text-foreground">El tablero de arqueo está listo</p>
                   <p className="max-w-md text-xs text-muted-foreground">
-                    Seleccione el rango de fechas (si no especifica fecha final se tomará la fecha inicial/hoy por defecto) y presione <strong>Consultar</strong>. Suma TODOS los RC de todas las cajas en ese rango.
+                    Seleccione el rango de fechas (si no pone fecha final, se acumula desde la fecha inicial hasta hoy) y presione <strong>Consultar</strong>. Suma TODOS los RC de todas las cajas en ese rango.
                   </p>
                 </div>
                 <Button onClick={handleConsultarGeneral} disabled={cargandoGeneral} className="nu-btn nu-btn-primary mt-2 gap-2 text-xs shadow-xs">
@@ -420,6 +445,14 @@ export const ReciboCajaPage = () => {
                 {errorGeneral && (
                   <p className="rounded-xl border border-red-500/20 bg-red-500/10 p-3 text-xs font-semibold text-red-600 dark:text-red-400">{errorGeneral}</p>
                 )}
+                <section className="space-y-4">
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <div><h2 className="text-base font-bold text-foreground">Cuadre de caja</h2><p className="text-xs text-muted-foreground">Movimiento real de caja en SIESA (recibos de la app y de SIESA, egresos, traslados y consignaciones)</p></div>
+                    <Button onClick={descargarCuadre} disabled={!cuadre} className="nu-btn nu-btn-primary gap-2"><FileText className="h-4 w-4" />Descargar anexo PDF</Button>
+                  </div>
+                  {errorCuadre && <p className="rounded-xl border border-red-500/20 bg-red-500/10 p-3 text-xs font-semibold text-red-600 dark:text-red-400">{errorCuadre}</p>}
+                  {!errorCuadre && <CuadreCaja datos={cuadreConTraslados} cargando={cargandoGeneral} />}
+                </section>
                 {resumenGeneral && <TableroGeneral resumen={resumenGeneral} />}
                 {resumenGeneral && <TrasladosPeriodo traslados={trasladosGeneral} cajas={cajasTraslado} />}
                 {resumenGeneral && asignadas && <FacturasAsignadasConductores datos={asignadas} />}
@@ -440,10 +473,10 @@ export const ReciboCajaPage = () => {
                 {/* Botones de acción rápida */}
                 <div className="flex justify-end">
                   <div className="flex items-center justify-end gap-2 nu-card p-4">
-                    <Button variant="ghost" size="sm" title="Imprimir" className="nu-btn nu-btn-soft h-9 w-9 p-0">
+                    <Button variant="ghost" size="sm" title="Imprimir" onClick={descargarCuadre} disabled={!cuadre} className="nu-btn nu-btn-soft h-9 w-9 p-0">
                       <Printer className="h-4 w-4" />
                     </Button>
-                    <Button variant="ghost" size="sm" title="Imprimir Anexo" className="nu-btn nu-btn-soft h-9 w-9 p-0">
+                    <Button variant="ghost" size="sm" title="Imprimir Anexo" onClick={descargarCuadre} disabled={!cuadre} className="nu-btn nu-btn-soft h-9 w-9 p-0">
                       <FileText className="h-4 w-4" />
                     </Button>
                     <Button variant="ghost" size="sm" title="Exportar" className="nu-btn nu-btn-soft h-9 w-9 p-0">
@@ -850,17 +883,6 @@ function formatearFechaHoraRc(rc: ReciboCajaUsuario | null): string {
   if (!m) return ''
   const fecha = `${m[3]}/${m[2]}/${m[1]}`
   return m[4] && rc?.Fecha_Creacion ? `${fecha} ${m[4]}:${m[5]}` : fecha
-}
-
-function MontoAlineado({ value, alinear = 'izquierda' }: { value: number; alinear?: 'izquierda' | 'derecha' }) {
-  const numero = formatters.currency(value).replace(/^\$\s*/, '')
-
-  return (
-    <span className="inline-grid grid-cols-[0.75rem_10ch] justify-start gap-1 tabular-nums">
-      <span>$</span>
-      <span className={alinear === 'derecha' ? 'text-right' : 'text-left'}>{numero}</span>
-    </span>
-  )
 }
 
 const COLUMNAS_TEXTO = ['Documento', 'Fecha', 'Cliente', 'Creado por', 'C.O.']
