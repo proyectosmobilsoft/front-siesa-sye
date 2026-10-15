@@ -1,5 +1,11 @@
 import { useState, type ReactNode } from 'react'
 import { useQuery } from '@tanstack/react-query'
+import { useSearchParams } from 'react-router-dom'
+import { PanelExpandible } from '@/components/tablero/Expandible'
+import { Resumenes } from '@/components/tablero/ventas/Resumenes'
+import { VentasPresupuesto } from '@/components/tablero/ventas/VentasPresupuesto'
+import { VentasProveedores } from '@/components/tablero/ventas/VentasProveedores'
+import type { DashboardVentas } from '@/components/tablero/ventas/tipos'
 import {
   Ban,
   CalendarClock,
@@ -194,6 +200,12 @@ const TONO_NOTA = {
 }
 
 export function DashboardReciboCajaPage() {
+  const [parametros, setParametros] = useSearchParams()
+  const valorVista = parametros.get('vista')
+  const vista = valorVista === 'recaudo' || valorVista === 'presupuesto' || valorVista === 'proveedores' ? valorVista : null
+  const elegirVista = (v: 'recaudo' | 'presupuesto' | 'proveedores' | null) => {
+    setParametros(actuales => { const siguientes = new URLSearchParams(actuales); if (v && v !== vista) siguientes.set('vista', v); else siguientes.delete('vista'); return siguientes })
+  }
   const centroOperacionActivo = useAuthStore((s) => s.centroOperacionActivo)
   const { data: limites } = useFechasLimite()
   const [preset, setPreset] = useState<PresetRango | null>('anio')
@@ -207,14 +219,20 @@ export function DashboardReciboCajaPage() {
     enabled: valido,
     staleTime: 5 * 60 * 1000,
   })
+  const consultaVentas = useQuery({
+    queryKey: ['dashboard-ventas', rango.desde, rango.hasta],
+    queryFn: async () => (await apiClient.get<{ success: boolean; data: DashboardVentas }>('/dashboard/ventas', { params: rango })).data.data,
+    enabled: valido,
+    staleTime: 5 * 60 * 1000,
+  })
   const d = consulta.data
   const co = coPuntual(centroOperacionActivo)
 
   return (
     <section className="mx-auto max-w-[1600px] p-4 sm:p-6 lg:p-8">
       <Encabezado
-        titulo="Dashboard de Recibo de Caja"
-        descripcion={`Cobro de cartera, anulaciones, conductores, carga y clientes${co ? ` · C.O. ${co}` : ' · todos los C.O.'}. Incluye recibos hechos en SIESA y en la app.`}
+        titulo="Dashboard de Recaudo y Ventas"
+        descripcion={`Recaudo de cartera${co ? ` (C.O. ${co})` : ' (todos los C.O.)'}, ventas vs presupuesto y proveedores (ambos C.O.).`}
       />
       <SelectorRango
         preset={preset}
@@ -236,9 +254,12 @@ export function DashboardReciboCajaPage() {
         }}
       />
 
-      <CuerpoConsulta consulta={{ isLoading: consulta.isLoading || (consulta.isFetching && !d), isError: consulta.isError }} vacio={!valido} mensajeVacio="Elige un rango de fechas válido" altura="h-96">
-        {d && <Contenido d={d} />}
-      </CuerpoConsulta>
+      <Resumenes recaudo={d} ventas={consultaVentas.data} cargaRecaudo={consulta.isLoading || (consulta.isFetching && !d)} errorRecaudo={consulta.isError} cargaVentas={consultaVentas.isLoading || (consultaVentas.isFetching && !consultaVentas.data)} errorVentas={consultaVentas.isError} vista={vista} alElegir={elegirVista} />
+      <PanelExpandible vista={vista} titulo={vista === 'recaudo' ? 'Recaudo de cartera' : vista === 'presupuesto' ? 'Ventas vs presupuesto' : 'Ventas por proveedor'} alCerrar={() => elegirVista(null)}>
+        {vista === 'recaudo' && <CuerpoConsulta consulta={{ isLoading: consulta.isLoading || (consulta.isFetching && !d), isError: consulta.isError }} vacio={!valido} mensajeVacio="Elige un rango de fechas válido" altura="h-96">{d && <Contenido d={d} />}</CuerpoConsulta>}
+        {vista === 'presupuesto' && <CuerpoConsulta consulta={{ isLoading: consultaVentas.isLoading || (consultaVentas.isFetching && !consultaVentas.data), isError: consultaVentas.isError }} vacio={!valido} mensajeVacio="Elige un rango de fechas válido" altura="h-96">{consultaVentas.data && <VentasPresupuesto d={consultaVentas.data} />}</CuerpoConsulta>}
+        {vista === 'proveedores' && <CuerpoConsulta consulta={{ isLoading: consultaVentas.isLoading || (consultaVentas.isFetching && !consultaVentas.data), isError: consultaVentas.isError }} vacio={!valido} mensajeVacio="Elige un rango de fechas válido" altura="h-96">{consultaVentas.data && <VentasProveedores d={consultaVentas.data} />}</CuerpoConsulta>}
+      </PanelExpandible>
     </section>
   )
 }
@@ -267,23 +288,23 @@ function Contenido({ d }: { d: DashboardRC }) {
           variacion={variacion(k.recaudo_cartera, k.recaudo_cartera_previo)}
           nota="vs periodo anterior"
           tono="marca"
-          icono={Wallet}
+          icono={Wallet} ayuda={{ fuente: 'Recibos de caja (RC) de SIESA y de la app, no anulados, que cruzan al menos una factura.', formula: 'Σ medios de pago de RC no anulados con facturas cruzadas · Variación = (actual − anterior) / anterior', nota: 'Los RC sin factura (anticipos, otros ingresos) no cuentan aquí.' }}
         />
-        <Tarjeta etiqueta="Facturado" valor={dinero(k.facturado)} nota="Facturas menos notas crédito" tono="info" icono={FileText} />
+        <Tarjeta etiqueta="Facturado" valor={dinero(k.facturado)} nota="Facturas menos notas crédito" tono="info" icono={FileText} ayuda={{ fuente: 'Movimientos de inventario de facturas FCE, BQE, FM, FC, FV, C01 menos notas NC1, NC2, NV1, N01.', formula: 'Σ valor neto facturas − Σ valor neto notas crédito' }} />
         <Tarjeta
           etiqueta="Cobertura de recaudo"
           valor={k.cobertura_recaudo == null ? '—' : porcentaje(k.cobertura_recaudo, 0)}
           nota={k.cobertura_recaudo != null && k.cobertura_recaudo > 1 ? 'Cobro > facturado: baja la cartera' : 'Cobro de cartera / facturado'}
           tono={k.cobertura_recaudo != null && k.cobertura_recaudo < 0.7 ? 'err' : 'ok'}
-          icono={CircleDollarSign}
+          icono={CircleDollarSign} ayuda={{ fuente: 'RC de cartera y facturas de SIESA del mismo periodo.', formula: 'Cobro de cartera ÷ Facturado del mismo periodo', nota: '> 100 % = se cobraron facturas de periodos anteriores.' }}
         />
-        <Tarjeta etiqueta="Días promedio de pago" valor={dias(k.dias_promedio_pago)} nota="Desde la factura hasta el recibo" tono="neutro" icono={CalendarClock} />
+        <Tarjeta etiqueta="Días promedio de pago" valor={dias(k.dias_promedio_pago)} nota="Desde la factura hasta el recibo" tono="neutro" icono={CalendarClock} ayuda={{ fuente: 'Cruce RC → factura (saldos abiertos).', formula: 'Σ (valor cruzado × días entre factura y RC) ÷ Σ valor cruzado' }} />
         <Tarjeta
           etiqueta="Descuento financiero"
           valor={dinero(k.descuento_pp)}
           nota={k.valor_facturas ? `${porcentaje(k.descuento_pp / k.valor_facturas)} de lo cobrado` : undefined}
           tono="aviso"
-          icono={Percent}
+          icono={Percent} ayuda={{ fuente: 'Descuento por pronto pago aplicado en el cruce del RC.', formula: 'Σ descuento PP · % = descuento ÷ valor de facturas cobradas' }}
         />
         <Tarjeta
           etiqueta="Tasa de anulación"
@@ -292,20 +313,20 @@ function Contenido({ d }: { d: DashboardRC }) {
           subirEsMalo
           nota={`${entero(k.anulados)} recibos`}
           tono="err"
-          icono={Ban}
+          icono={Ban} ayuda={{ fuente: 'RC de SIESA y de la app del periodo.', formula: 'RC anulados ÷ RC del periodo (vigentes + anulados)' }}
         />
-        <Tarjeta etiqueta="Carga despachada" valor={kilos(k.kg_facturados)} nota={`${kilos(k.kg_cobrados_conductores)} cobrada por conductores`} tono="info" icono={Scale} />
+        <Tarjeta etiqueta="Carga despachada" valor={kilos(k.kg_facturados)} nota={`${kilos(k.kg_cobrados_conductores)} cobrada por conductores`} tono="info" icono={Scale} ayuda={{ fuente: 'Ítems de inventario facturados (sin servicios).', formula: 'Σ cantidad × peso unitario − devoluciones' }} />
         <Tarjeta
           etiqueta="Ticket promedio"
           valor={dinero(k.ticket_promedio)}
           nota={`${entero(k.recibos - k.recibos_sin_factura)} recibos de cartera`}
           tono="neutro"
-          icono={CircleDollarSign}
+          icono={CircleDollarSign} ayuda={{ fuente: 'RC de cartera no anulados.', formula: 'Cobro de cartera ÷ número de RC de cartera' }}
         />
       </Malla>
 
       {notas.length > 0 && (
-        <Bloque titulo="Lectura del analista" descripcion="Lo que dicen los números del periodo y qué conviene revisar" accion={<Lightbulb className="h-5 w-5 text-amber-500" />}>
+        <Bloque titulo="Lectura del analista" descripcion="Lo que dicen los números del periodo y qué conviene revisar" accion={<Lightbulb className="h-5 w-5 text-amber-500" />} ayuda={{ fuente: 'Indicadores de RC, facturas y anulaciones de SIESA y la app.', formula: 'Variaciones y proporciones de los indicadores del periodo.' }}>
           <ul className="grid gap-3 lg:grid-cols-2">
             {notas.map((n, i) => (
               <li key={i} className="flex gap-3 rounded-2xl bg-muted/50 p-3.5 text-[13.5px] leading-relaxed text-foreground/85">
@@ -318,7 +339,7 @@ function Contenido({ d }: { d: DashboardRC }) {
       )}
 
       <Malla columnas={2}>
-        <Bloque titulo="Facturado vs. cobrado por mes" descripcion="Si la línea de cobro queda por debajo, la cartera crece">
+        <Bloque titulo="Facturado vs. cobrado por mes" descripcion="Si la línea de cobro queda por debajo, la cartera crece" ayuda={{ fuente: 'Facturas y RC de cartera agrupados por mes.', formula: 'Σ facturado y Σ cobro de cartera de cada mes.' }}>
           <Areas
             datos={mensual}
             ejeX="etiqueta"
@@ -329,7 +350,7 @@ function Contenido({ d }: { d: DashboardRC }) {
             formato={dinero}
           />
         </Bloque>
-        <Bloque titulo="Recaudo por mes y origen" descripcion="Recibos de la caja en SIESA y de los conductores en la app">
+        <Bloque titulo="Recaudo por mes y origen" descripcion="Recibos de la caja en SIESA y de los conductores en la app" ayuda={{ fuente: 'RC de SIESA y la app agrupados por mes.', formula: 'Σ medios de pago por origen y mes.' }}>
           <BarrasApiladas
             datos={mensual}
             ejeX="etiqueta"
@@ -343,34 +364,34 @@ function Contenido({ d }: { d: DashboardRC }) {
       </Malla>
 
       <Malla columnas={3}>
-        <Bloque titulo="Medios de pago" descripcion={`${dinero(k.recaudo)} recaudados en total`}>
+        <Bloque titulo="Medios de pago" descripcion={`${dinero(k.recaudo)} recaudados en total`} ayuda={{ fuente: 'Medios de pago de RC vigentes.', formula: 'Σ valor de cada medio de pago.' }}>
           <CuerpoConsulta consulta={{ isLoading: false, isError: false }} vacio={medios.length === 0} altura="h-56">
             <Dona datos={medios} formato={dinero} />
           </CuerpoConsulta>
         </Bloque>
-        <Bloque titulo="Carga despachada por mes" descripcion="Kilos de mercancía facturada (menos devoluciones)" className="lg:col-span-2">
+        <Bloque titulo="Carga despachada por mes" descripcion="Kilos de mercancía facturada (menos devoluciones)" className="lg:col-span-2" ayuda={{ fuente: 'Ítems de inventario en facturas SIESA.', formula: 'Σ cantidad × peso unitario − devoluciones por mes.' }}>
           <Barras datos={mensual.map((m) => ({ nombre: m.etiqueta, valor: m.kg_facturados }))} formato={kilos} nombreValor="Carga" color={PALETA[4]} />
         </Bloque>
       </Malla>
 
       <Malla columnas={3}>
-        <Bloque titulo="Causas de anulación" descripcion="Motivo registrado en SIESA">
+        <Bloque titulo="Causas de anulación" descripcion="Motivo registrado en SIESA" ayuda={{ fuente: 'Motivos de RC anulados en SIESA.', formula: 'Conteo de RC anulados por motivo.' }}>
           <CuerpoConsulta consulta={{ isLoading: false, isError: false }} vacio={d.anulaciones.por_motivo.length === 0} mensajeVacio="Sin anulaciones en el periodo" altura="h-48">
             <BarrasH datos={d.anulaciones.por_motivo.map((m) => ({ nombre: recortar(m.motivo.toLowerCase().replace(/^\w/, (c) => c.toUpperCase())), valor: m.cantidad }))} formato={entero} nombreValor="Recibos" color={PALETA[5]} anchoEtiqueta={150} />
           </CuerpoConsulta>
         </Bloque>
-        <Bloque titulo="Tiempo hasta anular" descripcion="Cuánto después de creado se anula el recibo">
+        <Bloque titulo="Tiempo hasta anular" descripcion="Cuánto después de creado se anula el recibo" ayuda={{ fuente: 'Fechas de creación y anulación de RC.', formula: 'Conteo de RC por tramo de tiempo hasta anular.' }}>
           <CuerpoConsulta consulta={{ isLoading: false, isError: false }} vacio={d.anulaciones.por_tiempo.length === 0} mensajeVacio="Sin anulaciones en el periodo" altura="h-48">
             <Barras datos={d.anulaciones.por_tiempo.map((t) => ({ nombre: t.tramo, valor: t.cantidad }))} formato={entero} nombreValor="Recibos" color={PALETA[5]} altura={220} />
           </CuerpoConsulta>
         </Bloque>
-        <Bloque titulo="Anulados por mes" descripcion="Cantidad de recibos anulados">
+        <Bloque titulo="Anulados por mes" descripcion="Cantidad de recibos anulados" ayuda={{ fuente: 'RC anulados de SIESA y la app.', formula: 'Conteo de RC anulados por mes.' }}>
           <Barras datos={mensual.map((m) => ({ nombre: m.etiqueta, valor: m.anulados }))} formato={entero} nombreValor="Anulados" color={PALETA[5]} altura={220} />
         </Bloque>
       </Malla>
 
       <Malla columnas={2}>
-        <Bloque titulo="Quién genera los anulados" descripcion="Creador del recibo que luego se anuló">
+        <Bloque titulo="Quién genera los anulados" descripcion="Creador del recibo que luego se anuló" ayuda={{ fuente: 'Usuario creador de RC anulados.', formula: 'Conteo y Σ valor de RC anulados por creador.' }}>
           <CuerpoConsulta consulta={{ isLoading: false, isError: false }} vacio={d.anulaciones.por_creador.length === 0} mensajeVacio="Sin anulaciones en el periodo" altura="h-40">
             <Tabla
               columnas={[
@@ -384,7 +405,7 @@ function Contenido({ d }: { d: DashboardRC }) {
             />
           </CuerpoConsulta>
         </Bloque>
-        <Bloque titulo="Quién anula" descripcion="Usuario de SIESA que hizo la anulación">
+        <Bloque titulo="Quién anula" descripcion="Usuario de SIESA que hizo la anulación" ayuda={{ fuente: 'Usuario que anula el RC en SIESA.', formula: 'Conteo y Σ valor de RC anulados por usuario.' }}>
           <CuerpoConsulta consulta={{ isLoading: false, isError: false }} vacio={d.anulaciones.por_quien_anula.length === 0} mensajeVacio="Sin anulaciones en el periodo" altura="h-40">
             <Tabla
               columnas={[
@@ -400,19 +421,19 @@ function Contenido({ d }: { d: DashboardRC }) {
       </Malla>
 
       <Malla columnas={2}>
-        <Bloque titulo="Conductores: cobro de cartera" descripcion="Los 10 que más recaudaron en la app">
+        <Bloque titulo="Conductores: cobro de cartera" descripcion="Los 10 que más recaudaron en la app" ayuda={{ fuente: 'RC creados por conductores en la app.', formula: 'Σ cobro de cartera por conductor.' }}>
           <CuerpoConsulta consulta={{ isLoading: false, isError: false }} vacio={conductoresPorRecaudo.length === 0} mensajeVacio="Sin recibos de conductores en el periodo" altura="h-48">
             <BarrasH datos={conductoresPorRecaudo.map((c) => ({ nombre: recortar(c.nombre), valor: c.recaudo }))} formato={dinero} nombreValor="Recaudo" color={PALETA[1]} anchoEtiqueta={150} />
           </CuerpoConsulta>
         </Bloque>
-        <Bloque titulo="Conductores: carga cobrada" descripcion="Kilos de las facturas que cobró cada conductor">
+        <Bloque titulo="Conductores: carga cobrada" descripcion="Kilos de las facturas que cobró cada conductor" ayuda={{ fuente: 'Facturas cruzadas con RC de conductores.', formula: 'Σ kg de facturas cobradas por conductor.' }}>
           <CuerpoConsulta consulta={{ isLoading: false, isError: false }} vacio={conductoresPorKg.length === 0} mensajeVacio="Sin carga registrada en el periodo" altura="h-48">
             <BarrasH datos={conductoresPorKg.map((c) => ({ nombre: recortar(c.nombre), valor: c.kg }))} formato={kilos} nombreValor="Carga" color={PALETA[4]} anchoEtiqueta={150} />
           </CuerpoConsulta>
         </Bloque>
       </Malla>
 
-      <Bloque titulo="Detalle por conductor" descripcion="Recibos hechos desde la app">
+      <Bloque titulo="Detalle por conductor" descripcion="Recibos hechos desde la app" ayuda={{ fuente: 'RC de la app cruzados con facturas SIESA.', formula: 'Conteos y sumas de recaudo, descuentos y carga por conductor.' }}>
         <CuerpoConsulta consulta={{ isLoading: false, isError: false }} vacio={d.conductores.length === 0} mensajeVacio="Sin recibos de conductores en el periodo" altura="h-40">
           <Tabla
             columnas={[
@@ -441,12 +462,12 @@ function Contenido({ d }: { d: DashboardRC }) {
       </Bloque>
 
       <Malla columnas={2}>
-        <Bloque titulo="Clientes que más pagan" descripcion="Top 10 por valor de facturas cobradas">
+        <Bloque titulo="Clientes que más pagan" descripcion="Top 10 por valor de facturas cobradas" ayuda={{ fuente: 'Facturas cruzadas con RC del periodo.', formula: 'Σ valor de facturas cobradas por cliente.' }}>
           <CuerpoConsulta consulta={{ isLoading: false, isError: false }} vacio={d.clientes.length === 0} altura="h-48">
             <BarrasH datos={d.clientes.map((c) => ({ nombre: recortar(c.cliente), valor: c.valor_facturas }))} formato={dinero} nombreValor="Facturas cobradas" color={PALETA[0]} anchoEtiqueta={170} />
           </CuerpoConsulta>
         </Bloque>
-        <Bloque titulo="Comportamiento de pago de esos clientes" descripcion="Días de pago altos = más capital de trabajo atrapado">
+        <Bloque titulo="Comportamiento de pago de esos clientes" descripcion="Días de pago altos = más capital de trabajo atrapado" ayuda={{ fuente: 'Cruce RC → factura por cliente.', formula: 'Σ valor cruzado y promedio de días ponderado por valor.' }}>
           <Tabla
             columnas={[
               {
@@ -476,7 +497,7 @@ function Contenido({ d }: { d: DashboardRC }) {
         </Bloque>
       </Malla>
 
-      <Bloque titulo="Caja SIESA por usuario" descripcion="Recibos tecleados directamente en SIESA">
+      <Bloque titulo="Caja SIESA por usuario" descripcion="Recibos tecleados directamente en SIESA" ayuda={{ fuente: 'RC creados directamente en SIESA.', formula: 'Conteo y Σ recaudo por usuario; conteo de anulados.' }}>
         <CuerpoConsulta consulta={{ isLoading: false, isError: false }} vacio={d.cajeros.length === 0} altura="h-32">
           <Tabla
             columnas={[

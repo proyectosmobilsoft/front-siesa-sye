@@ -1,4 +1,4 @@
-import { Area, AreaChart, Bar, BarChart, CartesianGrid, Cell, Legend, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
+import { Area, AreaChart, Bar, BarChart, CartesianGrid, Cell, ComposedChart, LabelList, Legend, Line, Pie, PieChart, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import { PALETA, compacto } from './formato'
 
 // Gráficas de los dashboards, mismo diseño que vehiman_react (src/dashboard/graficas.tsx):
@@ -172,4 +172,24 @@ export function Areas<T extends Record<string, unknown>>({ datos, ejeX, series, 
       </ResponsiveContainer>
     </div>
   )
+}
+
+/** Venta mensual con línea de meta y barras discretas del año anterior. */
+export function BarrasConMeta({ datos }: { datos: { nombre: string; venta: number; meta: number | null; anterior: number }[] }) {
+  return <div className="h-[300px]" role="img" aria-label="Venta, meta y año anterior por mes"><ResponsiveContainer width="100%" height="100%"><ComposedChart data={datos} margin={{ top: 10, right: 16, bottom: 8, left: 0 }}>
+    <CartesianGrid stroke={REJILLA} vertical={false} /><XAxis dataKey="nombre" tick={EJE} tickLine={false} axisLine={{ stroke: REJILLA }} /><YAxis tick={EJE} tickLine={false} axisLine={false} tickFormatter={compacto} width={52} />
+    <Tooltip {...estiloTooltip} formatter={(v, n) => [compacto(Number(v)), String(n)]} /><Legend {...leyenda} />
+    <Bar dataKey="anterior" name="Año anterior" fill="hsl(var(--muted-foreground))" fillOpacity={0.22} maxBarSize={28} radius={[5, 5, 0, 0]} />
+    <Bar dataKey="venta" name="Venta" fill={PALETA[0]} maxBarSize={28} radius={[5, 5, 0, 0]} />
+    <Line dataKey="meta" name="Meta" stroke={PALETA[2]} strokeWidth={2} strokeDasharray="5 4" dot={false} connectNulls={false} />
+  </ComposedChart></ResponsiveContainer></div>
+}
+
+/** Cumplimiento por grupo con referencia del 100 %. */
+export function BarrasCumplimiento({ datos }: { datos: { nombre: string; valor: number }[] }) {
+  return <div style={{ height: Math.max(200, datos.length * 42 + 42) }} role="img" aria-label="Cumplimiento por grupo"><ResponsiveContainer width="100%" height="100%"><BarChart data={datos} layout="vertical" margin={{ top: 8, right: 48, bottom: 8, left: 0 }}>
+    <CartesianGrid stroke={REJILLA} horizontal={false} /><XAxis type="number" domain={[0, Math.max(1.2, ...datos.map(d => d.valor))]} tick={EJE} tickFormatter={(v: number) => `${Math.round(v * 100)} %`} tickLine={false} axisLine={false} /><YAxis type="category" dataKey="nombre" tick={EJE} tickLine={false} axisLine={false} width={130} interval={0} />
+    <Tooltip {...estiloTooltip} formatter={(v) => [`${Math.round(Number(v) * 100)} %`, 'Cumplimiento']} /><ReferenceLine x={1} stroke={PALETA[2]} strokeDasharray="4 4" />
+    <Bar dataKey="valor" barSize={19} radius={[0, 5, 5, 0]}>{datos.map(d => <Cell key={d.nombre} fill={d.valor >= 1 ? PALETA[1] : d.valor >= .8 ? PALETA[2] : PALETA[5]} />)}<LabelList dataKey="valor" position="right" formatter={(v: number) => `${Math.round(v * 100)} %`} style={EJE} /></Bar>
+  </BarChart></ResponsiveContainer></div>
 }

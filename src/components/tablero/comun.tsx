@@ -1,6 +1,7 @@
 import { clsx } from 'clsx'
-import { Inbox, TrendingDown, TrendingUp, TriangleAlert, type LucideIcon } from 'lucide-react'
+import { Inbox, Info, TrendingDown, TrendingUp, TriangleAlert, type LucideIcon } from 'lucide-react'
 import type { ReactNode } from 'react'
+import { useAyuda, type Ayuda } from './ayuda'
 import { FechaInput } from '@/components/ui/fecha-input'
 import { PRESETS, type PresetRango } from './formato'
 
@@ -21,17 +22,19 @@ export function Encabezado({ titulo, descripcion, accion }: { titulo: string; de
 }
 
 /** Tarjeta con título, para agrupar una gráfica, una tabla o unos totales. */
-export function Bloque({ titulo, descripcion, accion, children, className }: { titulo: string; descripcion?: string; accion?: ReactNode; children: ReactNode; className?: string }) {
+export function Bloque({ titulo, descripcion, accion, children, className, ayuda }: { titulo: string; descripcion?: string; accion?: ReactNode; children: ReactNode; className?: string; ayuda?: Ayuda }) {
+  const info = useAyuda(ayuda)
   return (
     <section className={clsx('rounded-3xl bg-card p-5 ring-1 ring-border/80 sm:p-6', className)}>
-      <header className="mb-4 flex flex-wrap items-start justify-between gap-2">
+      <header ref={info.referencia as React.RefObject<HTMLElement>} onMouseEnter={info.mostrar} onMouseLeave={info.ocultar} className="mb-4 flex flex-wrap items-start justify-between gap-2">
         <div>
-          <h2 className="text-[15px] font-semibold text-foreground">{titulo}</h2>
+          <h2 className="flex items-center gap-1.5 text-[15px] font-semibold text-foreground">{titulo}{ayuda && <span tabIndex={0} role="img" aria-label={`Ayuda sobre ${titulo}`} aria-describedby={info.id} onFocus={info.mostrar} onBlur={info.ocultar} className="inline-flex cursor-help text-muted-foreground"><Info className="size-3.5" /></span>}</h2>
           {descripcion && <p className="mt-0.5 text-[12.5px] text-muted-foreground">{descripcion}</p>}
         </div>
         {accion}
       </header>
       {children}
+      {info.tooltip}
     </section>
   )
 }
@@ -49,6 +52,7 @@ const TONOS: Record<Tono, { fondo: string; icono: string }> = {
 
 interface PropsTarjeta {
   etiqueta: string
+  ayuda?: Ayuda
   valor: ReactNode
   nota?: ReactNode
   tono?: Tono
@@ -60,14 +64,15 @@ interface PropsTarjeta {
 }
 
 /** Total destacado (KPI). */
-export function Tarjeta({ etiqueta, valor, nota, tono = 'marca', icono: Icono, variacion, subirEsMalo }: PropsTarjeta) {
+export function Tarjeta({ etiqueta, valor, nota, tono = 'marca', icono: Icono, variacion, subirEsMalo, ayuda }: PropsTarjeta) {
+  const info = useAyuda(ayuda)
   const t = TONOS[tono]
   const hayVariacion = variacion != null && Number.isFinite(variacion)
   const bueno = hayVariacion && (subirEsMalo ? variacion! <= 0 : variacion! >= 0)
   return (
-    <div className={clsx('flex items-center justify-between gap-3 rounded-3xl p-5', t.fondo)}>
+    <div ref={info.referencia as React.RefObject<HTMLDivElement>} onMouseEnter={info.mostrar} onMouseLeave={info.ocultar} className={clsx('flex items-center justify-between gap-3 rounded-3xl p-5', t.fondo)}>
       <div className="min-w-0 text-left">
-        <p className="text-[12.5px] font-medium text-muted-foreground">{etiqueta}</p>
+        <p className="flex items-center gap-1.5 text-[12.5px] font-medium text-muted-foreground">{etiqueta}{ayuda && <span tabIndex={0} role="img" aria-label={`Ayuda sobre ${etiqueta}`} aria-describedby={info.id} onFocus={info.mostrar} onBlur={info.ocultar} className="inline-flex cursor-help"><Info className="size-3.5" /></span>}</p>
         <p className="mt-1 truncate text-[24px] leading-tight font-bold tracking-[-0.02em] text-foreground tabular-nums">{valor}</p>
         {(nota || hayVariacion) && (
           <p className="mt-0.5 flex flex-wrap items-center gap-x-2 text-[12px] text-muted-foreground">
@@ -82,6 +87,7 @@ export function Tarjeta({ etiqueta, valor, nota, tono = 'marca', icono: Icono, v
           </p>
         )}
       </div>
+      {info.tooltip}
       {Icono && (
         <span className={clsx('flex size-10 shrink-0 items-center justify-center rounded-2xl [&>svg]:size-5', t.icono)}>
           <Icono />
@@ -184,7 +190,7 @@ export interface Columna<T> {
 }
 
 /** Tabla simple de los dashboards (sin paginación: los detalles son cortos). */
-export function Tabla<T>({ columnas, filas, clave }: { columnas: Columna<T>[]; filas: T[]; clave: (f: T, i: number) => string | number }) {
+export function Tabla<T>({ columnas, filas, clave, pie }: { columnas: Columna<T>[]; filas: T[]; clave: (f: T, i: number) => string | number; pie?: ReactNode }) {
   return (
     <div className="overflow-x-auto">
       <table className="w-full text-[13.5px]">
@@ -208,6 +214,7 @@ export function Tabla<T>({ columnas, filas, clave }: { columnas: Columna<T>[]; f
             </tr>
           ))}
         </tbody>
+        {pie && <tfoot><tr className="border-t border-border font-semibold"><td colSpan={columnas.length} className="px-3 py-3 text-right">{pie}</td></tr></tfoot>}
       </table>
     </div>
   )
