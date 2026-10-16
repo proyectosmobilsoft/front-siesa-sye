@@ -1,4 +1,5 @@
-import { Area, AreaChart, Bar, BarChart, CartesianGrid, Cell, ComposedChart, LabelList, Legend, Line, Pie, PieChart, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
+import { Fragment } from 'react'
+import { Area, AreaChart, Bar, BarChart, CartesianGrid, Cell, ComposedChart, LabelList, Legend, Line, Pie, PieChart, ReferenceLine, ResponsiveContainer, Scatter, ScatterChart, Tooltip, XAxis, YAxis, ZAxis } from 'recharts'
 import { PALETA, compacto } from './formato'
 
 // Gráficas de los dashboards, mismo diseño que vehiman_react (src/dashboard/graficas.tsx):
@@ -192,4 +193,97 @@ export function BarrasCumplimiento({ datos }: { datos: { nombre: string; valor: 
     <Tooltip {...estiloTooltip} formatter={(v) => [`${Math.round(Number(v) * 100)} %`, 'Cumplimiento']} /><ReferenceLine x={1} stroke={PALETA[2]} strokeDasharray="4 4" />
     <Bar dataKey="valor" barSize={19} radius={[0, 5, 5, 0]}>{datos.map(d => <Cell key={d.nombre} fill={d.valor >= 1 ? PALETA[1] : d.valor >= .8 ? PALETA[2] : PALETA[5]} />)}<LabelList dataKey="valor" position="right" formatter={(v: number) => `${Math.round(v * 100)} %`} style={EJE} /></Bar>
   </BarChart></ResponsiveContainer></div>
+}
+
+
+export function BarrasComparadas({ datos, formato, etiquetas = ['Venta', 'Meta'] }: {
+  datos: { nombre: string; actual: number; meta: number; cumplimiento?: number | null }[]
+  formato: Formato
+  etiquetas?: [string, string]
+}) {
+  return (
+    <div className="max-h-[560px] overflow-y-auto" role="img" aria-label={`${etiquetas[0]} frente a ${etiquetas[1]}`}><div style={{ height: Math.max(220, datos.length * 43 + 45) }}>
+      <ResponsiveContainer width="100%" height="100%">
+        <BarChart data={datos} layout="vertical" margin={{ right: 16, left: 0 }}>
+          <CartesianGrid stroke={REJILLA} horizontal={false} />
+          <XAxis type="number" tick={EJE} tickFormatter={compacto} tickLine={false} axisLine={false} />
+          <YAxis type="category" dataKey="nombre" width={135} tick={EJE} tickLine={false} axisLine={false} interval={0} />
+          <Tooltip {...estiloTooltip} formatter={(v, n) => [formato(Number(v)), String(n)]} />
+          <Legend {...leyenda} />
+          <Bar dataKey="actual" name={etiquetas[0]} barSize={11} radius={[0, 5, 5, 0]}>
+            {datos.map((d) => <Cell key={d.nombre} fill={d.cumplimiento == null ? PALETA[0] : d.cumplimiento >= 1 ? PALETA[1] : d.cumplimiento >= 0.8 ? PALETA[2] : PALETA[5]} />)}
+          </Bar>
+          <Bar dataKey="meta" name={etiquetas[1]} fill="hsl(var(--muted-foreground))" fillOpacity={0.35} barSize={7} radius={[0, 4, 4, 0]} />
+        </BarChart>
+      </ResponsiveContainer>
+    </div></div>
+  )
+}
+
+export function BarrasApiladasH({ datos, series, formato }: {
+  datos: Record<string, string | number>[]
+  series: Serie[]
+  formato: Formato
+}) {
+  return (
+    <div style={{ height: Math.max(200, datos.length * 34 + 55) }} role="img" aria-label="Gráfica horizontal apilada">
+      <ResponsiveContainer width="100%" height="100%">
+        <BarChart data={datos} layout="vertical" margin={{ right: 12 }}>
+          <CartesianGrid stroke={REJILLA} horizontal={false} />
+          <XAxis type="number" tick={EJE} tickFormatter={compacto} tickLine={false} axisLine={false} />
+          <YAxis type="category" dataKey="nombre" width={140} tick={EJE} tickLine={false} axisLine={false} interval={0} />
+          <Tooltip {...estiloTooltip} formatter={(v, n) => [formato(Number(v)), String(n)]} />
+          <Legend {...leyenda} />
+          {series.map((serie) => <Bar key={serie.clave} dataKey={serie.clave} name={serie.nombre} stackId="total" fill={serie.color} barSize={20} />)}
+        </BarChart>
+      </ResponsiveContainer>
+    </div>
+  )
+}
+
+export function ClientesDispersion({ datos }: {
+  datos: { nombre: string; dias: number; valor: number }[]
+}) {
+  return (
+    <div className="h-72" role="img" aria-label="Valor cobrado frente a días de pago por cliente">
+      <ResponsiveContainer width="100%" height="100%">
+        <ScatterChart margin={{ right: 16 }}>
+          <CartesianGrid stroke={REJILLA} />
+          <XAxis type="number" dataKey="dias" name="Días de pago" tick={EJE} tickLine={false} unit=" d" />
+          <YAxis type="number" dataKey="valor" name="Cobrado" tick={EJE} tickFormatter={compacto} tickLine={false} width={55} />
+          <Tooltip {...estiloTooltip} cursor={{ strokeDasharray: '3 3' }} content={({ active, payload }) => {
+            if (!active || !payload?.length) return null
+            const punto = payload[0].payload as { nombre: string; dias: number; valor: number }
+            return <div className="rounded-xl border border-border bg-card p-3 text-xs text-foreground shadow-lg"><strong>{punto.nombre}</strong><div>{dineroGrafica(punto.valor)} · {punto.dias.toFixed(1)} días</div></div>
+          }} />
+          <ZAxis type="number" dataKey="valor" range={[80, 420]} />
+          <Scatter data={datos} fill={PALETA[0]} fillOpacity={0.7} />
+        </ScatterChart>
+      </ResponsiveContainer>
+    </div>
+  )
+}
+
+const dineroGrafica = (valor: number) => new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(valor)
+
+export function MapaCalor({ filas, meses, formato }: {
+  filas: { nombre: string; valores: number[] }[]
+  meses: string[]
+  formato: Formato
+}) {
+  return (
+    <div className="max-h-[560px] overflow-auto" role="img" aria-label="Mapa de calor de venta mensual por proveedor">
+      <div className="grid min-w-max gap-1" style={{ gridTemplateColumns: `minmax(150px, 1.5fr) repeat(${meses.length}, minmax(65px, 1fr))` }}>
+        <span />
+        {meses.map((mes) => <span key={mes} className="text-center text-xs text-muted-foreground">{mes}</span>)}
+        {filas.map((fila) => {
+          const maximo = Math.max(1, ...fila.valores)
+          return <Fragment key={fila.nombre}>
+            <span className="truncate py-2 text-xs text-foreground" title={fila.nombre}>{fila.nombre}</span>
+            {fila.valores.map((valor, indice) => <span key={meses[indice]} title={`${fila.nombre} · ${meses[indice]}: ${formato(valor)}`} className="rounded-md py-2 text-center text-[11px] tabular-nums text-foreground" style={{ backgroundColor: `hsl(var(--primary) / ${0.06 + valor / maximo * 0.44})` }}>{compacto(valor)}</span>)}
+          </Fragment>
+        })}
+      </div>
+    </div>
+  )
 }

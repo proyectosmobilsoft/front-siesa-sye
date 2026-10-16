@@ -1,4 +1,6 @@
 import { clsx } from 'clsx'
+import { AnimatePresence, motion } from 'framer-motion'
+import { Area, AreaChart, ResponsiveContainer } from 'recharts'
 import { Inbox, Info, TrendingDown, TrendingUp, TriangleAlert, type LucideIcon } from 'lucide-react'
 import type { ReactNode } from 'react'
 import { useAyuda, type Ayuda } from './ayuda'
@@ -61,19 +63,30 @@ interface PropsTarjeta {
   variacion?: number | null
   /** Si subir es malo (ej. tasa de anulación), la flecha hacia arriba sale en rojo. */
   subirEsMalo?: boolean
+  serie?: number[]
+  compacta?: boolean
 }
 
 /** Total destacado (KPI). */
-export function Tarjeta({ etiqueta, valor, nota, tono = 'marca', icono: Icono, variacion, subirEsMalo, ayuda }: PropsTarjeta) {
+export function Tarjeta({ etiqueta, valor, nota, tono = 'marca', icono: Icono, variacion, subirEsMalo, ayuda, serie, compacta = false }: PropsTarjeta) {
   const info = useAyuda(ayuda)
   const t = TONOS[tono]
   const hayVariacion = variacion != null && Number.isFinite(variacion)
   const bueno = hayVariacion && (subirEsMalo ? variacion! <= 0 : variacion! >= 0)
   return (
-    <div ref={info.referencia as React.RefObject<HTMLDivElement>} onMouseEnter={info.mostrar} onMouseLeave={info.ocultar} className={clsx('flex items-center justify-between gap-3 rounded-3xl p-5', t.fondo)}>
+    <div ref={info.referencia as React.RefObject<HTMLDivElement>} onMouseEnter={info.mostrar} onMouseLeave={info.ocultar} className={clsx('flex items-center justify-between gap-3 rounded-3xl', compacta ? 'p-4' : 'p-5', t.fondo)}>
       <div className="min-w-0 text-left">
         <p className="flex items-center gap-1.5 text-[12.5px] font-medium text-muted-foreground">{etiqueta}{ayuda && <span tabIndex={0} role="img" aria-label={`Ayuda sobre ${etiqueta}`} aria-describedby={info.id} onFocus={info.mostrar} onBlur={info.ocultar} className="inline-flex cursor-help"><Info className="size-3.5" /></span>}</p>
-        <p className="mt-1 truncate text-[24px] leading-tight font-bold tracking-[-0.02em] text-foreground tabular-nums">{valor}</p>
+        <p className={clsx('mt-1 truncate leading-tight font-bold tracking-[-0.02em] text-foreground tabular-nums', compacta ? 'text-[20px]' : 'text-[24px]')}>{valor}</p>
+        {serie && serie.length > 1 && (
+          <div className="mt-1 h-8 w-full min-w-24" aria-label="Tendencia mensual">
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={serie.map((valor, indice) => ({ indice, valor }))}>
+                <Area dataKey="valor" type="monotone" stroke="hsl(var(--primary))" fill="hsl(var(--primary) / 0.12)" strokeWidth={2} dot={false} isAnimationActive={false} />
+              </AreaChart>
+            </ResponsiveContainer>
+          </div>
+        )}
         {(nota || hayVariacion) && (
           <p className="mt-0.5 flex flex-wrap items-center gap-x-2 text-[12px] text-muted-foreground">
             {hayVariacion && (
@@ -98,8 +111,8 @@ export function Tarjeta({ etiqueta, valor, nota, tono = 'marca', icono: Icono, v
 }
 
 /** Malla responsive: 1 columna en móvil, `n` desde tablet. */
-export function Malla({ columnas = 3, children, className }: { columnas?: 2 | 3 | 4 | 5; children: ReactNode; className?: string }) {
-  const c = { 2: 'lg:grid-cols-2', 3: 'sm:grid-cols-2 lg:grid-cols-3', 4: 'sm:grid-cols-2 lg:grid-cols-4', 5: 'sm:grid-cols-2 lg:grid-cols-5' }[columnas]
+export function Malla({ columnas = 3, children, className }: { columnas?: 2 | 3 | 4 | 5 | 6; children: ReactNode; className?: string }) {
+  const c = { 2: 'lg:grid-cols-2', 3: 'sm:grid-cols-2 lg:grid-cols-3', 4: 'sm:grid-cols-2 lg:grid-cols-4', 5: 'sm:grid-cols-2 lg:grid-cols-5', 6: 'sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6' }[columnas]
   return <div className={clsx('grid grid-cols-1 gap-4', c, className)}>{children}</div>
 }
 
@@ -218,4 +231,43 @@ export function Tabla<T>({ columnas, filas, clave, pie }: { columnas: Columna<T>
       </table>
     </div>
   )
+}
+
+/** Navegación compacta dentro del panel expandido. */
+export function SubPestanas({ opciones, activa, alElegir, children }: {
+  opciones: { valor: string; etiqueta: string }[]
+  activa: string
+  alElegir: (valor: string) => void
+  children: ReactNode
+}) {
+  return (
+    <div>
+      <nav className="sticky top-0 z-30 -mx-1 mb-4 overflow-x-auto bg-background/95 px-1 py-2 backdrop-blur" aria-label="Secciones del tablero">
+        <div className="flex w-max rounded-2xl bg-muted p-1" role="tablist">
+          {opciones.map((opcion) => (
+            <button
+              key={opcion.valor}
+              type="button"
+              role="tab"
+              aria-selected={activa === opcion.valor}
+              onClick={() => alElegir(opcion.valor)}
+              className={clsx('relative whitespace-nowrap rounded-xl px-3.5 py-2 text-[13px] font-medium', activa === opcion.valor ? 'text-foreground' : 'text-muted-foreground hover:text-foreground')}
+            >
+              {activa === opcion.valor && <motion.span layoutId="subpestana-activa" className="absolute inset-0 rounded-xl bg-card shadow-sm" transition={{ duration: 0.2 }} />}
+              <span className="relative">{opcion.etiqueta}</span>
+            </button>
+          ))}
+        </div>
+      </nav>
+      <AnimatePresence mode="wait">
+        <motion.div key={activa} role="tabpanel" initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }} transition={{ duration: 0.18 }}>
+          {children}
+        </motion.div>
+      </AnimatePresence>
+    </div>
+  )
+}
+
+export function BotonTabla({ visible, alAlternar }: { visible: boolean; alAlternar: () => void }) {
+  return <button type="button" onClick={alAlternar} className="rounded-xl bg-muted px-3 py-1.5 text-sm text-foreground">{visible ? 'Ocultar tabla' : 'Ver tabla'}</button>
 }
