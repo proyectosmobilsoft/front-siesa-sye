@@ -130,3 +130,33 @@ export interface DashboardVentas {
     porcentaje: number
   }[] // tabla estática del JSON
 }
+
+export interface DashboardCompras {
+  desde: string
+  hasta: string
+  periodo_anterior: Rango
+  kpis: {
+    compra: number
+    devoluciones: number
+    compra_neta: number
+    compra_neta_previa: number
+    kg: number
+    proveedores: number
+    documentos: number
+    tasa_devolucion: number | null
+  }
+  mensual: { mes: string; compra: number; devoluciones: number; compra_neta: number; kg: number }[]
+  proveedores: {
+    proveedor: string
+    nit: string | null
+    compra: number
+    devoluciones: number
+    compra_neta: number
+    participacion: number
+    compra_neta_previa: number
+    documentos: number
+    kg: number
+    mensual: { mes: string; compra_neta: number }[]
+  }[]
+  marcas: { marca: string; compra_neta: number }[]
+}

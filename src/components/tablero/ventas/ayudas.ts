@@ -33,7 +33,7 @@ export const AYUDAS = {
     formula: 'Venta ÷ kg',
   },
   proveedor: {
-    fuente: "Criterio de ítem 'PROVEEDOR' (plan 05) en SIESA.",
+    fuente: "Venta a clientes agrupada por la marca del ítem: criterio 'PROVEEDOR' (plan 05) en SIESA. No son compras al proveedor.",
     formula: 'Venta proveedor ÷ venta total',
   },
   cobertura: {

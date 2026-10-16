@@ -3,7 +3,7 @@ import { Areas } from '../graficas'
 import { TarjetaResumen } from '../Expandible'
 import { PALETA, compacto, dinero, etiquetaMes, porcentaje } from '../formato'
 import { AYUDAS } from './ayudas'
-import type { DashboardVentas } from './tipos'
+import type { DashboardCompras, DashboardVentas } from './tipos'
 import { colorCumplimiento } from './colores'
 
 interface ResumenRC {
@@ -14,10 +14,13 @@ interface ResumenRC {
   }
   mensual: { mes: string; facturado: number; recaudo_cartera: number }[]
 }
-type Vista = 'recaudo' | 'presupuesto' | 'proveedores'
+type Vista = 'recaudo' | 'presupuesto' | 'proveedores' | 'compras'
 export function Resumenes({
   recaudo,
   ventas,
+  compras,
+  cargaCompras,
+  errorCompras,
   cargaRecaudo,
   errorRecaudo,
   cargaVentas,
@@ -27,6 +30,9 @@ export function Resumenes({
 }: {
   recaudo?: ResumenRC
   ventas?: DashboardVentas
+  compras?: DashboardCompras
+  cargaCompras: boolean
+  errorCompras: boolean
   cargaRecaudo: boolean
   errorRecaudo: boolean
   cargaVentas: boolean
@@ -38,8 +44,9 @@ export function Resumenes({
     ventas?.proveedores
       .filter(p => p.proveedor !== 'OTROS PROVEEDORES')
       .slice(0, 5) ?? []
+  const topCompras = compras?.proveedores.filter(p => p.proveedor !== 'OTROS PROVEEDORES').slice(0, 5) ?? []
   return (
-    <Malla columnas={3}>
+    <Malla columnas={4}>
       <TarjetaResumen
         titulo="Recaudo de cartera"
         abierta={vista === 'recaudo'}
@@ -142,7 +149,7 @@ export function Resumenes({
         </CuerpoConsulta>
       </TarjetaResumen>
       <TarjetaResumen
-        titulo="Ventas por proveedor"
+        titulo="Ventas por marca/proveedor"
         abierta={vista === 'proveedores'}
         alAlternar={() => alElegir('proveedores')}
         ayuda={AYUDAS.proveedor}
@@ -176,6 +183,28 @@ export function Resumenes({
                   />
                 </div>
                 <span>{compacto(p.venta)}</span>
+              </div>
+            ))}
+          </div>
+        </CuerpoConsulta>
+      </TarjetaResumen>
+      <TarjetaResumen
+        titulo="Compras por proveedor"
+        abierta={vista === 'compras'}
+        alAlternar={() => alElegir('compras')}
+        ayuda={{ fuente: 'Entradas de almacén EA/EAF menos notas NP (devolución a proveedor) de SIESA, sin IVA.', formula: 'Compra neta = entradas − devoluciones' }}
+      >
+        <CuerpoConsulta consulta={{ isLoading: cargaCompras, isError: errorCompras }} altura="h-40">
+          <div className="text-2xl font-bold tabular-nums">{compras && dinero(compras.kpis.compra_neta)}</div>
+          <div className="mt-1 text-xs text-muted-foreground">Devoluciones {compras?.kpis.tasa_devolucion == null ? '—' : porcentaje(compras.kpis.tasa_devolucion)}</div>
+          <div className="mt-3 space-y-2">
+            {topCompras.map(p => (
+              <div key={`${p.nit}-${p.proveedor}`} className="flex items-center gap-2 text-[11px]">
+                <span className="w-24 truncate" title={p.proveedor}>{p.proveedor}</span>
+                <div className="h-2 flex-1 rounded-full bg-muted">
+                  <div className="h-full rounded-full bg-primary" style={{ width: `${topCompras[0]?.compra_neta ? Math.max(0, p.compra_neta / topCompras[0].compra_neta * 100) : 0}%` }} />
+                </div>
+                <span>{compacto(p.compra_neta)}</span>
               </div>
             ))}
           </div>

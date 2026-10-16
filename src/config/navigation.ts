@@ -82,82 +82,6 @@ export const navigation: NavItem[] = [
     subtitle: 'Resumen de pedidos, ventas y vendedores',
   },
   {
-    name: 'Maestros',
-    icon: Database,
-    subItems: [
-      {
-        name: 'Usuarios',
-        href: '/maestro/usuarios',
-        icon: UserPlus,
-        subtitle: 'Administración de usuarios del sistema',
-        permiso: PERMISOS.USUARIOS,
-      },
-      {
-        name: 'Roles',
-        href: '/maestro/roles',
-        icon: Shield,
-        subtitle: 'Administración de roles',
-        permiso: PERMISOS.ROLES,
-      },
-      // Módulos y Permisos: el catálogo que alimenta la pantalla de Roles.
-      // Permiso VER_MODULOS, asignado solo al rol Administrador.
-      {
-        name: 'Módulos y Permisos',
-        href: '/maestro/modulos',
-        icon: KeyRound,
-        subtitle: 'Catálogo de módulos y permisos del sistema',
-        permiso: PERMISOS.MODULOS,
-      },
-      // Cajas: permiso VER_CAJAS, asignado solo al rol Administrador
-      {
-        name: 'Cajas',
-        href: '/maestro/cajas',
-        icon: Archive,
-        subtitle: 'Cajas que se muestran en el tablero de tesorería',
-        permiso: PERMISOS.CAJAS,
-      },
-      // Cuentas Bancarias: permiso VER_CUENTAS_BANCARIAS, asignado solo al rol Administrador
-      {
-        name: 'Cuentas Bancarias',
-        href: '/maestro/cuentas-bancarias',
-        icon: Landmark,
-        subtitle: 'Whitelist de cuentas bancarias válidas para el recibo de caja',
-        permiso: PERMISOS.CUENTAS_BANCARIAS,
-      },
-      {
-        name: 'Descuentos Financieros',
-        href: '/maestro/descuentos-financieros',
-        icon: Percent,
-        subtitle: 'Condiciones y descuentos de pago',
-        permiso: PERMISOS.DESCUENTOS,
-      },
-      // Relación de Conceptos: permiso VER_CONCEPTOS, asignado solo al rol Administrador
-      {
-        name: 'Relación de Conceptos',
-        href: '/maestro/relacion-conceptos',
-        icon: ListChecks,
-        subtitle: 'Catálogo de conceptos de gasto operativo',
-        permiso: PERMISOS.CONCEPTOS,
-      },
-      // Maquinaria: solo lectura, los datos viven en la BD Vehiman
-      {
-        name: 'Maquinaria',
-        href: '/maestro/maquinaria',
-        icon: Truck,
-        subtitle: 'Inventario de equipos y maquinaria',
-        permiso: PERMISOS.MAQUINARIA,
-      },
-      // Interfaz Contable Vehículos: cuenta contable por placa de cada conductor
-      {
-        name: 'Interfaz Contable Vehículos',
-        href: '/maestro/interfaz-contable-vehiculos',
-        icon: Calculator,
-        subtitle: 'Cuenta contable asociada a cada placa del conductor',
-        permiso: PERMISOS.INTERFAZ_CONTABLE,
-      },
-    ],
-  },
-  {
     name: 'Comercial',
     icon: Store,
     subItems: [
@@ -326,6 +250,88 @@ export const navigation: NavItem[] = [
     ],
   },
   {
+    name: 'Propuesta',
+    href: '/propuesta',
+    icon: Presentation,
+    subtitle: 'Propuesta de integración ERP Siesa Zero-Impact',
+  },
+  {
+    name: 'Maestros',
+    icon: Database,
+    subItems: [
+      {
+        name: 'Usuarios',
+        href: '/maestro/usuarios',
+        icon: UserPlus,
+        subtitle: 'Administración de usuarios del sistema',
+        permiso: PERMISOS.USUARIOS,
+      },
+      {
+        name: 'Roles',
+        href: '/maestro/roles',
+        icon: Shield,
+        subtitle: 'Administración de roles',
+        permiso: PERMISOS.ROLES,
+      },
+      // Módulos y Permisos: el catálogo que alimenta la pantalla de Roles.
+      // Permiso VER_MODULOS, asignado solo al rol Administrador.
+      {
+        name: 'Módulos y Permisos',
+        href: '/maestro/modulos',
+        icon: KeyRound,
+        subtitle: 'Catálogo de módulos y permisos del sistema',
+        permiso: PERMISOS.MODULOS,
+      },
+      // Cajas: permiso VER_CAJAS, asignado solo al rol Administrador
+      {
+        name: 'Cajas',
+        href: '/maestro/cajas',
+        icon: Archive,
+        subtitle: 'Cajas que se muestran en el tablero de tesorería',
+        permiso: PERMISOS.CAJAS,
+      },
+      // Cuentas Bancarias: permiso VER_CUENTAS_BANCARIAS, asignado solo al rol Administrador
+      {
+        name: 'Cuentas Bancarias',
+        href: '/maestro/cuentas-bancarias',
+        icon: Landmark,
+        subtitle: 'Whitelist de cuentas bancarias válidas para el recibo de caja',
+        permiso: PERMISOS.CUENTAS_BANCARIAS,
+      },
+      {
+        name: 'Descuentos Financieros',
+        href: '/maestro/descuentos-financieros',
+        icon: Percent,
+        subtitle: 'Condiciones y descuentos de pago',
+        permiso: PERMISOS.DESCUENTOS,
+      },
+      // Relación de Conceptos: permiso VER_CONCEPTOS, asignado solo al rol Administrador
+      {
+        name: 'Relación de Conceptos',
+        href: '/maestro/relacion-conceptos',
+        icon: ListChecks,
+        subtitle: 'Catálogo de conceptos de gasto operativo',
+        permiso: PERMISOS.CONCEPTOS,
+      },
+      // Maquinaria: solo lectura, los datos viven en la BD Vehiman
+      {
+        name: 'Maquinaria',
+        href: '/maestro/maquinaria',
+        icon: Truck,
+        subtitle: 'Inventario de equipos y maquinaria',
+        permiso: PERMISOS.MAQUINARIA,
+      },
+      // Interfaz Contable Vehículos: cuenta contable por placa de cada conductor
+      {
+        name: 'Interfaz Contable Vehículos',
+        href: '/maestro/interfaz-contable-vehiculos',
+        icon: Calculator,
+        subtitle: 'Cuenta contable asociada a cada placa del conductor',
+        permiso: PERMISOS.INTERFAZ_CONTABLE,
+      },
+    ],
+  },
+  {
     name: 'Sistema',
     icon: Settings,
     subItems: [
@@ -343,12 +349,6 @@ export const navigation: NavItem[] = [
         subtitle: 'Documentación y soporte',
       },
     ],
-  },
-  {
-    name: 'Propuesta',
-    href: '/propuesta',
-    icon: Presentation,
-    subtitle: 'Propuesta de integración ERP Siesa Zero-Impact',
   },
 ]
 

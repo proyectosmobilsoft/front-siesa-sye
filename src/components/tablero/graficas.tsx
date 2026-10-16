@@ -105,7 +105,7 @@ export interface Serie {
 }
 
 /** Barras apiladas por categoría del eje X (ej. recaudo por mes: app + SIESA). */
-export function BarrasApiladas<T extends Record<string, unknown>>({ datos, ejeX, series, formato, altura = 300 }: { datos: T[]; ejeX: string; series: Serie[]; formato: Formato; altura?: number }) {
+export function BarrasApiladas<T extends Record<string, unknown>>({ datos, ejeX, series, formato, altura = 300, agrupadas = false }: { datos: T[]; ejeX: string; series: Serie[]; formato: Formato; altura?: number; agrupadas?: boolean }) {
   return (
     <div style={{ height: altura }} role="img" aria-label="Gráfica de barras apiladas">
       <ResponsiveContainer width="100%" height="100%">
@@ -120,12 +120,12 @@ export function BarrasApiladas<T extends Record<string, unknown>>({ datos, ejeX,
               key={s.clave}
               dataKey={s.clave}
               name={s.nombre}
-              stackId="pila"
+              stackId={agrupadas ? undefined : 'pila'}
               fill={s.color}
               // Separación de 2px entre segmentos con el color de la tarjeta.
               stroke="hsl(var(--card))"
               strokeWidth={2}
-              radius={i === series.length - 1 ? [6, 6, 0, 0] : [0, 0, 0, 0]}
+              radius={agrupadas || i === series.length - 1 ? [6, 6, 0, 0] : [0, 0, 0, 0]}
               maxBarSize={44}
               animationDuration={600}
             />

@@ -230,7 +230,7 @@ export function VentasProveedores({
         {activa === 'mensual' && (
           <>
             <Bloque
-              titulo="Venta mensual por proveedor"
+              titulo="Venta mensual por marca/proveedor"
               accion={
                 <BotonTabla
                   visible={!!tablas.mensual}
