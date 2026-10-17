@@ -274,12 +274,13 @@ export function MapaCalor({ filas, meses, formato }: {
   return (
     <div className="max-h-[560px] overflow-auto" role="img" aria-label="Mapa de calor de venta mensual por proveedor">
       <div className="grid min-w-max gap-1" style={{ gridTemplateColumns: `minmax(150px, 1.5fr) repeat(${meses.length}, minmax(65px, 1fr))` }}>
-        <span />
-        {meses.map((mes) => <span key={mes} className="text-center text-xs text-muted-foreground">{mes}</span>)}
+        {/* Encabezado de meses y columna de nombres fijos al desplazarse. */}
+        <span className="sticky left-0 top-0 z-20 bg-card py-1 text-xs font-medium text-muted-foreground">Proveedor</span>
+        {meses.map((mes) => <span key={mes} className="sticky top-0 z-10 bg-card py-1 text-center text-xs font-medium text-muted-foreground">{mes}</span>)}
         {filas.map((fila) => {
           const maximo = Math.max(1, ...fila.valores)
           return <Fragment key={fila.nombre}>
-            <span className="truncate py-2 text-xs text-foreground" title={fila.nombre}>{fila.nombre}</span>
+            <span className="sticky left-0 z-10 truncate bg-card py-2 pr-2 text-xs text-foreground" title={fila.nombre}>{fila.nombre}</span>
             {fila.valores.map((valor, indice) => <span key={meses[indice]} title={`${fila.nombre} · ${meses[indice]}: ${formato(valor)}`} className="rounded-md py-2 text-center text-[11px] tabular-nums text-foreground" style={{ backgroundColor: `hsl(var(--primary) / ${0.06 + valor / maximo * 0.44})` }}>{compacto(valor)}</span>)}
           </Fragment>
         })}
