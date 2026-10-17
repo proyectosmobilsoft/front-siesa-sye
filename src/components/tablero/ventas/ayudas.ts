@@ -3,7 +3,7 @@ import type { Ayuda } from '../ayuda'
 export const AYUDAS = {
   venta: {
     fuente:
-      'SIESA: facturas + remisiones aún no facturadas − notas crédito; solo ítems de inventario; ambos C.O.; excluye ALANG S.A.S. (igual que el Excel).',
+      'SIESA: facturas + remisiones aún no facturadas − notas crédito y devoluciones de remisión (DMA); mercancía + descuento comercial; sin transporte, arrendamiento ni negocios especiales (vendedor DISTRIBUCIONES SYE); ambos C.O. Igual que el Excel "Ventas por ítem" de comercial.',
     formula: 'Σ (valor bruto − descuentos), sin IVA',
   },
   meta: {

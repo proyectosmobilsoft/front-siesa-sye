@@ -11,7 +11,7 @@ export interface DashboardVentas {
   fuente: {
     presupuesto: string // texto "fuente" del JSON
     anio_presupuesto: number // 2026
-    clientes_excluidos: string[] // ["ALANG S.A.S."]
+    clientes_excluidos: string[] // vacío desde 2026-10-17 (ALANG sí cuenta)
     meses_con_meta: number // fracción de meses del rango cubiertos por el presupuesto (ej. 9.5)
   }
   kpis: {
