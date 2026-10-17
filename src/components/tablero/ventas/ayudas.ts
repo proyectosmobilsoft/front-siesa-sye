@@ -7,16 +7,16 @@ export const AYUDAS = {
     formula: 'Σ (valor bruto − descuentos), sin IVA',
   },
   meta: {
-    fuente: 'Excel PRESUPUESTO 2026: meta mensual por línea × asesor.',
+    fuente: 'Excel PRESUPUESTO 2026: meta mensual por línea × vendedor.',
     formula: 'Σ meta mensual × (días del rango en el mes ÷ días del mes)',
   },
   cumplimiento: {
     fuente:
-      'Venta SIESA de asesores con presupuesto y meta del Excel PRESUPUESTO 2026.',
-    formula: 'Venta de asesores con presupuesto ÷ meta del periodo',
+      'Venta SIESA de vendedores con presupuesto y meta del Excel PRESUPUESTO 2026.',
+    formula: 'Venta de vendedores con presupuesto ÷ meta del periodo',
   },
   gerencia: {
-    fuente: "Meta mensual por asesor (bloque 'Meta para agosto' del Excel).",
+    fuente: "Meta mensual por vendedor (bloque 'Meta para agosto' del Excel).",
     formula: 'Σ meta mensual × (días del rango en el mes ÷ días del mes)',
   },
   proyeccion: {

@@ -357,7 +357,7 @@ export function VentasProveedores({
         {activa === 'cobertura' && (
           <>
             <Bloque
-              titulo="Cobertura de líneas foco por asesor"
+              titulo="Cobertura de líneas foco por vendedor"
               accion={
                 <BotonTabla
                   visible={!!tablas.cobertura}
@@ -387,7 +387,7 @@ export function VentasProveedores({
                   clave={a => a.asesor}
                   columnas={[
                     {
-                      titulo: 'Asesor',
+                      titulo: 'Vendedor',
                       celda: a => (
                         <span className="font-medium text-foreground">
                           {a.asesor}
@@ -472,7 +472,7 @@ export function VentasProveedores({
                         </span>
                       ),
                     },
-                    { titulo: 'Asesor', celda: c => c.asesor },
+                    { titulo: 'Vendedor', celda: c => c.asesor },
                     {
                       titulo: 'Venta foco',
                       alinear: 'der',

@@ -12,6 +12,7 @@ import {
   BarrasConMeta,
   BarrasCumplimiento,
   BarrasComparadas,
+  BarrasH,
 } from '../graficas'
 import {
   decimal,
@@ -48,7 +49,7 @@ function Lectura({ d }: { d: DashboardVentas }) {
     grupos.length > 0 &&
       `Grupo más atrasado: ${grupos[0].nombre} (${textoPct(grupos[0].cumplimiento)}). Más adelantado: ${grupos[grupos.length - 1].nombre} (${textoPct(grupos[grupos.length - 1].cumplimiento)}).`,
     asesores.length > 0 &&
-      `Mejor asesor: ${asesores[asesores.length - 1].nombre} (${textoPct(asesores[asesores.length - 1].cumplimiento)}). Peor: ${asesores[0].nombre} (${textoPct(asesores[0].cumplimiento)}).`,
+      `Mejor vendedor: ${asesores[asesores.length - 1].nombre} (${textoPct(asesores[asesores.length - 1].cumplimiento)}). Peor: ${asesores[0].nombre} (${textoPct(asesores[0].cumplimiento)}).`,
     bajas.length > 0 &&
       `Líneas por debajo del 50 %: ${bajas.map(l => l.nombre).join(', ')}.`,
     mes &&
@@ -64,7 +65,7 @@ function Lectura({ d }: { d: DashboardVentas }) {
       descripcion="Señales principales del presupuesto"
       accion={<Lightbulb className="size-5 text-amber-500" />}
       ayuda={{
-        fuente: 'KPIs, grupos, asesores y líneas del presupuesto 2026.',
+        fuente: 'KPIs, grupos, vendedores y líneas del presupuesto 2026.',
         formula: 'Comparación de ventas y metas prorrateadas del periodo.',
       }}
     >
@@ -95,12 +96,13 @@ export function VentasPresupuesto({
   const alternar = (clave: string) =>
     setTablas(actual => ({ ...actual, [clave]: !actual[clave] }))
   const opciones = [
-    'Resumen',
-    'Asesores',
-    'Líneas',
-    'Matriz',
-    'Descuentos',
-  ].map(etiqueta => ({ etiqueta, valor: etiqueta.toLowerCase() }))
+    { etiqueta: 'Resumen', valor: 'resumen' },
+    { etiqueta: 'Vendedores', valor: 'asesores' },
+    { etiqueta: 'Por C.O.', valor: 'centros' },
+    { etiqueta: 'Líneas', valor: 'líneas' },
+    { etiqueta: 'Matriz', valor: 'matriz' },
+    { etiqueta: 'Descuentos', valor: 'descuentos' },
+  ]
   const activa = opciones.some(opcion => opcion.valor === sub) ? sub : 'resumen'
   const diasRango = Math.max(
     1,
@@ -118,6 +120,18 @@ export function VentasPresupuesto({
       (a.grupo ?? 'ZZZ').localeCompare(b.grupo ?? 'ZZZ') || b.venta - a.venta
   )
   const conMeta = d.asesores.filter(a => a.meta != null)
+  const filasCentros: { tipo: 'co' | 'vendedor' | 'total'; clave: string; nombre: string; venta: number; venta_previa: number }[] = d.centros.flatMap(co => [
+    { tipo: 'co' as const, clave: `co-${co.id}`, nombre: `Total ${co.id} · ${co.nombre}`, venta: co.venta, venta_previa: co.venta_previa },
+    ...co.vendedores.map(vendedor => ({
+      tipo: 'vendedor' as const, clave: `${co.id}-${vendedor.nombre}`,
+      nombre: vendedor.nombre, venta: vendedor.venta, venta_previa: vendedor.venta_previa,
+    })),
+  ])
+  filasCentros.push({ tipo: 'total', clave: 'total-general', nombre: 'Total general', venta: k.venta, venta_previa: k.venta_previa })
+  const ayudaCentros = {
+    fuente: "SIESA, C.O. del movimiento ('Desc. C.O. movto.'); Peña Torres, Ávila Bolívar y Montoya van completos a Alemateriales, como en la hoja HT de comercial.",
+    formula: 'Venta por C.O. y vendedor; participación = venta del C.O. ÷ venta total; variación = (venta − venta previa) ÷ venta previa.',
+  }
   const columnas = [...d.lineas.filter(l => l.meta != null)].sort(
     (a, b) =>
       Number(b.mide_kg || b.mide_unidades) -
@@ -252,12 +266,12 @@ export function VentasPresupuesto({
               />
               <Tarjeta
                 compacta
-                etiqueta="Asesores en meta"
+                etiqueta="Vendedores en meta"
                 valor={`${entero(d.asesores.filter(a => a.cumplimiento != null && a.cumplimiento >= 1).length)} de ${entero(d.asesores.filter(a => a.cumplimiento != null).length)}`}
                 ayuda={{
                   fuente: AYUDAS.meta.fuente,
                   formula:
-                    'Asesores con cumplimiento ≥ 100 % ÷ asesores con meta',
+                    'Vendedores con cumplimiento ≥ 100 % ÷ vendedores con meta',
                 }}
               />
               <Tarjeta
@@ -322,7 +336,7 @@ export function VentasPresupuesto({
                 titulo="Cumplimiento por grupo"
                 ayuda={{
                   fuente: AYUDAS.meta.fuente,
-                  formula: 'Venta de asesores del grupo ÷ meta del grupo',
+                  formula: 'Venta de vendedores del grupo ÷ meta del grupo',
                 }}
               >
                 <BarrasCumplimiento
@@ -340,7 +354,7 @@ export function VentasPresupuesto({
         {activa === 'asesores' && (
           <>
             <Bloque
-              titulo="Asesores"
+              titulo="Vendedores"
               accion={
                 <BotonTabla
                   visible={!!tablas.asesores}
@@ -350,7 +364,7 @@ export function VentasPresupuesto({
               ayuda={{
                 fuente: `${AYUDAS.venta.fuente} ${AYUDAS.meta.fuente}`,
                 formula:
-                  'Venta y meta agrupadas por asesor; faltante = meta − venta.',
+                  'Venta y meta agrupadas por vendedor; faltante = meta − venta.',
               }}
             >
               <BarrasComparadas
@@ -369,7 +383,7 @@ export function VentasPresupuesto({
                   pie={`Total · Venta ${dinero(d.asesores.reduce((s, a) => s + a.venta, 0))} · Meta ${dinero(conMeta.reduce((s, a) => s + (a.meta ?? 0), 0))}`}
                   columnas={[
                     {
-                      titulo: 'Asesor',
+                      titulo: 'Vendedor',
                       celda: a => (
                         <span className="font-medium text-foreground">
                           {a.nombre}
@@ -414,6 +428,63 @@ export function VentasPresupuesto({
                       titulo: 'Cumpl. gerencia',
                       alinear: 'der',
                       celda: a => textoPct(a.cumplimiento_gerencia),
+                    },
+                  ]}
+                />
+              )}
+            </Bloque>
+          </>
+        )}
+        {activa === 'centros' && (
+          <>
+            <Malla columnas={3}>
+              {d.centros.map(co => (
+                <Tarjeta
+                  key={co.id}
+                  compacta
+                  etiqueta={`${co.id} · ${co.nombre}`}
+                  valor={dinero(co.venta)}
+                  variacion={variacion(co.venta, co.venta_previa)}
+                  nota={`${porcentaje(co.participacion)} de la venta total`}
+                  ayuda={ayudaCentros}
+                />
+              ))}
+            </Malla>
+            <Bloque titulo="Venta por C.O. y vendedor" ayuda={ayudaCentros}>
+              <BarrasH
+                datos={d.centros.flatMap(co => co.vendedores
+                  .filter(vendedor => vendedor.venta !== 0)
+                  .map(vendedor => ({ nombre: `${co.id} · ${vendedor.nombre}`, valor: vendedor.venta })))}
+                formato={dinero}
+                nombreValor="Venta"
+                anchoEtiqueta={230}
+              />
+            </Bloque>
+            <Bloque
+              titulo="Detalle por C.O. y vendedor"
+              ayuda={ayudaCentros}
+              accion={<BotonTabla visible={!!tablas.centros} alAlternar={() => alternar('centros')} />}
+            >
+              {tablas.centros && (
+                <Tabla
+                  filas={filasCentros}
+                  clave={fila => fila.clave}
+                  columnas={[
+                    {
+                      titulo: 'C.O. / Vendedor',
+                      celda: fila => <span className={fila.tipo === 'vendedor' ? 'pl-5' : 'font-semibold text-foreground'}>{fila.nombre}</span>,
+                    },
+                    {
+                      titulo: 'Venta', alinear: 'der',
+                      celda: fila => <span className={fila.tipo === 'vendedor' ? '' : 'font-semibold text-foreground'}>{dinero(fila.venta)}</span>,
+                    },
+                    {
+                      titulo: 'Venta previa', alinear: 'der',
+                      celda: fila => <span className={fila.tipo === 'vendedor' ? '' : 'font-semibold text-foreground'}>{dinero(fila.venta_previa)}</span>,
+                    },
+                    {
+                      titulo: 'Variación', alinear: 'der',
+                      celda: fila => <span className={fila.tipo === 'vendedor' ? '' : 'font-semibold text-foreground'}>{textoPct(variacion(fila.venta, fila.venta_previa))}</span>,
                     },
                   ]}
                 />
@@ -520,12 +591,12 @@ export function VentasPresupuesto({
         {activa === 'matriz' && (
           <>
             <Bloque
-              titulo="Matriz asesor × línea"
+              titulo="Matriz vendedor × línea"
               ayuda={{
                 fuente:
-                  'Venta SIESA y metas por línea × asesor del Excel PRESUPUESTO 2026.',
+                  'Venta SIESA y metas por línea × vendedor del Excel PRESUPUESTO 2026.',
                 formula:
-                  'Cada celda = venta del asesor en la línea ÷ meta de esa combinación.',
+                  'Cada celda = venta del vendedor en la línea ÷ meta de esa combinación.',
               }}
             >
               <div className="overflow-x-auto">
@@ -533,7 +604,7 @@ export function VentasPresupuesto({
                   <thead>
                     <tr>
                       <th className="sticky left-0 z-10 bg-card p-2 text-left">
-                        Asesor
+                        Vendedor
                       </th>
                       {columnas.map(l => (
                         <th

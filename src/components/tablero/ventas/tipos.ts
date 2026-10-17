@@ -68,6 +68,19 @@ export interface DashboardVentas {
     clientes: number
     kg: number
   }[] // ordenado por venta desc
+  centros: {
+    id: string
+    nombre: string
+    venta: number
+    venta_previa: number
+    participacion: number
+    vendedores: {
+      nombre: string
+      grupo: string | null
+      venta: number
+      venta_previa: number
+    }[]
+  }[]
   lineas: {
     id: string
     nombre: string
