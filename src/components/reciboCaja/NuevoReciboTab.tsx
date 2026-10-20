@@ -216,6 +216,8 @@ export function NuevoReciboTab({ onCreated }: { onCreated: () => void }) {
     const sufijo = `${SEP}${notasAutomaticas}`
     if (valor.endsWith(sufijo)) { cursorNotas.current = cursor; setObservacion(valor.slice(0, valor.length - sufijo.length)); return }
     if (valor === notasAutomaticas) { cursorNotas.current = cursor; setObservacion(''); return }
+    // Sin texto de la persona todavía (solo se ve lo automático): lo que se escribe delante pasa a ser su texto
+    if (!observacion && valor.endsWith(notasAutomaticas)) { cursorNotas.current = cursor; setObservacion(valor.slice(0, valor.length - notasAutomaticas.length)); return }
     // Tocó la parte automática: queda como texto libre hasta que vuelva a la sugerencia
     setNotasManual(valor)
   }
@@ -256,7 +258,7 @@ export function NuevoReciboTab({ onCreated }: { onCreated: () => void }) {
         const res = await apiClient.get<{ proximoConsecutivo?: { f022_cons_proximo?: number }; data?: { f022_cons_proximo?: number }; f022_cons_proximo?: number }>('/recibo-caja/proximo-consecutivo', { params: { id_cia: 1, id_tipo_docto: 'RC', id_co: co, p_bloquear: 0, p_leer_mandato_tipo: 0 } })
         const consecutivo = numero(res.data.proximoConsecutivo?.f022_cons_proximo ?? res.data.data?.f022_cons_proximo ?? res.data.f022_cons_proximo)
         if (!consecutivo) throw new Error('No se recibió un consecutivo válido')
-        const payload = armarPayloadRC({ clienteId: cliente.f9740_id, facturas, descuentos: descuentosEfectivos, aplicar, pagos, parametros, observacion, usuario: sesion?.usuario ?? '?', co, caja, consecutivo, ahora: new Date() })
+        const payload = armarPayloadRC({ clienteId: cliente.f9740_id, facturas, descuentos: descuentosEfectivos, aplicar, pagos, parametros, observacion: notasManual?.trim() || observacion, usuario: sesion?.usuario ?? '?', co, caja, consecutivo, ahora: new Date() })
         if (notasManual !== null) payload.p_notas = notasManual.trim()
         if (requiereConfirmacion) payload.p_confirmaciones_transferencia = confirmacionesIds
         intento.current = { key: crypto.randomUUID(), payload }
