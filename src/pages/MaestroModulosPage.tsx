@@ -10,6 +10,7 @@ import {
     Shield,
     Search,
     Info,
+    ChevronRight,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -20,7 +21,7 @@ import {
     PermisoDeModulo,
     TipoPermiso,
 } from '@/api/seguridad'
-import { organizarPorSidebar } from '@/components/maestros/permisosSidebar'
+import { agruparPorMenu, organizarPorSidebar } from '@/components/maestros/permisosSidebar'
 import { EnlacesPersonalizados, NuevoModuloPersonalizadoModal } from '@/components/maestros/ModulosPersonalizados'
 import { esPersonalizado, MENU_PERSONALIZADO_KEY } from '@/api/menuPersonalizado'
 import { ICONOS_MENU, iconoMenu } from '@/config/iconosMenu'
@@ -114,6 +115,9 @@ export const MaestroModulosPage = () => {
 
     // Lista ordenada y agrupada como el sidebar; cada módulo sigue siendo el de BD
     const modulosMenu = useMemo(() => organizarPorSidebar(modulos, { dividir: false }), [modulos])
+    // Ramas del árbol Menú ▸ Submenú ▸ Acciones: los menús abiertos a mano (el del submenú seleccionado y los de una búsqueda siempre se ven)
+    const [menusAbiertos, setMenusAbiertos] = useState<Set<string>>(new Set())
+    const alternarMenu = (menu: string) => setMenusAbiertos((prev) => { const sig = new Set(prev); if (sig.has(menu)) sig.delete(menu); else sig.add(menu); return sig })
     const sa = (t: string) => t.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
 
     const modulosFiltrados = modulosMenu.filter((m) => {
@@ -287,34 +291,48 @@ export const MaestroModulosPage = () => {
                             No se encontraron módulos.
                         </div>
                     ) : (
-                        modulosFiltrados.map((m, i) => (
-                          <div key={m.codigo}>
-                            {(i === 0 || modulosFiltrados[i - 1].grupoMenu !== m.grupoMenu) && (
-                                <p className="sticky top-0 z-10 border-b bg-muted/60 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground backdrop-blur">{m.grupoMenu}</p>
-                            )}
-                            <button
-                                type="button"
-                                onClick={() => setSeleccionado(m.id)}
-                                className={`flex w-full items-center gap-3 border-b px-3 py-2.5 text-left transition-colors last:border-0 ${
-                                    m.id === seleccionado ? 'bg-primary/10' : 'hover:bg-muted/40'
-                                }`}
-                            >
-                                <div className="min-w-0 flex-1">
-                                    <div className="flex items-center gap-2">
-                                        <span className="truncate text-sm font-semibold">{m.nombre}</span>
-                                        {m.estado === false && (
-                                            <span className={`rounded-full px-1.5 py-0.5 text-[10px] font-semibold ${badgeClass('red')}`}>
-                                                Inactivo
-                                            </span>
-                                        )}
-                                    </div>
-                                    <p className="truncate text-[11px] text-muted-foreground">{esPersonalizado(m.codigo) ? 'Sección del menú' : m.paginas ? `Menú: ${m.paginas}` : 'Sin página en el menú'}</p>
-                                    {!esPersonalizado(m.codigo) && <p className="truncate font-mono text-[10px] text-muted-foreground/70">{m.codigo}</p>}
+                        agruparPorMenu(modulosFiltrados).map(({ menu, modulos: submenus }) => {
+                            const abierto = !!search.trim() || menusAbiertos.has(menu) || submenus.some((m) => m.id === seleccionado)
+                            return (
+                                <div key={menu} className="border-b last:border-0">
+                                    {/* Nivel 1: menú */}
+                                    <button type="button" onClick={() => alternarMenu(menu)} aria-expanded={abierto}
+                                        className="flex w-full items-center gap-2 bg-muted/50 px-3 py-2 text-left hover:bg-muted/70">
+                                        <ChevronRight className={`h-4 w-4 shrink-0 text-muted-foreground transition-transform ${abierto ? 'rotate-90' : ''}`} />
+                                        <span className="flex-1 truncate text-xs font-bold uppercase tracking-wider">{menu}</span>
+                                        <span className="shrink-0 text-xs text-muted-foreground">{submenus.length}</span>
+                                    </button>
+                                    {abierto && submenus.map((m) => (
+                                        <div key={m.codigo}>
+                                            {/* Nivel 2: submenú */}
+                                            <button type="button" onClick={() => setSeleccionado(m.id)}
+                                                className={`flex w-full items-center gap-3 border-t px-3 py-2 pl-8 text-left transition-colors ${m.id === seleccionado ? 'bg-primary/10' : 'hover:bg-muted/40'}`}>
+                                                <div className="min-w-0 flex-1">
+                                                    <div className="flex items-center gap-2">
+                                                        <span className="truncate text-sm font-semibold">{m.nombre}</span>
+                                                        {m.estado === false && (
+                                                            <span className={`rounded-full px-1.5 py-0.5 text-[10px] font-semibold ${badgeClass('red')}`}>Inactivo</span>
+                                                        )}
+                                                    </div>
+                                                    {!esPersonalizado(m.codigo) && m.paginas && <p className="truncate text-[11px] text-muted-foreground">Menú: {m.paginas}</p>}
+                                                </div>
+                                                <span className="shrink-0 text-xs text-muted-foreground">{m.permisos.length}</span>
+                                            </button>
+                                            {/* Nivel 3: acciones del submenú seleccionado */}
+                                            {m.id === seleccionado && !esPersonalizado(m.codigo) && (
+                                                <ul className="space-y-0.5 bg-primary/5 py-1.5 pl-14 pr-3">
+                                                    {m.permisos.map((p) => (
+                                                        <li key={p.id} className="truncate text-xs text-muted-foreground" title={p.codigo}>
+                                                            {p.tipo === 'VISTA' ? 'Entrar a la pantalla' : p.etiqueta}
+                                                        </li>
+                                                    ))}
+                                                </ul>
+                                            )}
+                                        </div>
+                                    ))}
                                 </div>
-                                <span className="shrink-0 text-xs text-muted-foreground">{m.permisos.length}</span>
-                            </button>
-                          </div>
-                        ))
+                            )
+                        })
                     )}
                 </div>
 

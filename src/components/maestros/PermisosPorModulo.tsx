@@ -1,68 +1,33 @@
-import { useState, useEffect, useMemo, useRef } from 'react'
-import {
-    Plus,
-    Search,
-    X,
-    ChevronDown,
-    Check,
-    Loader2,
-    Shield,
-    LayoutDashboard,
-    Receipt,
-    Wallet,
-    ClipboardList,
-    Banknote,
-    Archive,
-    ListChecks,
-    Truck,
-    UserCircle,
-    type LucideIcon,
-} from 'lucide-react'
-import { Button } from '@/components/ui/button'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { ChevronRight, Loader2, Search } from 'lucide-react'
 import { Input } from '@/components/ui/input'
-import { ModuloPermisos, PermisoDeModulo } from '@/api/seguridad'
-import { organizarPorSidebar, type ModuloMenu } from './permisosSidebar'
+import type { ModuloPermisos, PermisoDeModulo } from '@/api/seguridad'
+import { agruparPorMenu, organizarPorSidebar, type ModuloMenu } from './permisosSidebar'
 
 /**
- * Selector de permisos agrupados por módulo para el formulario de Roles.
+ * Selector de permisos de un rol, como un árbol igual al menú lateral:
  *
- * Reemplaza la lista plana de códigos (donde había que saberse de memoria que
- * VER_ANTICIPO_TAB_RECHAZADA pertenece a Egreso): aquí se agrega un módulo y
- * se marcan las acciones que necesita el rol.
+ *   Menú (Tesorería)  ▸  Submenú (Recibo de Caja)  ▸  Acciones (ver, crear, anular…)
  *
- * La agrupación NO vive aquí: viene de auth_modulos vía GET /auth-secundario/
- * modulos, así que un permiso nuevo aparece solo sin tocar este archivo.
- *
- * El permiso VISTA de un módulo agregado va marcado y bloqueado: el API lo
- * agrega de todas formas al guardar, porque una acción sin acceso al módulo no
- * sirve de nada. Aquí solo se refleja esa regla para que no sorprenda.
+ * La estructura sale de permisosSidebar.ts (navigation.ts + auth_modulos). El permiso de acceso
+ * (VISTA) de cada submenú es la puerta: marcarlo da entrada a la pantalla; desmarcarlo quita
+ * también sus acciones, porque una acción sin acceso a la pantalla no sirve de nada (el API
+ * además agrega el VISTA al guardar si el rol tiene cualquier acción del submenú).
  */
 
-const ICONOS: Record<string, LucideIcon> = {
-    LayoutDashboard,
-    Receipt,
-    Wallet,
-    ClipboardList,
-    Banknote,
-    Archive,
-    ListChecks,
-    Truck,
-    UserCircle,
+const sinAcentos = (t: string) => t.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim()
+
+const ETIQUETA_TIPO: Record<string, string> = { TAB: 'pestaña', ESPECIAL: 'especial' }
+
+type Estado = 'todos' | 'algunos' | 'ninguno'
+const estadoDe = (marcados: number, total: number): Estado => (marcados === 0 ? 'ninguno' : marcados === total ? 'todos' : 'algunos')
+
+/** Casilla de tres estados (marcada, parcial, vacía) */
+function Casilla({ estado, onChange, label }: { estado: Estado; onChange: () => void; label: string }) {
+    const ref = useRef<HTMLInputElement>(null)
+    useEffect(() => { if (ref.current) ref.current.indeterminate = estado === 'algunos' }, [estado])
+    return <input ref={ref} type="checkbox" aria-label={label} checked={estado === 'todos'} onChange={onChange} className="h-4 w-4 shrink-0 rounded border-input" />
 }
-
-const sinAcentos = (t: string) => t.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim()
-
-const iconoDe = (nombre?: string | null): LucideIcon => (nombre && ICONOS[nombre]) || Shield
-
-/** Títulos de las secciones dentro de la tarjeta de un módulo. */
-const TITULO_SECCION: Record<string, string> = {
-    VISTA: 'Acceso',
-    ACCION: 'Acciones',
-    TAB: 'Pestañas visibles',
-    ESPECIAL: 'Especial',
-}
-
-const ORDEN_SECCION = ['VISTA', 'ACCION', 'TAB', 'ESPECIAL']
 
 interface Props {
     modulos: ModuloPermisos[]
@@ -70,117 +35,53 @@ interface Props {
     /** IDs de permisos seleccionados */
     seleccion: number[]
     onChange: (ids: number[]) => void
-    /**
-     * Cambia cuando el formulario pasa a otro rol (id del rol o 'nuevo'):
-     * reinicia qué módulos aparecen desplegados en la lista.
-     */
+    /** Cambia cuando el formulario pasa a otro rol: reinicia qué ramas están abiertas */
     resetKey: string
 }
 
 export const PermisosPorModulo = ({ modulos: modulosBd, loading, seleccion, onChange, resetKey }: Props) => {
-    // Se presentan agrupados como el sidebar; ver permisosSidebar.ts
     const modulos = useMemo(() => organizarPorSidebar(modulosBd), [modulosBd])
-    // Códigos de módulo visibles en el formulario. Se distingue de "tiene
-    // permisos marcados" para poder agregar un módulo y todavía no marcar nada.
-    const [agregados, setAgregados] = useState<string[]>([])
-    const [expandidos, setExpandidos] = useState<string[]>([])
-    const [dropdownOpen, setDropdownOpen] = useState(false)
-    const [search, setSearch] = useState('')
-    const dropdownRef = useRef<HTMLDivElement>(null)
-
     const seleccionSet = useMemo(() => new Set(seleccion), [seleccion])
+    const [abiertos, setAbiertos] = useState<Set<string>>(new Set())
+    const [search, setSearch] = useState('')
 
-    // Al abrir el formulario de otro rol, los módulos que ya tienen permisos
-    // asignados aparecen agregados.
-    useEffect(() => {
-        const conPermisos = modulos
-            .filter((m) => m.permisos.some((p) => seleccionSet.has(p.id)))
-            .map((m) => m.codigo)
-        setAgregados(conPermisos)
-        // Contraídos al abrir: un rol con varios módulos llenaba el formulario
-        // de checkboxes antes de que el usuario supiera qué venía a cambiar.
-        setExpandidos([])
-        setSearch('')
-        setDropdownOpen(false)
-        // Depende solo de resetKey/modulos a propósito: si dependiera de la
-        // selección, quitar el último permiso de un módulo lo haría desaparecer
-        // mientras el usuario lo está editando.
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [resetKey, modulos])
+    useEffect(() => { setAbiertos(new Set()); setSearch('') }, [resetKey, modulosBd])
 
-    useEffect(() => {
-        const handleClickOutside = (e: MouseEvent) => {
-            if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
-                setDropdownOpen(false)
-            }
-        }
-        document.addEventListener('mousedown', handleClickOutside)
-        return () => document.removeEventListener('mousedown', handleClickOutside)
-    }, [])
-
-    const modulosAgregados = modulos.filter((m) => agregados.includes(m.codigo))
-    const disponibles = modulos.filter((m) => {
-        if (agregados.includes(m.codigo)) return false
-        if (!search.trim()) return true
+    const buscando = search.trim().length > 0
+    const visibles = useMemo(() => {
+        if (!buscando) return modulos
         const q = sinAcentos(search)
-        return (
-            sinAcentos(m.nombre).includes(q) ||
-            sinAcentos(m.grupoMenu).includes(q) ||
-            m.permisos.some((p) => sinAcentos(p.codigo).includes(q) || sinAcentos(p.etiqueta).includes(q))
-        )
-    })
+        return modulos.filter((m) =>
+            sinAcentos(m.nombre).includes(q) || sinAcentos(m.grupoMenu).includes(q) ||
+            m.permisos.some((p) => sinAcentos(p.codigo).includes(q) || sinAcentos(p.etiqueta).includes(q)))
+    }, [modulos, search, buscando])
+    const menus = useMemo(() => agruparPorMenu(visibles), [visibles])
 
-    const permisoVista = (m: ModuloMenu) => m.permisos.find((p) => p.tipo === 'VISTA')
+    const alternarRama = (clave: string) =>
+        setAbiertos((prev) => { const sig = new Set(prev); if (sig.has(clave)) sig.delete(clave); else sig.add(clave); return sig })
+    const estaAbierta = (clave: string) => buscando || abiertos.has(clave)
 
-    const agregarModulo = (m: ModuloMenu) => {
-        setAgregados((prev) => [...prev, m.codigo])
-        setExpandidos((prev) => [...prev, m.codigo])
-        setDropdownOpen(false)
-        setSearch('')
-        // Agregar un módulo significa, como mínimo, poder entrar a él
-        const vista = permisoVista(m)
-        if (vista && !seleccionSet.has(vista.id)) onChange([...seleccion, vista.id])
+    const ids = (ms: ModuloMenu[]) => ms.flatMap((m) => m.permisos.map((p) => p.id))
+    const contar = (ms: ModuloMenu[]) => { const todos = ids(ms); return { marcados: todos.filter((id) => seleccionSet.has(id)).length, total: todos.length } }
+
+    /** Marca o desmarca varios permisos a la vez (menú o submenú completo) */
+    const alternarGrupo = (ms: ModuloMenu[]) => {
+        const todos = ids(ms)
+        const completo = todos.every((id) => seleccionSet.has(id))
+        if (completo) { const quitar = new Set(todos); onChange(seleccion.filter((id) => !quitar.has(id))) }
+        else onChange([...seleccion, ...todos.filter((id) => !seleccionSet.has(id))])
     }
 
-    const quitarModulo = (m: ModuloMenu) => {
-        setAgregados((prev) => prev.filter((c) => c !== m.codigo))
-        setExpandidos((prev) => prev.filter((c) => c !== m.codigo))
-        const idsModulo = new Set(m.permisos.map((p) => p.id))
-        onChange(seleccion.filter((id) => !idsModulo.has(id)))
-    }
-
-    const togglePermiso = (m: ModuloMenu, permiso: PermisoDeModulo) => {
-        // El VISTA de un módulo agregado no se puede desmarcar: el API lo
-        // reinsertaría igual al guardar.
-        if (permiso.tipo === 'VISTA') return
-
-        if (seleccionSet.has(permiso.id)) {
-            onChange(seleccion.filter((id) => id !== permiso.id))
+    const alternarPermiso = (m: ModuloMenu, p: PermisoDeModulo) => {
+        const vista = m.permisos.find((x) => x.tipo === 'VISTA')
+        if (p.tipo === 'VISTA') {
+            // Sin acceso a la pantalla no hay acciones: se quitan todas las del submenú
+            if (seleccionSet.has(p.id)) { const quitar = new Set(m.permisos.map((x) => x.id)); onChange(seleccion.filter((id) => !quitar.has(id))) }
+            else onChange([...seleccion, p.id])
             return
         }
-        const vista = permisoVista(m)
-        const nuevos = [permiso.id]
-        if (vista && !seleccionSet.has(vista.id)) nuevos.push(vista.id)
-        onChange([...seleccion, ...nuevos])
-    }
-
-    const toggleTodoElModulo = (m: ModuloMenu) => {
-        const idsModulo = m.permisos.map((p) => p.id)
-        const todosMarcados = idsModulo.every((id) => seleccionSet.has(id))
-        if (todosMarcados) {
-            // Deja solo el acceso: quitar todo dejaría el módulo en la lista sin
-            // ningún permiso, que es un estado sin sentido.
-            const vista = permisoVista(m)
-            const idsQuitar = new Set(idsModulo.filter((id) => id !== vista?.id))
-            onChange(seleccion.filter((id) => !idsQuitar.has(id)))
-        } else {
-            const faltantes = idsModulo.filter((id) => !seleccionSet.has(id))
-            onChange([...seleccion, ...faltantes])
-        }
-    }
-
-    const toggleExpandido = (codigo: string) => {
-        setExpandidos((prev) => (prev.includes(codigo) ? prev.filter((c) => c !== codigo) : [...prev, codigo]))
+        if (seleccionSet.has(p.id)) { onChange(seleccion.filter((id) => id !== p.id)); return }
+        onChange([...seleccion, p.id, ...(vista && !seleccionSet.has(vista.id) ? [vista.id] : [])])
     }
 
     const totalSeleccionados = seleccion.length
@@ -188,178 +89,70 @@ export const PermisosPorModulo = ({ modulos: modulosBd, loading, seleccion, onCh
     return (
         <div className="space-y-2">
             <div className="flex items-center justify-between">
-                <label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                    Permisos del Rol
-                </label>
-                <span className="text-xs text-muted-foreground">
-                    {modulosAgregados.length} módulo{modulosAgregados.length !== 1 ? 's' : ''} · {totalSeleccionados} permiso
-                    {totalSeleccionados !== 1 ? 's' : ''}
-                </span>
+                <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Permisos del Rol</span>
+                <span className="text-xs text-muted-foreground">{totalSeleccionados} permiso{totalSeleccionados !== 1 ? 's' : ''}</span>
             </div>
 
-            {/* Agregar módulo */}
-            <div ref={dropdownRef} className="relative">
-                <button
-                    type="button"
-                    onClick={() => setDropdownOpen(!dropdownOpen)}
-                    disabled={loading}
-                    className="flex h-10 w-full items-center justify-between rounded-md border border-dashed border-input bg-background px-3 py-2 text-sm hover:bg-muted/50 disabled:opacity-60"
-                >
-                    <span className="flex items-center gap-2 text-muted-foreground">
-                        {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
-                        {loading ? 'Cargando módulos...' : 'Agregar módulo'}
-                    </span>
-                    <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground" />
-                </button>
-
-                {dropdownOpen && (
-                    <div className="absolute z-50 mt-1 w-full overflow-hidden rounded-md border bg-popover shadow-lg">
-                        <div className="border-b bg-muted/30 p-2">
-                            <div className="relative">
-                                <Search className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                                <Input
-                                    placeholder="Buscar módulo o permiso..."
-                                    value={search}
-                                    onChange={(e) => setSearch(e.target.value)}
-                                    className="h-9 pl-8"
-                                    autoFocus
-                                />
-                            </div>
-                        </div>
-                        <div className="max-h-56 overflow-y-auto p-1">
-                            {disponibles.length === 0 ? (
-                                <div className="py-4 text-center text-sm text-muted-foreground">
-                                    {modulos.length === 0 ? 'No hay módulos' : 'No quedan módulos por agregar'}
-                                </div>
-                            ) : (
-                                disponibles.map((m, i) => {
-                                    const Icono = iconoDe(m.icono)
-                                    const nuevoGrupo = i === 0 || disponibles[i - 1].grupoMenu !== m.grupoMenu
-                                    return (
-                                        <div key={m.codigo}>
-                                        {nuevoGrupo && (
-                                            <p className="px-2 pb-1 pt-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">{m.grupoMenu}</p>
-                                        )}
-                                        <button
-                                            type="button"
-                                            onClick={() => agregarModulo(m)}
-                                            className="flex w-full items-center gap-2.5 rounded px-2 py-2 text-left hover:bg-muted/60"
-                                        >
-                                            <Icono className="h-4 w-4 shrink-0 text-primary opacity-70" />
-                                            <span className="flex-1 truncate text-sm font-medium">{m.nombre}</span>
-                                            <span className="shrink-0 text-xs text-muted-foreground">
-                                                {m.permisos.length}
-                                            </span>
-                                        </button>
-                                        </div>
-                                    )
-                                })
-                            )}
-                        </div>
-                    </div>
-                )}
+            <div className="relative">
+                <Search className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Input aria-label="Buscar menú, submenú o permiso" placeholder="Buscar menú, submenú o permiso..." value={search} onChange={(e) => setSearch(e.target.value)} className="h-9 pl-8" disabled={loading} />
             </div>
 
-            {/* Módulos agregados */}
-            {modulosAgregados.length === 0 ? (
-                <div className="rounded-md border border-dashed py-6 text-center text-sm text-muted-foreground">
-                    Este rol no tiene permisos.
-                    <br />
-                    <span className="text-xs">Agrega un módulo para elegir qué puede hacer en él.</span>
-                </div>
+            {loading ? (
+                <div className="flex h-24 items-center justify-center gap-2 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" /> Cargando permisos...</div>
+            ) : menus.length === 0 ? (
+                <div className="rounded-md border border-dashed py-6 text-center text-sm text-muted-foreground">No se encontraron permisos.</div>
             ) : (
-                <div className="space-y-2">
-                    {modulosAgregados.map((m) => {
-                        const Icono = iconoDe(m.icono)
-                        const abierto = expandidos.includes(m.codigo)
-                        const marcados = m.permisos.filter((p) => seleccionSet.has(p.id)).length
-                        const todos = marcados === m.permisos.length
-
-                        const secciones = ORDEN_SECCION.map((tipo) => ({
-                            tipo,
-                            permisos: m.permisos.filter((p) => p.tipo === tipo),
-                        })).filter((s) => s.permisos.length > 0)
-
+                <div className="space-y-1.5">
+                    {menus.map(({ menu, modulos: submenus }) => {
+                        const claveMenu = `m:${menu}`
+                        const abierto = estaAbierta(claveMenu)
+                        const c = contar(submenus)
                         return (
-                            <div key={m.codigo} className="overflow-hidden rounded-md border">
-                                <div className="flex items-center gap-2 bg-muted/40 px-3 py-2">
-                                    <button
-                                        type="button"
-                                        onClick={() => toggleExpandido(m.codigo)}
-                                        className="flex flex-1 items-center gap-2.5 text-left"
-                                    >
-                                        <ChevronDown
-                                            className={`h-4 w-4 shrink-0 text-muted-foreground transition-transform ${abierto ? '' : '-rotate-90'}`}
-                                        />
-                                        <Icono className="h-4 w-4 shrink-0 text-primary" />
-                                        <span className="truncate text-sm font-semibold">{m.nombre}</span>
-                                        <span className="shrink-0 rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-muted-foreground">{m.grupoMenu}</span>
-                                        <span className="shrink-0 text-xs text-muted-foreground">
-                                            {marcados} de {m.permisos.length}
-                                        </span>
+                            <div key={menu} className="overflow-hidden rounded-md border">
+                                {/* Nivel 1: menú */}
+                                <div className="flex items-center gap-2 bg-muted/50 px-3 py-2">
+                                    <Casilla estado={estadoDe(c.marcados, c.total)} onChange={() => alternarGrupo(submenus)} label={`Todo el menú ${menu}`} />
+                                    <button type="button" onClick={() => alternarRama(claveMenu)} aria-expanded={abierto} className="flex min-w-0 flex-1 items-center gap-2 text-left">
+                                        <ChevronRight className={`h-4 w-4 shrink-0 text-muted-foreground transition-transform ${abierto ? 'rotate-90' : ''}`} />
+                                        <span className="truncate text-sm font-bold uppercase tracking-wide">{menu}</span>
+                                        <span className="shrink-0 text-xs text-muted-foreground">{c.marcados} de {c.total}</span>
                                     </button>
-                                    {m.permisos.length > 1 && (
-                                        <button
-                                            type="button"
-                                            onClick={() => toggleTodoElModulo(m)}
-                                            className="shrink-0 rounded px-2 py-1 text-xs font-medium text-primary hover:bg-primary/10"
-                                        >
-                                            {todos ? 'Solo acceso' : 'Marcar todo'}
-                                        </button>
-                                    )}
-                                    <Button
-                                        type="button"
-                                        variant="ghost"
-                                        size="sm"
-                                        onClick={() => quitarModulo(m)}
-                                        className="h-7 w-7 shrink-0 p-0 text-destructive hover:bg-destructive/10"
-                                        title="Quitar módulo del rol"
-                                    >
-                                        <X className="h-4 w-4" />
-                                    </Button>
                                 </div>
 
                                 {abierto && (
-                                    <div className="space-y-3 px-3 py-2.5">
-                                        {secciones.map((seccion) => (
-                                            <div key={seccion.tipo} className="space-y-1">
-                                                <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-                                                    {TITULO_SECCION[seccion.tipo] || seccion.tipo}
-                                                </p>
-                                                <div className="grid gap-1 sm:grid-cols-2">
-                                                    {seccion.permisos.map((p) => {
-                                                        const marcado = seleccionSet.has(p.id)
-                                                        const fijo = p.tipo === 'VISTA'
-                                                        return (
-                                                            <label
-                                                                key={p.id}
-                                                                title={p.codigo}
-                                                                className={`flex items-center gap-2 rounded px-2 py-1.5 text-sm ${
-                                                                    fijo
-                                                                        ? 'cursor-default text-muted-foreground'
-                                                                        : 'cursor-pointer hover:bg-muted/50'
-                                                                }`}
-                                                            >
-                                                                <input
-                                                                    type="checkbox"
-                                                                    checked={marcado}
-                                                                    disabled={fijo}
-                                                                    onChange={() => togglePermiso(m, p)}
-                                                                    className="rounded border-input"
-                                                                />
-                                                                <span className="truncate">{p.etiqueta}</span>
-                                                                {fijo && (
-                                                                    <span className="ml-auto flex shrink-0 items-center gap-1 text-[10px] uppercase tracking-wide">
-                                                                        <Check className="h-3 w-3" />
-                                                                        incluido
-                                                                    </span>
-                                                                )}
-                                                            </label>
-                                                        )
-                                                    })}
+                                    <div className="divide-y">
+                                        {submenus.map((m) => {
+                                            const claveSub = `s:${m.codigo}`
+                                            const subAbierto = estaAbierta(claveSub)
+                                            const cs = contar([m])
+                                            return (
+                                                <div key={m.codigo}>
+                                                    {/* Nivel 2: submenú */}
+                                                    <div className="flex items-center gap-2 py-1.5 pl-6 pr-3">
+                                                        <Casilla estado={estadoDe(cs.marcados, cs.total)} onChange={() => alternarGrupo([m])} label={`Todo ${m.nombre}`} />
+                                                        <button type="button" onClick={() => alternarRama(claveSub)} aria-expanded={subAbierto} className="flex min-w-0 flex-1 items-center gap-2 text-left">
+                                                            <ChevronRight className={`h-3.5 w-3.5 shrink-0 text-muted-foreground transition-transform ${subAbierto ? 'rotate-90' : ''}`} />
+                                                            <span className="truncate text-sm font-semibold">{m.nombre}</span>
+                                                            <span className="shrink-0 text-xs text-muted-foreground">{cs.marcados} de {cs.total}</span>
+                                                        </button>
+                                                    </div>
+
+                                                    {/* Nivel 3: acciones */}
+                                                    {subAbierto && (
+                                                        <div className="grid gap-0.5 pb-2 pl-14 pr-3 sm:grid-cols-2">
+                                                            {m.permisos.map((p) => (
+                                                                <label key={p.id} title={p.codigo} className="flex cursor-pointer items-center gap-2 rounded px-2 py-1 text-sm hover:bg-muted/50">
+                                                                    <input type="checkbox" checked={seleccionSet.has(p.id)} onChange={() => alternarPermiso(m, p)} className="h-4 w-4 shrink-0 rounded border-input" />
+                                                                    <span className="truncate">{p.tipo === 'VISTA' ? 'Entrar a la pantalla' : p.etiqueta}</span>
+                                                                    {ETIQUETA_TIPO[p.tipo] && <span className="shrink-0 rounded-full bg-muted px-1.5 text-[10px] uppercase text-muted-foreground">{ETIQUETA_TIPO[p.tipo]}</span>}
+                                                                </label>
+                                                            ))}
+                                                        </div>
+                                                    )}
                                                 </div>
-                                            </div>
-                                        ))}
+                                            )
+                                        })}
                                     </div>
                                 )}
                             </div>
