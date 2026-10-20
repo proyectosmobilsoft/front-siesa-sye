@@ -1,13 +1,14 @@
 import { useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { transferenciasConfirmacionApi, soporteUrl } from '@/api/transferenciasConfirmacion'
+import { transferenciasConfirmacionApi } from '@/api/transferenciasConfirmacion'
 import { usePermiso } from '@/hooks/usePermiso'
 import { Modal } from '@/components/ui/modal'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { formatters } from '@/utils/formatters'
 import { validarSoportes } from './soportes'
-import { FileText, Upload } from 'lucide-react'
+import { ZonaSoportes } from './ZonaSoportes'
+import { SoporteProtegido } from './SoporteProtegido'
 import { Cargando } from '@/components/ui/cargando'
 import { duracion } from './tiempos'
 import { facturaTexto, medioTexto, resumenPayload } from './payload'
@@ -75,9 +76,7 @@ export function DetalleConfirmacionModal({ id, onClose, onSaved }: { id: number;
       </div>
       {row.tiene_payload && <div className="rounded-lg border border-border p-3"><h3 className="font-semibold">Datos del recibo</h3><p>Cliente: {typeof resumenPayload(row)?.cliente === 'string' ? resumenPayload(row)?.cliente as string : row.razon_social}</p><p>Valor: {formatters.currency(Number(resumenPayload(row)?.valor ?? row.valor))}</p><p>Facturas: {resumenPayload(row)?.facturas?.map(facturaTexto).join(', ') || '—'}</p><p>Medios: {resumenPayload(row)?.medios?.map(medioTexto).join(', ') || '—'}</p></div>}
       <div><h3 className="font-semibold">Facturas</h3>{row.facturas.length ? <ul className="mt-1 space-y-1">{row.facturas.map(f => <li key={f.rowid_sa} className="flex justify-between gap-3 border-b border-border py-1"><span>{f.documento}</span><span className="tabular-nums">Saldo {formatters.currency(Number(f.saldo) || 0)}</span></li>)}</ul> : <p className="text-muted-foreground">Sin facturas asociadas.</p>}</div>
-      <div><h3 className="font-semibold">Soportes</h3><div className="mt-2 grid gap-2 sm:grid-cols-3">{row.soportes.map(s => <a key={s.id} href={soporteUrl(s.url)} target="_blank" rel="noopener noreferrer" className="flex min-w-0 flex-col items-center gap-2 rounded-lg border border-border p-2 text-center text-xs hover:bg-muted">
-        {s.mime.startsWith('image/') ? <img src={soporteUrl(s.url)} alt={s.nombre_original} className="h-24 w-full rounded object-cover" /> : <FileText className="h-24 w-16 text-primary" />}<span className="w-full truncate" title={s.nombre_original}>{s.nombre_original}</span>
-      </a>)}</div></div>
+      <div><h3 className="font-semibold">Soportes</h3><div className="mt-2 grid gap-2 sm:grid-cols-3">{row.soportes.map(s => <SoporteProtegido key={s.id} url={s.url} mime={s.mime} nombre={s.nombre_original} variante="tarjeta" />)}</div></div>
       <div className="rounded-lg bg-muted/50 p-3"><h3 className="font-semibold">Trazabilidad</h3><p>Enviado por {row.conductor_nombre || row.created_by_usuario} el {formatters.dateTime(row.created_at)}</p>
         {row.revisado_at && <p>{row.estado === 'RECHAZADA' ? 'Rechazado' : 'Aprobado'} por {row.revisado_by_usuario || '—'} el {formatters.dateTime(row.revisado_at)}</p>}
         {row.segundos_espera != null && <p>Duración de espera: {duracion(row.segundos_espera)}</p>}
@@ -86,7 +85,13 @@ export function DetalleConfirmacionModal({ id, onClose, onSaved }: { id: number;
         {row.rc_error && <p role="alert" className="text-destructive">Error al crear RC: {row.rc_error}</p>}
         {row.usado_at && <p>Usado en RC {row.rc_numero || '—'} el {formatters.dateTime(row.usado_at)}</p>}
       </div>
-      {row.estado === 'PENDIENTE' && <div className="space-y-2"><label className="flex cursor-pointer items-center gap-2"><Upload className="h-4 w-4" /> Agregar soporte<input type="file" multiple accept="image/jpeg,image/png,image/webp,application/pdf" className="sr-only" onChange={e => { setFiles(Array.from(e.target.files ?? [])); e.target.value = '' }} /></label>{files.length > 0 && <div><p className="text-xs">{files.map(f => f.name).join(', ')}</p><Button size="sm" variant="outline" disabled={saving} onClick={() => void subir()}>Subir {files.length} soporte(s)</Button></div>}</div>}
+      {row.estado === 'PENDIENTE' && <div className="space-y-2">
+        <h3 className="font-semibold">Agregar soportes</h3>
+        <ZonaSoportes archivos={files} disabled={saving} ayuda={`Se permiten hasta ${Math.max(0, 10 - row.soportes.length)} más (máximo 10 en total).`}
+          onAgregar={nuevos => { const mensaje = validarSoportes(nuevos, row.soportes.length + files.length); if (mensaje) { setError(mensaje); return } setError(''); setFiles(prev => [...prev, ...nuevos]) }}
+          onQuitar={i => setFiles(prev => prev.filter((_, index) => index !== i))} />
+        {files.length > 0 && <Button size="sm" variant="outline" disabled={saving} onClick={() => void subir()}>Subir {files.length} soporte(s)</Button>}
+      </div>}
       {row.estado === 'PENDIENTE' && puedeAprobar && <div className="flex gap-2"><Button onClick={() => { setAccion('aprobar'); setValor(String(row.valor)); setError('') }}>{row.tiene_payload ? 'Aprobar y crear RC' : 'Aprobar'}</Button><Button variant="destructive" onClick={() => { setAccion('rechazar'); setError('') }}>Rechazar</Button></div>}
       {row.estado === 'APROBADA' && row.tiene_payload && row.rc_error && puedeAprobar && <Button onClick={() => { setAccion('reintentar'); setError('') }}>Reintentar RC</Button>}
       {(row.estado === 'PENDIENTE' || row.estado === 'APROBADA') && puedeAnular && <Button variant="outline" onClick={() => { setAccion('anular'); setError('') }}>Anular</Button>}

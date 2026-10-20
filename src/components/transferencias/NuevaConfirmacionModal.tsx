@@ -14,20 +14,10 @@ import { FechaInput } from '@/components/ui/fecha-input'
 import { formatters } from '@/utils/formatters'
 import { parseMonto } from '@/utils/reciboCajaCalculos'
 import { validarSoportes } from './soportes'
-import { FileText, Trash2, Upload } from 'lucide-react'
+import { ZonaSoportes } from './ZonaSoportes'
 import { Cargando } from '@/components/ui/cargando'
 
 const hoy = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}` }
-function Miniatura({ file }: { file: File }) {
-  const [url, setUrl] = useState('')
-  useEffect(() => {
-    if (!file.type.startsWith('image/')) return
-    const objectUrl = URL.createObjectURL(file)
-    setUrl(objectUrl)
-    return () => URL.revokeObjectURL(objectUrl)
-  }, [file])
-  return url ? <img src={url} alt="" className="h-10 w-10 rounded object-cover" /> : <FileText className="h-8 w-8 text-primary" />
-}
 const mensajeError = (error: unknown) => (error as { response?: { data?: { message?: string } }; message?: string }).response?.data?.message || (error as Error).message || 'No se pudo guardar la confirmación'
 const field = 'block space-y-1 text-xs font-medium text-muted-foreground'
 
@@ -99,14 +89,7 @@ export function NuevaConfirmacionModal({ onClose, onSaved }: { onClose: () => vo
         <label className={field}>Referencia / número de comprobante<Input value={referencia} onChange={e => setReferencia(e.target.value)} /></label>
       </div>
       <label className={field}>Observación<textarea value={observacion} onChange={e => setObservacion(e.target.value)} rows={2} className="w-full rounded-md border border-input bg-background p-2 text-sm text-foreground" /></label>
-      <div onDragOver={e => e.preventDefault()} onDrop={e => { e.preventDefault(); agregar(Array.from(e.dataTransfer.files)) }} className="rounded-lg border border-dashed border-border p-4">
-        <label className="flex cursor-pointer items-center gap-2 text-sm font-medium"><Upload className="h-4 w-4" /> Soportes (1 a 10; JPG, PNG, WEBP o PDF; máximo 10 MB cada uno)<input type="file" accept="image/jpeg,image/png,image/webp,application/pdf" multiple className="sr-only" onChange={e => { agregar(Array.from(e.target.files ?? [])); e.target.value = '' }} /></label>
-        <p className="mt-1 text-xs text-muted-foreground">Selecciona archivos o arrástralos aquí.</p>
-        <div className="mt-2 grid gap-2 sm:grid-cols-2">{soportes.map((file, i) => <div key={`${file.name}-${i}`} className="flex min-w-0 items-center gap-2 rounded border border-border p-2 text-xs">
-          <Miniatura file={file} />
-          <span className="min-w-0 flex-1 truncate" title={file.name}>{file.name}</span><button type="button" aria-label={`Quitar ${file.name}`} onClick={() => setSoportes(prev => prev.filter((_, index) => index !== i))}><Trash2 className="h-4 w-4" /></button>
-        </div>)}</div>
-      </div>
+      <ZonaSoportes archivos={soportes} onAgregar={agregar} onQuitar={i => setSoportes(prev => prev.filter((_, index) => index !== i))} disabled={guardando} ayuda="1 a 10 soportes; JPG, PNG, WEBP o PDF; máximo 10 MB cada uno." />
       {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
       <div className="flex justify-end gap-2"><Button variant="outline" onClick={onClose} disabled={guardando}>Cancelar</Button><Button onClick={() => void guardar()} disabled={guardando}>{guardando ? 'Guardando…' : 'Guardar solicitud'}</Button></div>
     </div>}

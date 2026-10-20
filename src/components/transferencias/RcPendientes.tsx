@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { FileText } from 'lucide-react'
-import { transferenciasConfirmacionApi, soporteUrl, type ConfirmacionTransferencia } from '@/api/transferenciasConfirmacion'
+import { SoporteProtegido } from './SoporteProtegido'
+import { transferenciasConfirmacionApi, type ConfirmacionTransferencia } from '@/api/transferenciasConfirmacion'
 import { Button } from '@/components/ui/button'
 import { formatters } from '@/utils/formatters'
 import { esperaActual } from './tiempos'
@@ -10,7 +11,7 @@ function MiniaturaSoporte({ id }: { id: number }) {
   const detalle = useQuery({ queryKey: ['transferencias-confirmacion', 'detalle', id], queryFn: () => transferenciasConfirmacionApi.detalle(id), staleTime: 30_000 })
   const soporte = detalle.data?.soportes?.[0]
   if (!soporte) return <span className="flex h-14 w-14 items-center justify-center rounded border border-border text-muted-foreground"><FileText className="h-6 w-6" /></span>
-  return soporte.mime?.startsWith('image/') ? <img src={soporteUrl(soporte.url)} alt="Miniatura del soporte" className="h-14 w-14 rounded border border-border object-cover" /> : <span className="flex h-14 w-14 items-center justify-center rounded border border-border text-primary" title={soporte.nombre_original}><FileText className="h-6 w-6" /></span>
+  return <SoporteProtegido url={soporte.url} mime={soporte.mime ?? ''} nombre={soporte.nombre_original} variante="miniatura" />
 }
 
 export function RcPendientes({ rows, ahora, onDetalle }: { rows: ConfirmacionTransferencia[]; ahora: number; onDetalle: (id: number) => void }) {

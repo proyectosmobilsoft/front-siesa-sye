@@ -1,5 +1,4 @@
 import { apiClient } from './client'
-import { API_CONFIG, API_ORIGIN } from '@/config/api'
 
 export type EstadoTransferencia = 'PENDIENTE' | 'APROBADA' | 'RECHAZADA' | 'ANULADA' | 'EN_USO' | 'USADA'
 export interface PayloadRcResumido {
@@ -67,9 +66,10 @@ export interface MiRcPendiente {
 }
 const base = '/transferencias-confirmacion'
 const multipart = { headers: { 'Content-Type': 'multipart/form-data' } }
-export const soporteUrl = (url: string) => new URL(url, new URL(API_CONFIG.BASE_URL, API_ORIGIN).origin).href
 
 export const transferenciasConfirmacionApi = {
+  /** Descarga un soporte con la sesión (las fotos no son públicas). `url` es la que trae el soporte, p. ej. /api/transferencias-confirmacion/soportes/5/archivo */
+  soporteBlob: async (url: string) => (await apiClient.get<Blob>(url.replace(/^\/api(?=\/)/, ''), { responseType: 'blob' })).data,
   listar: async (params: ListarConfirmacionesParams) =>
     (await apiClient.get<{ success: boolean; data: ConfirmacionTransferencia[]; pagination: { page: number; pageSize: number; total: number; totalPages: number } }>(base, { params })).data,
   resumen: async () => (await apiClient.get<{ data: ResumenTransferencias }>(`${base}/resumen`)).data.data,
