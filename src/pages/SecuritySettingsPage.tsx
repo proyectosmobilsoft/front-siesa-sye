@@ -18,6 +18,7 @@ import { badgeClass } from '@/utils/badges'
 import { Modal } from '@/components/ui/modal'
 import { usePermiso } from '@/hooks/usePermiso'
 import { Cargando } from '@/components/ui/cargando'
+import { BotonExcel } from '@/components/ui/boton-excel'
 
 export const SecuritySettingsPage = () => {
     const navigate = useNavigate()
@@ -25,7 +26,7 @@ export const SecuritySettingsPage = () => {
     // Permisos de acción del maestro de Usuarios. La API también los exige
     // (requirePermiso en /auth-secundario/usuarios), esto solo evita mostrar
     // botones que terminarían en 403.
-    const { puede, P } = usePermiso()
+    const { puede, P, sesion } = usePermiso()
     const puedeCrear = puede(P.CREAR_USUARIO)
     const puedeEditar = puede(P.EDITAR_USUARIO)
 
@@ -210,13 +211,15 @@ export const SecuritySettingsPage = () => {
                         )}
                         {puedeEditar && (
                             <Button
-                                variant="ghost"
+                                variant="outline"
                                 size="sm"
                                 onClick={() => handleStatusUser(user)}
-                                title={user.activo ? 'Desactivar usuario' : 'Reactivar usuario'}
-                                className={`h-8 w-8 p-0 border ${user.activo ? 'text-destructive border-destructive/20 hover:bg-destructive/10' : 'text-green-600 border-green-600/20 hover:bg-green-600/10'}`}
+                                disabled={user.activo && user.usuario === sesion?.usuario}
+                                title={user.activo ? (user.usuario === sesion?.usuario ? 'No puedes deshabilitar tu propio usuario' : 'Deshabilitar usuario') : 'Habilitar usuario'}
+                                className={`h-8 gap-1.5 px-2.5 text-xs font-semibold ${user.activo ? 'text-destructive border-destructive/30 hover:bg-destructive/10' : 'text-green-600 border-green-600/30 hover:bg-green-600/10'}`}
                             >
-                                {user.activo ? <UserX className="h-4 w-4" /> : <UserCheck className="h-4 w-4" />}
+                                {user.activo ? <UserX className="h-3.5 w-3.5" /> : <UserCheck className="h-3.5 w-3.5" />}
+                                {user.activo ? 'Deshabilitar' : 'Habilitar'}
                             </Button>
                         )}
                         {!puedeEditar && (
@@ -271,6 +274,7 @@ export const SecuritySettingsPage = () => {
                             autoComplete="off"
                         />
                     </div>
+                    <BotonExcel nombre="usuarios" />
                     <Button variant="outline" size="icon" onClick={() => fetchUsuarios(globalFilter)} disabled={loading} title="Actualizar">
                         <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
                     </Button>
@@ -405,12 +409,12 @@ export const SecuritySettingsPage = () => {
 
                     {/* Título */}
                     <h3 className="text-xl font-bold text-foreground mb-2">
-                        ¿{statusUser?.activo ? 'Desactivar' : 'Reactivar'} este usuario?
+                        ¿{statusUser?.activo ? 'Deshabilitar' : 'Habilitar'} este usuario?
                     </h3>
 
                     {/* Descripción */}
                     <p className="text-muted-foreground mb-5 max-w-sm">
-                        El usuario {statusUser?.activo ? 'perderá el acceso al sistema' : 'recuperará el acceso al sistema'}:
+                        El usuario {statusUser?.activo ? 'no podrá iniciar sesión y se cerrarán sus sesiones abiertas' : 'podrá volver a iniciar sesión'}:
                     </p>
 
                     {/* Card con info del usuario */}
@@ -457,7 +461,7 @@ export const SecuritySettingsPage = () => {
                             ) : (
                                 <>
                                     {statusUser?.activo ? <UserX className="h-4 w-4" /> : <UserCheck className="h-4 w-4" />}
-                                    Sí, {statusUser?.activo ? 'desactivar' : 'reactivar'}
+                                    Sí, {statusUser?.activo ? 'deshabilitar' : 'habilitar'}
                                 </>
                             )}
                         </Button>
