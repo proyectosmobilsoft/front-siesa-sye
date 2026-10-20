@@ -9,6 +9,7 @@ import { FechaInput } from '@/components/ui/fecha-input'
 import { PRESETS, type PresetRango } from './formato'
 import { useDetalle } from './detalle/contexto'
 import type { EspecDetalle } from './detalle/tipos'
+import { BotonExcel } from '@/components/ui/boton-excel'
 
 // Piezas de los dashboards, con el mismo diseño de vehiman_react (src/dashboard/comun.tsx):
 // encabezado, bloques blancos redondeados, tarjetas KPI con tono e ícono, malla
@@ -231,6 +232,8 @@ export interface Columna<T> {
 /** Tabla simple de los dashboards (sin paginación: los detalles son cortos). */
 export function Tabla<T>({ columnas, filas, clave, pie }: { columnas: Columna<T>[]; filas: T[]; clave: (f: T, i: number) => string | number; pie?: ReactNode }) {
   return (
+    <div>
+      <div className="mb-1.5 flex justify-end"><BotonExcel nombre="tablero" className="h-7 px-2 text-[11px]" /></div>
     <div className="overflow-x-auto">
       <table className="w-full text-[13.5px]">
         <thead>
@@ -255,6 +258,7 @@ export function Tabla<T>({ columnas, filas, clave, pie }: { columnas: Columna<T>
         </tbody>
         {pie && <tfoot><tr className="border-t border-border font-semibold"><td colSpan={columnas.length} className="px-3 py-3 text-right">{pie}</td></tr></tfoot>}
       </table>
+    </div>
     </div>
   )
 }

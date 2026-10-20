@@ -4,6 +4,7 @@ import { Ticket, Trophy, User, PlusCircle, CheckCircle2, Users, TrendingUp, Sear
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { FechaInput } from '@/components/ui/fecha-input'
 import { Cargando } from '@/components/ui/cargando'
+import { BotonExcel } from '@/components/ui/boton-excel'
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -552,6 +553,7 @@ const FerregangaPage: React.FC = () => {
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input placeholder="Buscar cliente..." className="pl-9" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
             </div>
+            <BotonExcel nombre="ferreganga_clientes" />
           </div>
         </CardHeader>
         <CardContent>

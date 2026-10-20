@@ -9,6 +9,7 @@ import { FechaInput } from '@/components/ui/fecha-input'
 import { formatters } from '@/utils/formatters'
 import { NuevaConfirmacionModal } from '@/components/transferencias/NuevaConfirmacionModal'
 import { DetalleConfirmacionModal } from '@/components/transferencias/DetalleConfirmacionModal'
+import { BotonExcel } from '@/components/ui/boton-excel'
 
 const tabs: { label: string; estado: EstadoTransferencia | 'TODAS' }[] = [
   { label: 'Pendientes', estado: 'PENDIENTE' }, { label: 'Aprobadas', estado: 'APROBADA' },
@@ -48,6 +49,7 @@ export function ConfirmacionTransferenciasPage() {
       <label className="min-w-52 flex-1 space-y-1 text-xs font-medium text-muted-foreground">Buscar cliente, NIT o referencia<Input value={search} onChange={e => setSearch(e.target.value)} placeholder="Buscar…" /></label>
       <label className="space-y-1 text-xs font-medium text-muted-foreground">Desde<FechaInput value={desde} onChange={setDesde} /></label>
       <label className="space-y-1 text-xs font-medium text-muted-foreground">Hasta<FechaInput value={hasta} onChange={setHasta} min={desde || undefined} /></label>
+      <BotonExcel nombre="confirmacion_transferencias" />
       <Button variant="outline" size="icon" title="Actualizar" aria-label="Actualizar" onClick={refresh}><RefreshCw className={`h-4 w-4 ${lista.isFetching ? 'animate-spin' : ''}`} /></Button>
     </div>
     <div role="tablist" aria-label="Estado" className="flex gap-1 overflow-x-auto border-b border-border">{tabs.map(tab => <button key={tab.estado} role="tab" aria-selected={estado === tab.estado} onClick={() => setEstado(tab.estado)} className={`whitespace-nowrap border-b-2 px-3 py-2 text-sm ${estado === tab.estado ? 'border-primary font-semibold text-primary' : 'border-transparent text-muted-foreground'}`}>{tab.label} <span className="ml-1 rounded-full bg-muted px-1.5 py-0.5 text-xs tabular-nums">{tab.estado === 'TODAS' ? Object.values(resumen.data ?? {}).reduce((sum, n) => sum + Number(n ?? 0), 0) : resumen.data?.[tab.estado] ?? 0}</span></button>)}</div>

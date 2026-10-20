@@ -18,6 +18,7 @@ import { ErrorState } from '@/components/ui/error-state'
 import { Skeleton } from '@/lib/skeleton'
 import { useClients } from '@/hooks/useClients'
 import { Client } from '@/api/types'
+import { BotonExcel } from '@/components/ui/boton-excel'
 
 export const ClientsTable = () => {
     const { data: clients, isLoading, error } = useClients()
@@ -181,9 +182,12 @@ export const ClientsTable = () => {
                         className="pl-8"
                     />
                 </div>
+                <div className="flex shrink-0 items-center gap-3">
+                    <BotonExcel nombre="clientes" />
                 <p className="shrink-0 text-sm text-muted-foreground">
                     {clients?.length ?? 0} {clients?.length === 1 ? 'cliente' : 'clientes'}
                 </p>
+                </div>
             </div>
             <div className="min-h-0 flex-1 overflow-auto rounded-md border">
                 <table className="w-full text-sm">

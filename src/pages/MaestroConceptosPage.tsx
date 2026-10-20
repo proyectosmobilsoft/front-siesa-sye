@@ -9,6 +9,7 @@ import { AlertTriangle } from 'lucide-react'
 import { conceptosApi, Concepto } from '@/api/conceptos'
 import { badgeClass } from '@/utils/badges'
 import { usePermiso } from '@/hooks/usePermiso'
+import { BotonExcel } from '@/components/ui/boton-excel'
 
 export const MaestroConceptosPage = () => {
     const { puede, P } = usePermiso()
@@ -108,6 +109,7 @@ export const MaestroConceptosPage = () => {
                             autoComplete="off"
                         />
                     </div>
+                    <BotonExcel nombre="conceptos" />
                     <Button variant="outline" size="icon" onClick={() => fetchConceptos(search)} disabled={loading} title="Actualizar">
                         <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
                     </Button>

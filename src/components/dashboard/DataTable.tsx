@@ -3,6 +3,7 @@ import { Download } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { formatters } from '@/utils/formatters'
+import { BotonExcel } from '@/components/ui/boton-excel'
 
 interface Column {
     header: string
@@ -116,6 +117,7 @@ export const DataTable = ({
         >
             <div className="bg-muted/30 border-b px-2 py-1.5 flex items-center justify-between">
                 <h3 className="text-xs font-semibold text-foreground">{title}</h3>
+                {exportable && <BotonExcel nombre={title} className="h-6 px-2 text-[10px]" />}
                 {exportable && (
                     <Button
                         variant="ghost"

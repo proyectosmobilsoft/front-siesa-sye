@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input'
 import { maquinariaApi, Maquinaria } from '@/api/maquinaria'
 import { badgeClass } from '@/utils/badges'
 import { Cargando } from '@/components/ui/cargando'
+import { BotonExcel } from '@/components/ui/boton-excel'
 
 /** Placeholder para celdas sin dato, para no dejar huecos en blanco. */
 const Vacio = () => <span className="text-muted-foreground">—</span>
@@ -66,6 +67,7 @@ export const MaestroMaquinariaPage = () => {
                             autoComplete="off"
                         />
                     </div>
+                    <BotonExcel nombre="maquinaria" />
                     <Button variant="outline" size="icon" onClick={() => fetchEquipos(search)} disabled={loading} title="Actualizar">
                         <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
                     </Button>

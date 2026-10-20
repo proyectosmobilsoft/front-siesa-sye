@@ -19,6 +19,7 @@ import { Skeleton } from '@/lib/skeleton'
 import { useFacturas } from '@/hooks/useFacturas'
 import { Factura, FacturasParams } from '@/api/types'
 import { formatters } from '@/utils/formatters'
+import { BotonExcel } from '@/components/ui/boton-excel'
 
 // Función helper para convertir YYYYMM a formato legible
 const formatPeriodo = (periodo: number): string => {
@@ -248,6 +249,7 @@ export const GestionVentasPage = () => {
                         </div>
                     ) : (
                         <>
+                            <div className="flex justify-end"><BotonExcel nombre="facturas" /></div>
                             <div className="min-h-0 flex-1 overflow-auto rounded-md border">
                                 <table className="w-full text-sm">
                                     <thead className="sticky top-0 z-10 bg-card">

@@ -8,6 +8,7 @@ import { Modal } from '@/components/ui/modal'
 import { maestroCuentasBancariasApi, CuentaBancariaConfig } from '@/api/maestroCuentasBancarias'
 import { badgeClass } from '@/utils/badges'
 import { usePermiso } from '@/hooks/usePermiso'
+import { BotonExcel } from '@/components/ui/boton-excel'
 
 export const MaestroCuentasBancariasPage = () => {
     const { puede, P } = usePermiso()
@@ -140,6 +141,7 @@ export const MaestroCuentasBancariasPage = () => {
                             autoComplete="off"
                         />
                     </div>
+                    <BotonExcel nombre="cuentas_bancarias" />
                     <Button variant="outline" size="icon" onClick={() => fetchCuentas(search)} disabled={loading} title="Actualizar">
                         <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
                     </Button>

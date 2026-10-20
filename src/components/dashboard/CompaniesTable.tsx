@@ -21,6 +21,7 @@ import { ErrorState } from '@/components/ui/error-state'
 import { badgeClass } from '@/utils/badges'
 import { Company } from '@/api/types'
 import { formatters } from '@/utils/formatters'
+import { BotonExcel } from '@/components/ui/boton-excel'
 
 export const CompaniesTable = () => {
     return (
@@ -232,9 +233,12 @@ const CompaniesTableContent = () => {
                         className="pl-8"
                     />
                 </div>
+                <div className="flex shrink-0 items-center gap-3">
+                    <BotonExcel nombre="companias" />
                 <p className="shrink-0 text-sm text-muted-foreground">
                     {companies?.length ?? 0} {companies?.length === 1 ? 'compañía' : 'compañías'}
                 </p>
+                </div>
             </div>
             <div className="min-h-0 flex-1 overflow-auto rounded-md border">
                 <table className="w-full text-sm">

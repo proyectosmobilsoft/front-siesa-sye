@@ -19,6 +19,7 @@ import { Skeleton } from '@/lib/skeleton'
 import { useProducts } from '@/hooks/useProducts'
 import { Product } from '@/api/types'
 import { formatters } from '@/utils/formatters'
+import { BotonExcel } from '@/components/ui/boton-excel'
 
 export const ProductsTable = () => {
     const { data: products, isLoading, error } = useProducts()
@@ -209,9 +210,12 @@ export const ProductsTable = () => {
                         className="pl-8"
                     />
                 </div>
+                <div className="flex shrink-0 items-center gap-3">
+                    <BotonExcel nombre="productos" />
                 <p className="shrink-0 text-sm text-muted-foreground">
                     {products?.length ?? 0} {products?.length === 1 ? 'producto' : 'productos'}
                 </p>
+                </div>
             </div>
             <div className="min-h-0 flex-1 overflow-auto rounded-md border">
                 <table className="w-full text-sm">

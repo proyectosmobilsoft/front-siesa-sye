@@ -29,6 +29,7 @@ import { useMenuArmado } from '@/hooks/useMenuArmado'
 import { useQueryClient } from '@tanstack/react-query'
 import { badgeClass, Tono } from '@/utils/badges'
 import { usePermiso } from '@/hooks/usePermiso'
+import { BotonExcel } from '@/components/ui/boton-excel'
 
 /**
  * Maestro de Módulos y Permisos: el CRUD del propio catálogo de seguridad
@@ -265,6 +266,7 @@ export const MaestroModulosPage = () => {
                             autoComplete="off"
                         />
                     </div>
+                    <BotonExcel nombre="modulos_y_permisos" />
                     <Button variant="outline" size="icon" onClick={() => fetchModulos()} disabled={loading} title="Actualizar">
                         <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
                     </Button>

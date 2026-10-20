@@ -8,6 +8,8 @@ export interface ColumnaExcel {
   ancho?: number
   /** Formato numérico con miles, sin decimales (valores de dinero) */
   dinero?: boolean
+  /** Formato numérico propio (ej. '#,##0.00'); tiene prioridad sobre `dinero` */
+  formato?: string
 }
 
 export type CeldaExcel = string | number | null
@@ -22,7 +24,7 @@ export interface HojaExcel {
    * Vista agrupada: por cada fila, `grupo` (negrita y fondo, el título de un conductor) o `detalle`
    * (sangrada, colgando del grupo anterior; Excel permite plegarla con el botón de esquema).
    */
-  estilos?: ('grupo' | 'detalle' | undefined)[]
+  estilos?: ('grupo' | 'detalle' | 'total' | undefined)[]
 }
 
 export async function descargarExcel(archivo: string, hojas: HojaExcel[]): Promise<void> {
@@ -38,18 +40,20 @@ export async function descargarExcel(archivo: string, hojas: HojaExcel[]): Promi
       if (estilo === 'grupo') {
         fila.font = { bold: true }
         fila.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE8EEF7' } }
+      } else if (estilo === 'total') {
+        fila.font = { bold: true }
       } else if (estilo === 'detalle') {
         fila.getCell(1).alignment = { indent: 2 }
         fila.outlineLevel = 1
       }
     })
     // El grupo va arriba de su detalle, así que el botón de plegar queda en la fila del grupo
-    if (h.estilos) hoja.properties.outlineProperties = { summaryBelow: false, summaryRight: true }
+    if (h.estilos?.includes('detalle')) hoja.properties.outlineProperties = { summaryBelow: false, summaryRight: true }
     if (h.totales) hoja.addRow(h.totales).font = { bold: true }
     hoja.getRow(1).font = { bold: true }
     hoja.views = [{ state: 'frozen', ySplit: 1 }]
     if (h.columnas.length > 0) hoja.autoFilter = { from: { row: 1, column: 1 }, to: { row: 1, column: h.columnas.length } }
-    for (const c of h.columnas) if (c.dinero) hoja.getColumn(c.clave).numFmt = '#,##0'
+    for (const c of h.columnas) if (c.formato || c.dinero) hoja.getColumn(c.clave).numFmt = c.formato ?? '#,##0'
   }
   const buffer = await libro.xlsx.writeBuffer()
   saveAs(new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }), archivo.endsWith('.xlsx') ? archivo : `${archivo}.xlsx`)

@@ -37,6 +37,7 @@ import { formatters } from '@/utils/formatters'
 import { useQueryClient } from '@tanstack/react-query'
 import { usePermiso } from '@/hooks/usePermiso'
 import { Cargando } from '@/components/ui/cargando'
+import { BotonExcel } from '@/components/ui/boton-excel'
 
 // ─── Utilidades de UI ────────────────────────────────────────────────────────
 
@@ -898,6 +899,7 @@ export const EgresoPage = () => {
                                     {solicitudes.length} {solicitudes.length === 1 ? 'registro' : 'registros'}
                                 </p>
                             )}
+                            <BotonExcel nombre="egresos" />
                             <Button variant="outline" size="icon" onClick={handleRefresh} disabled={isLoading} title="Actualizar">
                                 <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
                             </Button>

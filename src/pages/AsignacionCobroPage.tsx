@@ -17,6 +17,7 @@ import { FacturaPendiente, formatearFecha, formatearPeso, formatearFacturaPendie
 import { FacturasPendientesTab } from '@/components/asignacionCobro/FacturasPendientesTab'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import { DetalleFacturasAsignadasModal } from '@/components/asignacionCobro/DetalleFacturasAsignadasModal'
+import { BotonExcel } from '@/components/ui/boton-excel'
 
 const moneda = (n: number) => n.toLocaleString('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 })
 const kilosTexto = (kg: number) => `${new Intl.NumberFormat('es-CO', { maximumFractionDigits: 0 }).format(kg)} kg`
@@ -426,6 +427,7 @@ export const AsignacionCobroPage = () => {
                                 {reconciliando ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <ShieldCheck className="h-3.5 w-3.5" />}
                                 Verificar contra SIESA
                             </Button>
+                            <BotonExcel nombre="tablero_cobros" />
                             <Button variant="ghost" size="icon" className="nu-btn nu-btn-soft" onClick={cargarTablero} disabled={cargandoTablero} title="Actualizar tablero">
                                 <RefreshCw className={`h-4 w-4 ${cargandoTablero ? 'animate-spin' : ''}`} />
                             </Button>

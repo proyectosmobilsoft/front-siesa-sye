@@ -10,6 +10,7 @@ import { financieroApi, CondicionPago } from '@/api/financiero'
 import { badgeClass } from '@/utils/badges'
 import { usePermiso } from '@/hooks/usePermiso'
 import { Cargando } from '@/components/ui/cargando'
+import { BotonExcel } from '@/components/ui/boton-excel'
 
 export const MaestroDescuentosFinancierosPage = () => {
     // Permisos de acción del maestro de Descuentos Financieros.
@@ -123,6 +124,7 @@ export const MaestroDescuentosFinancierosPage = () => {
                             autoComplete="off"
                         />
                     </div>
+                    <BotonExcel nombre="descuentos_financieros" />
                     <Button variant="outline" size="icon" onClick={() => fetchCondiciones(search)} disabled={loading} title="Actualizar">
                         <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
                     </Button>

@@ -22,6 +22,7 @@ import { Pedido, PedidosParams } from '@/api/types'
 import { formatters } from '@/utils/formatters'
 import { pedidosApi } from '@/api/pedidos'
 import { Cargando } from '@/components/ui/cargando'
+import { BotonExcel } from '@/components/ui/boton-excel'
 
 export const PedidosPage = () => {
     const today = new Date().toISOString().split('T')[0]
@@ -413,6 +414,7 @@ export const PedidosPage = () => {
                 </div>
             ) : (
                 <div className="flex min-h-0 flex-1 flex-col gap-4">
+                    <div className="flex justify-end"><BotonExcel nombre="pedidos" /></div>
                     <div className="min-h-0 flex-1 overflow-auto rounded-md border">
                         <table className="w-full text-sm">
                             <thead className="sticky top-0 z-10 bg-card">

@@ -8,6 +8,7 @@ import { Modal } from '@/components/ui/modal'
 import { maestroCajasApi, Caja } from '@/api/maestroCajas'
 import { badgeClass } from '@/utils/badges'
 import { usePermiso } from '@/hooks/usePermiso'
+import { BotonExcel } from '@/components/ui/boton-excel'
 
 export const MaestroCajasPage = () => {
     const { puede, P } = usePermiso()
@@ -146,6 +147,7 @@ export const MaestroCajasPage = () => {
                             autoComplete="off"
                         />
                     </div>
+                    <BotonExcel nombre="cajas" />
                     <Button variant="outline" size="icon" onClick={() => fetchCajas(search)} disabled={loading} title="Actualizar">
                         <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
                     </Button>

@@ -17,6 +17,7 @@ import { PermisosPorModulo } from '@/components/maestros/PermisosPorModulo'
 import { badgeClass } from '@/utils/badges'
 import { usePermiso } from '@/hooks/usePermiso'
 import { Cargando } from '@/components/ui/cargando'
+import { BotonExcel } from '@/components/ui/boton-excel'
 
 export const MaestroRolesPage = () => {
     const navigate = useNavigate()
@@ -323,12 +324,15 @@ export const MaestroRolesPage = () => {
                         {roles.length} rol{roles.length !== 1 ? 'es' : ''} registrado{roles.length !== 1 ? 's' : ''}
                     </span>
                 </div>
-                {puedeCrear && (
-                    <Button onClick={handleNewRole} className="whitespace-nowrap">
-                        <Plus className="mr-2 h-4 w-4" />
-                        Nuevo Rol
-                    </Button>
-                )}
+                <div className="flex items-center gap-2">
+                    <BotonExcel nombre="roles" />
+                    {puedeCrear && (
+                        <Button onClick={handleNewRole} className="whitespace-nowrap">
+                            <Plus className="mr-2 h-4 w-4" />
+                            Nuevo Rol
+                        </Button>
+                    )}
+                </div>
             </div>
 
             <div className="min-h-0 flex-1 overflow-auto rounded-md border">

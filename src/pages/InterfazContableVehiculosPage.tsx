@@ -9,6 +9,7 @@ import { interfazContableApi, InterfazContableVehiculo } from '@/api/interfazCon
 import { badgeClass } from '@/utils/badges'
 import { usePermiso } from '@/hooks/usePermiso'
 import { Cargando } from '@/components/ui/cargando'
+import { BotonExcel } from '@/components/ui/boton-excel'
 
 export const InterfazContableVehiculosPage = () => {
     const { puede, P } = usePermiso()
@@ -107,6 +108,7 @@ export const InterfazContableVehiculosPage = () => {
                             autoComplete="off"
                         />
                     </div>
+                    <BotonExcel nombre="interfaz_contable_vehiculos" />
                     <Button variant="outline" size="icon" onClick={() => fetchRegistros(search)} disabled={loading} title="Actualizar">
                         <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
                     </Button>
