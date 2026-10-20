@@ -68,6 +68,9 @@ export const PERMISOS = {
   TAB_LEGALIZACION:       'VER_ANTICIPO_TAB_LEGALIZACION',
   TAB_RECHAZADA:          'VER_ANTICIPO_TAB_RECHAZADA',
 
+  // ─── Recibo de Caja (Tesorería) ───
+  CREAR_RECIBO_CAJA:      'CREAR_RECIBO_CAJA',                  // Hacer RC desde la web (pestaña Nuevo recibo); sin él solo se ve el arqueo
+
   // ─── Recibos de cartera ───
   CREAR_RECIBO:           'CREAR_RECIBO',
   CONDICION_PAGO_RECIBO:  'SELECCIONAR_CONDICION_PAGO_RECIBO',

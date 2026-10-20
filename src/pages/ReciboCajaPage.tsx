@@ -22,6 +22,9 @@ import { enriquecerTraslados } from '@/components/reciboCaja/cuadreCajaCalculos'
 import { MontoAlineado } from '@/components/ui/monto-alineado'
 import { descargarAnexoCuadrePdf } from '@/utils/cuadreCajaPdf'
 import { Cargando } from '@/components/ui/cargando'
+import { BotonExcel } from '@/components/ui/boton-excel'
+import { usePermiso } from '@/hooks/usePermiso'
+import { PERMISOS } from '@/config/permisos'
 import { descargarExcel, type CeldaExcel, type HojaExcel } from '@/utils/exportarExcel'
 
 interface ReciboCaja {
@@ -139,6 +142,8 @@ const estadoBadge = (estado: string) =>
 export const ReciboCajaPage = () => {
   const { data: limites } = useFechasLimite()
   const { sesion, centroOperacionActivo } = useAuthStore()
+  // Sin este permiso se ve el arqueo (conductores, general, recibos) pero no se pueden hacer RC
+  const puedeHacerRc = usePermiso().puede(PERMISOS.CREAR_RECIBO_CAJA)
   const responsableNombre = sesion?.nombre_completo || sesion?.usuario || 'Usuario Autenticado'
   const responsableCedula = sesion?.id ? String(sesion.id) : '—'
 
@@ -402,12 +407,12 @@ export const ReciboCajaPage = () => {
             >
               <FileText className="h-3.5 w-3.5" /> Recibos
             </button>
-            <button
+            {puedeHacerRc && <button
               onClick={() => { setNuevoAbierto(true); setTab('nuevo') }}
               className={cn('flex items-center gap-2 rounded-full px-4 py-2 text-xs font-semibold transition-all', tab === 'nuevo' ? 'bg-card text-foreground shadow-xs' : 'text-muted-foreground hover:bg-card/50 hover:text-foreground')}
             >
               <Receipt className="h-3.5 w-3.5" /> Nuevo recibo
-            </button>
+            </button>}
           </div>
         </div>
 
@@ -478,7 +483,9 @@ export const ReciboCajaPage = () => {
                 <section className="space-y-4">
                   <div className="flex flex-wrap items-center justify-between gap-3">
                     <div><h2 className="text-base font-bold text-foreground">Cuadre de caja</h2><p className="text-xs text-muted-foreground">Movimiento real de caja en SIESA (recibos de la app y de SIESA, egresos, traslados y consignaciones)</p></div>
-                    <Button onClick={descargarCuadre} disabled={!cuadre} className="nu-btn nu-btn-primary gap-2"><FileText className="h-4 w-4" />Descargar anexo PDF</Button>
+                    <div className="flex items-center gap-2"><BotonExcel nombre="cuadre_de_caja" />
+                      <Button onClick={descargarCuadre} disabled={!cuadre} className="nu-btn nu-btn-primary gap-2"><FileText className="h-4 w-4" />Descargar anexo PDF</Button>
+                    </div>
                   </div>
                   {errorCuadre && <p className="rounded-xl border border-red-500/20 bg-red-500/10 p-3 text-xs font-semibold text-red-600 dark:text-red-400">{errorCuadre}</p>}
                   {!errorCuadre && <CuadreCaja datos={cuadreConTraslados} cargando={cargandoGeneral} />}
@@ -536,7 +543,7 @@ export const ReciboCajaPage = () => {
         )}
 
         {/* ── PESTAÑA: RECIBOS ── */}
-        {nuevoAbierto && <div className={tab === 'nuevo' ? 'lg:min-h-0 lg:flex-1' : 'hidden'}><NuevoReciboTab onCreated={() => { void fetchResumenConductores(); if (consultado) void handleConsultarGeneral(); void fetchRecibos(1) }} /></div>}
+        {puedeHacerRc && nuevoAbierto && <div className={tab === 'nuevo' ? 'lg:min-h-0 lg:flex-1' : 'hidden'}><NuevoReciboTab onCreated={() => { void fetchResumenConductores(); if (consultado) void handleConsultarGeneral(); void fetchRecibos(1) }} /></div>}
         {tab === 'recibos' && (
           <div className="p-4 sm:p-6">
             <History
