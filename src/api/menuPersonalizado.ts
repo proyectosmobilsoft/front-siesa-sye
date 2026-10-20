@@ -38,6 +38,9 @@ export const menuPersonalizadoApi = {
         const res = await apiClient.post(`${BASE}/modulos`, data)
         return res.data
     },
+    /** Roles y si ven la sección */
+    listarRoles: async (moduloId: number): Promise<{ id: number; nombre: string; tiene: boolean }[]> => (await apiClient.get(`${BASE}/modulos/${moduloId}/roles`)).data?.data ?? [],
+    asignarRoles: async (moduloId: number, roles: number[]) => (await apiClient.put(`${BASE}/modulos/${moduloId}/roles`, { roles })).data,
     listarEnlaces: async (moduloId: number): Promise<EnlaceAdmin[]> => {
         const res = await apiClient.get(`${BASE}/modulos/${moduloId}/items`)
         return res.data?.data ?? []

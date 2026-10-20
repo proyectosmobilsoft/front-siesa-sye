@@ -23,6 +23,7 @@ import {
 import { organizarPorSidebar } from '@/components/maestros/permisosSidebar'
 import { EnlacesPersonalizados, NuevoModuloPersonalizadoModal } from '@/components/maestros/ModulosPersonalizados'
 import { esPersonalizado, MENU_PERSONALIZADO_KEY } from '@/api/menuPersonalizado'
+import { ICONOS_MENU, iconoMenu } from '@/config/iconosMenu'
 import { useQueryClient } from '@tanstack/react-query'
 import { badgeClass, Tono } from '@/utils/badges'
 import { usePermiso } from '@/hooks/usePermiso'
@@ -325,8 +326,8 @@ export const MaestroModulosPage = () => {
                                             </span>
                                         )}
                                     </div>
-                                    <p className="truncate text-[11px] text-muted-foreground">{m.paginas ? `Menú: ${m.paginas}` : 'Sin página en el menú'}</p>
-                                    <p className="truncate font-mono text-[10px] text-muted-foreground/70">{m.codigo}</p>
+                                    <p className="truncate text-[11px] text-muted-foreground">{esPersonalizado(m.codigo) ? 'Sección del menú' : m.paginas ? `Menú: ${m.paginas}` : 'Sin página en el menú'}</p>
+                                    {!esPersonalizado(m.codigo) && <p className="truncate font-mono text-[10px] text-muted-foreground/70">{m.codigo}</p>}
                                 </div>
                                 <span className="shrink-0 text-xs text-muted-foreground">{m.permisos.length}</span>
                             </button>
@@ -346,9 +347,9 @@ export const MaestroModulosPage = () => {
                             <div className="flex shrink-0 flex-wrap items-center gap-2 border-b bg-muted/40 px-4 py-2.5">
                                 <Shield className="h-4 w-4 shrink-0 text-primary" />
                                 <span className="text-sm font-semibold">{moduloActual.nombre}</span>
-                                <span className="font-mono text-[11px] text-muted-foreground">{moduloActual.codigo}</span>
+                                {!esPersonalizado(moduloActual.codigo) && <span className="font-mono text-[11px] text-muted-foreground">{moduloActual.codigo}</span>}
                                 <div className="ml-auto flex items-center gap-1">
-                                    {puedeCrear && (
+                                    {puedeCrear && !esPersonalizado(moduloActual.codigo) && (
                                         <Button size="sm" onClick={nuevoPermiso} className="h-8 gap-1.5">
                                             <Plus className="h-3.5 w-3.5" />
                                             Permiso
@@ -380,10 +381,10 @@ export const MaestroModulosPage = () => {
                             </div>
 
                             {moduloActual.id !== null && esPersonalizado(moduloActual.codigo) && (
-                                <EnlacesPersonalizados moduloId={moduloActual.id} codigoPermiso={moduloActual.permisos.find((p) => p.tipo === 'VISTA')?.codigo ?? '(sin permiso de vista)'} puedeEditar={puedeEditar} />
+                                <EnlacesPersonalizados moduloId={moduloActual.id} puedeEditar={puedeEditar} puedeAsignarRoles={puede(P.EDITAR_ROL)} />
                             )}
 
-                            <div className="min-h-0 flex-1 overflow-auto">
+                            <div className={esPersonalizado(moduloActual.codigo) ? 'hidden' : 'min-h-0 flex-1 overflow-auto'}>
                                 <table className="w-full text-sm">
                                     <thead className="sticky top-0 z-10 bg-card">
                                         <tr className="border-b bg-muted/50">
@@ -467,11 +468,12 @@ export const MaestroModulosPage = () => {
             <Modal
                 isOpen={moduloModalOpen}
                 onClose={() => { if (!saving) setModuloModalOpen(false) }}
-                title={editandoModulo ? 'Editar Módulo' : 'Nuevo Módulo'}
+                title={editandoModulo ? (esPersonalizado(editandoModulo.codigo) ? 'Editar sección del menú' : 'Editar Módulo') : 'Nuevo Módulo'}
                 className="max-w-lg"
             >
                 <div className="mt-4 space-y-4">
                     <div className="grid gap-4 sm:grid-cols-2">
+                        {!esPersonalizado(editandoModulo?.codigo) && (
                         <div className="space-y-1.5">
                             <label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Código</label>
                             <Input
@@ -483,6 +485,7 @@ export const MaestroModulosPage = () => {
                                 className="h-10 font-mono disabled:opacity-70"
                             />
                         </div>
+                        )}
                         <div className="space-y-1.5">
                             <label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Nombre</label>
                             <Input
@@ -492,6 +495,7 @@ export const MaestroModulosPage = () => {
                                 className="h-10"
                             />
                         </div>
+                        {!esPersonalizado(editandoModulo?.codigo) && (
                         <div className="space-y-1.5">
                             <label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Grupo</label>
                             <Input
@@ -502,6 +506,23 @@ export const MaestroModulosPage = () => {
                                 className="h-10 disabled:opacity-70"
                             />
                         </div>
+                        )}
+                        {esPersonalizado(editandoModulo?.codigo) ? (
+                            <div className="space-y-1.5 sm:col-span-2">
+                                <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Icono</span>
+                                <div className="grid grid-cols-7 gap-1.5">
+                                    {Object.keys(ICONOS_MENU).map((n) => {
+                                        const Icono = iconoMenu(n)
+                                        return (
+                                            <button key={n} type="button" title={n} aria-label={n} aria-pressed={formModulo.icono === n} onClick={() => setFormModulo({ ...formModulo, icono: n })}
+                                                className={`flex h-10 items-center justify-center rounded-lg border transition-all ${formModulo.icono === n ? 'border-primary bg-primary/10 text-primary' : 'border-border text-muted-foreground hover:border-muted-foreground/50'}`}>
+                                                <Icono className="h-4 w-4" />
+                                            </button>
+                                        )
+                                    })}
+                                </div>
+                            </div>
+                        ) : (
                         <div className="space-y-1.5">
                             <label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Icono</label>
                             <Input
@@ -512,6 +533,7 @@ export const MaestroModulosPage = () => {
                             />
                             <p className="text-[11px] text-muted-foreground">Nombre de un icono de lucide-react</p>
                         </div>
+                        )}
                         <div className="space-y-1.5">
                             <label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Orden</label>
                             <Input

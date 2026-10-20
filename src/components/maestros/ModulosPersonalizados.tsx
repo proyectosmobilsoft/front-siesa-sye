@@ -69,7 +69,7 @@ export function NuevoModuloPersonalizadoModal({ abierto, onClose, onCreado }: { 
 }
 
 /** Enlaces de un módulo personalizado: lo que aparece como ítems de su sección en el sidebar */
-export function EnlacesPersonalizados({ moduloId, codigoPermiso, puedeEditar }: { moduloId: number; codigoPermiso: string; puedeEditar: boolean }) {
+export function EnlacesPersonalizados({ moduloId, puedeEditar, puedeAsignarRoles }: { moduloId: number; puedeEditar: boolean; puedeAsignarRoles: boolean }) {
     const queryClient = useQueryClient()
     const [enlaces, setEnlaces] = useState<EnlaceAdmin[]>([])
     const [cargando, setCargando] = useState(true)
@@ -77,6 +77,24 @@ export function EnlacesPersonalizados({ moduloId, codigoPermiso, puedeEditar }: 
     const [form, setForm] = useState({ nombre: '', url: '', modo: 'embed' as ModoEnlace, orden: 100, estado: true })
     const [guardando, setGuardando] = useState(false)
     const [error, setError] = useState<string | null>(null)
+    const [roles, setRoles] = useState<{ id: number; nombre: string; tiene: boolean }[]>([])
+
+    const cargarRoles = useCallback(async () => {
+        try { setRoles(await menuPersonalizadoApi.listarRoles(moduloId)) } catch { setRoles([]) }
+    }, [moduloId])
+    useEffect(() => { void cargarRoles() }, [cargarRoles])
+
+    const alternarRol = async (rolId: number) => {
+        const siguiente = roles.map((r) => (r.id === rolId ? { ...r, tiene: !r.tiene } : r))
+        setRoles(siguiente)
+        try {
+            await menuPersonalizadoApi.asignarRoles(moduloId, siguiente.filter((r) => r.tiene).map((r) => r.id))
+            await queryClient.invalidateQueries({ queryKey: MENU_PERSONALIZADO_KEY })
+        } catch (e) {
+            setRoles(roles)
+            window.alert(mensajeError(e, 'No se pudo actualizar el acceso'))
+        }
+    }
 
     const cargar = useCallback(async () => {
         setCargando(true)
@@ -108,13 +126,11 @@ export function EnlacesPersonalizados({ moduloId, codigoPermiso, puedeEditar }: 
     }
 
     return (
-        <div className="shrink-0 border-b bg-card">
+        <div className="min-h-0 flex-1 overflow-auto bg-card">
             <div className="flex flex-wrap items-center gap-2 px-4 py-2.5">
                 <div className="min-w-0 flex-1">
                     <p className="text-sm font-semibold">Enlaces del menú</p>
-                    <p className="text-xs text-muted-foreground">
-                        La sección aparece en el menú cuando tiene al menos un enlace activo, para los roles que tengan el permiso <span className="font-mono">{codigoPermiso}</span>. Tus roles ya lo tienen; a otros se lo das en Roles.
-                    </p>
+                    <p className="text-xs text-muted-foreground">Lo que aparece dentro de la sección en el menú. Se muestra cuando tiene al menos un enlace activo.</p>
                 </div>
                 {puedeEditar && <Button size="sm" className="h-8 gap-1.5" onClick={() => abrirForm('nuevo')}><Plus className="h-3.5 w-3.5" /> Enlace</Button>}
             </div>
@@ -144,6 +160,23 @@ export function EnlacesPersonalizados({ moduloId, codigoPermiso, puedeEditar }: 
                     ))}
                 </ul>
             )}
+
+            <div className="border-t px-4 py-3">
+                <p className="text-sm font-semibold">¿Quién la ve?</p>
+                <p className="mb-2 text-xs text-muted-foreground">Marca los roles que verán esta sección en el menú.</p>
+                {roles.length === 0 ? (
+                    <p className="text-sm text-muted-foreground">No se pudieron cargar los roles.</p>
+                ) : (
+                    <div className="grid gap-1 sm:grid-cols-2">
+                        {roles.map((r) => (
+                            <label key={r.id} className={`flex items-center gap-2 rounded px-2 py-1.5 text-sm ${puedeAsignarRoles ? 'cursor-pointer hover:bg-muted/50' : 'opacity-60'}`}>
+                                <input type="checkbox" checked={r.tiene} disabled={!puedeAsignarRoles} onChange={() => void alternarRol(r.id)} className="rounded border-input" />
+                                <span className="truncate">{r.nombre}</span>
+                            </label>
+                        ))}
+                    </div>
+                )}
+            </div>
 
             <Modal isOpen={!!editando} onClose={() => { if (!guardando) setEditando(null) }} title={editando === 'nuevo' ? 'Nuevo enlace' : 'Editar enlace'} className="max-w-lg">
                 <div className="mt-4 space-y-4">
