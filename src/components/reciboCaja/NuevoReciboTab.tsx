@@ -1,5 +1,5 @@
 import { AlertCircle, X } from 'lucide-react'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import axios from 'axios'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { apiClient } from '@/api/client'
@@ -187,20 +187,39 @@ export function NuevoReciboTab({ onCreated }: { onCreated: () => void }) {
   const coFacturas = [...new Set(seleccionadas.map(f => f.idCo))]
   const descuentosValidos = seleccionadas.every(f => { const n = descuentosEfectivos[f.rowid] ?? 0; return Number.isFinite(n) && n >= 0 && n < f.saldo })
   const pagosValidos = pagos.length > 0 && pagos.every(p => Number.isFinite(p.valor) && p.valor > 0 && (p.codigo !== 'CG1' || !!p.cuenta && !!p.fechaConsignacion) && (p.codigo !== 'TC' && p.codigo !== 'TD' || /^\d{4}$/.test(p.nroTarjeta.trim()) && p.autorizacion.trim().length >= 6))
-  const notasPreview = useMemo(() => {
-    if (!observacion.trim()) return ''
+  // Parte automática de las notas (facturas, pagos, ajuste y sello). Se calcula con un texto de relleno
+  // para mostrarla desde el principio, antes de que la persona escriba nada.
+  const SEP = ' | '
+  const notasAutomaticas = useMemo(() => {
+    const RELLENO = 'x'
     try {
-      if (cliente && facturasValidas && pagosValidos && totales.clasificacion.tipo !== 'faltanteExcesivo') {
-        return armarPayloadRC({ clienteId: cliente.f9740_id, facturas, descuentos: descuentosEfectivos, aplicar, pagos, parametros, observacion, usuario: sesion?.usuario ?? '?', co, caja, consecutivo: 1, ahora: new Date() }).p_notas
-      }
-      return buildRcNotas({ observacion, facturas: [], mediosPago: [], ajusteTipo: 'none', ajusteMonto: 0, usuario: sesion?.usuario ?? '?', fechaHora: new Date() })
+      const completo = cliente && facturasValidas && pagosValidos && totales.clasificacion.tipo !== 'faltanteExcesivo'
+        ? armarPayloadRC({ clienteId: cliente.f9740_id, facturas, descuentos: descuentosEfectivos, aplicar, pagos, parametros, observacion: RELLENO, usuario: sesion?.usuario ?? '?', co, caja, consecutivo: 1, ahora: new Date() }).p_notas
+        : buildRcNotas({ observacion: RELLENO, facturas: [], mediosPago: [], ajusteTipo: 'none', ajusteMonto: 0, usuario: sesion?.usuario ?? '?', fechaHora: new Date() })
+      return completo.slice(RELLENO.length + SEP.length)
     } catch (e) { return errorMensaje(e) }
-  }, [cliente, facturas, descuentosEfectivos, aplicar, pagos, parametros, observacion, sesion?.usuario, co, caja, facturasValidas, pagosValidos, totales.clasificacion.tipo])
-  const notasFinal = notasManual ?? notasPreview
-  // Lo que se agrega solo después del texto de la persona (facturas, pagos, ajuste y sello)
-  const obsLimpia = observacion.trim()
-  const notasAutomaticas = notasPreview.startsWith(obsLimpia) ? notasPreview.slice(obsLimpia.length).replace(/^ \| /, '') : notasPreview
-  const faltantes = [!cliente && 'Cliente', !facturasValidas && 'Al menos 1 factura', coFacturas.length > 1 && 'Facturas de distintos C.O. (haz un recibo por C.O.)', !descuentosValidos && 'El descuento debe ser mayor o igual a 0 y menor que el valor de la factura', !pagosValidos && 'Pagos válidos', !observacion.trim() && 'Observación', notasFinal.length > 255 && 'Las notas superan 255 caracteres', cargandoDescuentos && 'Esperando descuento financiero', totales.clasificacion.tipo === 'faltanteExcesivo' && `Faltante supera el límite de ${formatters.currency(parametros.limite)}`, requiereConfirmacion && (disponibles.isLoading || disponibles.isFetching || disponibles.isError || totalConfirmado < totalTransferencia - 1) && 'Transferencia sin confirmación aprobada'].filter((v): v is string => !!v)
+  }, [cliente, facturas, descuentosEfectivos, aplicar, pagos, parametros, sesion?.usuario, co, caja, facturasValidas, pagosValidos, totales.clasificacion.tipo])
+  // Lo que se ve y se guarda: el texto de la persona primero y, a continuación, lo automático
+  const notasSugeridas = observacion ? `${observacion}${SEP}${notasAutomaticas}` : notasAutomaticas
+  const notasFinal = notasManual ?? notasSugeridas
+  const areaNotas = useRef<HTMLTextAreaElement>(null)
+  const cursorNotas = useRef<number | null>(null)
+  // Al escribir en el texto de la persona el campo se vuelve a armar; se devuelve el cursor a donde estaba
+  useLayoutEffect(() => {
+    if (cursorNotas.current !== null && areaNotas.current) areaNotas.current.setSelectionRange(cursorNotas.current, cursorNotas.current)
+    cursorNotas.current = null
+  })
+  const editarNotas = (valor: string, cursor: number) => {
+    cambio()
+    if (notasManual !== null) { setNotasManual(valor); return }
+    // Se escribió antes de la parte automática: sigue siendo "texto de la persona" y todo se actualiza en vivo
+    const sufijo = `${SEP}${notasAutomaticas}`
+    if (valor.endsWith(sufijo)) { cursorNotas.current = cursor; setObservacion(valor.slice(0, valor.length - sufijo.length)); return }
+    if (valor === notasAutomaticas) { cursorNotas.current = cursor; setObservacion(''); return }
+    // Tocó la parte automática: queda como texto libre hasta que vuelva a la sugerencia
+    setNotasManual(valor)
+  }
+  const faltantes = [!cliente && 'Cliente', !facturasValidas && 'Al menos 1 factura', coFacturas.length > 1 && 'Facturas de distintos C.O. (haz un recibo por C.O.)', !descuentosValidos && 'El descuento debe ser mayor o igual a 0 y menor que el valor de la factura', !pagosValidos && 'Pagos válidos', !(notasManual !== null ? notasManual : observacion).trim() && 'Observación', notasFinal.length > 255 && 'Las notas superan 255 caracteres', cargandoDescuentos && 'Esperando descuento financiero', totales.clasificacion.tipo === 'faltanteExcesivo' && `Faltante supera el límite de ${formatters.currency(parametros.limite)}`, requiereConfirmacion && (disponibles.isLoading || disponibles.isFetching || disponibles.isError || totalConfirmado < totalTransferencia - 1) && 'Transferencia sin confirmación aprobada'].filter((v): v is string => !!v)
   const confirmarCreacion = (numeroRc: string | number) => {
     reset(); setExito(`RC ${numeroRc} creado`)
     void queryClient.invalidateQueries({ queryKey: ['recibo-caja'] })
@@ -315,21 +334,13 @@ export function NuevoReciboTab({ onCreated }: { onCreated: () => void }) {
         <Card className={`${section} rounded-xl ${!cliente ? 'opacity-60' : ''}`}>
           <h2 className={`${title} mb-2`}>Observación y notas</h2>
           {!cliente ? <p className="text-sm text-muted-foreground">Elige un cliente para completar la observación.</p> : <>
-            {notasManual === null ? (
-              <div className="rounded-md border border-input bg-background focus-within:ring-2 focus-within:ring-ring">
-                <textarea value={observacion} onChange={e => { cambio(); setObservacion(e.target.value) }} rows={2} aria-label="Observación"
-                  className="w-full resize-none rounded-md bg-transparent p-2 text-sm text-foreground focus-visible:outline-none"
-                  placeholder="Escribe aquí el motivo del recaudo" />
-                {notasAutomaticas && <p className="border-t border-dashed border-input px-2 py-1.5 text-xs text-muted-foreground" title="Se agrega solo al guardar">{notasAutomaticas}</p>}
-              </div>
-            ) : (
-              <textarea value={notasManual} onChange={e => { cambio(); setNotasManual(e.target.value) }} rows={4} aria-label="Notas del recibo"
-                className="w-full rounded-md border border-input bg-background p-2 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" />
-            )}
+            <textarea ref={areaNotas} value={notasFinal} onChange={e => editarNotas(e.target.value, e.target.selectionStart)} rows={4} aria-label="Observación y notas"
+              className="w-full rounded-md border border-input bg-background p-2 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              placeholder="Escribe aquí el motivo del recaudo" />
             <div className="mt-1 flex items-center justify-between gap-2 text-xs">
-              {notasManual === null
-                ? <button type="button" onClick={() => { cambio(); setNotasManual(notasPreview) }} className="font-medium text-primary hover:underline">Editar todo el texto</button>
-                : <button type="button" onClick={() => { cambio(); setNotasManual(null) }} className="font-medium text-primary hover:underline">Volver al texto automático</button>}
+              {notasManual !== null
+                ? <button type="button" onClick={() => { cambio(); setNotasManual(null) }} className="font-medium text-primary hover:underline">Volver a la sugerencia</button>
+                : <span className="text-muted-foreground">Lo que escribas va primero; el resto se agrega solo.</span>}
               <span className={`tabular-nums ${notasFinal.length > 255 ? 'font-semibold text-destructive' : 'text-muted-foreground'}`}>{notasFinal.length}/255</span>
             </div>
           </>}
