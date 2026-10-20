@@ -32,7 +32,7 @@ export const MaestroCuentasBancariasPage = () => {
     const fetchCuentas = async (searchTerm = search) => {
         try {
             setLoading(true)
-            const res = await maestroCuentasBancariasApi.listarConfig(false)
+            const res = await maestroCuentasBancariasApi.listarConfig(false, false, true)
             const data = res.data ?? []
             const filtered = searchTerm.trim()
                 ? data.filter((c) => {
@@ -163,6 +163,7 @@ export const MaestroCuentasBancariasPage = () => {
                             <th className="h-11 px-4 text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground">CIA</th>
                             <th className="h-11 px-4 text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground">Cuenta</th>
                             <th className="h-11 px-4 text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground">Banco</th>
+                            <th className="h-11 px-4 text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground">Conductores de</th>
                             <th className="h-11 px-4 text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground">Estado</th>
                             <th className="h-11 px-4 text-right text-xs font-semibold uppercase tracking-wide text-muted-foreground">Acciones</th>
                         </tr>
@@ -170,7 +171,7 @@ export const MaestroCuentasBancariasPage = () => {
                     <tbody>
                         {loading ? (
                             <tr>
-                                <td colSpan={6} className="h-32 text-center">
+                                <td colSpan={7} className="h-32 text-center">
                                     <div className="flex items-center justify-center gap-2 text-muted-foreground">
                                         <Loader2 className="h-5 w-5 animate-spin" />
                                         Cargando cuentas bancarias...
@@ -186,6 +187,17 @@ export const MaestroCuentasBancariasPage = () => {
                                         <td className="py-3.5 px-4 font-mono text-xs">{c.f026_id_cia}</td>
                                         <td className="py-3.5 px-4 font-mono text-xs">{c.f026_id}</td>
                                         <td className="py-3.5 px-4 font-mono text-xs">{c.f026_id_banco?.trim() ?? '—'}</td>
+                                        <td className="py-3.5 px-4">
+                                            {c.centros_operacion?.length ? (
+                                                <div className="flex flex-wrap gap-1">
+                                                    {c.centros_operacion.map((co) => (
+                                                        <span key={co} className="rounded-full bg-primary/10 px-2 py-0.5 font-mono text-[11px] font-semibold text-primary">C.O. {co}</span>
+                                                    ))}
+                                                </div>
+                                            ) : (
+                                                <span className="text-xs text-muted-foreground">Todos</span>
+                                            )}
+                                        </td>
                                         <td className="py-3.5 px-4">
                                             <span
                                                 className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold ${badgeClass(activa ? 'green' : 'red')}`}
@@ -242,7 +254,7 @@ export const MaestroCuentasBancariasPage = () => {
                             })
                         ) : (
                             <tr>
-                                <td colSpan={6} className="h-24 text-center text-muted-foreground">
+                                <td colSpan={7} className="h-24 text-center text-muted-foreground">
                                     No se encontraron cuentas bancarias.
                                 </td>
                             </tr>

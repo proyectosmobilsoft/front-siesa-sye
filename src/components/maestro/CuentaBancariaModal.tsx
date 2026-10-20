@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input'
 import { Select } from '@/components/ui/select'
 import { AlertCircle, Loader2 } from 'lucide-react'
 import { maestroCuentasBancariasApi, CuentaBancariaConfig, CuentaBancariaSiesa } from '@/api/maestroCuentasBancarias'
+import { CENTROS_OPERACION } from '@/config/centrosOperacion'
 
 interface CuentaBancariaModalProps {
     isOpen: boolean
@@ -20,6 +21,7 @@ export const CuentaBancariaModal = ({ isOpen, onClose, cuenta }: CuentaBancariaM
     const [seleccion, setSeleccion] = useState('')
     const [idCia, setIdCia] = useState('')
     const [idCuenta, setIdCuenta] = useState('')
+    const [centros, setCentros] = useState<string[]>([])
     const [isSubmitting, setIsSubmitting] = useState(false)
     const [error, setError] = useState<string | null>(null)
 
@@ -28,6 +30,7 @@ export const CuentaBancariaModal = ({ isOpen, onClose, cuenta }: CuentaBancariaM
 
         setIdCia(cuenta?.f026_id_cia != null ? String(cuenta.f026_id_cia) : '')
         setIdCuenta(cuenta?.f026_id ?? '')
+        setCentros(cuenta?.centros_operacion ?? [])
         setSeleccion('')
         setError(null)
 
@@ -70,6 +73,7 @@ export const CuentaBancariaModal = ({ isOpen, onClose, cuenta }: CuentaBancariaM
             const dto = {
                 id_cia: Number(idCia.trim()),
                 id_cuenta: idCuenta.trim(),
+                centros_operacion: centros,
             }
 
             if (isEditing && cuenta?.id) {
@@ -161,6 +165,32 @@ export const CuentaBancariaModal = ({ isOpen, onClose, cuenta }: CuentaBancariaM
                         />
                     </div>
                 </div>
+
+                <fieldset className="space-y-1.5">
+                    <legend className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">¿Qué conductores la ven?</legend>
+                    <div className="flex flex-wrap gap-2">
+                        {CENTROS_OPERACION.map((co) => {
+                            const marcado = centros.includes(co.codigo)
+                            return (
+                                <label
+                                    key={co.codigo}
+                                    className={`flex cursor-pointer items-center gap-2 rounded-lg border px-3 py-2 text-sm font-medium transition-colors ${marcado ? 'border-primary bg-primary/10 text-primary' : 'border-border text-muted-foreground hover:border-muted-foreground/50'}`}
+                                >
+                                    <input
+                                        type="checkbox"
+                                        checked={marcado}
+                                        onChange={() => setCentros((prev) => (marcado ? prev.filter((c) => c !== co.codigo) : [...prev, co.codigo]))}
+                                        className="h-4 w-4 rounded border-input"
+                                    />
+                                    C.O. {co.codigo} · {co.nombre}
+                                </label>
+                            )
+                        })}
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                        Los conductores de cada centro solo ven las cuentas marcadas con su centro. Sin marcar ninguno, la ven los conductores de todos los centros.
+                    </p>
+                </fieldset>
 
                 <div className="flex justify-end gap-3 pt-4 border-t">
                     <Button type="button" variant="outline" onClick={onClose} disabled={isSubmitting}>

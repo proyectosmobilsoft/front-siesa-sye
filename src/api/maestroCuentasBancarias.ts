@@ -12,11 +12,15 @@ export interface CuentaBancariaConfig {
     f026_descripcion: string
     f026_id_banco?: string
     f026_nro_cuenta?: string
+    /** Centros de operación cuyos conductores ven la cuenta; vacío = la ven todos */
+    centros_operacion?: string[]
 }
 
 export interface CuentaBancariaConfigDto {
     id_cia: number
     id_cuenta: string
+    /** Qué conductores la ven: lista de centros (001, 002); vacía = todos. Si se omite al editar, no cambia */
+    centros_operacion?: string[]
 }
 
 /** Fila real de t026_mm_cuentas_bancarias (SIESA), campos relevantes para el selector/tabla */
@@ -50,9 +54,11 @@ export const maestroCuentasBancariasApi = {
     /**
      * Por defecto trae la whitelist (la que ve el conductor y administra el maestro).
      * `todas: true` trae todas las cuentas de SIESA, sin filtro (recibo de caja, transferencias).
+     * `gestion: true` trae toda la lista con los centros de cada cuenta (el maestro); sin él, el API
+     * devuelve solo las cuentas de los centros de operación de quien consulta.
      */
-    listarConfig: async (soloActivas = true, todas = false): Promise<{ success: boolean; data: CuentaBancariaConfig[] }> => {
-        const response = await apiClient.get('/maestros/cuentas-bancarias-config', { params: { activas: soloActivas, ...(todas ? { todas: true } : {}) } })
+    listarConfig: async (soloActivas = true, todas = false, gestion = false): Promise<{ success: boolean; data: CuentaBancariaConfig[] }> => {
+        const response = await apiClient.get('/maestros/cuentas-bancarias-config', { params: { activas: soloActivas, ...(todas ? { todas: true } : {}), ...(gestion ? { gestion: true } : {}) } })
         return response.data
     },
 
