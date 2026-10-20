@@ -548,7 +548,7 @@ function TableroConductoresRC({
 }) {
   const { data: limites } = useFechasLimite()
   // Solo conductores que hicieron RC en la fecha; los que solo tienen facturas
-  // asignadas pendientes (sin plata recaudada) se ven en Logística → Asignar facturas.
+  // asignadas pendientes (sin plata recaudada) se ven en Tesorería → Asignar Facturas.
   const conductores = (resumen?.conductores ?? []).filter((c) => c.recibos_count > 0)
   const totales = conductores.reduce(
     (acc, c) => ({

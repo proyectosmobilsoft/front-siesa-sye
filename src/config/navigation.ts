@@ -51,7 +51,7 @@ import { PERMISOS } from '@/config/permisos'
  *   2. Maestros      → catálogos y configuración de datos base
  *   3. Comercial     → clientes, productos y pedidos
  *   4. Facturación   → documentos de venta y su análisis
- *   5. Tesorería     → todo el movimiento de dinero (entra, sale y se traslada)
+ *   5. Tesorería     → todo el movimiento de dinero (entra, sale y se traslada) y la asignación de facturas a conductores
  *   6. Reportes      → consultas de solo lectura
  *   7. Sistema       → preferencias y soporte
  *   8. Propuesta     → enlace directo a la propuesta comercial
@@ -71,6 +71,22 @@ export interface NavItem {
   subtitle?: string
   permiso?: string
   subItems?: SubNavItem[]
+}
+
+/**
+ * Rutas de las páginas que se han movido de grupo. App.tsx y el menú las leen de aquí:
+ * si cambian de grupo otra vez, se editan en un solo lugar.
+ */
+export const RUTAS = {
+  asignarFacturas: '/tesoreria/asignar-facturas',
+  mvpLogistica: '/tesoreria/mvp-logistica',
+} as const
+
+/** Rutas anteriores (cuando vivían en Logística o en Tesorería con otro nombre): redirigen a la actual. */
+export const RUTAS_ANTERIORES: Record<string, string> = {
+  '/logistica/asignar-facturas': RUTAS.asignarFacturas,
+  '/tesoreria/asignacion-cobro': RUTAS.asignarFacturas,
+  '/logistica/mvp': RUTAS.mvpLogistica,
 }
 
 export const navigation: NavItem[] = [
@@ -213,6 +229,20 @@ export const navigation: NavItem[] = [
         permiso: PERMISOS.TRASLADO_FONDOS,
       },
       {
+        name: 'Asignar Facturas',
+        href: RUTAS.asignarFacturas,
+        icon: ListChecks,
+        subtitle: 'Asignar facturas pendientes a conductores para cobro en ruta',
+        permiso: PERMISOS.ASIGNACION_COBRO,
+      },
+      {
+        name: 'MVP Logística',
+        href: RUTAS.mvpLogistica,
+        icon: Route,
+        subtitle: 'Rutas óptimas por peso y capacidad, en mapa',
+        permiso: PERMISOS.ASIGNACION_COBRO,
+      },
+      {
         name: 'Parámetros RC',
         href: '/tesoreria/parametros-rc',
         icon: Settings2,
@@ -226,26 +256,6 @@ export const navigation: NavItem[] = [
         icon: Wallet,
         subtitle: 'Gestión de anticipos operativos',
         permiso: PERMISOS.EGRESO,
-      },
-    ],
-  },
-  {
-    name: 'Logística',
-    icon: Truck,
-    subItems: [
-      {
-        name: 'Asignar Facturas',
-        href: '/logistica/asignar-facturas',
-        icon: ListChecks,
-        subtitle: 'Asignar facturas pendientes a conductores para cobro en ruta',
-        permiso: PERMISOS.ASIGNACION_COBRO,
-      },
-      {
-        name: 'MVP Logística',
-        href: '/logistica/mvp',
-        icon: Route,
-        subtitle: 'Rutas óptimas por peso y capacidad, en mapa',
-        permiso: PERMISOS.ASIGNACION_COBRO,
       },
     ],
   },
@@ -352,6 +362,12 @@ export const navigation: NavItem[] = [
   },
 ]
 
+/** Páginas del sistema agrupadas como el sidebar, para elegirlas al armar un módulo personalizado */
+export const paginasDelSistema = (): { grupo: string; paginas: { name: string; href: string; permiso?: string }[] }[] => [
+  { grupo: 'General', paginas: navigation.filter((n) => n.href).map((n) => ({ name: n.name, href: n.href!, permiso: n.permiso })) },
+  ...navigation.filter((n) => n.subItems).map((n) => ({ grupo: n.name, paginas: n.subItems!.map((s) => ({ name: s.name, href: s.href, permiso: s.permiso })) })),
+]
+
 export interface PageMeta {
   name: string
   icon: LucideIcon
@@ -367,8 +383,15 @@ const flatRoutes: (SubNavItem | (NavItem & { href: string }))[] = [
 
 const routesByPath = new Map(flatRoutes.map(r => [r.href, r]))
 
+// Páginas que no están en `navigation` (los enlaces de los módulos personalizados llegan del API)
+const paginasExtra = new Map<string, PageMeta>()
+export const registrarPaginasExtra = (paginas: Record<string, PageMeta>) => {
+  paginasExtra.clear()
+  for (const [href, meta] of Object.entries(paginas)) paginasExtra.set(href, meta)
+}
+
 export const getPageMeta = (pathname: string): PageMeta | undefined => {
   const route = routesByPath.get(pathname)
-  if (!route) return undefined
+  if (!route) return paginasExtra.get(pathname)
   return { name: route.name, icon: route.icon, subtitle: route.subtitle ?? '' }
 }

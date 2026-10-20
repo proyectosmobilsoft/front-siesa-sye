@@ -1,12 +1,18 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import { X, ChevronRight, LogOut } from 'lucide-react'
 import { useUIStore } from '@/store/uiStore'
 import { useAuthStore } from '@/store/authStore'
 import { useMediaQuery } from '@/hooks/useMediaQuery'
 import { cn } from '@/lib/utils'
-import { navigation, NavItem } from '@/config/navigation'
+import { navigation, NavItem, SubNavItem, registrarPaginasExtra, paginasDelSistema } from '@/config/navigation'
+
+type GrupoPersonalizado = Omit<NavItem, 'subItems'> & { subItems: (SubNavItem & { interno: boolean })[] }
+import { iconoMenu } from '@/config/iconosMenu'
+import { menuPersonalizadoApi, MENU_PERSONALIZADO_KEY } from '@/api/menuPersonalizado'
+import { AppWindow } from 'lucide-react'
 
 export const Sidebar = () => {
     const { sidebarOpen, setSidebarOpen } = useUIStore()
@@ -18,6 +24,37 @@ export const Sidebar = () => {
     // cuelgan de un grupo, permitir varios abiertos hacía crecer el menú hasta
     // necesitar scroll a medida que el usuario navegaba entre secciones.
     const [expandedItem, setExpandedItem] = useState<string | null>(null)
+
+    // Secciones personalizadas (creadas en Módulos y Permisos): el API ya trae solo las del usuario
+    const personalizado = useQuery({ queryKey: MENU_PERSONALIZADO_KEY, queryFn: menuPersonalizadoApi.menu, enabled: !!sesion, retry: false, staleTime: 60_000 })
+    const navPersonalizado = useMemo<GrupoPersonalizado[]>(
+        () => {
+            // Una página del sistema agregada a una sección solo se muestra si el usuario tiene el permiso de esa página
+            const permisoDe = new Map(paginasDelSistema().flatMap((g) => g.paginas.map((p) => [p.href, p.permiso] as const)))
+            return (personalizado.data ?? [])
+                .map((m) => ({
+                    name: m.nombre,
+                    icon: iconoMenu(m.icono),
+                    subItems: m.items
+                        .filter((i) => i.modo !== 'interno' || !permisoDe.get(i.url) || hasPermiso(permisoDe.get(i.url)!))
+                        .map((i) => ({
+                            name: i.nombre,
+                            href: i.modo === 'interno' ? i.url : `/personalizado/${i.id}`,
+                            icon: AppWindow,
+                            subtitle: m.nombre,
+                            interno: i.modo === 'interno',
+                        })),
+                }))
+                .filter((g) => g.subItems.length > 0)
+        },
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+        [personalizado.data]
+    )
+    useEffect(() => {
+        registrarPaginasExtra(Object.fromEntries(
+            navPersonalizado.flatMap((g) => g.subItems.filter((s) => !s.interno).map((s) => [s.href, { name: s.name, icon: s.icon, subtitle: s.subtitle }]))
+        ))
+    }, [navPersonalizado])
 
     // Filtrar items de navegación según permisos del usuario
     const navFiltrado: NavItem[] = navigation.reduce<NavItem[]>((acc, item) => {
@@ -37,7 +74,7 @@ export const Sidebar = () => {
             }
         }
         return acc
-    }, [])
+    }, []).concat(navPersonalizado)
 
     // Abrir el grupo que contiene la ruta actual (y cerrar el resto)
     useEffect(() => {

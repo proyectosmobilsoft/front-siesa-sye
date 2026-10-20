@@ -21,6 +21,7 @@ import {
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { ModuloPermisos, PermisoDeModulo } from '@/api/seguridad'
+import { organizarPorSidebar, type ModuloMenu } from './permisosSidebar'
 
 /**
  * Selector de permisos agrupados por módulo para el formulario de Roles.
@@ -49,6 +50,8 @@ const ICONOS: Record<string, LucideIcon> = {
     UserCircle,
 }
 
+const sinAcentos = (t: string) => t.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim()
+
 const iconoDe = (nombre?: string | null): LucideIcon => (nombre && ICONOS[nombre]) || Shield
 
 /** Títulos de las secciones dentro de la tarjeta de un módulo. */
@@ -74,7 +77,9 @@ interface Props {
     resetKey: string
 }
 
-export const PermisosPorModulo = ({ modulos, loading, seleccion, onChange, resetKey }: Props) => {
+export const PermisosPorModulo = ({ modulos: modulosBd, loading, seleccion, onChange, resetKey }: Props) => {
+    // Se presentan agrupados como el sidebar; ver permisosSidebar.ts
+    const modulos = useMemo(() => organizarPorSidebar(modulosBd), [modulosBd])
     // Códigos de módulo visibles en el formulario. Se distingue de "tiene
     // permisos marcados" para poder agregar un módulo y todavía no marcar nada.
     const [agregados, setAgregados] = useState<string[]>([])
@@ -117,17 +122,17 @@ export const PermisosPorModulo = ({ modulos, loading, seleccion, onChange, reset
     const disponibles = modulos.filter((m) => {
         if (agregados.includes(m.codigo)) return false
         if (!search.trim()) return true
-        const q = search.toLowerCase()
+        const q = sinAcentos(search)
         return (
-            m.nombre.toLowerCase().includes(q) ||
-            m.grupo?.toLowerCase().includes(q) ||
-            m.permisos.some((p) => p.codigo.toLowerCase().includes(q) || p.etiqueta.toLowerCase().includes(q))
+            sinAcentos(m.nombre).includes(q) ||
+            sinAcentos(m.grupoMenu).includes(q) ||
+            m.permisos.some((p) => sinAcentos(p.codigo).includes(q) || sinAcentos(p.etiqueta).includes(q))
         )
     })
 
-    const permisoVista = (m: ModuloPermisos) => m.permisos.find((p) => p.tipo === 'VISTA')
+    const permisoVista = (m: ModuloMenu) => m.permisos.find((p) => p.tipo === 'VISTA')
 
-    const agregarModulo = (m: ModuloPermisos) => {
+    const agregarModulo = (m: ModuloMenu) => {
         setAgregados((prev) => [...prev, m.codigo])
         setExpandidos((prev) => [...prev, m.codigo])
         setDropdownOpen(false)
@@ -137,14 +142,14 @@ export const PermisosPorModulo = ({ modulos, loading, seleccion, onChange, reset
         if (vista && !seleccionSet.has(vista.id)) onChange([...seleccion, vista.id])
     }
 
-    const quitarModulo = (m: ModuloPermisos) => {
+    const quitarModulo = (m: ModuloMenu) => {
         setAgregados((prev) => prev.filter((c) => c !== m.codigo))
         setExpandidos((prev) => prev.filter((c) => c !== m.codigo))
         const idsModulo = new Set(m.permisos.map((p) => p.id))
         onChange(seleccion.filter((id) => !idsModulo.has(id)))
     }
 
-    const togglePermiso = (m: ModuloPermisos, permiso: PermisoDeModulo) => {
+    const togglePermiso = (m: ModuloMenu, permiso: PermisoDeModulo) => {
         // El VISTA de un módulo agregado no se puede desmarcar: el API lo
         // reinsertaría igual al guardar.
         if (permiso.tipo === 'VISTA') return
@@ -159,7 +164,7 @@ export const PermisosPorModulo = ({ modulos, loading, seleccion, onChange, reset
         onChange([...seleccion, ...nuevos])
     }
 
-    const toggleTodoElModulo = (m: ModuloPermisos) => {
+    const toggleTodoElModulo = (m: ModuloMenu) => {
         const idsModulo = m.permisos.map((p) => p.id)
         const todosMarcados = idsModulo.every((id) => seleccionSet.has(id))
         if (todosMarcados) {
@@ -227,26 +232,26 @@ export const PermisosPorModulo = ({ modulos, loading, seleccion, onChange, reset
                                     {modulos.length === 0 ? 'No hay módulos' : 'No quedan módulos por agregar'}
                                 </div>
                             ) : (
-                                disponibles.map((m) => {
+                                disponibles.map((m, i) => {
                                     const Icono = iconoDe(m.icono)
+                                    const nuevoGrupo = i === 0 || disponibles[i - 1].grupoMenu !== m.grupoMenu
                                     return (
+                                        <div key={m.codigo}>
+                                        {nuevoGrupo && (
+                                            <p className="px-2 pb-1 pt-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">{m.grupoMenu}</p>
+                                        )}
                                         <button
-                                            key={m.codigo}
                                             type="button"
                                             onClick={() => agregarModulo(m)}
                                             className="flex w-full items-center gap-2.5 rounded px-2 py-2 text-left hover:bg-muted/60"
                                         >
                                             <Icono className="h-4 w-4 shrink-0 text-primary opacity-70" />
                                             <span className="flex-1 truncate text-sm font-medium">{m.nombre}</span>
-                                            {m.grupo && (
-                                                <span className="shrink-0 rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
-                                                    {m.grupo}
-                                                </span>
-                                            )}
                                             <span className="shrink-0 text-xs text-muted-foreground">
                                                 {m.permisos.length}
                                             </span>
                                         </button>
+                                        </div>
                                     )
                                 })
                             )}
@@ -288,6 +293,7 @@ export const PermisosPorModulo = ({ modulos, loading, seleccion, onChange, reset
                                         />
                                         <Icono className="h-4 w-4 shrink-0 text-primary" />
                                         <span className="truncate text-sm font-semibold">{m.nombre}</span>
+                                        <span className="shrink-0 rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-muted-foreground">{m.grupoMenu}</span>
                                         <span className="shrink-0 text-xs text-muted-foreground">
                                             {marcados} de {m.permisos.length}
                                         </span>

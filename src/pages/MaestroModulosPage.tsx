@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import {
     Plus,
     Edit,
@@ -20,6 +20,9 @@ import {
     PermisoDeModulo,
     TipoPermiso,
 } from '@/api/seguridad'
+import { organizarPorSidebar } from '@/components/maestros/permisosSidebar'
+import { EnlacesPersonalizados, NuevoModuloPersonalizadoModal } from '@/components/maestros/ModulosPersonalizados'
+import { esPersonalizado } from '@/api/menuPersonalizado'
 import { badgeClass, Tono } from '@/utils/badges'
 import { usePermiso } from '@/hooks/usePermiso'
 
@@ -71,6 +74,8 @@ export const MaestroModulosPage = () => {
         moduloId: null as number | null,
     })
 
+    const [personalizadoModalOpen, setPersonalizadoModalOpen] = useState(false)
+
     const [saving, setSaving] = useState(false)
     const [errorForm, setErrorForm] = useState<string | null>(null)
 
@@ -104,14 +109,19 @@ export const MaestroModulosPage = () => {
 
     const moduloActual = modulos.find((m) => m.id === seleccionado) || null
 
-    const modulosFiltrados = modulos.filter((m) => {
+    // Lista ordenada y agrupada como el sidebar; cada módulo sigue siendo el de BD
+    const modulosMenu = useMemo(() => organizarPorSidebar(modulos, { dividir: false }), [modulos])
+    const sa = (t: string) => t.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
+
+    const modulosFiltrados = modulosMenu.filter((m) => {
         if (!search.trim()) return true
-        const q = search.toLowerCase()
+        const q = sa(search.trim())
         return (
-            m.nombre.toLowerCase().includes(q) ||
-            m.codigo.toLowerCase().includes(q) ||
-            (m.grupo || '').toLowerCase().includes(q) ||
-            m.permisos.some((p) => p.codigo.toLowerCase().includes(q) || p.etiqueta.toLowerCase().includes(q))
+            sa(m.nombre).includes(q) ||
+            sa(m.codigo).includes(q) ||
+            sa(m.grupoMenu).includes(q) ||
+            sa(m.paginas || '').includes(q) ||
+            m.permisos.some((p) => sa(p.codigo).includes(q) || sa(p.etiqueta).includes(q))
         )
     })
 
@@ -266,6 +276,12 @@ export const MaestroModulosPage = () => {
                             Nuevo Módulo
                         </Button>
                     )}
+                    {puedeCrear && (
+                        <Button variant="outline" onClick={() => setPersonalizadoModalOpen(true)} className="whitespace-nowrap gap-2" title="Crea una sección propia en el menú lateral, con enlaces">
+                            <Plus className="h-4 w-4" />
+                            Sección del menú
+                        </Button>
+                    )}
                 </div>
                 <span className="inline-flex shrink-0 items-center rounded-full bg-muted px-3 py-1 text-xs font-medium text-muted-foreground">
                     {modulos.length} módulos · {modulos.reduce((n, m) => n + m.permisos.length, 0)} permisos
@@ -285,9 +301,12 @@ export const MaestroModulosPage = () => {
                             No se encontraron módulos.
                         </div>
                     ) : (
-                        modulosFiltrados.map((m) => (
+                        modulosFiltrados.map((m, i) => (
+                          <div key={m.codigo}>
+                            {(i === 0 || modulosFiltrados[i - 1].grupoMenu !== m.grupoMenu) && (
+                                <p className="sticky top-0 z-10 border-b bg-muted/60 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground backdrop-blur">{m.grupoMenu}</p>
+                            )}
                             <button
-                                key={m.codigo}
                                 type="button"
                                 onClick={() => setSeleccionado(m.id)}
                                 className={`flex w-full items-center gap-3 border-b px-3 py-2.5 text-left transition-colors last:border-0 ${
@@ -303,15 +322,12 @@ export const MaestroModulosPage = () => {
                                             </span>
                                         )}
                                     </div>
-                                    <p className="truncate font-mono text-[11px] text-muted-foreground">{m.codigo}</p>
+                                    <p className="truncate text-[11px] text-muted-foreground">{m.paginas ? `Menú: ${m.paginas}` : 'Sin página en el menú'}</p>
+                                    <p className="truncate font-mono text-[10px] text-muted-foreground/70">{m.codigo}</p>
                                 </div>
-                                {m.grupo && (
-                                    <span className="shrink-0 rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
-                                        {m.grupo}
-                                    </span>
-                                )}
                                 <span className="shrink-0 text-xs text-muted-foreground">{m.permisos.length}</span>
                             </button>
+                          </div>
                         ))
                     )}
                 </div>
@@ -359,6 +375,10 @@ export const MaestroModulosPage = () => {
                                     )}
                                 </div>
                             </div>
+
+                            {moduloActual.id !== null && esPersonalizado(moduloActual.codigo) && (
+                                <EnlacesPersonalizados moduloId={moduloActual.id} codigoPermiso={`VER_${moduloActual.codigo}`} puedeEditar={puedeEditar} />
+                            )}
 
                             <div className="min-h-0 flex-1 overflow-auto">
                                 <table className="w-full text-sm">
@@ -437,6 +457,8 @@ export const MaestroModulosPage = () => {
                     )}
                 </div>
             </div>
+
+            <NuevoModuloPersonalizadoModal abierto={personalizadoModalOpen} onClose={() => setPersonalizadoModalOpen(false)} onCreado={() => void fetchModulos()} />
 
             {/* Modal Módulo */}
             <Modal
@@ -600,11 +622,15 @@ export const MaestroModulosPage = () => {
                             className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                         >
                             <option value="">Sin clasificar</option>
-                            {modulos.filter((m) => m.id !== null).map((m) => (
-                                <option key={m.id} value={m.id as number}>{m.nombre}</option>
+                            {[...new Set(modulosMenu.filter((m) => m.id !== null).map((m) => m.grupoMenu))].map((grupo) => (
+                                <optgroup key={grupo} label={grupo}>
+                                    {modulosMenu.filter((m) => m.id !== null && m.grupoMenu === grupo).map((m) => (
+                                        <option key={m.id} value={m.id as number}>{m.nombre}</option>
+                                    ))}
+                                </optgroup>
                             ))}
                         </select>
-                        <p className="text-[11px] text-muted-foreground">Dónde aparece en la pantalla de Roles. El código no cambia.</p>
+                        <p className="text-[11px] text-muted-foreground">Es la carpeta donde se muestra este permiso al armar un rol. Mover el permiso no cambia lo que hace ni su código.</p>
                     </div>
 
                     <div className="space-y-1.5">

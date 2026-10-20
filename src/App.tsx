@@ -6,6 +6,7 @@ import { DashboardPage } from '@/pages/DashboardPage'
 import { LoginPage } from '@/pages/LoginPage'
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute'
 import { PERMISOS } from '@/config/permisos'
+import { RUTAS, RUTAS_ANTERIORES } from '@/config/navigation'
 import { useUIStore } from '@/store/uiStore'
 import { lazy, Suspense, useCallback, useEffect, useState } from 'react'
 import { useAuth } from '@/hooks/useAuth'
@@ -18,6 +19,7 @@ import { InactivityModal } from '@/components/ui/InactivityModal'
 // parsear y evaluar el bundle completo de la app antes de poder mostrar
 // nada, aunque el usuario solo quisiera ver el Dashboard. Con React.lazy
 // cada página solo se descarga/evalúa cuando se navega a su ruta.
+const PersonalizadoPage = lazy(() => import('@/pages/PersonalizadoPage').then(m => ({ default: m.PersonalizadoPage })))
 const ClientsPage = lazy(() => import('@/pages/ClientsPage').then(m => ({ default: m.ClientsPage })))
 const CompaniesPage = lazy(() => import('@/pages/CompaniesPage').then(m => ({ default: m.CompaniesPage })))
 const ProductsPage = lazy(() => import('@/pages/ProductsPage').then(m => ({ default: m.ProductsPage })))
@@ -149,10 +151,13 @@ function AppLayout() {
                                 <Route path="/tesoreria/entrega-recaudo" element={<ProtectedRoute permiso={PERMISOS.ENTREGA_RECAUDO}><TesoreriaEntregaRecaudoPage /></ProtectedRoute>} />
                                 <Route path="/tesoreria/confirmacion-transferencias" element={<ProtectedRoute permiso={PERMISOS.CONFIRMACION_TRANSFERENCIA}><ConfirmacionTransferenciasPage /></ProtectedRoute>} />
                                 <Route path="/tesoreria/parametros-rc" element={<ProtectedRoute permiso={PERMISOS.PARAMETROS_RC}><ParametrosReciboCajaPage /></ProtectedRoute>} />
-                                <Route path="/logistica/asignar-facturas" element={<ProtectedRoute permiso={PERMISOS.ASIGNACION_COBRO}><AsignacionCobroPage /></ProtectedRoute>} />
-                                <Route path="/logistica/mvp" element={<ProtectedRoute permiso={PERMISOS.ASIGNACION_COBRO}><MvpLogisticaPage /></ProtectedRoute>} />
-                                {/* Compatibilidad con el enlace/ruta anterior. */}
-                                <Route path="/tesoreria/asignacion-cobro" element={<Navigate to="/logistica/asignar-facturas" replace />} />
+                                <Route path={RUTAS.asignarFacturas} element={<ProtectedRoute permiso={PERMISOS.ASIGNACION_COBRO}><AsignacionCobroPage /></ProtectedRoute>} />
+                                <Route path={RUTAS.mvpLogistica} element={<ProtectedRoute permiso={PERMISOS.ASIGNACION_COBRO}><MvpLogisticaPage /></ProtectedRoute>} />
+                                {/* Compatibilidad con las rutas anteriores (favoritos, enlaces). */}
+                                {Object.entries(RUTAS_ANTERIORES).map(([desde, hacia]) => (
+                                    <Route key={desde} path={desde} element={<Navigate to={hacia} replace />} />
+                                ))}
+                                <Route path="/personalizado/:itemId" element={<PersonalizadoPage />} />
                                 <Route path="/configuracion" element={<ProtectedRoute permiso={PERMISOS.CONFIGURACION}><SettingsPage /></ProtectedRoute>} />
                                 {/* Compatibilidad con enlaces antiguos, sin mantener un módulo duplicado. */}
                                 <Route path="/configuracion/seguridad" element={<Navigate to="/maestro/usuarios" replace />} />
