@@ -1,21 +1,5 @@
 import { Fragment, useEffect, useMemo, useState } from 'react'
-import {
-  ChevronLeft,
-  ChevronRight,
-  FileText,
-  Hash,
-  Search,
-  RefreshCw,
-  Receipt,
-  Landmark,
-  User,
-  Wallet,
-  Printer,
-  FileSpreadsheet,
-  FolderOpen,
-  Building2,
-  Layers,
-} from 'lucide-react'
+import { ChevronLeft, ChevronRight, FileText, Hash, Search, RefreshCw, Receipt, Landmark, User, Wallet, Printer, FileSpreadsheet, FolderOpen, Building2, Layers } from 'lucide-react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { Button } from '@/components/ui/button'
 import { FechaInput } from '@/components/ui/fecha-input'
@@ -37,6 +21,7 @@ import { CuadreCaja } from '@/components/reciboCaja/CuadreCaja'
 import { enriquecerTraslados } from '@/components/reciboCaja/cuadreCajaCalculos'
 import { MontoAlineado } from '@/components/ui/monto-alineado'
 import { descargarAnexoCuadrePdf } from '@/utils/cuadreCajaPdf'
+import { Cargando } from '@/components/ui/cargando'
 
 interface ReciboCaja {
   Rowid: number
@@ -648,7 +633,7 @@ function TableroConductoresRC({
               {conductores.length === 0 ? (
                 <tr>
                   <td colSpan={columnas} className="py-14 text-center text-xs font-bold uppercase tracking-widest text-muted-foreground">
-                    {loading ? 'Cargando...' : 'Sin RC registrados para la fecha seleccionada'}
+                    {loading ? <Cargando compacto texto="Cargando" /> : 'Sin RC registrados para la fecha seleccionada'}
                   </td>
                 </tr>
               ) : (
@@ -739,7 +724,7 @@ function RcConductorDetalle({ rc, loading, conductorNombre }: { rc: ReciboCajaUs
   const [reciboFacturas, setReciboFacturas] = useState<ReciboCajaUsuario | null>(null)
 
   if (loading) {
-    return <div className="px-8 py-6 text-center text-xs font-bold uppercase tracking-widest text-muted-foreground">Cargando RC...</div>
+    return <Cargando compacto texto="Cargando RC" />
   }
   if (!rc || rc.length === 0) {
     return <div className="px-8 py-6 text-center text-xs font-bold uppercase tracking-widest text-muted-foreground">Sin RC para mostrar</div>
@@ -1165,7 +1150,7 @@ function DetalleReciboModal({ recibo, onClose }: { recibo: ReciboCaja | null; on
           </dl>
 
           {cargando ? (
-            <p className="py-6 text-center text-xs font-bold uppercase tracking-widest text-muted-foreground">Cargando facturas...</p>
+            <Cargando compacto texto="Cargando facturas" />
           ) : error ? (
             <p className="text-sm text-destructive">{error}</p>
           ) : facturas.length === 0 ? (

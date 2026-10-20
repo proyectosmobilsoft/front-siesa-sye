@@ -4,6 +4,7 @@ import { formatters } from '@/utils/formatters'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { Cargando } from '@/components/ui/cargando'
 
 export function FacturasTabla({ facturas, descuentos, descuentosSugeridos, descuentosManuales, aplicar, cargando, mas, onChange, onDescuento, onRestaurar, onAll, onClear, onMore }: {
   facturas: FacturaRC[]; descuentos: Record<number, number>; descuentosSugeridos: Record<number, number>; descuentosManuales: Record<number, number>; aplicar: boolean
@@ -50,7 +51,7 @@ export function FacturasTabla({ facturas, descuentos, descuentosSugeridos, descu
       </table>
       {!cargando && !facturas.length && <p className="p-5 text-center text-sm text-muted-foreground">No hay facturas abiertas.</p>}
     </div>
-    {cargando && <p className="text-xs text-muted-foreground">Cargando facturas…</p>}
+    {cargando && <Cargando compacto texto="Cargando facturas" />}
     {mas && <Button size="sm" className="h-7 self-start text-xs" variant="outline" disabled={cargando} onClick={onMore}>Cargar más</Button>}
   </div>
 }

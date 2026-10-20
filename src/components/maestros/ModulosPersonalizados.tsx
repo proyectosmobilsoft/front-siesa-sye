@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { ExternalLink, Info, Loader2, Pencil, Plus, Trash2 } from 'lucide-react'
+import { ExternalLink, Info, Pencil, Plus, Trash2 } from 'lucide-react'
 import { useQueryClient } from '@tanstack/react-query'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -7,6 +7,7 @@ import { Modal } from '@/components/ui/modal'
 import { ICONOS_MENU, iconoMenu } from '@/config/iconosMenu'
 import { paginasDelSistema } from '@/config/navigation'
 import { menuPersonalizadoApi, MENU_PERSONALIZADO_KEY, type EnlaceAdmin, type ModoEnlace } from '@/api/menuPersonalizado'
+import { Cargando } from '@/components/ui/cargando'
 
 const PAGINAS = paginasDelSistema()
 const nombreDePagina = (href: string) => PAGINAS.flatMap((g) => g.paginas).find((p) => p.href === href)?.name
@@ -135,7 +136,7 @@ export function EnlacesPersonalizados({ moduloId, puedeEditar, puedeAsignarRoles
                 {puedeEditar && <Button size="sm" className="h-8 gap-1.5" onClick={() => abrirForm('nuevo')}><Plus className="h-3.5 w-3.5" /> Enlace</Button>}
             </div>
             {cargando ? (
-                <div className="flex items-center gap-2 px-4 pb-3 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" /> Cargando…</div>
+                <Cargando compacto texto="Cargando enlaces" />
             ) : enlaces.length === 0 ? (
                 <p className="px-4 pb-3 text-sm text-muted-foreground">Todavía no hay enlaces. Agrega el primero.</p>
             ) : (

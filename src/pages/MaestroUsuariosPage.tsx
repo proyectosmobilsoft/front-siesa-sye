@@ -8,6 +8,7 @@ import { Modal } from '@/components/ui/modal'
 import { AlertTriangle } from 'lucide-react'
 import { seguridadApi, UsuarioMaster } from '@/api/seguridad'
 import { badgeClass } from '@/utils/badges'
+import { Cargando } from '@/components/ui/cargando'
 
 export const MaestroUsuariosPage = () => {
     const [search, setSearch] = useState('')
@@ -135,10 +136,7 @@ export const MaestroUsuariosPage = () => {
                         {loading ? (
                             <tr>
                                 <td colSpan={8} className="h-32 text-center">
-                                    <div className="flex items-center justify-center gap-2 text-muted-foreground">
-                                        <Loader2 className="h-5 w-5 animate-spin" />
-                                        Cargando usuarios...
-                                    </div>
+                                    <Cargando compacto texto="Cargando usuarios" />
                                 </td>
                             </tr>
                         ) : usuarios.length > 0 ? (

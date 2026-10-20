@@ -8,6 +8,7 @@ import { InterfazContableModal } from '@/components/maestros/InterfazContableMod
 import { interfazContableApi, InterfazContableVehiculo } from '@/api/interfazContable'
 import { badgeClass } from '@/utils/badges'
 import { usePermiso } from '@/hooks/usePermiso'
+import { Cargando } from '@/components/ui/cargando'
 
 export const InterfazContableVehiculosPage = () => {
     const { puede, P } = usePermiso()
@@ -137,10 +138,7 @@ export const InterfazContableVehiculosPage = () => {
                         {loading ? (
                             <tr>
                                 <td colSpan={8} className="h-32 text-center">
-                                    <div className="flex items-center justify-center gap-2 text-muted-foreground">
-                                        <Loader2 className="h-5 w-5 animate-spin" />
-                                        Cargando relaciones...
-                                    </div>
+                                    <Cargando compacto texto="Cargando relaciones" />
                                 </td>
                             </tr>
                         ) : registros.length > 0 ? (

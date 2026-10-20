@@ -20,6 +20,7 @@ import { ClienteAutocomplete } from './ClienteAutocomplete'
 import { FacturasTabla } from './FacturasTabla'
 import { MediosPago } from './MediosPago'
 import { ResumenRecibo } from './ResumenRecibo'
+import { Cargando } from '@/components/ui/cargando'
 
 type MeResponse = { data?: { siesa_rowid?: number | null; siesa_nombre?: string | null }; siesa_rowid?: number | null; siesa_nombre?: string | null }
 type FacturaRaw = Record<string, unknown>
@@ -271,7 +272,7 @@ export function NuevoReciboTab({ onCreated }: { onCreated: () => void }) {
       confirmarCreacion(numeroRc)
     } catch (e) { if (estadoIncierto(e) && intento.current) await verificarCreacion(intento.current.key); else setError(errorMensaje(e)) } finally { setGuardando(false) }
   }
-  if (me.isLoading) return <p className="p-6 text-sm text-muted-foreground">Consultando usuario SIESA…</p>
+  if (me.isLoading) return <Cargando texto="Consultando usuario SIESA" />
   if (me.isError) return <div className="p-6 text-sm text-red-600 dark:text-red-400">No se pudo verificar la asociación SIESA: {errorMensaje(me.error)} <Button variant="outline" onClick={() => void me.refetch()}>Reintentar</Button></div>
   if (!asociado) return <p className="m-4 rounded-xl border border-amber-500/30 bg-amber-500/10 p-4 text-sm font-medium text-amber-700 dark:text-amber-400">Tu usuario no está asociado a un usuario de SIESA; pide al administrador que lo asocie en Maestro de usuarios.</p>
   return <div className="p-3 pb-28 lg:flex lg:h-full lg:min-h-0 lg:flex-col lg:pb-3">
@@ -322,7 +323,7 @@ export function NuevoReciboTab({ onCreated }: { onCreated: () => void }) {
               onChange={cambiarPago} onAdd={agregarPago} onRemove={quitarPago} />}
           {requiereConfirmacion && <div className="mt-2 rounded-lg border border-border p-2">
             <h3 className="text-xs font-semibold">Transferencias aprobadas del cliente</h3>
-            {disponibles.isFetching && <p className="mt-2 text-xs text-muted-foreground">Consultando confirmaciones…</p>}
+            {disponibles.isFetching && <Cargando compacto texto="Consultando confirmaciones" />}
             {disponibles.isError && <p className="mt-2 text-xs text-destructive">No se pudieron consultar las confirmaciones.</p>}
             {!disponibles.isFetching && !disponibles.isError && disponiblesOrdenadas.length === 0 && <p className="mt-2 text-sm text-muted-foreground">No hay transferencias aprobadas. <Link className="text-primary underline" to="/tesoreria/confirmacion-transferencias">Ir a confirmación de transferencias</Link></p>}
             <div className="mt-2 max-h-28 space-y-1 overflow-y-auto">{disponiblesOrdenadas.map(row => <label key={row.id} className="flex cursor-pointer items-start gap-2 rounded-lg border border-border p-1.5 text-xs">

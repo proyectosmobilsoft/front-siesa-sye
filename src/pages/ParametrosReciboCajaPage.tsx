@@ -11,6 +11,7 @@ import {
   CuentaParametroRC,
 } from '@/api/reciboCaja'
 import { AxiosError } from 'axios'
+import { Cargando } from '@/components/ui/cargando'
 
 type CuentaKey =
   | 'cuenta_ajuste_peso_descuento'
@@ -220,10 +221,7 @@ export const ParametrosReciboCajaPage = () => {
       </div>
 
       {loading && !data ? (
-        <div className="flex flex-1 items-center justify-center gap-2 text-muted-foreground">
-          <Loader2 className="h-5 w-5 animate-spin" />
-          Cargando parámetros...
-        </div>
+        <Cargando texto="Cargando parámetros" className="flex-1" />
       ) : (
         <div className="min-h-0 flex-1 space-y-4 overflow-auto">
           <Card>

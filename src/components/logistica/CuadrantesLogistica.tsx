@@ -12,6 +12,7 @@ import {
   DireccionesCuadrante,
   type FilaDireccion,
 } from './DireccionesCuadrante'
+import { Cargando } from '@/components/ui/cargando'
 
 type Punto = { lat: number; lon: number; nombre?: string }
 const filasVacias = (): FilaDireccion[] =>
@@ -326,7 +327,7 @@ export function CuadrantesLogistica({
               Nuevo
             </button>
           </div>
-          {zonasQ.isLoading && <p className="text-sm">Cargando cuadrantes…</p>}
+          {zonasQ.isLoading && <Cargando compacto texto="Cargando cuadrantes" />}
           {zonasQ.isError && (
             <p role="alert" className="text-sm text-destructive">
               No se pudieron cargar los cuadrantes.
@@ -491,7 +492,7 @@ export function CuadrantesLogistica({
             <h2 className="font-semibold">
               Facturas pendientes dentro del cuadrante
             </h2>
-            {facturasQ.isLoading && <p>Cargando facturas…</p>}
+            {facturasQ.isLoading && <Cargando compacto texto="Cargando facturas" />}
             {facturasQ.isError && (
               <p role="alert">No se pudieron cargar las facturas.</p>
             )}

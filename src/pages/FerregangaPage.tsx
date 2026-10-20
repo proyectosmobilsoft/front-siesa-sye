@@ -1,18 +1,9 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { apiClient } from '@/api/client';
-import {
-  Ticket, Trophy, User,
-  PlusCircle,
-  CheckCircle2, Users,
-  TrendingUp,
-  Search, Megaphone,
-  AlertCircle, Gift,
-  Save,
-  Medal, Trash2, Edit3,
-  Plus, X
-} from 'lucide-react';
+import { Ticket, Trophy, User, PlusCircle, CheckCircle2, Users, TrendingUp, Search, Megaphone, AlertCircle, Gift, Save, Medal, Trash2, Edit3, Plus, X } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { FechaInput } from '@/components/ui/fecha-input'
+import { Cargando } from '@/components/ui/cargando'
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -565,10 +556,7 @@ const FerregangaPage: React.FC = () => {
         </CardHeader>
         <CardContent>
           {loadingClientes ? (
-            <div className="flex items-center justify-center py-16 gap-3 text-muted-foreground">
-              <div className="w-5 h-5 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-              <span className="text-sm font-bold uppercase tracking-widest">Cargando clientes...</span>
-            </div>
+            <Cargando texto="Cargando clientes" />
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
@@ -645,10 +633,7 @@ const FerregangaPage: React.FC = () => {
       </div>
 
       {loadingCampanias && (
-        <div className="flex items-center justify-center py-16 text-muted-foreground gap-3">
-          <div className="w-5 h-5 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-          <span className="text-sm font-bold uppercase tracking-widest">Cargando campañas...</span>
-        </div>
+        <Cargando texto="Cargando campañas" />
       )}
 
       {errorCampanias && !loadingCampanias && (

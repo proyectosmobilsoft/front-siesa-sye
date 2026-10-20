@@ -39,6 +39,7 @@ import { cn } from '@/lib/utils'
 import { usePermiso } from '@/hooks/usePermiso'
 import ExcelJS from 'exceljs'
 import { saveAs } from 'file-saver'
+import { Cargando } from '@/components/ui/cargando'
 
 // ─── Agrupación por conductor ────────────────────────────────────────────────
 
@@ -873,9 +874,7 @@ const RecibosConductorModal = ({ grupo, onClose, rango }: { grupo: GrupoConducto
                     Este conductor no tiene usuario SIESA vinculado (siesa_nombre), no se puede consultar sus recibos.
                 </p>
             ) : isLoading ? (
-                <div className="flex items-center justify-center gap-2 py-10 text-sm text-muted-foreground">
-                    <Loader2 className="h-4 w-4 animate-spin" /> Cargando recibos...
-                </div>
+                <Cargando compacto texto="Cargando recibos" />
             ) : error ? (
                 <p className="text-sm font-semibold text-destructive">Error al cargar los recibos.</p>
             ) : todosRecibos.length === 0 ? (

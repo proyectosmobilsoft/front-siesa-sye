@@ -8,6 +8,7 @@ import { Modal } from '@/components/ui/modal'
 import { cn } from '@/lib/utils'
 import { formatters } from '@/utils/formatters'
 import { calcularCuadre, TIPOS_LIQUIDAN_TARJETA, type ColumnaMonto, type ConceptoCalculado, type MontosCuadre } from './cuadreCajaCalculos'
+import { Cargando } from '@/components/ui/cargando'
 
 type Filtro = 'todos' | 'APP' | 'SIESA' | 'consignacion'
 
@@ -27,7 +28,7 @@ export function CuadreCaja({ datos, cargando }: { datos: CuadreCajaDatos | null;
   const [abiertos, setAbiertos] = useState<string[]>(['RECAUDOS'])
 
   if (cargando) {
-    return <div className="nu-card py-12 text-center text-xs font-bold uppercase tracking-widest text-muted-foreground">Cargando cuadre de caja...</div>
+    return <div className="nu-card"><Cargando texto="Cargando cuadre de caja" /></div>
   }
   if (!datos || !calculo) {
     return <div className="nu-card py-12 text-center text-sm text-muted-foreground">No hay datos de cuadre para mostrar.</div>

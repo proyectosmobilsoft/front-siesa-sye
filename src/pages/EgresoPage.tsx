@@ -36,6 +36,7 @@ import { AnticipoOperativo, AnticipoOperativoUpdatePayload, DistribucionItem, So
 import { formatters } from '@/utils/formatters'
 import { useQueryClient } from '@tanstack/react-query'
 import { usePermiso } from '@/hooks/usePermiso'
+import { Cargando } from '@/components/ui/cargando'
 
 // ─── Utilidades de UI ────────────────────────────────────────────────────────
 
@@ -402,10 +403,7 @@ const DistribucionAccordion = ({ anticipo, totalColumnas }: DistribucionAccordio
                         </div>
 
                         {isLoading ? (
-                            <div className="flex items-center gap-2 py-3 text-muted-foreground text-sm">
-                                <Loader2 className="h-4 w-4 animate-spin" />
-                                Cargando distribución...
-                            </div>
+                            <Cargando compacto texto="Cargando distribución" />
                         ) : error ? (
                             <div className="flex items-center gap-2 py-3 text-sm text-destructive">
                                 <AlertCircle className="h-4 w-4" />

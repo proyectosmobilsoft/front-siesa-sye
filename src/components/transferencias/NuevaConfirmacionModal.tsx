@@ -15,6 +15,7 @@ import { formatters } from '@/utils/formatters'
 import { parseMonto } from '@/utils/reciboCajaCalculos'
 import { validarSoportes } from './soportes'
 import { FileText, Trash2, Upload } from 'lucide-react'
+import { Cargando } from '@/components/ui/cargando'
 
 const hoy = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}` }
 function Miniatura({ file }: { file: File }) {
@@ -87,7 +88,7 @@ export function NuevaConfirmacionModal({ onClose, onSaved }: { onClose: () => vo
     </div> : <div className="space-y-4">
       <div><p className="mb-1 text-xs font-medium text-muted-foreground">Cliente</p><ClienteAutocomplete cliente={cliente} resultados={clientes.data ?? []} termino={busqueda} buscando={clientes.isFetching} error={clientes.isError ? mensajeError(clientes.error) : undefined} onSearch={setBusqueda} onSelect={elegirCliente} onChange={() => { facturaVersion.current++; setCliente(null); setFacturas([]); setSeleccionadas([]); setCargandoFacturas(false) }} /></div>
       {cliente && <div className="rounded-lg border border-border p-3"><p className="text-sm font-semibold">Facturas pendientes <span className="font-normal text-muted-foreground">(opcional)</span></p>
-        {cargandoFacturas && <p className="text-xs text-muted-foreground">Cargando facturas…</p>}
+        {cargandoFacturas && <Cargando compacto texto="Cargando facturas" />}
         <div className="mt-2 max-h-36 space-y-1 overflow-auto">{facturas.length ? facturas.map(row => <label key={row.rowid_sa} className="flex items-center gap-2 text-sm"><input type="checkbox" checked={seleccionadas.includes(row.rowid_sa)} onChange={e => setSeleccionadas(prev => e.target.checked ? [...prev, row.rowid_sa] : prev.filter(id => id !== row.rowid_sa))} /><span className="flex-1">{row.documento}</span><span className="tabular-nums">{formatters.currency(row.saldo)}</span></label>) : <p className="text-xs text-muted-foreground">Sin facturas pendientes en la primera página.</p>}</div>
         <p className="mt-2 text-right text-xs tabular-nums text-muted-foreground">Suma seleccionada: {formatters.currency(sumaFacturas)} <button type="button" className="ml-2 text-primary underline" onClick={() => setValor(String(sumaFacturas))} disabled={!seleccionadas.length}>Usar como valor</button></p>
       </div>}

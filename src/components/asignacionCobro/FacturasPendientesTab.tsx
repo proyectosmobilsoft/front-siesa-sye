@@ -16,6 +16,7 @@ import {
     normalizarFactura,
     formatearPeso,
 } from './facturaPendiente'
+import { Cargando } from '@/components/ui/cargando'
 
 interface Props {
     conductores: UsuarioMaster[]
@@ -206,9 +207,7 @@ export const FacturasPendientesTab = ({ conductores, onAsignado }: Props) => {
                         )}
                     </div>
                     {cargando ? (
-                        <div className="flex items-center justify-center gap-2 p-8 text-muted-foreground">
-                            <Loader2 className="h-5 w-5 animate-spin" /> Cargando facturas...
-                        </div>
+                        <Cargando texto="Cargando facturas" />
                     ) : grupos.length === 0 ? (
                         <div className="p-8 text-center text-sm text-muted-foreground">No hay facturas pendientes que coincidan.</div>
                     ) : (

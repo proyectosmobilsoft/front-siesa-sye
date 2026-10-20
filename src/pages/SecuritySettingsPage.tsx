@@ -17,6 +17,7 @@ import { seguridadApi, UsuarioMaster } from '@/api/seguridad'
 import { badgeClass } from '@/utils/badges'
 import { Modal } from '@/components/ui/modal'
 import { usePermiso } from '@/hooks/usePermiso'
+import { Cargando } from '@/components/ui/cargando'
 
 export const SecuritySettingsPage = () => {
     const navigate = useNavigate()
@@ -328,10 +329,7 @@ export const SecuritySettingsPage = () => {
                         {loading ? (
                             <tr>
                                 <td colSpan={columns.length} className="h-32 text-center">
-                                    <div className="flex items-center justify-center gap-2 text-muted-foreground">
-                                        <Loader2 className="h-5 w-5 animate-spin" />
-                                        Cargando usuarios...
-                                    </div>
+                                    <Cargando compacto texto="Cargando usuarios" />
                                 </td>
                             </tr>
                         ) : table.getRowModel().rows?.length ? (

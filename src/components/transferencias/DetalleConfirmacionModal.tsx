@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input'
 import { formatters } from '@/utils/formatters'
 import { validarSoportes } from './soportes'
 import { FileText, Upload } from 'lucide-react'
+import { Cargando } from '@/components/ui/cargando'
 
 const errorMensaje = (error: unknown) => (error as { response?: { data?: { message?: string } }; message?: string }).response?.data?.message || (error as Error).message || 'No se pudo completar la operación'
 type Accion = 'aprobar' | 'rechazar' | 'anular' | null
@@ -44,7 +45,7 @@ export function DetalleConfirmacionModal({ id, onClose, onSaved }: { id: number;
     catch (e) { setError(errorMensaje(e)) } finally { setSaving(false) }
   }
   return <Modal isOpen onClose={() => { if (!saving) onClose() }} title={`Confirmación #${id}`} className="max-w-2xl">
-    {detalle.isLoading && <p className="text-sm text-muted-foreground">Cargando detalle…</p>}
+    {detalle.isLoading && <Cargando compacto texto="Cargando detalle" />}
     {detalle.isError && <p role="alert" className="text-sm text-destructive">{errorMensaje(detalle.error)}</p>}
     {row && <div className="space-y-5 text-sm">
       <div className="grid gap-3 rounded-lg border border-border p-3 sm:grid-cols-2">

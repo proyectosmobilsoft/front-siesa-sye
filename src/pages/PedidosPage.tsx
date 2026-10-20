@@ -21,6 +21,7 @@ import { usePedidos } from '@/hooks/usePedidos'
 import { Pedido, PedidosParams } from '@/api/types'
 import { formatters } from '@/utils/formatters'
 import { pedidosApi } from '@/api/pedidos'
+import { Cargando } from '@/components/ui/cargando'
 
 export const PedidosPage = () => {
     const today = new Date().toISOString().split('T')[0]
@@ -498,12 +499,7 @@ export const PedidosPage = () => {
                 title="Vista Previa del Pedido"
             >
                 {loadingPreview ? (
-                    <div className="flex items-center justify-center py-12">
-                        <div className="text-center">
-                            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-                            <p className="text-muted-foreground">Cargando vista previa...</p>
-                        </div>
-                    </div>
+                    <Cargando texto="Cargando vista previa" />
                 ) : previewData ? (
                     <div className="space-y-4">
                         <pre className="bg-muted p-4 rounded-lg overflow-auto max-h-[60vh] text-xs">

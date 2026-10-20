@@ -32,6 +32,7 @@ import {
   Settings,
   SlidersHorizontal,
   Settings2,
+  LayoutList,
   CircleHelp,
   Presentation,
   type LucideIcon,
@@ -290,6 +291,14 @@ export const navigation: NavItem[] = [
         icon: Shield,
         subtitle: 'Administración de roles',
         permiso: PERMISOS.ROLES,
+      },
+      // Organizar Menú: dónde va cada página del menú lateral (configuración global; los roles se arman sobre ese menú)
+      {
+        name: 'Organizar Menú',
+        href: '/maestro/organizar-menu',
+        icon: LayoutList,
+        subtitle: 'Arrastra cada página al menú donde la quieres',
+        permiso: PERMISOS.MODULOS,
       },
       // Módulos y Permisos: el catálogo que alimenta la pantalla de Roles.
       // Permiso VER_MODULOS, asignado solo al rol Administrador.

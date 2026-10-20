@@ -1,8 +1,9 @@
 import { Navigate, useParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { ExternalLink, Loader2 } from 'lucide-react'
+import { ExternalLink } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { menuPersonalizadoApi, MENU_PERSONALIZADO_KEY } from '@/api/menuPersonalizado'
+import { Cargando } from '@/components/ui/cargando'
 
 /**
  * Muestra un enlace de un módulo personalizado: embebido (iframe) o con un botón
@@ -14,7 +15,7 @@ export function PersonalizadoPage() {
     const menu = useQuery({ queryKey: MENU_PERSONALIZADO_KEY, queryFn: menuPersonalizadoApi.menu, retry: false, staleTime: 60_000 })
 
     if (menu.isLoading) {
-        return <div className="flex h-64 items-center justify-center gap-2 text-muted-foreground"><Loader2 className="h-5 w-5 animate-spin" /> Cargando…</div>
+        return <Cargando texto="Cargando" />
     }
 
     const modulo = menu.data?.find((m) => m.items.some((i) => String(i.id) === itemId))

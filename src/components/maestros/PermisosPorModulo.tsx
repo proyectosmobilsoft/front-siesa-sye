@@ -1,8 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { ChevronRight, Loader2, Search } from 'lucide-react'
+import { ChevronRight, Search } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import type { ModuloPermisos, PermisoDeModulo } from '@/api/seguridad'
+import { useMenuArmado } from '@/hooks/useMenuArmado'
 import { agruparPorMenu, organizarPorSidebar, type ModuloMenu } from './permisosSidebar'
+import { Cargando } from '@/components/ui/cargando'
 
 /**
  * Selector de permisos de un rol, como un árbol igual al menú lateral:
@@ -40,7 +42,9 @@ interface Props {
 }
 
 export const PermisosPorModulo = ({ modulos: modulosBd, loading, seleccion, onChange, resetKey }: Props) => {
-    const modulos = useMemo(() => organizarPorSidebar(modulosBd), [modulosBd])
+    // El árbol sigue el menú global armado (el del código + lo que el administrador organizó)
+    const { entradas } = useMenuArmado({ incluirVacios: true })
+    const modulos = useMemo(() => organizarPorSidebar(modulosBd, { menu: entradas }), [modulosBd, entradas])
     const seleccionSet = useMemo(() => new Set(seleccion), [seleccion])
     const [abiertos, setAbiertos] = useState<Set<string>>(new Set())
     const [search, setSearch] = useState('')
@@ -99,7 +103,7 @@ export const PermisosPorModulo = ({ modulos: modulosBd, loading, seleccion, onCh
             </div>
 
             {loading ? (
-                <div className="flex h-24 items-center justify-center gap-2 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" /> Cargando permisos...</div>
+                <Cargando compacto texto="Cargando permisos" />
             ) : menus.length === 0 ? (
                 <div className="rounded-md border border-dashed py-6 text-center text-sm text-muted-foreground">No se encontraron permisos.</div>
             ) : (

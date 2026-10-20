@@ -8,6 +8,7 @@ import {
 } from '@/api/logistica'
 import { MapaLogistica } from './MapaLogistica'
 import { useVehiculosLogistica } from './useLogistica'
+import { Cargando } from '@/components/ui/cargando'
 
 type Borrador = {
   cod: number | null
@@ -212,9 +213,7 @@ export function ConfiguracionLogistica({
             </div>
           </div>
         )}
-        {vehiculosQ.isLoading && (
-          <p className="text-sm text-muted-foreground">Cargando camiones…</p>
-        )}
+        {vehiculosQ.isLoading && <Cargando compacto texto="Cargando camiones" />}
         {vehiculosQ.data?.length === 0 && (
           <p className="text-sm text-muted-foreground">
             No hay camiones registrados. Use "Nuevo camión".

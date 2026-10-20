@@ -9,6 +9,7 @@ import { AlertTriangle } from 'lucide-react'
 import { financieroApi, CondicionPago } from '@/api/financiero'
 import { badgeClass } from '@/utils/badges'
 import { usePermiso } from '@/hooks/usePermiso'
+import { Cargando } from '@/components/ui/cargando'
 
 export const MaestroDescuentosFinancierosPage = () => {
     // Permisos de acción del maestro de Descuentos Financieros.
@@ -151,10 +152,7 @@ export const MaestroDescuentosFinancierosPage = () => {
                         {loading ? (
                             <tr>
                                 <td colSpan={4} className="h-32 text-center">
-                                    <div className="flex items-center justify-center gap-2 text-muted-foreground">
-                                        <Loader2 className="h-5 w-5 animate-spin" />
-                                        Cargando condiciones de pago...
-                                    </div>
+                                    <Cargando compacto texto="Cargando condiciones de pago" />
                                 </td>
                             </tr>
                         ) : condiciones.length > 0 ? (

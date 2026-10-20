@@ -1,18 +1,13 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { useEffect, useMemo, useState } from 'react'
-import { useQuery } from '@tanstack/react-query'
+import { useEffect, useState } from 'react'
 import { X, ChevronRight, LogOut } from 'lucide-react'
 import { useUIStore } from '@/store/uiStore'
 import { useAuthStore } from '@/store/authStore'
 import { useMediaQuery } from '@/hooks/useMediaQuery'
 import { cn } from '@/lib/utils'
-import { navigation, NavItem, SubNavItem, registrarPaginasExtra, paginasDelSistema } from '@/config/navigation'
-
-type GrupoPersonalizado = Omit<NavItem, 'subItems'> & { subItems: (SubNavItem & { interno: boolean })[] }
-import { iconoMenu } from '@/config/iconosMenu'
-import { menuPersonalizadoApi, MENU_PERSONALIZADO_KEY } from '@/api/menuPersonalizado'
-import { AppWindow } from 'lucide-react'
+import { NavItem, registrarPaginasExtra } from '@/config/navigation'
+import { useMenuArmado } from '@/hooks/useMenuArmado'
 
 export const Sidebar = () => {
     const { sidebarOpen, setSidebarOpen } = useUIStore()
@@ -25,56 +20,28 @@ export const Sidebar = () => {
     // necesitar scroll a medida que el usuario navegaba entre secciones.
     const [expandedItem, setExpandedItem] = useState<string | null>(null)
 
-    // Secciones personalizadas (creadas en Módulos y Permisos): el API ya trae solo las del usuario
-    const personalizado = useQuery({ queryKey: MENU_PERSONALIZADO_KEY, queryFn: menuPersonalizadoApi.menu, enabled: !!sesion, retry: false, staleTime: 60_000 })
-    const navPersonalizado = useMemo<GrupoPersonalizado[]>(
-        () => {
-            // Una página del sistema agregada a una sección solo se muestra si el usuario tiene el permiso de esa página
-            const permisoDe = new Map(paginasDelSistema().flatMap((g) => g.paginas.map((p) => [p.href, p.permiso] as const)))
-            return (personalizado.data ?? [])
-                .map((m) => ({
-                    name: m.nombre,
-                    icon: iconoMenu(m.icono),
-                    subItems: m.items
-                        .filter((i) => i.modo !== 'interno' || !permisoDe.get(i.url) || hasPermiso(permisoDe.get(i.url)!))
-                        .map((i) => ({
-                            name: i.nombre,
-                            href: i.modo === 'interno' ? i.url : `/personalizado/${i.id}`,
-                            icon: AppWindow,
-                            subtitle: m.nombre,
-                            interno: i.modo === 'interno',
-                        })),
-                }))
-                .filter((g) => g.subItems.length > 0)
-        },
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-        [personalizado.data]
-    )
+    // El menú ya armado: el del código + secciones personalizadas + lo que el administrador organizó
+    const { entradas } = useMenuArmado()
     useEffect(() => {
+        // Los títulos del Header de las páginas que no están en `navigation` (enlaces de secciones personalizadas)
         registrarPaginasExtra(Object.fromEntries(
-            navPersonalizado.flatMap((g) => g.subItems.filter((s) => !s.interno).map((s) => [s.href, { name: s.name, icon: s.icon, subtitle: s.subtitle }]))
+            entradas.flatMap((e) => (e.tipo === 'directo' ? [e.pagina] : e.grupo.paginas)).map((p) => [p.href, { name: p.name, icon: p.icon, subtitle: p.subtitle ?? '' }])
         ))
-    }, [navPersonalizado])
+    }, [entradas])
 
-    // Filtrar items de navegación según permisos del usuario
-    const navFiltrado: NavItem[] = navigation.reduce<NavItem[]>((acc, item) => {
-        if (item.subItems) {
-            // Filtrar sub-items por permiso
-            const subsFiltrados = item.subItems.filter(
-                (sub) => !sub.permiso || hasPermiso(sub.permiso)
-            )
-            // Solo incluir el grupo padre si tiene al menos un sub-item visible
-            if (subsFiltrados.length > 0) {
-                acc.push({ ...item, subItems: subsFiltrados })
-            }
+    // Filtrar según permisos del usuario: una página sin permiso no se ve, y un menú sin páginas visibles tampoco
+    const navFiltrado: NavItem[] = entradas.reduce<NavItem[]>((acc, e) => {
+        if (e.tipo === 'directo') {
+            const p = e.pagina
+            if (!p.permiso || hasPermiso(p.permiso)) acc.push({ name: p.name, href: p.href, icon: p.icon, subtitle: p.subtitle, permiso: p.permiso })
         } else {
-            // Item simple: mostrar si no tiene permiso requerido o si el usuario lo tiene
-            if (!item.permiso || hasPermiso(item.permiso)) {
-                acc.push(item)
-            }
+            const subItems = e.grupo.paginas
+                .filter((p) => !p.permiso || hasPermiso(p.permiso))
+                .map((p) => ({ name: p.name, href: p.href, icon: p.icon, subtitle: p.subtitle ?? '', permiso: p.permiso }))
+            if (subItems.length > 0) acc.push({ name: e.grupo.name, icon: e.grupo.icon, subItems })
         }
         return acc
-    }, []).concat(navPersonalizado)
+    }, [])
 
     // Abrir el grupo que contiene la ruta actual (y cerrar el resto)
     useEffect(() => {

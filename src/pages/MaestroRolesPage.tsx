@@ -16,6 +16,7 @@ import { seguridadApi, AuthRole, ModuloPermisos } from '@/api/seguridad'
 import { PermisosPorModulo } from '@/components/maestros/PermisosPorModulo'
 import { badgeClass } from '@/utils/badges'
 import { usePermiso } from '@/hooks/usePermiso'
+import { Cargando } from '@/components/ui/cargando'
 
 export const MaestroRolesPage = () => {
     const navigate = useNavigate()
@@ -355,10 +356,7 @@ export const MaestroRolesPage = () => {
                         {loading ? (
                             <tr>
                                 <td colSpan={columns.length} className="h-32 text-center">
-                                    <div className="flex items-center justify-center gap-2 text-muted-foreground">
-                                        <Loader2 className="h-5 w-5 animate-spin" />
-                                        Cargando roles...
-                                    </div>
+                                    <Cargando compacto texto="Cargando roles" />
                                 </td>
                             </tr>
                         ) : table.getRowModel().rows?.length ? (

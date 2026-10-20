@@ -1,4 +1,5 @@
 import { navigation, LOGISTICA } from '@/config/navigation'
+import { armarMenu, type EntradaMenu } from '@/config/organizarMenu'
 import { PERMISOS } from '@/config/permisos'
 import type { ModuloPermisos, PermisoDeModulo } from '@/api/seguridad'
 
@@ -22,42 +23,41 @@ export interface ModuloMenu extends ModuloPermisos {
 
 const sinAcentos = (t: string) => t.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim()
 
-interface EntradaMenu { grupo: string; ordenGrupo: number; ordenItem: number; items: string[] }
-
-// permiso → dónde aparece en el sidebar (un permiso puede abrir varias páginas)
-const porPermiso = new Map<string, EntradaMenu>()
-const gruposMenu = new Map<string, { nombre: string; orden: number }>()
-navigation.forEach((grupo, ordenGrupo) => {
-    gruposMenu.set(sinAcentos(grupo.name), { nombre: grupo.name, orden: ordenGrupo })
-    for (const [ordenItem, item] of (grupo.subItems ?? []).entries()) {
-        if (!item.permiso) continue
-        const previa = porPermiso.get(item.permiso)
-        if (previa) previa.items.push(item.name)
-        else porPermiso.set(item.permiso, { grupo: grupo.name, ordenGrupo, ordenItem, items: [item.name] })
-    }
-})
+interface EntradaPermiso { grupo: string; ordenGrupo: number; ordenItem: number; items: string[] }
 
 const ORDEN_OTROS = 9999
 
-// Logística no es un grupo de `navigation` (su sección del menú se arma desde BD), pero sus páginas
-// siguen agrupadas aparte en los permisos, justo después de Tesorería.
-const ordenLogistica = (gruposMenu.get('tesoreria')?.orden ?? 0) + 0.5
-gruposMenu.set('logistica', { nombre: 'Logística', orden: ordenLogistica })
-LOGISTICA.forEach((item, ordenItem) => {
-    if (!item.permiso) return
-    const previa = porPermiso.get(item.permiso)
-    if (previa) previa.items.push(item.name)
-    else porPermiso.set(item.permiso, { grupo: 'Logística', ordenGrupo: ordenLogistica, ordenItem, items: [item.name] })
-})
+/** Menú del código sin organizar ni secciones personalizadas: lo que se usa si nadie pasa el menú armado */
+const MENU_DEL_CODIGO = armarMenu(navigation, [], [], { incluirVacios: true })
 
-// Dashboard es un enlace directo del sidebar (sin subitems ni permiso en navigation.ts)
-porPermiso.set(PERMISOS.DASHBOARD, { grupo: 'Dashboard', ordenGrupo: -1, ordenItem: 0, items: ['Dashboard'] })
-
-const grupoDeBd = (m: ModuloPermisos): { nombre: string; orden: number } => {
-    // Grupo guardado en BD cuando coincide con un grupo del sidebar
-    const g = m.grupo ? gruposMenu.get(sinAcentos(m.grupo)) : undefined
-    if (g) return g
-    return { nombre: m.grupo || 'Otros', orden: ORDEN_OTROS }
+/**
+ * Mapas del menú armado: permiso → página donde aparece (un permiso puede abrir varias páginas) y
+ * menús por nombre. Se calculan con el menú que se le pasa, así lo que el administrador organiza
+ * (mover una página de menú, crear un menú) se refleja también al armar un rol.
+ */
+function construirMapas(entradas: EntradaMenu[]) {
+    const porPermiso = new Map<string, EntradaPermiso>()
+    const gruposMenu = new Map<string, { nombre: string; orden: number }>()
+    entradas.forEach((e, ordenGrupo) => {
+        if (e.tipo !== 'grupo') return
+        gruposMenu.set(sinAcentos(e.grupo.name), { nombre: e.grupo.name, orden: ordenGrupo })
+        e.grupo.paginas.forEach((p, ordenItem) => {
+            if (!p.permiso) return
+            const previa = porPermiso.get(p.permiso)
+            if (previa) previa.items.push(p.name)
+            else porPermiso.set(p.permiso, { grupo: e.grupo.name, ordenGrupo, ordenItem, items: [p.name] })
+        })
+    })
+    // Las páginas de Logística siguen agrupadas aparte aunque su sección no exista para este usuario
+    const ordenLogistica = (gruposMenu.get('logistica')?.orden ?? (gruposMenu.get('tesoreria')?.orden ?? 0) + 0.5)
+    if (!gruposMenu.has('logistica')) gruposMenu.set('logistica', { nombre: 'Logística', orden: ordenLogistica })
+    LOGISTICA.forEach((item, ordenItem) => {
+        if (!item.permiso || porPermiso.has(item.permiso)) return
+        porPermiso.set(item.permiso, { grupo: 'Logística', ordenGrupo: ordenLogistica, ordenItem, items: [item.name] })
+    })
+    // Dashboard es un enlace directo del sidebar (sin permiso en navigation.ts)
+    porPermiso.set(PERMISOS.DASHBOARD, { grupo: 'Dashboard', ordenGrupo: -1, ordenItem: 0, items: ['Dashboard'] })
+    return { porPermiso, gruposMenu }
 }
 
 /**
@@ -65,12 +65,19 @@ const grupoDeBd = (m: ModuloPermisos): { nombre: string; orden: number } => {
  * `dividir: false` (maestro de Módulos) deja cada módulo de BD entero, para poder
  * editarlo y borrarlo; solo lo ubica y ordena según el sidebar.
  */
-export function organizarPorSidebar(modulos: ModuloPermisos[], { dividir = true } = {}): ModuloMenu[] {
+export function organizarPorSidebar(modulos: ModuloPermisos[], { dividir = true, menu = MENU_DEL_CODIGO }: { dividir?: boolean; menu?: EntradaMenu[] } = {}): ModuloMenu[] {
+    const { porPermiso, gruposMenu } = construirMapas(menu)
+    const grupoDeBd = (m: ModuloPermisos): { nombre: string; orden: number } => {
+        // Grupo guardado en BD cuando coincide con un menú del sidebar
+        const g = m.grupo ? gruposMenu.get(sinAcentos(m.grupo)) : undefined
+        if (g) return g
+        return { nombre: m.grupo || 'Otros', orden: ORDEN_OTROS }
+    }
     const resultado: ModuloMenu[] = []
 
     for (const m of modulos) {
         if (!dividir) {
-            const entradas = m.permisos.map((p) => porPermiso.get(p.codigo)).filter((e): e is EntradaMenu => !!e)
+            const entradas = m.permisos.map((p) => porPermiso.get(p.codigo)).filter((e): e is EntradaPermiso => !!e)
             const principal = entradas[0]
             const grupo = principal ? { nombre: principal.grupo, orden: principal.ordenGrupo } : m.id === null ? { nombre: 'Otros', orden: ORDEN_OTROS } : grupoDeBd(m)
             const paginas = [...new Set(entradas.flatMap((e) => e.items))].join(', ')
@@ -102,7 +109,7 @@ export function organizarPorSidebar(modulos: ModuloPermisos[], { dividir = true 
         }
         // "Sin clasificar": los permisos que sí tienen página en el sidebar salen
         // como módulo de esa página (p. ej. Tesorería › Parámetros RC)
-        const virtuales = new Map<string, { entrada: EntradaMenu; permisos: PermisoDeModulo[] }>()
+        const virtuales = new Map<string, { entrada: EntradaPermiso; permisos: PermisoDeModulo[] }>()
         const resto: PermisoDeModulo[] = []
         for (const p of m.permisos) {
             const e = porPermiso.get(p.codigo)

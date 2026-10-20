@@ -25,6 +25,7 @@ import { agruparPorMenu, organizarPorSidebar } from '@/components/maestros/permi
 import { EnlacesPersonalizados, NuevoModuloPersonalizadoModal } from '@/components/maestros/ModulosPersonalizados'
 import { esPersonalizado, MENU_PERSONALIZADO_KEY } from '@/api/menuPersonalizado'
 import { ICONOS_MENU, iconoMenu } from '@/config/iconosMenu'
+import { useMenuArmado } from '@/hooks/useMenuArmado'
 import { useQueryClient } from '@tanstack/react-query'
 import { badgeClass, Tono } from '@/utils/badges'
 import { usePermiso } from '@/hooks/usePermiso'
@@ -114,7 +115,8 @@ export const MaestroModulosPage = () => {
     const moduloActual = modulos.find((m) => m.id === seleccionado) || null
 
     // Lista ordenada y agrupada como el sidebar; cada módulo sigue siendo el de BD
-    const modulosMenu = useMemo(() => organizarPorSidebar(modulos, { dividir: false }), [modulos])
+    const { entradas: menuArmado } = useMenuArmado({ incluirVacios: true })
+    const modulosMenu = useMemo(() => organizarPorSidebar(modulos, { dividir: false, menu: menuArmado }), [modulos, menuArmado])
     // Ramas del árbol Menú ▸ Submenú ▸ Acciones: los menús abiertos a mano (el del submenú seleccionado y los de una búsqueda siempre se ven)
     const [menusAbiertos, setMenusAbiertos] = useState<Set<string>>(new Set())
     const alternarMenu = (menu: string) => setMenusAbiertos((prev) => { const sig = new Set(prev); if (sig.has(menu)) sig.delete(menu); else sig.add(menu); return sig })

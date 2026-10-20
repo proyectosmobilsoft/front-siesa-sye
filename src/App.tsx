@@ -12,6 +12,7 @@ import { lazy, Suspense, useCallback, useEffect, useState } from 'react'
 import { useAuth } from '@/hooks/useAuth'
 import { useInactivityTimeout } from '@/hooks/useInactivityTimeout'
 import { InactivityModal } from '@/components/ui/InactivityModal'
+import { Cargando } from '@/components/ui/cargando'
 
 // Code-splitting por ruta: antes las ~20 páginas (con dependencias pesadas
 // como exceljs, recharts, framer-motion) se importaban todas de forma
@@ -41,6 +42,7 @@ const MaestroCuentasBancariasPage = lazy(() => import('@/pages/MaestroCuentasBan
 const MaestroConceptosPage = lazy(() => import('@/pages/MaestroConceptosPage').then(m => ({ default: m.MaestroConceptosPage })))
 const MaestroMaquinariaPage = lazy(() => import('@/pages/MaestroMaquinariaPage').then(m => ({ default: m.MaestroMaquinariaPage })))
 const InterfazContableVehiculosPage = lazy(() => import('@/pages/InterfazContableVehiculosPage').then(m => ({ default: m.InterfazContableVehiculosPage })))
+const OrganizarMenuPage = lazy(() => import('@/pages/OrganizarMenuPage').then(m => ({ default: m.OrganizarMenuPage })))
 const MaestroModulosPage = lazy(() => import('@/pages/MaestroModulosPage').then(m => ({ default: m.MaestroModulosPage })))
 const EgresoPage = lazy(() => import('@/pages/EgresoPage').then(m => ({ default: m.EgresoPage })))
 const FerregangaPage = lazy(() => import('@/pages/FerregangaPage'))
@@ -72,9 +74,7 @@ function AppLayout() {
                     <Header />
                     <main className="flex-1 overflow-auto custom-scrollbar">
                         <Suspense fallback={
-                            <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
-                                Cargando…
-                            </div>
+                            <Cargando texto="Cargando" className="h-full" />
                         }>
                             <Routes>
                                 <Route path="/" element={<DashboardPage />} />
@@ -112,6 +112,11 @@ function AppLayout() {
                                 {/* Módulos y Permisos (catálogo de seguridad): protegido por VER_MODULOS */}
                                 <Route path="/maestro/modulos" element={
                                     <ProtectedRoute permiso={PERMISOS.MODULOS}><MaestroModulosPage /></ProtectedRoute>
+                                } />
+
+                                {/* Organizar el menú lateral (configuración global): VER_MODULOS para entrar, EDITAR_MODULO para cambiar */}
+                                <Route path="/maestro/organizar-menu" element={
+                                    <ProtectedRoute permiso={PERMISOS.MODULOS}><OrganizarMenuPage /></ProtectedRoute>
                                 } />
 
                                 {/* Gestión de Ventas: protegido por VER_RECIBO */}

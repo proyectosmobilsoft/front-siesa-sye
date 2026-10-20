@@ -1,10 +1,11 @@
 import { motion } from 'framer-motion'
 import { useState, useEffect, useRef } from 'react'
-import { Search, RefreshCw, Loader2 } from 'lucide-react'
+import { Search, RefreshCw } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { maquinariaApi, Maquinaria } from '@/api/maquinaria'
 import { badgeClass } from '@/utils/badges'
+import { Cargando } from '@/components/ui/cargando'
 
 /** Placeholder para celdas sin dato, para no dejar huecos en blanco. */
 const Vacio = () => <span className="text-muted-foreground">—</span>
@@ -89,10 +90,7 @@ export const MaestroMaquinariaPage = () => {
                         {loading ? (
                             <tr>
                                 <td colSpan={12} className="h-32 text-center">
-                                    <div className="flex items-center justify-center gap-2 text-muted-foreground">
-                                        <Loader2 className="h-5 w-5 animate-spin" />
-                                        Cargando maquinaria...
-                                    </div>
+                                    <Cargando compacto texto="Cargando maquinaria" />
                                 </td>
                             </tr>
                         ) : equipos.length > 0 ? (
