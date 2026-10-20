@@ -113,7 +113,7 @@ export function EnlacesPersonalizados({ moduloId, codigoPermiso, puedeEditar }: 
                 <div className="min-w-0 flex-1">
                     <p className="text-sm font-semibold">Enlaces del menú</p>
                     <p className="text-xs text-muted-foreground">
-                        Aparecen en el sidebar para los roles que tengan el permiso <span className="font-mono">{codigoPermiso}</span> (asígnalo en Roles).
+                        La sección aparece en el menú cuando tiene al menos un enlace activo, para los roles que tengan el permiso <span className="font-mono">{codigoPermiso}</span>. Tus roles ya lo tienen; a otros se lo das en Roles.
                     </p>
                 </div>
                 {puedeEditar && <Button size="sm" className="h-8 gap-1.5" onClick={() => abrirForm('nuevo')}><Plus className="h-3.5 w-3.5" /> Enlace</Button>}

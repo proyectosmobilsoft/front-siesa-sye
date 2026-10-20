@@ -22,7 +22,8 @@ import {
 } from '@/api/seguridad'
 import { organizarPorSidebar } from '@/components/maestros/permisosSidebar'
 import { EnlacesPersonalizados, NuevoModuloPersonalizadoModal } from '@/components/maestros/ModulosPersonalizados'
-import { esPersonalizado } from '@/api/menuPersonalizado'
+import { esPersonalizado, MENU_PERSONALIZADO_KEY } from '@/api/menuPersonalizado'
+import { useQueryClient } from '@tanstack/react-query'
 import { badgeClass, Tono } from '@/utils/badges'
 import { usePermiso } from '@/hooks/usePermiso'
 
@@ -56,6 +57,7 @@ export const MaestroModulosPage = () => {
     const puedeEditar = puede(P.EDITAR_MODULO)
     const puedeEliminar = puede(P.ELIMINAR_MODULO)
 
+    const queryClient = useQueryClient()
     const [modulos, setModulos] = useState<ModuloPermisos[]>([])
     const [loading, setLoading] = useState(true)
     const [seleccionado, setSeleccionado] = useState<number | null>(null)
@@ -240,6 +242,7 @@ export const MaestroModulosPage = () => {
                 await seguridadApi.eliminarPermiso(borrando.item.id)
             }
             setBorrando(null)
+            await queryClient.invalidateQueries({ queryKey: MENU_PERSONALIZADO_KEY })
             await fetchModulos(borrando.tipo === 'permiso')
         } catch (err: any) {
             setErrorDelete(err?.response?.data?.message || 'Error al eliminar')
@@ -377,7 +380,7 @@ export const MaestroModulosPage = () => {
                             </div>
 
                             {moduloActual.id !== null && esPersonalizado(moduloActual.codigo) && (
-                                <EnlacesPersonalizados moduloId={moduloActual.id} codigoPermiso={`VER_${moduloActual.codigo}`} puedeEditar={puedeEditar} />
+                                <EnlacesPersonalizados moduloId={moduloActual.id} codigoPermiso={moduloActual.permisos.find((p) => p.tipo === 'VISTA')?.codigo ?? '(sin permiso de vista)'} puedeEditar={puedeEditar} />
                             )}
 
                             <div className="min-h-0 flex-1 overflow-auto">
@@ -474,8 +477,10 @@ export const MaestroModulosPage = () => {
                             <Input
                                 placeholder="CAJAS"
                                 value={formModulo.codigo}
+                                disabled={esPersonalizado(editandoModulo?.codigo)}
+                                title={esPersonalizado(editandoModulo?.codigo) ? 'Las secciones del menú conservan su código y su grupo' : undefined}
                                 onChange={(e) => setFormModulo({ ...formModulo, codigo: e.target.value.toUpperCase() })}
-                                className="h-10 font-mono"
+                                className="h-10 font-mono disabled:opacity-70"
                             />
                         </div>
                         <div className="space-y-1.5">
@@ -492,8 +497,9 @@ export const MaestroModulosPage = () => {
                             <Input
                                 placeholder="Maestros"
                                 value={formModulo.grupo}
+                                disabled={esPersonalizado(editandoModulo?.codigo)}
                                 onChange={(e) => setFormModulo({ ...formModulo, grupo: e.target.value })}
-                                className="h-10"
+                                className="h-10 disabled:opacity-70"
                             />
                         </div>
                         <div className="space-y-1.5">
@@ -738,7 +744,9 @@ export const MaestroModulosPage = () => {
 
                     <p className="mb-6 text-xs text-destructive/80">
                         {borrando?.tipo === 'modulo'
-                            ? 'Solo se puede eliminar si ya no tiene permisos.'
+                            ? esPersonalizado(borrando.item.codigo)
+                                ? 'Se elimina la sección completa: sus enlaces, su permiso y la asignación a los roles. Desaparece del menú.'
+                                : 'Solo se puede eliminar si ya no tiene permisos.'
                             : 'Solo se puede eliminar si ningún rol lo tiene asignado.'}
                     </p>
 
