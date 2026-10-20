@@ -51,7 +51,7 @@ import { PERMISOS } from '@/config/permisos'
  *   2. Maestros      → catálogos y configuración de datos base
  *   3. Comercial     → clientes, productos y pedidos
  *   4. Facturación   → documentos de venta y su análisis
- *   5. Tesorería     → todo el movimiento de dinero (entra, sale y se traslada) y la asignación de facturas a conductores
+ *   5. Tesorería     → todo el movimiento de dinero (entra, sale y se traslada)
  *   6. Reportes      → consultas de solo lectura
  *   7. Sistema       → preferencias y soporte
  *   8. Propuesta     → enlace directo a la propuesta comercial
@@ -78,16 +78,38 @@ export interface NavItem {
  * si cambian de grupo otra vez, se editan en un solo lugar.
  */
 export const RUTAS = {
-  asignarFacturas: '/tesoreria/asignar-facturas',
-  mvpLogistica: '/tesoreria/mvp-logistica',
+  asignarFacturas: '/logistica/asignar-facturas',
+  mvpLogistica: '/logistica/mvp',
 } as const
 
 /** Rutas anteriores (cuando vivían en Logística o en Tesorería con otro nombre): redirigen a la actual. */
 export const RUTAS_ANTERIORES: Record<string, string> = {
-  '/logistica/asignar-facturas': RUTAS.asignarFacturas,
+  '/tesoreria/asignar-facturas': RUTAS.asignarFacturas,
   '/tesoreria/asignacion-cobro': RUTAS.asignarFacturas,
-  '/logistica/mvp': RUTAS.mvpLogistica,
+  '/tesoreria/mvp-logistica': RUTAS.mvpLogistica,
 }
+
+/**
+ * Páginas de Logística. NO están en `navigation`: la sección "Logística" del menú la arma el
+ * administrador desde Módulos y Permisos (sección personalizada). Aquí solo se declaran para
+ * que el selector de enlaces, el título del Header y la pantalla de permisos las conozcan.
+ */
+export const LOGISTICA: SubNavItem[] = [
+  {
+    name: 'Asignar Facturas',
+    href: RUTAS.asignarFacturas,
+    icon: ListChecks,
+    subtitle: 'Asignar facturas pendientes a conductores para cobro en ruta',
+    permiso: PERMISOS.ASIGNACION_COBRO,
+  },
+  {
+    name: 'MVP Logística',
+    href: RUTAS.mvpLogistica,
+    icon: Route,
+    subtitle: 'Rutas óptimas por peso y capacidad, en mapa',
+    permiso: PERMISOS.ASIGNACION_COBRO,
+  },
+]
 
 export const navigation: NavItem[] = [
   // Dashboard: único enlace directo del menú, es la pantalla de entrada
@@ -229,20 +251,6 @@ export const navigation: NavItem[] = [
         permiso: PERMISOS.TRASLADO_FONDOS,
       },
       {
-        name: 'Asignar Facturas',
-        href: RUTAS.asignarFacturas,
-        icon: ListChecks,
-        subtitle: 'Asignar facturas pendientes a conductores para cobro en ruta',
-        permiso: PERMISOS.ASIGNACION_COBRO,
-      },
-      {
-        name: 'MVP Logística',
-        href: RUTAS.mvpLogistica,
-        icon: Route,
-        subtitle: 'Rutas óptimas por peso y capacidad, en mapa',
-        permiso: PERMISOS.ASIGNACION_COBRO,
-      },
-      {
         name: 'Parámetros RC',
         href: '/tesoreria/parametros-rc',
         icon: Settings2,
@@ -366,6 +374,7 @@ export const navigation: NavItem[] = [
 export const paginasDelSistema = (): { grupo: string; paginas: { name: string; href: string; permiso?: string }[] }[] => [
   { grupo: 'General', paginas: navigation.filter((n) => n.href).map((n) => ({ name: n.name, href: n.href!, permiso: n.permiso })) },
   ...navigation.filter((n) => n.subItems).map((n) => ({ grupo: n.name, paginas: n.subItems!.map((s) => ({ name: s.name, href: s.href, permiso: s.permiso })) })),
+  { grupo: 'Logística', paginas: LOGISTICA.map((s) => ({ name: s.name, href: s.href, permiso: s.permiso })) },
 ]
 
 export interface PageMeta {
@@ -379,6 +388,7 @@ const flatRoutes: (SubNavItem | (NavItem & { href: string }))[] = [
     (item): item is NavItem & { href: string } => !!item.href
   ),
   ...navigation.flatMap(item => item.subItems ?? []),
+  ...LOGISTICA,
 ]
 
 const routesByPath = new Map(flatRoutes.map(r => [r.href, r]))

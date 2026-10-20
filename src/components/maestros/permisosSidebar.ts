@@ -1,4 +1,4 @@
-import { navigation } from '@/config/navigation'
+import { navigation, LOGISTICA } from '@/config/navigation'
 import { PERMISOS } from '@/config/permisos'
 import type { ModuloPermisos, PermisoDeModulo } from '@/api/seguridad'
 
@@ -38,6 +38,17 @@ navigation.forEach((grupo, ordenGrupo) => {
 })
 
 const ORDEN_OTROS = 9999
+
+// Logística no es un grupo de `navigation` (su sección del menú se arma desde BD), pero sus páginas
+// siguen agrupadas aparte en los permisos, justo después de Tesorería.
+const ordenLogistica = (gruposMenu.get('tesoreria')?.orden ?? 0) + 0.5
+gruposMenu.set('logistica', { nombre: 'Logística', orden: ordenLogistica })
+LOGISTICA.forEach((item, ordenItem) => {
+    if (!item.permiso) return
+    const previa = porPermiso.get(item.permiso)
+    if (previa) previa.items.push(item.name)
+    else porPermiso.set(item.permiso, { grupo: 'Logística', ordenGrupo: ordenLogistica, ordenItem, items: [item.name] })
+})
 
 // Dashboard es un enlace directo del sidebar (sin subitems ni permiso en navigation.ts)
 porPermiso.set(PERMISOS.DASHBOARD, { grupo: 'Dashboard', ordenGrupo: -1, ordenItem: 0, items: ['Dashboard'] })
@@ -112,4 +123,15 @@ export function organizarPorSidebar(modulos: ModuloPermisos[], { dividir = true 
     }
 
     return resultado.sort((a, b) => a.ordenGrupo - b.ordenGrupo || a.ordenItem - b.ordenItem || a.orden - b.orden || a.nombre.localeCompare(b.nombre))
+}
+
+/** Agrupa los módulos ya ordenados por menú (grupo del sidebar), respetando el orden en que vienen */
+export function agruparPorMenu<T extends { grupoMenu: string }>(modulos: T[]): { menu: string; modulos: T[] }[] {
+    const grupos: { menu: string; modulos: T[] }[] = []
+    for (const m of modulos) {
+        const ultimo = grupos[grupos.length - 1]
+        if (ultimo && ultimo.menu === m.grupoMenu) ultimo.modulos.push(m)
+        else grupos.push({ menu: m.grupoMenu, modulos: [m] })
+    }
+    return grupos
 }
