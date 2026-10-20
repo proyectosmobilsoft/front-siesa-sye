@@ -2,6 +2,7 @@ import { apiClient } from './client'
 
 /** Fila de la whitelist enriquecida con la data real de SIESA (join hecho en el backend) */
 export interface CuentaBancariaConfig {
+    /** Con listarConfig sin `conductor` llega null (no hay fila de whitelist); solo el maestro admin lo usa */
     id: number
     activa: boolean | number
     fecha_creacion?: string
@@ -46,8 +47,12 @@ export const maestroCuentasBancariasApi = {
         return response.data.data ?? []
     },
 
-    listarConfig: async (soloActivas = true): Promise<{ success: boolean; data: CuentaBancariaConfig[] }> => {
-        const response = await apiClient.get('/maestros/cuentas-bancarias-config', { params: { activas: soloActivas } })
+    /**
+     * `conductor: true` trae solo la whitelist (lo que ve el conductor; el maestro admin
+     * la administra). Sin él trae todas las cuentas de SIESA, sin filtro.
+     */
+    listarConfig: async (soloActivas = true, conductor = false): Promise<{ success: boolean; data: CuentaBancariaConfig[] }> => {
+        const response = await apiClient.get('/maestros/cuentas-bancarias-config', { params: { activas: soloActivas, ...(conductor ? { conductor: true } : {}) } })
         return response.data
     },
 

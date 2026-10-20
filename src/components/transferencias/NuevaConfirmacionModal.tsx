@@ -94,7 +94,7 @@ export function NuevaConfirmacionModal({ onClose, onSaved }: { onClose: () => vo
       <div className="grid gap-3 sm:grid-cols-2">
         <label className={field}>Valor<Input type="number" min="0.01" step="0.01" value={valor} onChange={e => setValor(e.target.value)} className="text-right tabular-nums" /></label>
         <label className={field}>Fecha de transferencia<FechaInput value={fecha} onChange={setFecha} /></label>
-        <label className={field}>Cuenta bancaria destino<Select value={cuenta} onChange={e => setCuenta(e.target.value)}><option value="">Seleccionar cuenta</option>{bancos.data?.map(row => <option key={row.id} value={row.f026_id}>{row.f026_id} · {row.f026_descripcion}</option>)}</Select></label>
+        <label className={field}>Cuenta bancaria destino<Select value={cuenta} onChange={e => setCuenta(e.target.value)}><option value="">Seleccionar cuenta</option>{bancos.data?.map(row => <option key={`${row.f026_id_cia}-${row.f026_id}`} value={row.f026_id}>{row.f026_id} · {row.f026_descripcion}</option>)}</Select></label>
         <label className={field}>Referencia / número de comprobante<Input value={referencia} onChange={e => setReferencia(e.target.value)} /></label>
       </div>
       <label className={field}>Observación<textarea value={observacion} onChange={e => setObservacion(e.target.value)} rows={2} className="w-full rounded-md border border-input bg-background p-2 text-sm text-foreground" /></label>
