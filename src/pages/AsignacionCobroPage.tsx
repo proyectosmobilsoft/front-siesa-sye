@@ -84,6 +84,25 @@ export const AsignacionCobroPage = () => {
     // Conductores
     const [conductores, setConductores] = useState<UsuarioMaster[]>([])
     const [conductorId, setConductorId] = useState<string>('')
+
+    // Con un C.O. puntual activo (001 o 002) solo se ofrecen los conductores de ese centro. Los que no tienen
+    // ningún centro asignado se dejan visibles porque no se puede saber a cuál pertenecen.
+    const conductoresVisibles = useMemo(
+        () => (centroOperacionActivo
+            ? conductores.filter((c) => !c.centros_operacion?.length || c.centros_operacion.some((co) => co.trim() === centroOperacionActivo))
+            : conductores),
+        [conductores, centroOperacionActivo]
+    )
+    // El tablero muestra a quien tiene facturas asignadas; se oculta el de otro centro (los que no están en la lista se dejan)
+    const tableroVisible = useMemo(() => {
+        const visibles = new Set(conductoresVisibles.map((c) => c.id))
+        const conocidos = new Set(conductores.map((c) => c.id))
+        return tablero.filter((r) => visibles.has(r.conductor_id) || !conocidos.has(r.conductor_id))
+    }, [tablero, conductores, conductoresVisibles])
+    // Si el conductor elegido es de otro centro (porque se cambió el C.O.), se quita la selección
+    useEffect(() => {
+        if (conductorId && !conductoresVisibles.some((c) => String(c.id) === conductorId)) setConductorId('')
+    }, [conductoresVisibles, conductorId])
     const [observacion, setObservacion] = useState('')
 
     const [enviando, setEnviando] = useState(false)
@@ -274,7 +293,7 @@ export const AsignacionCobroPage = () => {
                             <label className="nu-label">Conductor</label>
                             <Select className="nu-control" value={conductorId} onChange={(e) => setConductorId(e.target.value)}>
                                 <option value="">Seleccionar conductor...</option>
-                                {conductores.map((c) => (
+                                {conductoresVisibles.map((c) => (
                                     <option key={c.id} value={c.id}>
                                         {c.nombre_completo || c.usuario}
                                     </option>
@@ -383,7 +402,7 @@ export const AsignacionCobroPage = () => {
                 </div>
                 </TabsContent>
                 <TabsContent value="pendientes" className="mt-4">
-                    <FacturasPendientesTab conductores={conductores} onAsignado={cargarTablero} />
+                    <FacturasPendientesTab conductores={conductoresVisibles} onAsignado={cargarTablero} />
                 </TabsContent>
             </Tabs>
 
@@ -415,11 +434,11 @@ export const AsignacionCobroPage = () => {
                     {mensajeReconciliar && (
                         <div className="border-b bg-muted/30 px-4 py-2 text-xs text-muted-foreground">{mensajeReconciliar}</div>
                     )}
-                    {cargandoTablero && tablero.length === 0 ? (
+                    {cargandoTablero && tableroVisible.length === 0 ? (
                         <div className="flex items-center justify-center gap-2 p-8 text-muted-foreground">
                             <Loader2 className="h-5 w-5 animate-spin" /> Cargando tablero...
                         </div>
-                    ) : tablero.length === 0 ? (
+                    ) : tableroVisible.length === 0 ? (
                         <div className="p-8 text-center text-sm text-muted-foreground">
                             Ningún conductor tiene facturas asignadas pendientes.
                         </div>
@@ -428,11 +447,11 @@ export const AsignacionCobroPage = () => {
                             {/* Totales del tablero */}
                             <div className="flex flex-wrap gap-2 border-b px-4 py-3 text-xs">
                                 {[
-                                    { t: 'Pendientes', v: String(tablero.reduce((a, r) => a + r.pendientes, 0)) },
-                                    { t: 'Por cobrar', v: moneda(tablero.reduce((a, r) => a + (r.saldo_pendiente ?? r.valor_pendiente), 0)) },
-                                    { t: 'Carga en ruta', v: kilosTexto(tablero.reduce((a, r) => a + (r.kg_pendiente ?? 0), 0)) },
-                                    { t: 'Vencidas', v: String(tablero.reduce((a, r) => a + (r.vencidas ?? 0), 0)), alerta: tablero.some((r) => (r.vencidas ?? 0) > 0) },
-                                    { t: 'Cobradas (30 días)', v: `${tablero.reduce((a, r) => a + r.cobradas, 0)} · ${moneda(tablero.reduce((a, r) => a + r.valor_cobrado, 0))}` },
+                                    { t: 'Pendientes', v: String(tableroVisible.reduce((a, r) => a + r.pendientes, 0)) },
+                                    { t: 'Por cobrar', v: moneda(tableroVisible.reduce((a, r) => a + (r.saldo_pendiente ?? r.valor_pendiente), 0)) },
+                                    { t: 'Carga en ruta', v: kilosTexto(tableroVisible.reduce((a, r) => a + (r.kg_pendiente ?? 0), 0)) },
+                                    { t: 'Vencidas', v: String(tableroVisible.reduce((a, r) => a + (r.vencidas ?? 0), 0)), alerta: tableroVisible.some((r) => (r.vencidas ?? 0) > 0) },
+                                    { t: 'Cobradas (30 días)', v: `${tableroVisible.reduce((a, r) => a + r.cobradas, 0)} · ${moneda(tableroVisible.reduce((a, r) => a + r.valor_cobrado, 0))}` },
                                 ].map((x) => (
                                     <span key={x.t} className={`rounded-full px-3 py-1 ${x.alerta ? 'bg-red-500/10 text-red-600 dark:text-red-400' : 'bg-muted text-muted-foreground'}`}>
                                         {x.t}: <span className="font-semibold text-foreground">{x.v}</span>
@@ -458,7 +477,7 @@ export const AsignacionCobroPage = () => {
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {tablero.map((row) => {
+                                    {tableroVisible.map((row) => {
                                         const cumplimiento = row.cumplimiento ?? null
                                         return (
                                             <tr
