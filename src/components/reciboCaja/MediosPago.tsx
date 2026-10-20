@@ -51,14 +51,14 @@ export function MediosPago({ pagos, editados, cuentas, onChange, onAdd, onRemove
       </div>
       {!editados.has(p.id) && <p className="mt-0.5 text-right text-[11px] text-muted-foreground">Automático · {formatters.currency(p.valor)}</p>}
       {p.codigo === 'CG1' && <div className="mt-2 grid gap-2 sm:grid-cols-2">
-        <label className={field}>Cuenta bancaria<Select className="h-9 text-sm" value={p.cuenta} onChange={e => onChange(p.id, { cuenta: e.target.value })}><option value="">Seleccionar cuenta</option>{cuentas.map(b => <option key={b.id} value={b.f026_id}>{b.f026_id} · {b.f026_descripcion}</option>)}</Select></label>
+        <label className={field}>Cuenta bancaria<Select className="h-9 text-sm" value={p.cuenta} onChange={e => onChange(p.id, { cuenta: e.target.value })}><option value="">Seleccionar cuenta</option>{cuentas.map(b => <option key={`${b.f026_id_cia}-${b.f026_id}`} value={b.f026_id}>{b.f026_id} · {b.f026_descripcion}</option>)}</Select></label>
         <label className={field}>Fecha consignación<FechaInput className="h-9" value={p.fechaConsignacion} onChange={v => onChange(p.id, { fechaConsignacion: v })} /></label>
       </div>}
       {(p.codigo === 'TC' || p.codigo === 'TD') && <div className="mt-2 grid gap-2 sm:grid-cols-2">
         <label className={field}>Últimos 4 dígitos<Input className="h-9" inputMode="numeric" maxLength={4} value={p.nroTarjeta} onChange={e => onChange(p.id, { nroTarjeta: e.target.value.replace(/\D/g, '').slice(0, 4) })} /></label>
         <label className={field}>Autorización<Input className="h-9" value={p.autorizacion} onChange={e => onChange(p.id, { autorizacion: e.target.value })} /></label>
       </div>}
-      {p.codigo !== 'EFE' && <label className={`${field} mt-2`}>Voucher (opcional)<Input className="h-9" value={p.voucher} onChange={e => onChange(p.id, { voucher: e.target.value })} /></label>}
+      {(p.codigo === 'TC' || p.codigo === 'TD') && <label className={`${field} mt-2`}>Voucher (opcional)<Input className="h-9" value={p.voucher} onChange={e => onChange(p.id, { voucher: e.target.value })} /></label>}
     </div>)}
   </div>
 }

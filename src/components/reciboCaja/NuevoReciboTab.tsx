@@ -55,11 +55,12 @@ export function NuevoReciboTab({ onCreated }: { onCreated: () => void }) {
   const [descuentos, setDescuentos] = useState<Record<number, number>>({})
   const [descuentosManuales, setDescuentosManuales] = useState<Record<number, number>>({})
   const [cargandoDescuentos, setCargandoDescuentos] = useState(false)
-  const [pagos, setPagos] = useState<PagoRC[]>(() => [pagoVacio()])
+  const [pagos, setPagos] = useState<PagoRC[]>([])
   const [editados, setEditados] = useState<Set<string>>(() => new Set())
   const [observacion, setObservacion] = useState('')
+  const [notasManual, setNotasManual] = useState<string | null>(null)
   const [co, setCo] = useState(() => coInicial(centroOperacionActivo))
-  const [caja, setCaja] = useState(() => CAJA_POR_CO[coInicial(centroOperacionActivo)])
+  const caja = CAJA_POR_CO[co as '001' | '002']
   const [encabezadoManual, setEncabezadoManual] = useState(false)
   const [error, setError] = useState('')
   const [exito, setExito] = useState('')
@@ -99,8 +100,8 @@ export function NuevoReciboTab({ onCreated }: { onCreated: () => void }) {
   const reset = () => {
     cambio(); facturasVersion.current++; descuentoVersion.current++
     setBusqueda(''); setCliente(null); setFacturas([]); setPagina(1); setMasFacturas(false)
-    setDescuentos({}); setDescuentosManuales({}); setPagos([pagoVacio()]); setEditados(new Set())
-    setObservacion(''); setCo(coInicial(centroOperacionActivo)); setCaja(CAJA_POR_CO[coInicial(centroOperacionActivo)]); setEncabezadoManual(false)
+    setDescuentos({}); setDescuentosManuales({}); setPagos([]); setEditados(new Set())
+    setObservacion(''); setNotasManual(null); setCo(coInicial(centroOperacionActivo)); setEncabezadoManual(false)
     setSeleccionManual(null)
   }
   const cargarFacturas = async (id: number, page: number, acumular = false) => {
@@ -119,9 +120,9 @@ export function NuevoReciboTab({ onCreated }: { onCreated: () => void }) {
   const limpiarCliente = () => {
     cambio(); facturasVersion.current++; descuentoVersion.current++
     setCliente(null); setFacturas([]); setDescuentos({}); setDescuentosManuales({})
-    setPagos([pagoVacio()]); setEditados(new Set()); setObservacion('')
+    setPagos([]); setEditados(new Set()); setObservacion(''); setNotasManual(null)
     setMasFacturas(false); setCargandoFacturas(false); setCargandoDescuentos(false)
-    setCo(coInicial(centroOperacionActivo)); setCaja(CAJA_POR_CO[coInicial(centroOperacionActivo)]); setEncabezadoManual(false)
+    setCo(coInicial(centroOperacionActivo)); setEncabezadoManual(false)
     setSeleccionManual(null)
   }
   const elegirCliente = (c: Client) => {
@@ -150,7 +151,7 @@ export function NuevoReciboTab({ onCreated }: { onCreated: () => void }) {
   useEffect(() => {
     if (encabezadoManual || !seleccionadas.length) return
     const idCo = seleccionadas[0].idCo
-    if (idCo === '001' || idCo === '002') { setCo(idCo); setCaja(CAJA_POR_CO[idCo]) }
+    if (idCo === '001' || idCo === '002') setCo(idCo)
   }, [seleccionadas, encabezadoManual])
   const codigosPago = pagos.map(p => p.codigo).join(',')
   useEffect(() => {
@@ -186,7 +187,6 @@ export function NuevoReciboTab({ onCreated }: { onCreated: () => void }) {
   const coFacturas = [...new Set(seleccionadas.map(f => f.idCo))]
   const descuentosValidos = seleccionadas.every(f => { const n = descuentosEfectivos[f.rowid] ?? 0; return Number.isFinite(n) && n >= 0 && n < f.saldo })
   const pagosValidos = pagos.length > 0 && pagos.every(p => Number.isFinite(p.valor) && p.valor > 0 && (p.codigo !== 'CG1' || !!p.cuenta && !!p.fechaConsignacion) && (p.codigo !== 'TC' && p.codigo !== 'TD' || /^\d{4}$/.test(p.nroTarjeta.trim()) && p.autorizacion.trim().length >= 6))
-  const faltantes = [!cliente && 'Cliente', !facturasValidas && 'Al menos 1 factura', coFacturas.length > 1 && 'Facturas de distintos C.O. (haz un recibo por C.O.)', !descuentosValidos && 'El descuento debe ser mayor o igual a 0 y menor que el valor de la factura', !pagosValidos && 'Pagos válidos', !observacion.trim() && 'Observación', cargandoDescuentos && 'Esperando descuento financiero', totales.clasificacion.tipo === 'faltanteExcesivo' && `Faltante supera el límite de ${formatters.currency(parametros.limite)}`, requiereConfirmacion && (disponibles.isLoading || disponibles.isFetching || disponibles.isError || totalConfirmado < totalTransferencia - 1) && 'Transferencia sin confirmación aprobada'].filter((v): v is string => !!v)
   const notasPreview = useMemo(() => {
     if (!observacion.trim()) return ''
     try {
@@ -196,6 +196,8 @@ export function NuevoReciboTab({ onCreated }: { onCreated: () => void }) {
       return buildRcNotas({ observacion, facturas: [], mediosPago: [], ajusteTipo: 'none', ajusteMonto: 0, usuario: sesion?.usuario ?? '?', fechaHora: new Date() })
     } catch (e) { return errorMensaje(e) }
   }, [cliente, facturas, descuentosEfectivos, aplicar, pagos, parametros, observacion, sesion?.usuario, co, caja, facturasValidas, pagosValidos, totales.clasificacion.tipo])
+  const notasFinal = notasManual ?? notasPreview
+  const faltantes = [!cliente && 'Cliente', !facturasValidas && 'Al menos 1 factura', coFacturas.length > 1 && 'Facturas de distintos C.O. (haz un recibo por C.O.)', !descuentosValidos && 'El descuento debe ser mayor o igual a 0 y menor que el valor de la factura', !pagosValidos && 'Pagos válidos', !observacion.trim() && 'Observación', notasFinal.length > 255 && 'Las notas superan 255 caracteres', cargandoDescuentos && 'Esperando descuento financiero', totales.clasificacion.tipo === 'faltanteExcesivo' && `Faltante supera el límite de ${formatters.currency(parametros.limite)}`, requiereConfirmacion && (disponibles.isLoading || disponibles.isFetching || disponibles.isError || totalConfirmado < totalTransferencia - 1) && 'Transferencia sin confirmación aprobada'].filter((v): v is string => !!v)
   const confirmarCreacion = (numeroRc: string | number) => {
     reset(); setExito(`RC ${numeroRc} creado`)
     void queryClient.invalidateQueries({ queryKey: ['recibo-caja'] })
@@ -233,6 +235,7 @@ export function NuevoReciboTab({ onCreated }: { onCreated: () => void }) {
         const consecutivo = numero(res.data.proximoConsecutivo?.f022_cons_proximo ?? res.data.data?.f022_cons_proximo ?? res.data.f022_cons_proximo)
         if (!consecutivo) throw new Error('No se recibió un consecutivo válido')
         const payload = armarPayloadRC({ clienteId: cliente.f9740_id, facturas, descuentos: descuentosEfectivos, aplicar, pagos, parametros, observacion, usuario: sesion?.usuario ?? '?', co, caja, consecutivo, ahora: new Date() })
+        if (notasManual !== null) payload.p_notas = notasManual.trim()
         if (requiereConfirmacion) payload.p_confirmaciones_transferencia = confirmacionesIds
         intento.current = { key: crypto.randomUUID(), payload }
       }
@@ -263,15 +266,13 @@ export function NuevoReciboTab({ onCreated }: { onCreated: () => void }) {
           <div className="grid gap-3 lg:grid-cols-[auto_125px_130px_minmax(0,1fr)] lg:items-center">
             <div className="flex min-w-0 items-center gap-2 whitespace-nowrap text-xs">A nombre de <Badge variant="secondary" className="max-w-24 truncate" title={usuarioSiesa?.siesa_nombre ?? undefined}>{usuarioSiesa?.siesa_nombre}</Badge></div>
             <label className="flex min-w-0 items-center gap-2 text-xs font-medium text-muted-foreground">C.O.
-              <span className="min-w-0 flex-1"><Select className="h-9 text-sm" value={co} onChange={e => { cambio(); setCo(e.target.value); setCaja(CAJA_POR_CO[e.target.value as '001' | '002']); setEncabezadoManual(true) }}>
+              <span className="min-w-0 flex-1"><Select className="h-9 text-sm" value={co} onChange={e => { cambio(); setCo(e.target.value); setEncabezadoManual(true) }}>
                 <option value="001">001 · Principal</option><option value="002">002 · Almateriales</option>
               </Select></span>
             </label>
-            <label className="flex min-w-0 items-center gap-2 text-xs font-medium text-muted-foreground">Caja
-              <span className="min-w-0 flex-1"><Select className="h-9 text-sm" value={caja} onChange={e => { cambio(); setCaja(e.target.value); setEncabezadoManual(true) }}>
-                <option value="40">40 · Vía 40</option><option value="80">80 · Ferretería</option>
-              </Select></span>
-            </label>
+            <div className="flex min-w-0 items-center gap-2 text-xs font-medium text-muted-foreground">Caja
+              <span className="flex h-9 min-w-0 flex-1 items-center rounded-md border border-input bg-muted/40 px-3 text-sm text-foreground" title="La caja depende del C.O.">{caja === '80' ? '80 · Ferretería' : '40 · Vía 40'}</span>
+            </div>
             <div className="min-w-0"><ClienteAutocomplete cliente={cliente} resultados={clientes.data ?? []} termino={busqueda} buscando={clientes.isFetching}
               error={clientes.isError ? errorMensaje(clientes.error) : undefined}
               onSearch={setBusqueda} onSelect={elegirCliente} onChange={limpiarCliente} /></div>
@@ -315,10 +316,16 @@ export function NuevoReciboTab({ onCreated }: { onCreated: () => void }) {
               className="w-full rounded-md border border-input bg-background p-2 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               placeholder="Motivo del recaudo" />
             <p className="mt-1 text-right text-xs text-muted-foreground">{observacion.length} caracteres</p>
-            <details className="mt-2 rounded-lg bg-muted/50 p-2 text-xs text-muted-foreground">
-              <summary className="cursor-pointer font-semibold">Ver notas · {notasPreview.length}/255</summary>
-              <p className="mt-1 break-words">{notasPreview || 'La vista previa aparecerá aquí.'}</p>
-            </details>
+<div className="mt-2 space-y-1">
+              <div className="flex items-center justify-between gap-2 text-xs">
+                <label htmlFor="rc-notas" className="font-semibold text-muted-foreground">Notas del recibo · sugeridas, puedes editarlas</label>
+                <span className={`tabular-nums ${notasFinal.length > 255 ? 'font-semibold text-destructive' : 'text-muted-foreground'}`}>{notasFinal.length}/255</span>
+              </div>
+              <textarea id="rc-notas" rows={3} value={notasFinal} onChange={e => { cambio(); setNotasManual(e.target.value) }}
+                className="w-full rounded-md border border-input bg-background p-2 text-xs text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                placeholder="La sugerencia aparecerá aquí" />
+              {notasManual !== null && <button type="button" onClick={() => { cambio(); setNotasManual(null) }} className="text-xs font-medium text-primary hover:underline">Volver a la sugerida</button>}
+            </div>
           </>}
         </Card>
         </div>

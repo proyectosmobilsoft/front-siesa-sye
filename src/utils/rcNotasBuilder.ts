@@ -1,4 +1,4 @@
-/** Port de rc_notas_builder.dart. Orden: observación, facturas, pagos, ajuste, sello. */
+/** Port de rc_notas_builder.dart. Orden: facturas, observación, pagos, ajuste, sello. */
 export interface RcNotaFactura { tipo: string; consecutivo: string; valorRecibido: number; descuentoPp?: number; ajusteAlPeso?: number }
 export interface RcNotaMedioPago { nombre: string; valor: number; voucher?: string }
 export type RcNotaAjusteTipo = 'none' | 'ajusteDescuento' | 'ajusteIngreso' | 'anticipo'
@@ -15,18 +15,11 @@ export function buildRcNotas({ observacion, facturas, mediosPago, ajusteTipo, aj
   const labels: Record<RcNotaAjusteTipo, string> = { none: '', ajusteDescuento: 'Descuento por ajuste al peso', ajusteIngreso: 'Ingreso por ajuste al peso', anticipo: 'Anticipo cliente' }
   const ajuste = ajusteTipo === 'none' || Math.abs(ajusteMonto) < 0.005 ? null : `${labels[ajusteTipo]}: $ ${Math.abs(ajusteMonto).toFixed(2)}`
   let obs = observacion.trim()
-  let facturasPart = facturas.map(f => {
-    const extras = [f.descuentoPp && f.descuentoPp > 0.005 ? `(pp ${formatRcCop(f.descuentoPp)})` : '', f.ajusteAlPeso && f.ajusteAlPeso > 0.005 ? `(aj ${formatRcCop(f.ajusteAlPeso)})` : ''].filter(Boolean)
-    return `Fact ${f.tipo}-${f.consecutivo} ${formatRcCop(f.valorRecibido)}${extras.length ? ` ${extras.join(' ')}` : ''}`
-  }).join(', ')
+  let facturasPart = facturas.map(f => `${f.tipo.trim().toUpperCase()}-${f.consecutivo}`).join(', ')
   let pagosPart = mediosPago.length ? `Pago: ${mediosPago.map(p => `${titleCase(p.nombre)} ${formatRcCop(p.valor)}${p.voucher?.trim() ? ` Voucher: ${p.voucher.trim()}` : ''}`).join(', ')}` : ''
-  const assemble = () => join([obs, facturasPart, pagosPart, ajuste, sello])
+  const assemble = () => join([facturasPart, obs, pagosPart, ajuste, sello])
   if (assemble().length <= maxLength) return assemble()
-  if (facturas.length) {
-    const total = facturas.reduce((s, f) => s + f.valorRecibido, 0)
-    const pp = facturas.reduce((s, f) => s + (f.descuentoPp ?? 0), 0)
-    facturasPart = `${facturas.length} facturas ${formatRcCop(total)}${pp > 0.005 ? ` (pp ${formatRcCop(pp)})` : ''}`
-  }
+  if (facturas.length) facturasPart = `${facturas.length} facturas`
   if (assemble().length <= maxLength) return assemble()
   if (mediosPago.length) pagosPart = `Pago: ${formatRcCop(mediosPago.reduce((s, p) => s + p.valor, 0))}`
   if (assemble().length <= maxLength) return assemble()
