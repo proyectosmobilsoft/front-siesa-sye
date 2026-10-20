@@ -37,6 +37,8 @@ import { estadoRCBadge, estadoRCLabel } from '@/utils/badges'
 import { useQueries, useQuery, useQueryClient } from '@tanstack/react-query'
 import { cn } from '@/lib/utils'
 import { usePermiso } from '@/hooks/usePermiso'
+import ExcelJS from 'exceljs'
+import { saveAs } from 'file-saver'
 
 // ─── Agrupación por conductor ────────────────────────────────────────────────
 
@@ -1391,6 +1393,44 @@ export const TesoreriaEntregaRecaudoPage = () => {
     }
     const refrescando = pendientesQuery.isRefetching || confirmadasQuery.isRefetching
 
+    const exportarExcel = async () => {
+        const movimientos = [...(pendientesQuery.data ?? []), ...(confirmadasQuery.data ?? [])]
+            .sort((a, b) => a.fecha.localeCompare(b.fecha))
+        const libro = new ExcelJS.Workbook()
+        const hoja = libro.addWorksheet('Entrega de recaudo')
+        hoja.columns = [
+            { header: 'Fecha', key: 'fecha', width: 20 },
+            { header: 'Conductor', key: 'conductor', width: 30 },
+            { header: 'C.O.', key: 'co', width: 8 },
+            { header: 'Estado', key: 'estado', width: 14 },
+            { header: 'Valor entregado', key: 'valor', width: 18 },
+            { header: 'Valor confirmado', key: 'confirmado', width: 18 },
+            { header: 'Diferencia', key: 'diferencia', width: 14 },
+            { header: 'Confirmó', key: 'usuario', width: 24 },
+            { header: 'Fecha confirmación', key: 'fecha_confirma', width: 20 },
+            { header: 'Referencia', key: 'referencia', width: 24 },
+        ]
+        for (const m of movimientos) {
+            hoja.addRow({
+                fecha: formatters.dateTime(m.fecha),
+                conductor: m.conductor_siesa_nombre || m.conductor_nombre || '',
+                co: m.conductor_centro_operacion || '',
+                estado: m.estado === 'PENDIENTE' ? 'Pendiente' : m.estado === 'CONFIRMADO' ? 'Confirmada' : 'Anulada',
+                valor: Number(m.valor) || 0,
+                confirmado: m.valor_confirmado == null ? null : Number(m.valor_confirmado),
+                diferencia: m.diferencia == null ? null : Number(m.diferencia),
+                usuario: m.usuario_confirma_nombre || '',
+                fecha_confirma: m.fecha_confirma ? formatters.dateTime(m.fecha_confirma) : '',
+                referencia: m.referencia || '',
+            })
+        }
+        hoja.getRow(1).font = { bold: true }
+        for (const col of ['valor', 'confirmado', 'diferencia']) hoja.getColumn(col).numFmt = '#,##0'
+        const buffer = await libro.xlsx.writeBuffer()
+        saveAs(new Blob([buffer]), `entrega_recaudo_${fechaDesde || 'inicio'}_${fechaHasta || hoyLocalIso()}.xlsx`)
+    }
+    const sinMovimientos = !(pendientesQuery.data?.length || confirmadasQuery.data?.length)
+
     const handleConfirmado = () => {
         setMovValidando(null)
         queryClient.invalidateQueries({ queryKey: ['conductor-efectivo'] })
@@ -1544,9 +1584,14 @@ export const TesoreriaEntregaRecaudoPage = () => {
                         </Button>
                     )}
                 </div>
-                <Button variant="outline" size="sm" className="ml-auto h-8 gap-2 text-xs" onClick={refrescarTodo} disabled={refrescando}>
-                    <RefreshCw className={cn('h-3.5 w-3.5', refrescando && 'animate-spin')} /> Actualizar
-                </Button>
+                <div className="ml-auto flex items-center gap-2">
+                    <Button variant="outline" size="sm" className="h-8 gap-2 text-xs" onClick={() => void exportarExcel()} disabled={sinMovimientos}>
+                        <Download className="h-3.5 w-3.5" /> Exportar Excel
+                    </Button>
+                    <Button variant="outline" size="sm" className="h-8 gap-2 text-xs" onClick={refrescarTodo} disabled={refrescando}>
+                        <RefreshCw className={cn('h-3.5 w-3.5', refrescando && 'animate-spin')} /> Actualizar
+                    </Button>
+                </div>
             </div>
 
             <div className="grid items-stretch gap-5 lg:grid-cols-2">

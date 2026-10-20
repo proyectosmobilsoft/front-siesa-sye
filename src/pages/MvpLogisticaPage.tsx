@@ -19,6 +19,7 @@ import {
   type SolicitudPlan,
 } from '@/api/logistica'
 import {
+  useCuadrantesLogistica,
   useFacturasLogistica,
   useRecursosLogistica,
 } from '@/components/logistica/useLogistica'
@@ -34,6 +35,8 @@ import { MapaLogistica } from '@/components/logistica/MapaLogistica'
 import { RutasDelDia } from '@/components/logistica/RutasDelDia'
 import { KpisLogistica } from '@/components/logistica/KpisLogistica'
 import { ConfiguracionLogistica } from '@/components/logistica/ConfiguracionLogistica'
+import { useFiltrosFacturas } from '@/components/logistica/filtrosFacturas'
+import { CuadrantesLogistica } from '@/components/logistica/CuadrantesLogistica'
 import { Transicion3D } from '@/components/logistica/Transicion3D'
 import { COLORES_RUTA } from '@/components/logistica/colores'
 import { SelectorUbicacionModal } from '@/components/logistica/SelectorUbicacionModal'
@@ -61,7 +64,7 @@ export const MvpLogisticaPage = () => {
         ? coActivo || ''
         : ''
   const [pestana, setPestana] = useState<
-    'planificar' | 'rutas' | 'dashboard' | 'configuracion'
+    'planificar' | 'rutas' | 'dashboard' | 'configuracion' | 'cuadrantes'
   >('planificar')
   const [modo, setModo] = useState<'AUTO' | 'MANUAL'>('AUTO'),
     [seleccionadas, setSeleccionadas] = useState<Set<number>>(new Set())
@@ -88,6 +91,12 @@ export const MvpLogisticaPage = () => {
     () => facturasQ.data?.filter(f => f.idco === co) || [],
     [facturasQ.data, co]
   )
+  const cuadrantesQ = useCuadrantesLogistica(coActivo)
+  const cuadrantes = useMemo(
+    () => cuadrantesQ.data?.filter(z => z.id_co === co) || [],
+    [cuadrantesQ.data, co]
+  )
+  const filtrosFacturas = useFiltrosFacturas(co, facturas, cuadrantes)
   const elegidas = facturas.filter(f => seleccionadas.has(f.rowid_sa)),
     ids = elegidas.map(f => f.rowid_sa)
   const origen = recursosQ.data?.origenes.find(o => o.id_co === co)
@@ -263,6 +272,7 @@ export const MvpLogisticaPage = () => {
             ['planificar', 'Planificar'],
             ['rutas', 'Rutas del día'],
             ['dashboard', 'Dashboard'],
+            ['cuadrantes', 'Cuadrantes'],
             ['configuracion', 'Configuración'],
           ] as const
         ).map(([id, texto]) => (
@@ -360,7 +370,10 @@ export const MvpLogisticaPage = () => {
                       Marque los clientes (o facturas) que salen hoy.
                     </p>
                     <PanelFacturas
-                      facturas={facturas}
+                      facturas={filtrosFacturas.filtradas}
+                      filtrosEstado={filtrosFacturas}
+                      cuadrantes={cuadrantes}
+                      totalFacturas={facturas.length}
                       seleccionadas={seleccionadas}
                       cambiar={n => {
                         setSeleccionadas(new Set(n))
@@ -591,7 +604,7 @@ export const MvpLogisticaPage = () => {
                         origen={origen}
                         facturas={
                           paso === 1
-                            ? facturas.filter(
+                            ? filtrosFacturas.filtradas.filter(
                                 f =>
                                   f.peso_kg > 0 || seleccionadas.has(f.rowid_sa)
                               )
@@ -608,7 +621,14 @@ export const MvpLogisticaPage = () => {
                             : 'h-[280px] lg:h-[650px]'
                         }
                         // Re-encuadra al cambiar de C.O., de paso o de propuesta; no en cada selección.
-                        clave={`${co}-${paso}-${propuesta?.rutas.map(r => r.paradas.length).join() || ''}`}
+                        cuadrantes={paso === 1 ? cuadrantes : undefined}
+                        cuadranteResaltado={
+                          paso === 1 &&
+                          typeof filtrosFacturas.filtros.cuadrante === 'number'
+                            ? filtrosFacturas.filtros.cuadrante
+                            : null
+                        }
+                        clave={`${co}-${paso}-${propuesta?.rutas.map(r => r.paradas.length).join() || ''}-${paso === 1 ? `${filtrosFacturas.filtros.cuadrante}-${filtrosFacturas.filtros.ciudades.join()}-${filtrosFacturas.filtros.ubicacion}` : ''}`}
                       />
                     </Transicion3D>
                   </div>
@@ -728,6 +748,9 @@ export const MvpLogisticaPage = () => {
         <RutasDelDia co={coActivo} origenes={recursosQ.data?.origenes} />
       )}
       {pestana === 'dashboard' && <KpisLogistica co={coActivo} activo />}
+      {pestana === 'cuadrantes' && (
+        <CuadrantesLogistica key={co} co={co} recursos={recursosQ.data} />
+      )}
       {pestana === 'configuracion' && (
         <ConfiguracionLogistica key={co} co={co} recursos={recursosQ.data} />
       )}

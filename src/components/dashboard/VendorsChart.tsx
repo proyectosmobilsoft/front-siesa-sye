@@ -1,7 +1,7 @@
 import { motion } from 'framer-motion'
 import { ResponsiveBar } from '@nivo/bar'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Skeleton } from '@/lib/skeleton'
+import { CalculandoGraficas } from '@/components/tablero/CalculandoGraficas'
 import { ErrorBoundary } from '@/components/ui/error-boundary'
 import { useVendors } from '@/hooks/useReports'
 import { formatters } from '@/utils/formatters'
@@ -28,7 +28,7 @@ const VendorsChartContent = () => {
                     <CardTitle>Top Vendedores</CardTitle>
                 </CardHeader>
                 <CardContent>
-                    <Skeleton className="h-[280px] w-full" />
+                    <CalculandoGraficas altura="h-[280px]" />
                 </CardContent>
             </Card>
         )

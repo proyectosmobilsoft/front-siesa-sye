@@ -1,11 +1,14 @@
 import { clsx } from 'clsx'
+import { CalculandoGraficas } from '@/components/tablero/CalculandoGraficas'
 import { AnimatePresence, motion } from 'framer-motion'
 import { Area, AreaChart, ResponsiveContainer } from 'recharts'
-import { Inbox, Info, TrendingDown, TrendingUp, TriangleAlert, type LucideIcon } from 'lucide-react'
+import { Inbox, Info, TableProperties, TrendingDown, TrendingUp, TriangleAlert, type LucideIcon } from 'lucide-react'
 import type { ReactNode } from 'react'
 import { useAyuda, type Ayuda } from './ayuda'
 import { FechaInput } from '@/components/ui/fecha-input'
 import { PRESETS, type PresetRango } from './formato'
+import { useDetalle } from './detalle/contexto'
+import type { EspecDetalle } from './detalle/tipos'
 
 // Piezas de los dashboards, con el mismo diseño de vehiman_react (src/dashboard/comun.tsx):
 // encabezado, bloques blancos redondeados, tarjetas KPI con tono e ícono, malla
@@ -24,8 +27,9 @@ export function Encabezado({ titulo, descripcion, accion }: { titulo: string; de
 }
 
 /** Tarjeta con título, para agrupar una gráfica, una tabla o unos totales. */
-export function Bloque({ titulo, descripcion, accion, children, className, ayuda }: { titulo: string; descripcion?: string; accion?: ReactNode; children: ReactNode; className?: string; ayuda?: Ayuda }) {
+export function Bloque({ titulo, descripcion, accion, children, className, ayuda, detalle }: { titulo: string; descripcion?: string; accion?: ReactNode; children: ReactNode; className?: string; ayuda?: Ayuda; detalle?: EspecDetalle }) {
   const info = useAyuda(ayuda)
+  const detalles = useDetalle()
   return (
     <section className={clsx('rounded-3xl bg-card p-5 ring-1 ring-border/80 sm:p-6', className)}>
       <header ref={info.referencia as React.RefObject<HTMLElement>} onMouseEnter={info.mostrar} onMouseLeave={info.ocultar} className="mb-4 flex flex-wrap items-start justify-between gap-2">
@@ -33,7 +37,15 @@ export function Bloque({ titulo, descripcion, accion, children, className, ayuda
           <h2 className="flex items-center gap-1.5 text-[15px] font-semibold text-foreground">{titulo}{ayuda && <span tabIndex={0} role="img" aria-label={`Ayuda sobre ${titulo}`} aria-describedby={info.id} onFocus={info.mostrar} onBlur={info.ocultar} className="inline-flex cursor-help text-muted-foreground"><Info className="size-3.5" /></span>}</h2>
           {descripcion && <p className="mt-0.5 text-[12.5px] text-muted-foreground">{descripcion}</p>}
         </div>
-        {accion}
+        <div className="flex items-center gap-2">
+          {detalle && detalles && (
+            <button type="button" onClick={() => detalles.abrir({ ...detalle, titulo: detalle.titulo || titulo })}
+              className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-[12px] font-medium text-primary hover:bg-primary/10">
+              <TableProperties className="size-3.5" />Ver registros
+            </button>
+          )}
+          {accion}
+        </div>
       </header>
       {children}
       {info.tooltip}
@@ -65,16 +77,25 @@ interface PropsTarjeta {
   subirEsMalo?: boolean
   serie?: number[]
   compacta?: boolean
+  /** Registros que componen el valor: al tocar la tarjeta se abre su tabla. */
+  detalle?: EspecDetalle
 }
 
 /** Total destacado (KPI). */
-export function Tarjeta({ etiqueta, valor, nota, tono = 'marca', icono: Icono, variacion, subirEsMalo, ayuda, serie, compacta = false }: PropsTarjeta) {
+export function Tarjeta({ etiqueta, valor, nota, tono = 'marca', icono: Icono, variacion, subirEsMalo, ayuda, serie, compacta = false, detalle }: PropsTarjeta) {
   const info = useAyuda(ayuda)
+  const detalles = useDetalle()
+  const abrirDetalle = detalle && detalles ? () => detalles.abrir({ ...detalle, titulo: detalle.titulo || etiqueta, valor: detalle.valor ?? (typeof valor === 'string' || typeof valor === 'number' ? String(valor) : undefined) }) : undefined
   const t = TONOS[tono]
   const hayVariacion = variacion != null && Number.isFinite(variacion)
   const bueno = hayVariacion && (subirEsMalo ? variacion! <= 0 : variacion! >= 0)
   return (
-    <div ref={info.referencia as React.RefObject<HTMLDivElement>} onMouseEnter={info.mostrar} onMouseLeave={info.ocultar} className={clsx('flex items-center justify-between gap-3 rounded-3xl', compacta ? 'p-4' : 'p-5', t.fondo)}>
+    <div ref={info.referencia as React.RefObject<HTMLDivElement>} onMouseEnter={info.mostrar} onMouseLeave={info.ocultar}
+      {...(abrirDetalle ? {
+        role: 'button', tabIndex: 0, 'aria-label': `${etiqueta}: ver los registros que componen el valor`, onClick: abrirDetalle,
+        onKeyDown: (e: React.KeyboardEvent) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); abrirDetalle() } },
+      } : {})}
+      className={clsx('flex items-center justify-between gap-3 rounded-3xl', compacta ? 'p-4' : 'p-5', t.fondo, abrirDetalle && 'group/detalle cursor-pointer transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md focus-visible:outline-2 focus-visible:outline-primary')}>
       <div className="min-w-0 text-left">
         <p className="flex items-center gap-1.5 text-[12.5px] font-medium text-muted-foreground">{etiqueta}{ayuda && <span tabIndex={0} role="img" aria-label={`Ayuda sobre ${etiqueta}`} aria-describedby={info.id} onFocus={info.mostrar} onBlur={info.ocultar} className="inline-flex cursor-help"><Info className="size-3.5" /></span>}</p>
         <p className={clsx('mt-1 truncate leading-tight font-bold tracking-[-0.02em] text-foreground tabular-nums', compacta ? 'text-[20px]' : 'text-[24px]')}>{valor}</p>
@@ -97,6 +118,11 @@ export function Tarjeta({ etiqueta, valor, nota, tono = 'marca', icono: Icono, v
               </span>
             )}
             {nota}
+          </p>
+        )}
+        {abrirDetalle && (
+          <p className="mt-1 inline-flex items-center gap-1 text-[11.5px] font-medium text-primary opacity-70 transition-opacity group-hover/detalle:opacity-100">
+            <TableProperties className="size-3" />Ver registros
           </p>
         )}
       </div>
@@ -123,7 +149,7 @@ interface Consulta {
 
 /** Cargando, error y vacío de un bloque; si hay datos, muestra `children`. */
 export function CuerpoConsulta({ consulta, vacio, mensajeVacio = 'No hay datos en este periodo', altura = 'h-64', children }: { consulta: Consulta; vacio?: boolean; mensajeVacio?: string; altura?: string; children: ReactNode }) {
-  if (consulta.isLoading) return <div role="status" aria-label="Cargando" className={clsx('animate-pulse rounded-2xl bg-muted', altura)} />
+  if (consulta.isLoading) return <CalculandoGraficas altura={altura} />
   if (consulta.isError) {
     return (
       <div className={clsx('flex flex-col items-center justify-center gap-2 text-center', altura)}>

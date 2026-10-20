@@ -5,6 +5,7 @@ import { useClientsCount } from '@/hooks/useClients'
 import { useProductsCount } from '@/hooks/useProducts'
 import { useDailyOrdersStatusBreakdown, useSalesSummary } from '@/hooks/useReports'
 import { formatters } from '@/utils/formatters'
+import { DETALLE_PEDIDOS } from '@/components/tablero/detalle/especificaciones'
 
 const StatsCardsContent = () => {
     const { data: clientsCount, isLoading: loadingClients, error: errorClients } = useClientsCount()
@@ -23,7 +24,8 @@ const StatsCardsContent = () => {
     return (
         <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
             <StatCard
-                label="Pedidos Hoy"
+                label="Pedidos (últimos 10 días)"
+                detalle={DETALLE_PEDIDOS.pedidos}
                 value={formatters.number(totalPedidos)}
                 icon={ShoppingBag}
                 isLoading={loadingOrders}
@@ -31,7 +33,8 @@ const StatsCardsContent = () => {
                 delay={0}
             />
             <StatCard
-                label="Ventas Totales"
+                label="Ventas POS de hoy"
+                detalle={DETALLE_PEDIDOS.ventasPos}
                 value={formatters.compactCurrency(totalVentas)}
                 icon={DollarSign}
                 isLoading={loadingSales}
@@ -40,6 +43,7 @@ const StatsCardsContent = () => {
             />
             <StatCard
                 label="Clientes"
+                detalle={DETALLE_PEDIDOS.clientes}
                 value={formatters.number(clientsCount ?? 0)}
                 icon={User}
                 isLoading={loadingClients}
@@ -48,6 +52,7 @@ const StatsCardsContent = () => {
             />
             <StatCard
                 label="Productos"
+                detalle={DETALLE_PEDIDOS.productos}
                 value={formatters.number(productsCount ?? 0)}
                 icon={Package}
                 isLoading={loadingProducts}

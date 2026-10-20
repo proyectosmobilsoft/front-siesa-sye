@@ -6,6 +6,18 @@ export const useFacturasLogistica = (co: string | null) =>
     queryFn: logisticaApi.facturas,
     enabled: !!co,
   })
+export const useCuadrantesLogistica = (co: string | null) =>
+  useQuery({
+    queryKey: ['logistica', 'cuadrantes', co],
+    queryFn: logisticaApi.cuadrantes,
+    enabled: !!co,
+  })
+export const useFacturasCuadrante = (id: number | null) =>
+  useQuery({
+    queryKey: ['logistica', 'cuadrante-facturas', id],
+    queryFn: () => logisticaApi.facturasDeCuadrante(id!),
+    enabled: id != null,
+  })
 export const useRecursosLogistica = (co: string | null) =>
   useQuery({
     queryKey: ['logistica', 'recursos', co],

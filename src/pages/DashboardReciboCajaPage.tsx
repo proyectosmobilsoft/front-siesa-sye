@@ -2,6 +2,8 @@ import { useState, type ReactNode } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useSearchParams } from 'react-router-dom'
 import { PanelExpandible } from '@/components/tablero/Expandible'
+import { DetalleProvider } from '@/components/tablero/detalle/DetalleContext'
+import { DETALLE_RECAUDO } from '@/components/tablero/detalle/especificaciones'
 import { Resumenes } from '@/components/tablero/ventas/Resumenes'
 import { VentasPresupuesto } from '@/components/tablero/ventas/VentasPresupuesto'
 import { ComprasProveedores } from '@/components/tablero/compras/ComprasProveedores'
@@ -238,6 +240,7 @@ export function DashboardReciboCajaPage() {
   const co = coPuntual(centroOperacionActivo)
 
   return (
+    <DetalleProvider rango={valido ? rango : undefined}>
     <section className="mx-auto max-w-[1600px] p-4 sm:p-6 lg:p-8">
       <Encabezado
         titulo="Dashboard de Recaudo y Ventas"
@@ -271,6 +274,7 @@ export function DashboardReciboCajaPage() {
         {vista === 'compras' && <CuerpoConsulta consulta={{ isLoading: consultaCompras.isLoading || (consultaCompras.isFetching && !consultaCompras.data), isError: consultaCompras.isError }} vacio={!valido} mensajeVacio="Elige un rango de fechas válido" altura="h-96">{consultaCompras.data && <ComprasProveedores d={consultaCompras.data} ventas={consultaVentas.data} sub={sub} alElegirSub={elegirSub} />}</CuerpoConsulta>}
       </PanelExpandible>
     </section>
+    </DetalleProvider>
   )
 }
 
@@ -307,31 +311,31 @@ function Contenido({ d, sub, alElegirSub }: { d: DashboardRC; sub: string; alEle
       {activa === 'resumen' && <>
       <Malla columnas={6}>
         <Tarjeta
-          serie={mensual.map(m => m.recaudo_cartera)} etiqueta="Cobro de cartera"
+          serie={mensual.map(m => m.recaudo_cartera)} etiqueta="Cobro de cartera" detalle={DETALLE_RECAUDO.cobroCartera}
           valor={dinero(k.recaudo_cartera)}
           variacion={variacion(k.recaudo_cartera, k.recaudo_cartera_previo)}
           nota="vs periodo anterior"
           tono="marca"
           icono={Wallet} ayuda={{ fuente: 'Recibos de caja (RC) de SIESA y de la app, no anulados, que cruzan al menos una factura.', formula: 'Σ medios de pago de RC no anulados con facturas cruzadas · Variación = (actual − anterior) / anterior', nota: 'Los RC sin factura (anticipos, otros ingresos) no cuentan aquí.' }}
         />
-        <Tarjeta compacta serie={mensual.map(m => m.facturado)} etiqueta="Facturado" valor={dinero(k.facturado)} nota="Facturas menos notas crédito" tono="info" icono={FileText} ayuda={{ fuente: 'Movimientos de inventario de facturas FCE, BQE, FM, FC, FV, C01 menos notas NC1, NC2, NV1, N01.', formula: 'Σ valor neto facturas − Σ valor neto notas crédito' }} />
+        <Tarjeta compacta serie={mensual.map(m => m.facturado)} etiqueta="Facturado" detalle={DETALLE_RECAUDO.facturado} valor={dinero(k.facturado)} nota="Facturas menos notas crédito" tono="info" icono={FileText} ayuda={{ fuente: 'Movimientos de inventario de facturas FCE, BQE, FM, FC, FV, C01 menos notas NC1, NC2, NV1, N01.', formula: 'Σ valor neto facturas − Σ valor neto notas crédito' }} />
         <Tarjeta
-          etiqueta="Cobertura de recaudo"
+          etiqueta="Cobertura de recaudo" detalle={DETALLE_RECAUDO.cobertura}
           valor={k.cobertura_recaudo == null ? '—' : porcentaje(k.cobertura_recaudo, 0)}
           nota={k.cobertura_recaudo != null && k.cobertura_recaudo > 1 ? 'Cobro > facturado: baja la cartera' : 'Cobro de cartera / facturado'}
           tono={k.cobertura_recaudo != null && k.cobertura_recaudo < 0.7 ? 'err' : 'ok'}
           icono={CircleDollarSign} ayuda={{ fuente: 'RC de cartera y facturas de SIESA del mismo periodo.', formula: 'Cobro de cartera ÷ Facturado del mismo periodo', nota: '> 100 % = se cobraron facturas de periodos anteriores.' }}
         />
-        <Tarjeta compacta etiqueta="Días promedio de pago" valor={dias(k.dias_promedio_pago)} nota="Desde la factura hasta el recibo" tono="neutro" icono={CalendarClock} ayuda={{ fuente: 'Cruce RC → factura (saldos abiertos).', formula: 'Σ (valor cruzado × días entre factura y RC) ÷ Σ valor cruzado' }} />
+        <Tarjeta compacta etiqueta="Días promedio de pago" detalle={DETALLE_RECAUDO.diasPago} valor={dias(k.dias_promedio_pago)} nota="Desde la factura hasta el recibo" tono="neutro" icono={CalendarClock} ayuda={{ fuente: 'Cruce RC → factura (saldos abiertos).', formula: 'Σ (valor cruzado × días entre factura y RC) ÷ Σ valor cruzado' }} />
         <Tarjeta
-          etiqueta="Descuento financiero"
+          etiqueta="Descuento financiero" detalle={DETALLE_RECAUDO.descuento}
           valor={dinero(k.descuento_pp)}
           nota={k.valor_facturas ? `${porcentaje(k.descuento_pp / k.valor_facturas)} de lo cobrado` : undefined}
           tono="aviso"
           icono={Percent} ayuda={{ fuente: 'Descuento por pronto pago aplicado en el cruce del RC.', formula: 'Σ descuento PP · % = descuento ÷ valor de facturas cobradas' }}
         />
         <Tarjeta
-          serie={mensual.map(m => m.anulados)} etiqueta="Tasa de anulación"
+          serie={mensual.map(m => m.anulados)} etiqueta="Tasa de anulación" detalle={DETALLE_RECAUDO.tasaAnulacion}
           valor={porcentaje(k.tasa_anulacion)}
           variacion={k.tasa_anulacion_previa ? variacion(k.tasa_anulacion, k.tasa_anulacion_previa) : null}
           subirEsMalo
@@ -339,9 +343,9 @@ function Contenido({ d, sub, alElegirSub }: { d: DashboardRC; sub: string; alEle
           tono="err"
           icono={Ban} ayuda={{ fuente: 'RC de SIESA y de la app del periodo.', formula: 'RC anulados ÷ RC del periodo (vigentes + anulados)' }}
         />
-        <Tarjeta compacta etiqueta="Carga despachada" valor={kilos(k.kg_facturados)} nota={`${kilos(k.kg_cobrados_conductores)} cobrada por conductores`} tono="info" icono={Scale} ayuda={{ fuente: 'Ítems de inventario facturados (sin servicios).', formula: 'Σ cantidad × peso unitario − devoluciones' }} />
+        <Tarjeta compacta etiqueta="Carga despachada" detalle={DETALLE_RECAUDO.carga} valor={kilos(k.kg_facturados)} nota={`${kilos(k.kg_cobrados_conductores)} cobrada por conductores`} tono="info" icono={Scale} ayuda={{ fuente: 'Ítems de inventario facturados (sin servicios).', formula: 'Σ cantidad × peso unitario − devoluciones' }} />
         <Tarjeta
-          etiqueta="Ticket promedio"
+          etiqueta="Ticket promedio" detalle={DETALLE_RECAUDO.ticket}
           valor={dinero(k.ticket_promedio)}
           nota={`${entero(k.recibos - k.recibos_sin_factura)} recibos de cartera`}
           tono="neutro"
@@ -351,12 +355,12 @@ function Contenido({ d, sub, alElegirSub }: { d: DashboardRC; sub: string; alEle
 
 
       <Malla columnas={6}>
-        <Tarjeta compacta etiqueta="Efectivo del recaudo" valor={porcentaje(k.recaudo ? d.medios.efectivo / k.recaudo : 0)} ayuda={{ fuente: 'Medios de pago y recaudo total de RC vigentes.', formula: 'Efectivo ÷ recaudo total' }} />
-        <Tarjeta compacta etiqueta="Recaudado por la app" valor={porcentaje(k.recaudo ? k.recaudo_app / k.recaudo : 0)} ayuda={{ fuente: 'RC de la app y recaudo total vigente.', formula: 'Recaudo app ÷ recaudo total' }} />
-        <Tarjeta compacta etiqueta="Recaudo diario" valor={dinero(k.recaudo / diasRango)} ayuda={{ fuente: 'Recaudo total del rango.', formula: 'Recaudo ÷ días calendario inclusivos del rango' }} />
-        <Tarjeta compacta etiqueta="Recibos por día" valor={decimal(k.recibos / diasRango, 1)} ayuda={{ fuente: 'RC vigentes del rango.', formula: 'Número de recibos ÷ días calendario inclusivos del rango' }} />
-        <Tarjeta compacta etiqueta="Valor anulado" valor={dinero(d.anulaciones.por_motivo.reduce((suma, motivo) => suma + motivo.valor, 0))} ayuda={{ fuente: 'RC anulados por motivo.', formula: 'Σ valor de todos los motivos de anulación' }} />
-        <Tarjeta compacta etiqueta="Mes de mayor recaudo" valor={mensual.length ? mensual.reduce((mejor, mes) => mes.recaudo_app + mes.recaudo_siesa > mejor.recaudo_app + mejor.recaudo_siesa ? mes : mejor).etiqueta : '—'} ayuda={{ fuente: 'RC de SIESA y app agrupados por mes.', formula: 'Mes con máximo de recaudo SIESA + recaudo app' }} />
+        <Tarjeta compacta etiqueta="Efectivo del recaudo" detalle={DETALLE_RECAUDO.efectivo} valor={porcentaje(k.recaudo ? d.medios.efectivo / k.recaudo : 0)} ayuda={{ fuente: 'Medios de pago y recaudo total de RC vigentes.', formula: 'Efectivo ÷ recaudo total' }} />
+        <Tarjeta compacta etiqueta="Recaudado por la app" detalle={DETALLE_RECAUDO.app} valor={porcentaje(k.recaudo ? k.recaudo_app / k.recaudo : 0)} ayuda={{ fuente: 'RC de la app y recaudo total vigente.', formula: 'Recaudo app ÷ recaudo total' }} />
+        <Tarjeta compacta etiqueta="Recaudo diario" detalle={DETALLE_RECAUDO.recaudoDiario} valor={dinero(k.recaudo / diasRango)} ayuda={{ fuente: 'Recaudo total del rango.', formula: 'Recaudo ÷ días calendario inclusivos del rango' }} />
+        <Tarjeta compacta etiqueta="Recibos por día" detalle={DETALLE_RECAUDO.recibosDia} valor={decimal(k.recibos / diasRango, 1)} ayuda={{ fuente: 'RC vigentes del rango.', formula: 'Número de recibos ÷ días calendario inclusivos del rango' }} />
+        <Tarjeta compacta etiqueta="Valor anulado" detalle={DETALLE_RECAUDO.valorAnulado} valor={dinero(d.anulaciones.por_motivo.reduce((suma, motivo) => suma + motivo.valor, 0))} ayuda={{ fuente: 'RC anulados por motivo.', formula: 'Σ valor de todos los motivos de anulación' }} />
+        <Tarjeta compacta etiqueta="Mes de mayor recaudo" detalle={DETALLE_RECAUDO.mejorMes} valor={mensual.length ? mensual.reduce((mejor, mes) => mes.recaudo_app + mes.recaudo_siesa > mejor.recaudo_app + mejor.recaudo_siesa ? mes : mejor).etiqueta : '—'} ayuda={{ fuente: 'RC de SIESA y app agrupados por mes.', formula: 'Mes con máximo de recaudo SIESA + recaudo app' }} />
       </Malla>
       {notas.length > 0 && (
         <Bloque titulo="Lectura del analista" descripcion="Lo que dicen los números del periodo y qué conviene revisar" accion={<Lightbulb className="h-5 w-5 text-amber-500" />} ayuda={{ fuente: 'Indicadores de RC, facturas y anulaciones de SIESA y la app.', formula: 'Variaciones y proporciones de los indicadores del periodo.' }}>

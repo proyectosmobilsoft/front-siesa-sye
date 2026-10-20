@@ -9,6 +9,7 @@ import {
 } from '../comun'
 import { Areas, BarrasApiladasH, BarrasH, Dona, MapaCalor } from '../graficas'
 import { PALETA, dinero, entero, etiquetaMes, porcentaje } from '../formato'
+import { DETALLE_PROVEEDORES } from '../detalle/especificaciones'
 import type { DashboardVentas } from './tipos'
 import { AYUDAS } from './ayudas'
 
@@ -61,12 +62,14 @@ export function VentasProveedores({
               <Tarjeta
                 compacta
                 etiqueta="Venta total"
+                detalle={DETALLE_PROVEEDORES.venta}
                 valor={dinero(total)}
                 ayuda={AYUDAS.venta}
               />
               <Tarjeta
                 compacta
                 etiqueta="Proveedores con venta"
+                detalle={DETALLE_PROVEEDORES.proveedores}
                 valor={`${entero(proveedores.filter(p => p.venta > 0).length)}${otros && otros.venta > 0 ? '+' : ''}`}
                 nota={
                   otros && otros.venta > 0
@@ -82,6 +85,7 @@ export function VentasProveedores({
               <Tarjeta
                 compacta
                 etiqueta="Participación del proveedor #1"
+                detalle={DETALLE_PROVEEDORES.participacion}
                 valor={top[0] ? porcentaje(top[0].participacion) : '—'}
                 nota={top[0]?.proveedor}
                 ayuda={AYUDAS.proveedor}
@@ -89,6 +93,7 @@ export function VentasProveedores({
               <Tarjeta
                 compacta
                 etiqueta="Concentración top 5"
+                detalle={DETALLE_PROVEEDORES.top5}
                 valor={porcentaje(top.reduce((s, p) => s + p.participacion, 0))}
                 ayuda={{
                   fuente: AYUDAS.proveedor.fuente,
@@ -98,6 +103,7 @@ export function VentasProveedores({
               <Tarjeta
                 compacta
                 etiqueta="Variación vs periodo anterior"
+                detalle={DETALLE_PROVEEDORES.variacion}
                 valor={
                   variacion(total, d.kpis.venta_previa) == null
                     ? '—'
@@ -114,6 +120,7 @@ export function VentasProveedores({
               <Tarjeta
                 compacta
                 etiqueta="Crecieron / cayeron"
+                detalle={DETALLE_PROVEEDORES.crecieronCayeron}
                 valor={`${proveedores.filter(p => p.venta > p.venta_previa).length} / ${proveedores.filter(p => p.venta < p.venta_previa).length}`}
                 ayuda={{
                   fuente: AYUDAS.proveedor.fuente,
@@ -124,6 +131,7 @@ export function VentasProveedores({
               <Tarjeta
                 compacta
                 etiqueta="Mayor crecimiento"
+                detalle={DETALLE_PROVEEDORES.mayorCrecimiento}
                 valor={
                   mayorCrecimiento
                     ? dinero(
@@ -145,6 +153,7 @@ export function VentasProveedores({
               <Tarjeta
                 compacta
                 etiqueta="Mayor caída"
+                detalle={DETALLE_PROVEEDORES.mayorCaida}
                 valor={
                   mayorCaida
                     ? dinero(mayorCaida.venta - mayorCaida.venta_previa)
@@ -164,6 +173,7 @@ export function VentasProveedores({
               <Tarjeta
                 compacta
                 etiqueta="Concentración HHI"
+                detalle={DETALLE_PROVEEDORES.hhi}
                 valor={entero(
                   d.proveedores
                     .filter(p => p.proveedor !== 'OTROS PROVEEDORES')
@@ -181,6 +191,7 @@ export function VentasProveedores({
               <Tarjeta
                 compacta
                 etiqueta="Venta por cliente"
+                detalle={DETALLE_PROVEEDORES.ventaCliente}
                 valor={d.kpis.clientes ? dinero(total / d.kpis.clientes) : '—'}
                 ayuda={{
                   fuente: AYUDAS.venta.fuente,

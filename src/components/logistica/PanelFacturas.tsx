@@ -1,8 +1,10 @@
 import { useState } from 'react'
-import { ChevronDown, MapPin } from 'lucide-react'
-import type { FacturaLogistica } from '@/api/logistica'
+import { ChevronDown, MapPin, SlidersHorizontal, X } from 'lucide-react'
+import type { Cuadrante, FacturaLogistica } from '@/api/logistica'
 import { formatters } from '@/utils/formatters'
 import { formatearFecha } from '@/components/asignacionCobro/facturaPendiente'
+import { FiltrosFacturasModal } from './FiltrosFacturasModal'
+import { SIN_FILTROS, type FiltrosFacturasEstado } from './filtrosFacturas'
 
 const kg = (n: number) => `${n.toLocaleString('es-CO')} kg`
 
@@ -38,6 +40,17 @@ function EstadoUbicacion({
   )
 }
 
+function Chip({ texto, quitar }: { texto: string; quitar: () => void }) {
+  return (
+    <span className="flex items-center gap-1 rounded-full border border-primary/60 bg-primary/5 px-2 py-1">
+      {texto}
+      <button type="button" aria-label={`Quitar ${texto}`} onClick={quitar}>
+        <X className="size-3" />
+      </button>
+    </span>
+  )
+}
+
 /**
  * Paso 1: elegir qué se entrega. Un cliente (+ sucursal) = una parada; se
  * despliega para ver o elegir facturas sueltas. Por defecto se ocultan los
@@ -50,14 +63,24 @@ export function PanelFacturas({
   fijar,
   ubicarFaltantes,
   ocupado,
+  filtrosEstado,
+  cuadrantes,
+  totalFacturas,
 }: {
+  /** Ya filtradas por ciudad / cuadrante / ubicación. */
   facturas: FacturaLogistica[]
   seleccionadas: Set<number>
   cambiar: (ids: number[]) => void
   fijar: (f: FacturaLogistica) => void
   ubicarFaltantes: (lista: FacturaLogistica[]) => void
   ocupado: boolean
+  filtrosEstado: FiltrosFacturasEstado
+  cuadrantes: Cuadrante[]
+  /** Facturas del C.O. antes de filtrar. */
+  totalFacturas: number
 }) {
+  const { filtros, setFiltros, activos, opciones, cuadranteDe } = filtrosEstado
+  const [verFiltros, setVerFiltros] = useState(false)
   const [busqueda, setBusqueda] = useState(''),
     [conPeso, setConPeso] = useState(true),
     [abiertos, setAbiertos] = useState<Set<string>>(new Set())
@@ -97,11 +120,67 @@ export function PanelFacturas({
 
   return (
     <section className="space-y-3">
-      <input
-        className="w-full rounded-xl border bg-card p-3 text-sm"
-        placeholder="Buscar cliente, NIT o factura"
-        value={busqueda}
-        onChange={e => setBusqueda(e.target.value)}
+      <div className="flex gap-2">
+        <input
+          className="min-w-0 flex-1 rounded-xl border bg-card p-3 text-sm"
+          placeholder="Buscar cliente, NIT o factura"
+          value={busqueda}
+          onChange={e => setBusqueda(e.target.value)}
+        />
+        <button
+          type="button"
+          onClick={() => setVerFiltros(true)}
+          className={`flex shrink-0 items-center gap-2 rounded-xl border px-3 text-sm ${activos ? 'border-primary bg-primary/5 font-semibold' : ''}`}
+        >
+          <SlidersHorizontal className="size-4" />
+          Filtros{activos ? ` (${activos})` : ''}
+        </button>
+      </div>
+      {activos > 0 && (
+        <div className="flex flex-wrap items-center gap-2 text-xs">
+          {filtros.ciudades.length > 0 && (
+            <Chip
+              quitar={() => setFiltros({ ...filtros, ciudades: [] })}
+              texto={filtros.ciudades
+                .map(
+                  c => opciones.ciudades.find(o => o.clave === c)?.etiqueta || c
+                )
+                .join(', ')}
+            />
+          )}
+          {filtros.cuadrante !== 'todos' && (
+            <Chip
+              quitar={() => setFiltros({ ...filtros, cuadrante: 'todos' })}
+              texto={
+                filtros.cuadrante === 'ninguno'
+                  ? 'Fuera de los cuadrantes'
+                  : cuadrantes.find(c => c.id === filtros.cuadrante)?.nombre ||
+                    'Cuadrante'
+              }
+            />
+          )}
+          {filtros.ubicacion !== 'todas' && (
+            <Chip
+              quitar={() => setFiltros({ ...filtros, ubicacion: 'todas' })}
+              texto={
+                filtros.ubicacion === 'ubicadas' ? 'Ubicadas' : 'Sin ubicación'
+              }
+            />
+          )}
+          <button
+            type="button"
+            className="text-muted-foreground underline"
+            onClick={() => setFiltros(SIN_FILTROS)}
+          >
+            Limpiar
+          </button>
+        </div>
+      )}
+      <FiltrosFacturasModal
+        abierto={verFiltros}
+        cerrar={() => setVerFiltros(false)}
+        estado={filtrosEstado}
+        cuadrantes={cuadrantes}
       />
       <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm">
         <label className="flex items-center gap-2">
@@ -135,7 +214,7 @@ export function PanelFacturas({
       )}
       {!grupos.size && (
         <p className="rounded-xl border p-4 text-sm text-muted-foreground">
-          {facturas.length
+          {totalFacturas
             ? 'Ninguna factura coincide con el filtro.'
             : 'No hay facturas pendientes para este centro de operación.'}
         </p>
@@ -146,6 +225,7 @@ export function PanelFacturas({
         const peso = fs.reduce((s, f) => s + f.peso_kg, 0)
         const valor = fs.reduce((s, f) => s + f.valor, 0)
         const abierto = abiertos.has(k)
+        const zona = cuadranteDe(fs[0])
         return (
           <div
             key={k}
@@ -170,6 +250,20 @@ export function PanelFacturas({
                 <p className="truncate text-xs text-muted-foreground">
                   {fs.length} {fs.length === 1 ? 'factura' : 'facturas'} ·{' '}
                   {kg(peso)} · {formatters.currency(valor)}
+                </p>
+                <p className="flex items-center gap-1 truncate text-xs text-muted-foreground">
+                  {zona && (
+                    <span
+                      className="size-2 shrink-0 rounded-full"
+                      style={{ background: zona.color }}
+                      title={`Cuadrante ${zona.nombre}`}
+                    />
+                  )}
+                  <span className="truncate">
+                    {zona ? `${zona.nombre} · ` : ''}
+                    {fs[0].direccion || 'Sin dirección'}
+                    {fs[0].ciudad ? ` · ${fs[0].ciudad}` : ''}
+                  </span>
                 </p>
               </button>
               <EstadoUbicacion f={fs[0]} onClick={() => fijar(fs[0])} />

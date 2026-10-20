@@ -1,7 +1,7 @@
 import { buildRcNotas } from './rcNotasBuilder'
 
 export interface FacturaRC { rowid: number; tipo: string; consecutivo: string; prefijo: string; saldo: number; valor: number; seleccionada: boolean; idCia: number; idCo: string }
-export interface PagoRC { id: string; codigo: 'EFE' | 'CG1' | 'TC' | 'TD'; valor: number; cuenta: string; fechaConsignacion: string; nroTarjeta: string; autorizacion: string; vencimiento: string; voucher: string }
+export interface PagoRC { id: string; codigo: 'EFE' | 'CG1' | 'TC' | 'TD'; valor: number; cuenta: string; fechaConsignacion: string; nroTarjeta: string; autorizacion: string; voucher: string }
 export interface ParametrosRC { limite: number; ajusteDescuento: number; ajusteIngreso: number; descuentoFinanciero: number; anticipo: number }
 export const FALLBACK_RC: ParametrosRC = { limite: 1000, ajusteDescuento: 546, ajusteIngreso: 235, descuentoFinanciero: 697, anticipo: 193 }
 export const redondear = (n: number) => Math.round((n + Number.EPSILON) * 100) / 100
@@ -34,7 +34,7 @@ export interface PayloadRC {
   p_confirmaciones_transferencia?: number[]
   p_cia: number; p_fecha: string; p_clase_modulo: number; p_id_co: string; p_id_tipo_docto: string; p_numero_docto: number; p_clase_docto: number; p_rowid_tercero: number; p_periodo_docto: number; p_prefijo: string; p_notas: string; p_id_caja: string; p_moneda: string; p_valor: number; p_rowid_cobrador: number; p_rowid_fe: number; p_id_un: string; p_referencia_med: string
   p_rowid_auxiliar_anticipo?: number; p_rowid_auxiliar_pp?: number; p_rowid_auxiliar_aprovecha?: number; p_tipo_aprovecha?: 'descuento' | 'ingreso'
-  p_medio_pago: Array<{ p_id_medio_pago: string; p_id_cta_bancaria: string; p_valor: number; p_referencia_med: string; p_fecha_consignacion?: string; p_nro_tarjeta?: string; p_nro_autorizacion?: string; p_fecha_vcto_tarjeta?: string }>
+  p_medio_pago: Array<{ p_id_medio_pago: string; p_id_cta_bancaria: string; p_valor: number; p_referencia_med: string; p_fecha_consignacion?: string; p_nro_tarjeta?: string; p_nro_autorizacion?: string }>
   p_rowid_sa: Array<{ p_id: number; p_valor: number; p_tipo_docto_cruce: string; p_consec_docto_cruce: number; p_descuento_pp: number; p_aprovecha: number }>
 }
 export function armarPayloadRC(args: { clienteId: number; facturas: FacturaRC[]; descuentos: Record<number, number>; aplicar: boolean; pagos: PagoRC[]; parametros: ParametrosRC; observacion: string; usuario: string; co: string; caja: string; consecutivo: number; ahora: Date }): PayloadRC {
@@ -59,7 +59,7 @@ export function armarPayloadRC(args: { clienteId: number; facturas: FacturaRC[];
     ...(tipo === 'anticipo' ? { p_rowid_auxiliar_anticipo: parametros.anticipo } : {}),
     ...(sa.some(s => s.p_descuento_pp > 0) ? { p_rowid_auxiliar_pp: parametros.descuentoFinanciero } : {}),
     ...(sa.some(s => s.p_aprovecha > 0) ? { p_rowid_auxiliar_aprovecha: tipo === 'ajusteDescuento' ? parametros.ajusteDescuento : parametros.ajusteIngreso, p_tipo_aprovecha: tipo === 'ajusteDescuento' ? 'descuento' as const : 'ingreso' as const } : {}),
-    p_medio_pago: pagos.map(p => ({ p_id_medio_pago: p.codigo, p_id_cta_bancaria: p.codigo === 'CG1' ? p.cuenta : '', p_valor: p.valor, p_referencia_med: p.codigo === 'CG1' && p.fechaConsignacion ? '' : ref, ...(p.codigo === 'CG1' ? { p_fecha_consignacion: p.fechaConsignacion } : {}), ...(p.codigo === 'TC' || p.codigo === 'TD' ? { p_nro_tarjeta: p.nroTarjeta, p_nro_autorizacion: p.autorizacion, p_fecha_vcto_tarjeta: `${p.vencimiento}-01` } : {}) })),
+    p_medio_pago: pagos.map(p => ({ p_id_medio_pago: p.codigo, p_id_cta_bancaria: p.codigo === 'CG1' ? p.cuenta : '', p_valor: p.valor, p_referencia_med: p.codigo === 'CG1' && p.fechaConsignacion ? '' : ref, ...(p.codigo === 'CG1' ? { p_fecha_consignacion: p.fechaConsignacion } : {}), ...(p.codigo === 'TC' || p.codigo === 'TD' ? { p_nro_tarjeta: p.nroTarjeta, p_nro_autorizacion: p.autorizacion } : {}) })),
     p_rowid_sa: sa,
   }
 }

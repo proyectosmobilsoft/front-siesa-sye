@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom'
 import { ArrowUpRight, ShoppingBag } from 'lucide-react'
 import { ErrorBoundary } from '@/components/ui/error-boundary'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Skeleton } from '@/lib/skeleton'
+import { CalculandoGraficas } from '@/components/tablero/CalculandoGraficas'
 import { useRecentOrders } from '@/hooks/useReports'
 import { formatters } from '@/utils/formatters'
 
@@ -18,10 +18,8 @@ const RecentOrdersTableContent = () => {
                 <CardHeader>
                     <CardTitle>Pedidos Recientes</CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-3">
-                    {Array.from({ length: 5 }).map((_, i) => (
-                        <Skeleton key={i} className="h-12 w-full" />
-                    ))}
+                <CardContent>
+                    <CalculandoGraficas altura="h-56" />
                 </CardContent>
             </Card>
         )

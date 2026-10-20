@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Bloque, BotonTabla, Malla, SubPestanas, Tabla, Tarjeta } from '../comun'
 import { Areas, BarrasApiladas, BarrasH, MapaCalor } from '../graficas'
 import { PALETA, dinero, entero, etiquetaMes, kilos, porcentaje } from '../formato'
+import { DETALLE_COMPRAS } from '../detalle/especificaciones'
 import type { DashboardCompras, DashboardVentas } from '../ventas/tipos'
 
 const FUENTE = 'Entradas de almacén EA/EAF menos notas NP (devolución a proveedor) de SIESA, sin IVA.'
@@ -32,12 +33,12 @@ export function ComprasProveedores({ d, ventas, sub, alElegirSub }: {
       <div className="flex flex-col gap-4">
         {activa === 'ranking' && <>
           <Malla columnas={6}>
-            <Tarjeta compacta etiqueta="Compra neta" valor={dinero(d.kpis.compra_neta)} variacion={variacion(d.kpis.compra_neta, d.kpis.compra_neta_previa)} nota="vs periodo anterior" ayuda={{ fuente: FUENTE, formula: 'Compra − devoluciones; variación = (actual − anterior) ÷ anterior' }} />
-            <Tarjeta compacta etiqueta="Devoluciones" valor={dinero(d.kpis.devoluciones)} nota={d.kpis.tasa_devolucion == null ? 'Tasa —' : `Tasa ${porcentaje(d.kpis.tasa_devolucion)}`} ayuda={{ fuente: FUENTE, formula: 'Σ notas NP; tasa = devoluciones ÷ compra' }} />
-            <Tarjeta compacta etiqueta="Proveedores con compra" valor={entero(d.kpis.proveedores)} ayuda={{ fuente: FUENTE, formula: 'Terceros distintos con compra neta > 0' }} />
-            <Tarjeta compacta etiqueta="Documentos de entrada" valor={entero(d.kpis.documentos)} ayuda={{ fuente: FUENTE, formula: 'Documentos EA/EAF distintos' }} />
-            <Tarjeta compacta etiqueta="Concentración top 5" valor={porcentaje(top.reduce((suma, p) => suma + p.participacion, 0))} ayuda={{ fuente: FUENTE, formula: 'Σ participación de los cinco proveedores con mayor compra neta' }} />
-            <Tarjeta compacta etiqueta="Kg comprados" valor={kilos(d.kpis.kg)} ayuda={{ fuente: FUENTE, formula: 'Σ cantidad base × peso unitario, neto de devoluciones' }} />
+            <Tarjeta compacta etiqueta="Compra neta" detalle={DETALLE_COMPRAS.neta} valor={dinero(d.kpis.compra_neta)} variacion={variacion(d.kpis.compra_neta, d.kpis.compra_neta_previa)} nota="vs periodo anterior" ayuda={{ fuente: FUENTE, formula: 'Compra − devoluciones; variación = (actual − anterior) ÷ anterior' }} />
+            <Tarjeta compacta etiqueta="Devoluciones" detalle={DETALLE_COMPRAS.devoluciones} valor={dinero(d.kpis.devoluciones)} nota={d.kpis.tasa_devolucion == null ? 'Tasa —' : `Tasa ${porcentaje(d.kpis.tasa_devolucion)}`} ayuda={{ fuente: FUENTE, formula: 'Σ notas NP; tasa = devoluciones ÷ compra' }} />
+            <Tarjeta compacta etiqueta="Proveedores con compra" detalle={DETALLE_COMPRAS.proveedores} valor={entero(d.kpis.proveedores)} ayuda={{ fuente: FUENTE, formula: 'Terceros distintos con compra neta > 0' }} />
+            <Tarjeta compacta etiqueta="Documentos de entrada" detalle={DETALLE_COMPRAS.documentos} valor={entero(d.kpis.documentos)} ayuda={{ fuente: FUENTE, formula: 'Documentos EA/EAF distintos' }} />
+            <Tarjeta compacta etiqueta="Concentración top 5" detalle={DETALLE_COMPRAS.top5} valor={porcentaje(top.reduce((suma, p) => suma + p.participacion, 0))} ayuda={{ fuente: FUENTE, formula: 'Σ participación de los cinco proveedores con mayor compra neta' }} />
+            <Tarjeta compacta etiqueta="Kg comprados" detalle={DETALLE_COMPRAS.kg} valor={kilos(d.kpis.kg)} ayuda={{ fuente: FUENTE, formula: 'Σ cantidad base × peso unitario, neto de devoluciones' }} />
           </Malla>
           <Bloque titulo="Top 15 proveedores" ayuda={{ fuente: FUENTE, formula: 'Compra neta por tercero; orden descendente' }}>
             <BarrasH datos={proveedores.slice(0, 15).map(p => ({ nombre: p.proveedor, valor: p.compra_neta }))} formato={dinero} anchoEtiqueta={160} />

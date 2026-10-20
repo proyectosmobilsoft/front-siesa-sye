@@ -165,9 +165,74 @@ export interface DashboardLogistica {
   kgPorDia: { nombre: string; valor: number }[]
   topConductores: { nombre: string; valor: number }[]
 }
+export interface PoligonoCuadrante {
+  type: 'Polygon'
+  coordinates: number[][][]
+}
+export interface Cuadrante {
+  id: number
+  id_co: string
+  nombre: string
+  color: string
+  poligono: PoligonoCuadrante
+  origen: 'DIRECCIONES' | 'DIBUJO'
+  activo: boolean
+}
+export interface ResumenCuadrante {
+  cuadrante: Cuadrante
+  facturas: FacturaLogistica[]
+  clientes: {
+    razon: string
+    nit: string
+    idtercero: number
+    id_sucursal: string
+    numeroFacturas: number
+    kg: number
+    valor: number
+    facturas: FacturaLogistica[]
+  }[]
+  totales: { clientes: number; facturas: number; kg: number; valor: number }
+  sinUbicacion: number
+  sinCuadrante: number
+}
 const dato = async <T>(promesa: Promise<{ data: { data: T } }>): Promise<T> =>
   (await promesa).data.data
 export const logisticaApi = {
+  cuadrantes: () =>
+    dato(apiClient.get<{ data: Cuadrante[] }>('/logistica/cuadrantes')),
+  crearCuadrante: (
+    datos: Omit<Cuadrante, 'id' | 'id_co' | 'activo'> & { idCo: string }
+  ) =>
+    dato(apiClient.post<{ data: Cuadrante }>('/logistica/cuadrantes', datos)),
+  actualizarCuadrante: (
+    id: number,
+    datos: Omit<Cuadrante, 'id' | 'id_co' | 'activo'> & { idCo: string }
+  ) =>
+    dato(
+      apiClient.put<{ data: Cuadrante }>(`/logistica/cuadrantes/${id}`, datos)
+    ),
+  desactivarCuadrante: (id: number) =>
+    dato(apiClient.delete<{ data: Cuadrante }>(`/logistica/cuadrantes/${id}`)),
+  tramoACalle: (
+    desde: { lat: number; lon: number } | null,
+    hasta: { lat: number; lon: number }
+  ) =>
+    dato(
+      apiClient.post<{
+        data: {
+          punto: { lat: number; lon: number }
+          coordenadas: [number, number][]
+          fuente: 'calles' | 'osrm' | 'linea'
+        }
+      }>('/logistica/cuadrantes/tramo', { desde, hasta }, { timeout: 20000 })
+    ),
+  facturasDeCuadrante: (id: number) =>
+    dato(
+      apiClient.get<{ data: ResumenCuadrante }>(
+        `/logistica/cuadrantes/${id}/facturas`,
+        { timeout: 180000 }
+      )
+    ),
   facturas: () =>
     dato(
       apiClient.get<{ data: FacturaLogistica[] }>('/logistica/facturas', {

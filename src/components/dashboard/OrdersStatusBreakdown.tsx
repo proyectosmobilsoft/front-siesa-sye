@@ -1,14 +1,17 @@
 import { motion } from 'framer-motion'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Skeleton } from '@/lib/skeleton'
+import { CalculandoGraficas } from '@/components/tablero/CalculandoGraficas'
 import { ErrorBoundary } from '@/components/ui/error-boundary'
 import { useDailyOrdersStatusBreakdown } from '@/hooks/useReports'
 import { formatters } from '@/utils/formatters'
+import { useDetalle } from '@/components/tablero/detalle/contexto'
+import { DETALLE_PEDIDOS } from '@/components/tablero/detalle/especificaciones'
 
 const OrdersStatusBreakdownContent = () => {
     // Agregado en DB (GROUP BY estado) — ver
     // [[API - Endpoint - GET reports-daily-orders]].
     const { data: statusBreakdown, isLoading, error } = useDailyOrdersStatusBreakdown()
+    const detalles = useDetalle()
 
     const breakdown = Array.isArray(statusBreakdown)
         ? [...statusBreakdown]
@@ -24,10 +27,8 @@ const OrdersStatusBreakdownContent = () => {
                 <CardHeader>
                     <CardTitle>Estado de Pedidos</CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-3">
-                    <Skeleton className="h-6 w-full" />
-                    <Skeleton className="h-6 w-full" />
-                    <Skeleton className="h-6 w-full" />
+                <CardContent>
+                    <CalculandoGraficas altura="h-48" />
                 </CardContent>
             </Card>
         )
@@ -68,7 +69,15 @@ const OrdersStatusBreakdownContent = () => {
                 {breakdown.map(({ estado, cantidad }) => {
                     const pct = total > 0 ? Math.round((cantidad / total) * 100) : 0
                     return (
-                        <div key={estado} className="space-y-1.5">
+                        <div
+                            key={estado}
+                            className="-mx-2 space-y-1.5 rounded-lg px-2 py-1 cursor-pointer transition-colors hover:bg-muted/60 focus-visible:outline-2 focus-visible:outline-primary"
+                            role="button"
+                            tabIndex={0}
+                            aria-label={`Pedidos ${estado}: ver los registros`}
+                            onClick={() => detalles?.abrir({ ...DETALLE_PEDIDOS.estado(estado), valor: String(cantidad) })}
+                            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); detalles?.abrir({ ...DETALLE_PEDIDOS.estado(estado), valor: String(cantidad) }) } }}
+                        >
                             <div className="flex items-center justify-between text-sm">
                                 <span className="font-medium">{estado}</span>
                                 <span className="text-muted-foreground">

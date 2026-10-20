@@ -38,7 +38,7 @@ const mapFactura = (r: FacturaRaw): FacturaRC => {
   const partes = doc.split('-')
   return { rowid: numero(r.rowidsa ?? r.rowid), tipo: partes[0] || String(r.tipo ?? r.idTipoDocto ?? ''), consecutivo: partes[1] || String(r.factura ?? r.consecDocto ?? ''), prefijo: String(r.prefijo ?? partes[0] ?? '').toUpperCase(), saldo: parseMonto(r.saldo), valor: 0, seleccionada: false, idCia: numero(r.f350_id_cia ?? r.idCia) || 1, idCo: String(r.idco ?? '').trim() }
 }
-const pagoVacio = (codigo: PagoRC['codigo'] = 'EFE'): PagoRC => ({ id: crypto.randomUUID(), codigo, valor: 0, cuenta: '', fechaConsignacion: hoy(), nroTarjeta: '', autorizacion: '', vencimiento: '', voucher: '' })
+const pagoVacio = (codigo: PagoRC['codigo'] = 'EFE'): PagoRC => ({ id: crypto.randomUUID(), codigo, valor: 0, cuenta: '', fechaConsignacion: hoy(), nroTarjeta: '', autorizacion: '', voucher: '' })
 const section = 'p-3'
 const title = 'text-xs font-semibold uppercase tracking-wider text-muted-foreground'
 
@@ -174,12 +174,18 @@ export function NuevoReciboTab({ onCreated }: { onCreated: () => void }) {
     if (patch.codigo === 'CG1' && bancos.data?.length === 1) patch = { ...patch, cuenta: bancos.data[0].f026_id }
     setPagos(prev => prev.map(p => p.id === id ? { ...p, ...patch } : p))
   }
-  const agregarPago = () => { cambio(); setPagos(prev => [...prev, pagoVacio()]) }
+  const agregarPago = (codigo: PagoRC['codigo']) => {
+    cambio()
+    const nuevo = pagoVacio(codigo)
+    if (codigo === 'CG1' && bancos.data?.length === 1) nuevo.cuenta = bancos.data[0].f026_id
+    setEditados(prev => new Set([...prev, ...pagos.map(p => p.id)]))
+    setPagos(prev => [...prev, nuevo])
+  }
   const quitarPago = (id: string) => { cambio(); setPagos(prev => prev.filter(p => p.id !== id)); setEditados(prev => { const next = new Set(prev); next.delete(id); return next }) }
   const facturasValidas = seleccionadas.length > 0 && seleccionadas.every(f => Number.isFinite(f.valor) && f.valor > 0 && f.valor <= f.saldo)
   const coFacturas = [...new Set(seleccionadas.map(f => f.idCo))]
   const descuentosValidos = seleccionadas.every(f => { const n = descuentosEfectivos[f.rowid] ?? 0; return Number.isFinite(n) && n >= 0 && n < f.saldo })
-  const pagosValidos = pagos.length > 0 && pagos.every(p => Number.isFinite(p.valor) && p.valor > 0 && (p.codigo !== 'CG1' || !!p.cuenta && !!p.fechaConsignacion) && (p.codigo !== 'TC' && p.codigo !== 'TD' || /^\d{4}$/.test(p.nroTarjeta.trim()) && p.autorizacion.trim().length >= 6 && !!p.vencimiento))
+  const pagosValidos = pagos.length > 0 && pagos.every(p => Number.isFinite(p.valor) && p.valor > 0 && (p.codigo !== 'CG1' || !!p.cuenta && !!p.fechaConsignacion) && (p.codigo !== 'TC' && p.codigo !== 'TD' || /^\d{4}$/.test(p.nroTarjeta.trim()) && p.autorizacion.trim().length >= 6))
   const faltantes = [!cliente && 'Cliente', !facturasValidas && 'Al menos 1 factura', coFacturas.length > 1 && 'Facturas de distintos C.O. (haz un recibo por C.O.)', !descuentosValidos && 'El descuento debe ser mayor o igual a 0 y menor que el valor de la factura', !pagosValidos && 'Pagos válidos', !observacion.trim() && 'Observación', cargandoDescuentos && 'Esperando descuento financiero', totales.clasificacion.tipo === 'faltanteExcesivo' && `Faltante supera el límite de ${formatters.currency(parametros.limite)}`, requiereConfirmacion && (disponibles.isLoading || disponibles.isFetching || disponibles.isError || totalConfirmado < totalTransferencia - 1) && 'Transferencia sin confirmación aprobada'].filter((v): v is string => !!v)
   const notasPreview = useMemo(() => {
     if (!observacion.trim()) return ''
@@ -252,7 +258,7 @@ export function NuevoReciboTab({ onCreated }: { onCreated: () => void }) {
       <button type="button" aria-label="Cerrar" onClick={() => setError('')} className="rounded p-1 opacity-70 hover:opacity-100"><X className="h-4 w-4" /></button>
     </div>}
     <div className="grid items-start gap-3 lg:min-h-0 lg:flex-1 lg:grid-cols-[minmax(0,1fr)_300px] lg:items-stretch">
-      <fieldset disabled={guardando || verificando} className="min-w-0 space-y-3 lg:flex lg:min-h-0 lg:flex-col lg:space-y-0 lg:gap-3">
+      <fieldset disabled={guardando || verificando} className="min-w-0 space-y-3 lg:flex lg:min-h-0 lg:flex-col lg:space-y-0 lg:gap-3 lg:overflow-y-auto">
         <Card className={`${section} rounded-xl lg:shrink-0`}>
           <div className="grid gap-3 lg:grid-cols-[auto_125px_130px_minmax(0,1fr)] lg:items-center">
             <div className="flex min-w-0 items-center gap-2 whitespace-nowrap text-xs">A nombre de <Badge variant="secondary" className="max-w-24 truncate" title={usuarioSiesa?.siesa_nombre ?? undefined}>{usuarioSiesa?.siesa_nombre}</Badge></div>
@@ -272,7 +278,7 @@ export function NuevoReciboTab({ onCreated }: { onCreated: () => void }) {
           </div>
           {encabezadoManual && coFacturas.length === 1 && coFacturas[0] && coFacturas[0] !== co && <p role="status" className="mt-1 text-xs text-amber-700 dark:text-amber-400">Las facturas son del C.O. {coFacturas[0]} y el recibo quedará en {co}</p>}
         </Card>
-        <Card className={`${section} rounded-xl ${!cliente ? 'opacity-60' : ''} lg:flex lg:min-h-0 lg:flex-1 lg:flex-col`}>
+        <Card className={`${section} rounded-xl ${!cliente ? 'opacity-60' : ''} lg:flex lg:min-h-56 lg:flex-1 lg:flex-col`}>
           {!cliente ? <><h2 className={`${title} mb-2`}>Facturas</h2><p className="text-sm text-muted-foreground">Elige un cliente para cargar sus facturas.</p></> :
             <FacturasTabla facturas={facturas} descuentos={descuentosEfectivos} descuentosSugeridos={descuentos} descuentosManuales={descuentosManuales} aplicar={aplicar} cargando={cargandoFacturas} mas={masFacturas}
               onChange={actualizarFactura}
@@ -283,7 +289,7 @@ export function NuevoReciboTab({ onCreated }: { onCreated: () => void }) {
               onMore={() => void cargarFacturas(cliente.f9740_id, pagina + 1, true)} />}
           <p className="mt-1 text-[11px] text-muted-foreground">{cargandoDescuentos ? 'Consultando descuento SAS… · ' : ''}El descuento aplica a facturas pagadas completas y a tiempo. Ajuste al peso hasta {formatters.currency(parametros.limite)}.</p>
         </Card>
-        <div className="grid gap-3 lg:shrink-0 lg:grid-cols-2">
+        <div className="grid gap-3 lg:max-h-[42vh] lg:shrink-0 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)] lg:overflow-y-auto">
         <Card className={`${section} rounded-xl ${!cliente ? 'opacity-60' : ''}`}>
           <h2 className={`${title} mb-2`}>Pago</h2>
           {!cliente ? <p className="text-sm text-muted-foreground">Elige un cliente para registrar el pago.</p> :

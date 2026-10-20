@@ -4,14 +4,17 @@ import L from 'leaflet'
 import {
   MapContainer,
   Marker,
+  Polygon,
   Polyline,
   Popup,
   TileLayer,
+  Tooltip,
   useMap,
   useMapEvents,
 } from 'react-leaflet'
 import { useEffect } from 'react'
 import type {
+  Cuadrante,
   Origen,
   FacturaLogistica,
   RutaPropuesta,
@@ -79,6 +82,8 @@ export function MapaLogistica({
   alResaltar,
   alto = 'h-[420px] lg:h-[650px]',
   clave,
+  cuadrantes,
+  cuadranteResaltado = null,
 }: {
   origen?: Origen
   facturas?: FacturaLogistica[]
@@ -93,6 +98,9 @@ export function MapaLogistica({
   resaltada?: number | null
   alResaltar?: (indice: number | null) => void
   clave: string
+  /** Zonas de reparto dibujadas bajo los clientes (solo planificación). */
+  cuadrantes?: Cuadrante[]
+  cuadranteResaltado?: number | null
 }) {
   const puntos: Punto[] = []
   if (rutas?.length)
@@ -154,7 +162,10 @@ export function MapaLogistica({
         })
     })
   }
-  const limites = [...(origen ? [origen] : []), ...puntos]
+  const zonaResaltada = cuadrantes?.find(c => c.id === cuadranteResaltado)
+  const limites = zonaResaltada
+    ? zonaResaltada.poligono.coordinates[0].map(([lon, lat]) => ({ lat, lon }))
+    : [...(origen ? [origen] : []), ...puntos]
   const lienzos = (rutas || guardadas || []).map((r, i) => {
     const coords = (r.geometria?.coordinates || []).map(
       ([lon, lat]) => [lat, lon] as [number, number]
@@ -193,6 +204,22 @@ export function MapaLogistica({
         />
         <Ajustar puntos={limites} clave={clave} />
         <CapturarClic alClic={alClic} />
+        {cuadrantes?.map(c => (
+          <Polygon
+            key={c.id}
+            positions={c.poligono.coordinates[0].map(
+              ([lon, lat]) => [lat, lon] as [number, number]
+            )}
+            pathOptions={{
+              color: c.color,
+              fillColor: c.color,
+              fillOpacity: c.id === cuadranteResaltado ? 0.22 : 0.1,
+              weight: c.id === cuadranteResaltado ? 3 : 2,
+            }}
+          >
+            <Tooltip sticky>{c.nombre}</Tooltip>
+          </Polygon>
+        ))}
         {origen && (
           <Marker
             position={[origen.lat, origen.lon]}

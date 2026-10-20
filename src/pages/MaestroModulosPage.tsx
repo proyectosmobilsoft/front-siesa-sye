@@ -68,6 +68,7 @@ export const MaestroModulosPage = () => {
     const [editandoPermiso, setEditandoPermiso] = useState<PermisoDeModulo | null>(null)
     const [formPermiso, setFormPermiso] = useState({
         codigo: '', descripcion: '', etiqueta: '', tipo: 'ACCION' as TipoPermiso, orden: 100, estado: true,
+        moduloId: null as number | null,
     })
 
     const [saving, setSaving] = useState(false)
@@ -166,7 +167,7 @@ export const MaestroModulosPage = () => {
     // --- Permiso ---
     const nuevoPermiso = () => {
         setEditandoPermiso(null)
-        setFormPermiso({ codigo: '', descripcion: '', etiqueta: '', tipo: 'ACCION', orden: 100, estado: true })
+        setFormPermiso({ codigo: '', descripcion: '', etiqueta: '', tipo: 'ACCION', orden: 100, estado: true, moduloId: seleccionado })
         setErrorForm(null)
         setPermisoModalOpen(true)
     }
@@ -180,6 +181,7 @@ export const MaestroModulosPage = () => {
             tipo: p.tipo,
             orden: p.orden,
             estado: p.estado !== false,
+            moduloId: seleccionado,
         })
         setErrorForm(null)
         setPermisoModalOpen(true)
@@ -198,12 +200,13 @@ export const MaestroModulosPage = () => {
                 estado: formPermiso.estado,
             }
             if (editandoPermiso) {
-                await seguridadApi.actualizarPermiso(editandoPermiso.id, comun)
+                // El código sigue igual en BD; solo cambian etiqueta y módulo (null = Sin clasificar)
+                await seguridadApi.actualizarPermiso(editandoPermiso.id, { ...comun, modulo_id: formPermiso.moduloId })
             } else {
                 await seguridadApi.crearPermiso({
                     ...comun,
                     codigo: formPermiso.codigo.trim(),
-                    modulo_id: seleccionado,
+                    modulo_id: formPermiso.moduloId,
                 })
             }
             setPermisoModalOpen(false)
@@ -586,6 +589,22 @@ export const MaestroModulosPage = () => {
                                 className="h-10"
                             />
                         </div>
+                    </div>
+
+                    <div className="space-y-1.5">
+                        <label htmlFor="permiso-modulo" className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Módulo</label>
+                        <select
+                            id="permiso-modulo"
+                            value={formPermiso.moduloId ?? ''}
+                            onChange={(e) => setFormPermiso({ ...formPermiso, moduloId: e.target.value ? Number(e.target.value) : null })}
+                            className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                        >
+                            <option value="">Sin clasificar</option>
+                            {modulos.filter((m) => m.id !== null).map((m) => (
+                                <option key={m.id} value={m.id as number}>{m.nombre}</option>
+                            ))}
+                        </select>
+                        <p className="text-[11px] text-muted-foreground">Dónde aparece en la pantalla de Roles. El código no cambia.</p>
                     </div>
 
                     <div className="space-y-1.5">

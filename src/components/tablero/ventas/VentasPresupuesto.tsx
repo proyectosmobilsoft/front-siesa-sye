@@ -22,6 +22,7 @@ import {
   kilos,
   porcentaje,
 } from '../formato'
+import { DETALLE_VENTAS } from '../detalle/especificaciones'
 import type { DashboardVentas } from './tipos'
 import { AYUDAS } from './ayudas'
 import { Diferencia, Progreso } from './utiles'
@@ -162,6 +163,7 @@ export function VentasPresupuesto({
                 compacta
                 serie={d.mensual.map(m => m.venta)}
                 etiqueta="Venta del periodo"
+                detalle={DETALLE_VENTAS.venta}
                 valor={dinero(k.venta)}
                 variacion={variacion(k.venta, k.venta_previa)}
                 nota="vs periodo anterior"
@@ -171,12 +173,14 @@ export function VentasPresupuesto({
                 compacta
                 serie={d.mensual.map(m => m.meta ?? 0)}
                 etiqueta="Meta del periodo"
+                detalle={DETALLE_VENTAS.meta}
                 valor={k.meta == null ? '—' : dinero(k.meta)}
                 ayuda={AYUDAS.meta}
               />
               <Tarjeta
                 compacta
                 etiqueta="Cumplimiento"
+                detalle={DETALLE_VENTAS.cumplimiento}
                 valor={textoPct(k.cumplimiento)}
                 nota={
                   k.meta == null
@@ -191,6 +195,7 @@ export function VentasPresupuesto({
               <Tarjeta
                 compacta
                 etiqueta="Meta de gerencia"
+                detalle={DETALLE_VENTAS.metaGerencia}
                 valor={k.meta_gerencia == null ? '—' : dinero(k.meta_gerencia)}
                 nota={`Cumplimiento ${textoPct(k.cumplimiento_gerencia)}`}
                 ayuda={AYUDAS.gerencia}
@@ -198,6 +203,7 @@ export function VentasPresupuesto({
               <Tarjeta
                 compacta
                 etiqueta="Proyección de cierre del mes"
+                detalle={DETALLE_VENTAS.proyeccion(k.proyeccion_mes?.mes)}
                 valor={
                   k.proyeccion_mes ? dinero(k.proyeccion_mes.proyeccion) : '—'
                 }
@@ -211,6 +217,7 @@ export function VentasPresupuesto({
               <Tarjeta
                 compacta
                 etiqueta="Kilos de líneas con meta"
+                detalle={DETALLE_VENTAS.kilos}
                 valor={`${kilos(k.kg_lineas_kg)} / ${k.meta_kg == null ? '—' : kilos(k.meta_kg)}`}
                 nota={`Cumplimiento ${textoPct(k.cumplimiento_kg)}`}
                 ayuda={AYUDAS.kilos}
@@ -218,6 +225,7 @@ export function VentasPresupuesto({
               <Tarjeta
                 compacta
                 etiqueta="Clientes con compra"
+                detalle={DETALLE_VENTAS.clientes}
                 valor={entero(k.clientes)}
                 ayuda={{
                   fuente: AYUDAS.venta.fuente,
@@ -227,6 +235,7 @@ export function VentasPresupuesto({
               <Tarjeta
                 compacta
                 etiqueta="Ticket promedio"
+                detalle={DETALLE_VENTAS.ticket}
                 valor={dinero(k.ticket_promedio)}
                 ayuda={{
                   fuente: AYUDAS.venta.fuente,
@@ -240,6 +249,7 @@ export function VentasPresupuesto({
               <Tarjeta
                 compacta
                 etiqueta="Venta promedio diaria"
+                detalle={DETALLE_VENTAS.ventaDiaria}
                 valor={dinero(k.venta / diasRango)}
                 ayuda={{
                   fuente: AYUDAS.venta.fuente,
@@ -249,6 +259,7 @@ export function VentasPresupuesto({
               <Tarjeta
                 compacta
                 etiqueta="Venta diaria necesaria"
+                detalle={DETALLE_VENTAS.ventaNecesaria}
                 valor={
                   k.proyeccion_mes?.meta == null
                     ? '—'
@@ -267,6 +278,7 @@ export function VentasPresupuesto({
               <Tarjeta
                 compacta
                 etiqueta="Vendedores en meta"
+                detalle={DETALLE_VENTAS.vendedoresMeta}
                 valor={`${entero(d.asesores.filter(a => a.cumplimiento != null && a.cumplimiento >= 1).length)} de ${entero(d.asesores.filter(a => a.cumplimiento != null).length)}`}
                 ayuda={{
                   fuente: AYUDAS.meta.fuente,
@@ -277,6 +289,7 @@ export function VentasPresupuesto({
               <Tarjeta
                 compacta
                 etiqueta="Líneas en meta"
+                detalle={DETALLE_VENTAS.lineasMeta}
                 valor={`${entero(d.lineas.filter(l => l.cumplimiento != null && l.cumplimiento >= 1).length)} de ${entero(d.lineas.filter(l => l.cumplimiento != null).length)}`}
                 ayuda={{
                   fuente: AYUDAS.meta.fuente,
@@ -286,6 +299,7 @@ export function VentasPresupuesto({
               <Tarjeta
                 compacta
                 etiqueta="Crecimiento anual"
+                detalle={DETALLE_VENTAS.crecimiento}
                 valor={textoPct(variacion(k.venta, k.venta_anio_anterior))}
                 ayuda={{
                   fuente: AYUDAS.venta.fuente,
@@ -296,6 +310,7 @@ export function VentasPresupuesto({
               <Tarjeta
                 compacta
                 etiqueta="Precio promedio por kg"
+                detalle={DETALLE_VENTAS.precioKg}
                 valor={
                   k.kg_lineas_kg
                     ? dinero(
@@ -443,6 +458,7 @@ export function VentasPresupuesto({
                   key={co.id}
                   compacta
                   etiqueta={`${co.id} · ${co.nombre}`}
+                  detalle={DETALLE_VENTAS.centro(co.id, co.nombre)}
                   valor={dinero(co.venta)}
                   variacion={variacion(co.venta, co.venta_previa)}
                   nota={`${porcentaje(co.participacion)} de la venta total`}
