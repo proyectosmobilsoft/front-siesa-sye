@@ -227,7 +227,7 @@ export const ParametrosReciboCajaPage = () => {
           <Card>
             <CardHeader className="pb-3">
               <CardTitle className="text-lg">Confirmación de transferencias</CardTitle>
-              <CardDescription>Con esto activo, un RC con transferencia/consignación solo se crea si el cliente tiene confirmaciones aprobadas que cubran el valor. Aplica también a la app de conductores.</CardDescription>
+              <CardDescription>Con esto activo, un RC con transferencia solo se crea si el cliente tiene confirmaciones aprobadas que cubran el valor. Aplica también a la app de conductores.</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="flex items-center justify-between gap-4">

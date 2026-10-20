@@ -993,8 +993,8 @@ const RecibosConductorModal = ({ grupo, onClose, rango }: { grupo: GrupoConducto
                                     <th className="px-3 py-2 text-left font-medium uppercase tracking-wide text-muted-foreground">Tercero</th>
                                     <th className="px-3 py-2 text-right font-medium uppercase tracking-wide text-muted-foreground">Efectivo</th>
                                     <th className="px-3 py-2 text-right font-medium uppercase tracking-wide text-muted-foreground">Transferencia</th>
-                                    <th className="px-3 py-2 text-right font-medium uppercase tracking-wide text-muted-foreground">Total</th>
                                     <th className="px-3 py-2 text-right font-medium uppercase tracking-wide text-muted-foreground">Desc. financiero</th>
+                                    <th className="px-3 py-2 text-right font-medium uppercase tracking-wide text-muted-foreground">Total</th>
                                     <th className="px-3 py-2 text-center font-medium uppercase tracking-wide text-muted-foreground">Estado</th>
                                     <th className="px-3 py-2 text-left font-medium uppercase tracking-wide text-muted-foreground">Soporte SIESA</th>
                                 </tr>
@@ -1015,11 +1015,11 @@ const RecibosConductorModal = ({ grupo, onClose, rango }: { grupo: GrupoConducto
                                                 <span title={r.consignacion_cuenta_nombre || undefined}>{formatters.currency(r.consignacion)}</span>
                                             ) : <span className="text-muted-foreground">—</span>}
                                         </td>
-                                        <td className="px-3 py-2 text-right font-mono font-bold text-foreground">
-                                            {formatters.currency((r.efectivo ?? 0) + (r.consignacion ?? 0))}
-                                        </td>
                                         <td className="px-3 py-2 text-right font-mono text-muted-foreground">
                                             {descuentoFinanciero > 0 ? formatters.currency(descuentoFinanciero) : '—'}
+                                        </td>
+                                        <td className="px-3 py-2 text-right font-mono font-bold text-foreground">
+                                            {formatters.currency((r.efectivo ?? 0) + (r.consignacion ?? 0))}
                                         </td>
                                         <td className="px-3 py-2 text-center">
                                             <span className={cn('rounded-full px-2 py-0.5 text-[10px] font-black uppercase', estadoRCBadge(r.Estado))}>

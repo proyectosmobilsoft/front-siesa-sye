@@ -11,9 +11,9 @@ import { FechaInput } from '@/components/ui/fecha-input'
 type Codigo = PagoRC['codigo']
 const METODOS: { codigo: Codigo; label: string; icon: ComponentType<{ className?: string }> }[] = [
   { codigo: 'EFE', label: 'Efectivo', icon: Banknote },
-  { codigo: 'CG1', label: 'Transferencia / consignación', icon: Landmark },
-  { codigo: 'TC', label: 'Tarjeta crédito', icon: CreditCard },
+  { codigo: 'CG1', label: 'Transferencia', icon: Landmark },
   { codigo: 'TD', label: 'Tarjeta débito', icon: CreditCard },
+  { codigo: 'TC', label: 'Tarjeta crédito', icon: CreditCard },
 ]
 const etiqueta = (codigo: Codigo) => METODOS.find(m => m.codigo === codigo)?.label ?? codigo
 

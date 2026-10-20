@@ -298,8 +298,8 @@ function Contenido({ d, sub, alElegirSub }: { d: DashboardRC; sub: string; alEle
   const conductoresPorKg = [...d.conductores].filter((c) => c.kg > 0).sort((a, b) => b.kg - a.kg).slice(0, 10)
 
   const medios = [
-    { nombre: 'Transferencia', valor: d.medios.transferencia, color: PALETA[0] },
     { nombre: 'Efectivo', valor: d.medios.efectivo, color: PALETA[1] },
+    { nombre: 'Transferencia', valor: d.medios.transferencia, color: PALETA[0] },
     { nombre: 'T. Débito', valor: d.medios.tarjeta_debito, color: PALETA[2] },
     { nombre: 'T. Crédito', valor: d.medios.tarjeta_credito, color: PALETA[3] },
     { nombre: 'Cheque', valor: d.medios.cheque, color: PALETA[4] },

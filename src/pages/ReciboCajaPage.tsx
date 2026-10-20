@@ -22,6 +22,7 @@ import { enriquecerTraslados } from '@/components/reciboCaja/cuadreCajaCalculos'
 import { MontoAlineado } from '@/components/ui/monto-alineado'
 import { descargarAnexoCuadrePdf } from '@/utils/cuadreCajaPdf'
 import { Cargando } from '@/components/ui/cargando'
+import { descargarExcel, type HojaExcel } from '@/utils/exportarExcel'
 
 interface ReciboCaja {
   Rowid: number
@@ -250,21 +251,65 @@ export const ReciboCajaPage = () => {
     descargarAnexoCuadrePdf(cuadreConTraslados, { responsable: responsableNombre, cedula: responsableCedula, cajaDescripcion: 'Todas las cajas' })
   }
 
+  // Cuerpo de la consulta de recibos con los filtros de pantalla; lo usan la consulta y la exportación a Excel
+  const cuerpoListar = (p: number, limit: number) => {
+    const body: Record<string, unknown> = {
+      p_cia: 1,
+      p_idco: centroOperacionActivo ?? '001',
+      p_origen: 13,
+      p_numero: numero,
+      p_rowid_tercero: '0',
+      page: p,
+      limit,
+    }
+    if (estado !== 0) body.p_estado = estado
+    if (tipodoc.trim()) body.p_idtipodoc = tipodoc.trim().toUpperCase()
+    return body
+  }
+
+  const [exportando, setExportando] = useState(false)
+  /** Excel con TODOS los recibos que cumplen los filtros (no solo la página en pantalla) */
+  const exportarRecibos = async () => {
+    setExportando(true)
+    setError(null)
+    try {
+      const todos: ReciboCaja[] = []
+      for (let p = 1; p <= 500; p++) {
+        const res = await apiClient.post<{ success: boolean; total: number; data: ReciboCaja[] }>('/recibo-caja/listar', cuerpoListar(p, 200))
+        const lote = res.data.data ?? []
+        todos.push(...lote)
+        if (lote.length < 200 || todos.length >= (res.data.total ?? 0)) break
+      }
+      const filtrados = !razonSocial.trim() ? todos : todos.filter((r) => r.Razón_Social?.toLowerCase().includes(razonSocial.toLowerCase()))
+      await descargarExcel(`recibos_${hoyLocalIso()}`, [{
+        nombre: 'Recibos',
+        columnas: [
+          { titulo: 'Documento', clave: 'documento', ancho: 14 }, { titulo: 'Fecha', clave: 'fecha', ancho: 12 }, { titulo: 'Cliente', clave: 'cliente', ancho: 36 }, { titulo: 'NIT', clave: 'nit', ancho: 14 },
+          { titulo: 'Creado por', clave: 'creadoPor', ancho: 22 }, { titulo: 'Origen', clave: 'origen', ancho: 10 }, { titulo: 'C.O.', clave: 'co', ancho: 8 }, { titulo: 'Caja', clave: 'caja', ancho: 18 },
+          { titulo: 'Efectivo', clave: 'efectivo', dinero: true }, { titulo: 'Transferencia', clave: 'transferencia', dinero: true },
+          { titulo: 'T. Débito', clave: 'debito', dinero: true }, { titulo: 'T. Crédito', clave: 'credito', dinero: true },
+          { titulo: 'Desc. financiero', clave: 'descuento', dinero: true }, { titulo: 'Total a pagar', clave: 'totalAPagar', dinero: true }, { titulo: 'Estado', clave: 'estado', ancho: 12 },
+        ],
+        filas: filtrados.map((r) => ({
+          documento: `${(r.Tipo_Docto || '').trim()} ${r.Número}`, fecha: formatters.dateOnly(r.Fecha), cliente: r.Razón_Social ?? '', nit: r.Id_tercero ?? '',
+          creadoPor: r.Creado_Por ?? r.Usuario_Creacion ?? '', origen: r.Origen === 'APP' ? 'App' : r.Origen === 'SIESA' ? 'SIESA' : '', co: r['C.O.'], caja: r.Caja ?? '',
+          efectivo: r.efectivo ?? 0, transferencia: r.consignacion ?? 0, debito: r.tarjeta_debito ?? 0, credito: r.tarjeta_credito ?? 0,
+          descuento: r.descuento_pp ?? 0, totalAPagar: r.valor_facturas ?? 0, estado: r.Estado,
+        })),
+      }])
+    } catch (err: unknown) {
+      const apiError = err as { response?: { data?: { message?: string; error?: string } } }
+      setError(apiError.response?.data?.message ?? apiError.response?.data?.error ?? 'No se pudo exportar a Excel')
+    } finally {
+      setExportando(false)
+    }
+  }
+
   const fetchRecibos = async (p = 1) => {
     setLoading(true)
     setError(null)
     try {
-      const body: Record<string, unknown> = {
-        p_cia: 1,
-        p_idco: centroOperacionActivo ?? '001',
-        p_origen: 13,
-        p_numero: numero,
-        p_rowid_tercero: '0',
-        page: p,
-        limit: LIMIT,
-      }
-      if (estado !== 0) body.p_estado = estado
-      if (tipodoc.trim()) body.p_idtipodoc = tipodoc.trim().toUpperCase()
+      const body = cuerpoListar(p, LIMIT)
       const res = await apiClient.post<{ success: boolean; total: number; data: ReciboCaja[] }>('/recibo-caja/listar', body)
       setData(res.data.data ?? [])
       setTotal(res.data.total ?? 0)
@@ -510,6 +555,8 @@ export const ReciboCajaPage = () => {
               razonSocial={razonSocial}
               setRazonSocial={setRazonSocial}
               fetchRecibos={fetchRecibos}
+              exportar={exportarRecibos}
+              exportando={exportando}
             />
           </div>
         )}
@@ -555,6 +602,51 @@ function TableroConductoresRC({
   const [expandido, setExpandido] = useState<string | null>(null)
   const [detalle, setDetalle] = useState<Record<string, ReciboCajaUsuario[]>>({})
   const [cargando, setCargando] = useState<string | null>(null)
+  const [exportando, setExportando] = useState(false)
+
+  /** Excel con el resumen por conductor y, en otra hoja, todos los recibos de cada uno (incluye anulados) */
+  const exportarExcel = async () => {
+    setExportando(true)
+    try {
+      // El detalle se reutiliza si ya se abrió en pantalla; si no, se trae ahora
+      const detalles = await Promise.all(conductores.map((c) =>
+        detalle[c.usuario_creacion] ?? reciboCajaApi.getPorUsuario(c.usuario_creacion, { fechaInicial: resumen?.fecha_inicial, fechaFinal: resumen?.fecha_final, tipo: 'RC' }).catch(() => [] as ReciboCajaUsuario[])))
+      const medios = [
+        { titulo: 'Efectivo', clave: 'efectivo', dinero: true }, { titulo: 'Transferencia', clave: 'transferencia', dinero: true },
+        { titulo: 'T. Débito', clave: 'debito', dinero: true }, { titulo: 'T. Crédito', clave: 'credito', dinero: true },
+        { titulo: 'Desc. financiero', clave: 'descuento', dinero: true },
+      ]
+      const hojas: HojaExcel[] = [
+        {
+          nombre: 'Conductores',
+          columnas: [{ titulo: 'Conductor', clave: 'conductor', ancho: 30 }, { titulo: 'C.O.', clave: 'co', ancho: 8 }, ...medios, { titulo: 'Total pagado', clave: 'total', dinero: true }, { titulo: 'Total a pagar', clave: 'totalAPagar', dinero: true }, { titulo: 'Recibos', clave: 'recibos', ancho: 10 }],
+          filas: conductores.map((c) => ({ conductor: c.conductor_nombre, co: c.centro_operacion_codigo ?? '', efectivo: c.total_efectivo, transferencia: c.total_consignacion, debito: c.total_tarjeta_debito ?? 0, credito: c.total_tarjeta_credito ?? 0, descuento: c.total_descuento_pp ?? 0, total: c.total, totalAPagar: c.total_facturas ?? 0, recibos: c.recibos_count })),
+          totales: { conductor: 'TOTAL', co: '', efectivo: totales.efectivo, transferencia: totales.consignacion, debito: totales.tarjetaDebito, credito: totales.tarjetaCredito, descuento: totales.descuento, total: totales.total, totalAPagar: totales.facturas, recibos: totales.recibos },
+        },
+        {
+          nombre: 'Recibos',
+          columnas: [{ titulo: 'Conductor', clave: 'conductor', ancho: 28 }, { titulo: 'Documento', clave: 'documento', ancho: 14 }, { titulo: 'Facturas', clave: 'facturas', ancho: 28 }, { titulo: 'C.O.', clave: 'co', ancho: 8 }, { titulo: 'Fecha', clave: 'fecha', ancho: 12 }, { titulo: 'Tercero', clave: 'tercero', ancho: 34 }, { titulo: 'NIT', clave: 'nit', ancho: 14 }, ...medios, { titulo: 'Total', clave: 'total', dinero: true }, { titulo: 'Estado', clave: 'estado', ancho: 12 }],
+          filas: conductores.flatMap((c, i) => detalles[i].map((r) => {
+            const facturas = r.Facturas ?? []
+            const pagado = (r.efectivo ?? 0) + (r.consignacion ?? 0) + (r.tarjeta_credito ?? 0) + (r.tarjeta_debito ?? 0)
+            return {
+              conductor: c.conductor_nombre, documento: `${(r.Tipo_Docto || 'RC').trim()} ${r.Numero}`,
+              facturas: facturas.map((f) => `${(f.Tipo || '').trim().toUpperCase()} ${f.Numero}`).join(', '),
+              co: r['C.O.'], fecha: formatters.dateOnly(r.Fecha), tercero: r.Tercero_Nombre ?? '', nit: r.Tercero_Nit ?? '',
+              efectivo: r.efectivo ?? 0, transferencia: r.consignacion ?? 0, debito: r.tarjeta_debito ?? 0, credito: r.tarjeta_credito ?? 0,
+              descuento: facturas.reduce((t, f) => t + (f.Descuento_Pp || 0), 0), total: pagado,
+              estado: r.Estado === 1 ? 'Aprobado' : r.Estado === 2 ? 'Anulado' : 'En proceso',
+            }
+          })),
+        },
+      ]
+      await descargarExcel(`recibos_conductores_${resumen?.fecha_inicial ?? fecha}`, hojas)
+    } catch (err) {
+      console.error('Error exportando recibos de conductores:', err)
+    } finally {
+      setExportando(false)
+    }
+  }
 
   useEffect(() => {
     setExpandido(null)
@@ -606,6 +698,9 @@ function TableroConductoresRC({
         </div>
 
         <div className="flex items-center gap-3">
+          <Button variant="outline" size="sm" className="nu-btn nu-btn-soft h-9 gap-1.5 text-xs" onClick={() => void exportarExcel()} disabled={exportando || conductores.length === 0}>
+            {exportando ? <RefreshCw className="h-3.5 w-3.5 animate-spin" /> : <FileSpreadsheet className="h-3.5 w-3.5" />} Exportar Excel
+          </Button>
           <Button variant="ghost" size="sm" className="nu-btn nu-btn-soft h-9 w-9 p-0" onClick={onRefresh} disabled={loading} title="Actualizar">
             <RefreshCw className={cn('h-4 w-4', loading && 'animate-spin')} />
           </Button>
@@ -620,13 +715,13 @@ function TableroConductoresRC({
               <tr className="border-b border-border bg-muted/60">
                 <th className="px-4 py-3 text-left nu-th">Conductor</th>
                 <th className="px-4 py-3 text-left nu-th">C.O.</th>
-                <th className="px-4 py-3 text-right nu-th">Total a pagar</th>
-                <th className="px-4 py-3 text-right nu-th">Desc. financiero</th>
                 <th className="px-4 py-3 text-right nu-th">Efectivo</th>
                 <th className="px-4 py-3 text-right nu-th">Transferencia</th>
-                {tieneTarjetaCredito && <th className="px-4 py-3 text-right nu-th">T. Crédito</th>}
                 {tieneTarjetaDebito && <th className="px-4 py-3 text-right nu-th">T. Débito</th>}
+                {tieneTarjetaCredito && <th className="px-4 py-3 text-right nu-th">T. Crédito</th>}
+                <th className="px-4 py-3 text-right nu-th">Desc. financiero</th>
                 <th className="px-4 py-3 text-right nu-th">Total pagado</th>
+                <th className="px-4 py-3 text-right nu-th">Total a pagar</th>
               </tr>
             </thead>
             <tbody>
@@ -673,13 +768,13 @@ function TableroConductoresRC({
                       <td className="px-4 py-3 text-left font-mono font-semibold text-foreground">
                         {c.centro_operacion_codigo || <span className="font-sans text-[11px] italic text-muted-foreground">Sin asignar</span>}
                       </td>
-                      <td className="px-4 py-3 text-right font-semibold text-foreground"><MontoAlineado value={c.total_facturas ?? 0} alinear="derecha" /></td>
-                      <td className="px-4 py-3 text-right font-semibold text-red-600 dark:text-red-400"><MontoAlineado value={c.total_descuento_pp ?? 0} alinear="derecha" /></td>
                       <td className="px-4 py-3 text-right font-semibold text-foreground"><MontoAlineado value={c.total_efectivo} alinear="derecha" /></td>
                       <td className="px-4 py-3 text-right font-semibold text-foreground"><MontoAlineado value={c.total_consignacion} alinear="derecha" /></td>
-                      {tieneTarjetaCredito && <td className="px-4 py-3 text-right font-semibold text-foreground"><MontoAlineado value={c.total_tarjeta_credito ?? 0} alinear="derecha" /></td>}
                       {tieneTarjetaDebito && <td className="px-4 py-3 text-right font-semibold text-foreground"><MontoAlineado value={c.total_tarjeta_debito ?? 0} alinear="derecha" /></td>}
+                      {tieneTarjetaCredito && <td className="px-4 py-3 text-right font-semibold text-foreground"><MontoAlineado value={c.total_tarjeta_credito ?? 0} alinear="derecha" /></td>}
+                      <td className="px-4 py-3 text-right font-semibold text-red-600 dark:text-red-400"><MontoAlineado value={c.total_descuento_pp ?? 0} alinear="derecha" /></td>
                       <td className="px-4 py-3 text-right font-bold text-primary"><MontoAlineado value={c.total} alinear="derecha" /></td>
+                      <td className="px-4 py-3 text-right font-semibold text-foreground"><MontoAlineado value={c.total_facturas ?? 0} alinear="derecha" /></td>
                     </motion.tr>
                     {expandido === c.usuario_creacion && (
                       <tr>
@@ -701,13 +796,13 @@ function TableroConductoresRC({
                       {conductores.length} conductor{conductores.length !== 1 ? 'es' : ''} · {totales.recibos} RC
                     </span>
                   </td>
-                  <td className="px-4 py-3 text-right text-foreground"><MontoAlineado value={totales.facturas} alinear="derecha" /></td>
-                  <td className="px-4 py-3 text-right text-red-600 dark:text-red-400"><MontoAlineado value={totales.descuento} alinear="derecha" /></td>
                   <td className="px-4 py-3 text-right text-emerald-600 dark:text-emerald-400"><MontoAlineado value={totales.efectivo} alinear="derecha" /></td>
                   <td className="px-4 py-3 text-right text-blue-600 dark:text-blue-400"><MontoAlineado value={totales.consignacion} alinear="derecha" /></td>
-                  {tieneTarjetaCredito && <td className="px-4 py-3 text-right text-violet-600 dark:text-violet-400"><MontoAlineado value={totales.tarjetaCredito} alinear="derecha" /></td>}
                   {tieneTarjetaDebito && <td className="px-4 py-3 text-right text-sky-600 dark:text-sky-400"><MontoAlineado value={totales.tarjetaDebito} alinear="derecha" /></td>}
+                  {tieneTarjetaCredito && <td className="px-4 py-3 text-right text-violet-600 dark:text-violet-400"><MontoAlineado value={totales.tarjetaCredito} alinear="derecha" /></td>}
+                  <td className="px-4 py-3 text-right text-red-600 dark:text-red-400"><MontoAlineado value={totales.descuento} alinear="derecha" /></td>
                   <td className="px-4 py-3 text-right text-primary"><MontoAlineado value={totales.total} alinear="derecha" /></td>
+                  <td className="px-4 py-3 text-right text-foreground"><MontoAlineado value={totales.facturas} alinear="derecha" /></td>
                 </tr>
               </tfoot>
             )}
@@ -744,8 +839,8 @@ function RcConductorDetalle({ rc, loading, conductorNombre }: { rc: ReciboCajaUs
             <th className="px-3 py-2 text-left nu-th">Tercero</th>
             <th className="px-3 py-2 text-right nu-th">Efectivo</th>
             <th className="px-3 py-2 text-right nu-th">Transferencia</th>
-            {tieneTarjetaCredito && <th className="px-3 py-2 text-right nu-th">T. crédito</th>}
             {tieneTarjetaDebito && <th className="px-3 py-2 text-right nu-th">T. débito</th>}
+            {tieneTarjetaCredito && <th className="px-3 py-2 text-right nu-th">T. crédito</th>}
             <th className="px-3 py-2 text-right nu-th">Desc. financiero</th>
             <th className="px-3 py-2 text-right nu-th">Total</th>
             <th className="px-3 py-2 text-left nu-th">Estado</th>
@@ -788,8 +883,8 @@ function RcConductorDetalle({ rc, loading, conductorNombre }: { rc: ReciboCajaUs
                 <td className="max-w-[200px] truncate px-3 py-2 font-medium">{r.Tercero_Nombre}</td>
                 <td className="px-3 py-2 text-right"><MontoAlineado value={r.efectivo ?? 0} alinear="derecha" /></td>
                 <td className="px-3 py-2 text-right"><MontoAlineado value={r.consignacion ?? 0} alinear="derecha" /></td>
-                {tieneTarjetaCredito && <td className="px-3 py-2 text-right text-violet-600 dark:text-violet-400"><MontoAlineado value={r.tarjeta_credito ?? 0} alinear="derecha" /></td>}
                 {tieneTarjetaDebito && <td className="px-3 py-2 text-right text-sky-600 dark:text-sky-400"><MontoAlineado value={r.tarjeta_debito ?? 0} alinear="derecha" /></td>}
+                {tieneTarjetaCredito && <td className="px-3 py-2 text-right text-violet-600 dark:text-violet-400"><MontoAlineado value={r.tarjeta_credito ?? 0} alinear="derecha" /></td>}
                 <td className="px-3 py-2 text-right text-red-600 dark:text-red-400">
                   <MontoAlineado value={descuentoFinanciero} alinear="derecha" />
                 </td>
@@ -894,6 +989,8 @@ function History(props: {
   razonSocial: string
   setRazonSocial: (v: string) => void
   fetchRecibos: (p?: number) => void
+  exportar: () => void
+  exportando: boolean
 }) {
   const {
     data,
@@ -911,12 +1008,14 @@ function History(props: {
     razonSocial,
     setRazonSocial,
     fetchRecibos,
+    exportar,
+    exportando,
   } = props
   const [reciboDetalle, setReciboDetalle] = useState<ReciboCaja | null>(null)
   // Medios de pago y estado no van en la tabla: salen en el panel derecho
   // al pasar el mouse por un recibo (queda el último señalado).
   const [reciboSeñalado, setReciboSeñalado] = useState<ReciboCaja | null>(null)
-  const columnas = ['Documento', 'Fecha', 'Cliente', 'Creado por', 'C.O.', 'Total a pagar', 'Desc. financiero']
+  const columnas = ['Documento', 'Fecha', 'Cliente', 'Creado por', 'C.O.', 'Desc. financiero', 'Total a pagar']
 
   return (
     <div className="space-y-4">
@@ -967,6 +1066,9 @@ function History(props: {
 
           <Button size="sm" className="nu-btn nu-btn-primary gap-1 text-xs" onClick={() => fetchRecibos(1)} disabled={loading}>
             <Search className="h-3.5 w-3.5" /> Consultar
+          </Button>
+          <Button size="sm" variant="outline" className="nu-btn nu-btn-soft gap-1 text-xs" onClick={exportar} disabled={exportando || loading}>
+            {exportando ? <RefreshCw className="h-3.5 w-3.5 animate-spin" /> : <FileSpreadsheet className="h-3.5 w-3.5" />} Exportar Excel
           </Button>
         </div>
       </div>
@@ -1038,8 +1140,8 @@ function History(props: {
                       <p className="font-mono font-bold text-foreground">{r['C.O.']}</p>
                       <p className="whitespace-nowrap text-[10px] text-muted-foreground">{r.Caja}</p>
                     </td>
-                    <td className="px-4 py-3 text-right"><MontoAlineado value={r.valor_facturas ?? 0} alinear="derecha" /></td>
                     <td className="px-4 py-3 text-right text-red-600 dark:text-red-400"><MontoAlineado value={r.descuento_pp ?? 0} alinear="derecha" /></td>
+                    <td className="px-4 py-3 text-right"><MontoAlineado value={r.valor_facturas ?? 0} alinear="derecha" /></td>
                   </tr>
                 ))
               )}
@@ -1219,12 +1321,12 @@ function TableroGeneral({ resumen }: { resumen: ResumenGeneralRC }) {
   const columnas: { titulo: string; valor: (t: ReturnType<typeof sumarFilas>) => number; color?: string }[] = [
     { titulo: 'Efectivo', valor: (t) => t.efectivo },
     { titulo: 'Transferencia', valor: (t) => t.consignacion },
-    { titulo: 'T. Crédito', valor: (t) => t.tarjeta_credito },
     { titulo: 'T. Débito', valor: (t) => t.tarjeta_debito },
+    { titulo: 'T. Crédito', valor: (t) => t.tarjeta_credito },
     ...(tieneCheque ? [{ titulo: 'Cheque', valor: (t: ReturnType<typeof sumarFilas>) => t.cheque }] : []),
+    { titulo: 'Desc. financiero', valor: (t) => t.descuento_pp, color: 'text-red-600 dark:text-red-400' },
     { titulo: 'Total recaudado', valor: (t) => t.total, color: 'font-bold text-primary' },
     { titulo: 'Total a pagar', valor: (t) => t.valor_facturas },
-    { titulo: 'Desc. financiero', valor: (t) => t.descuento_pp, color: 'text-red-600 dark:text-red-400' },
   ]
 
   const fila = (etiqueta: React.ReactNode, t: ReturnType<typeof sumarFilas>, clase?: string) => (
@@ -1247,8 +1349,36 @@ function TableroGeneral({ resumen }: { resumen: ResumenGeneralRC }) {
     )
   }
 
+  /** Excel con las mismas filas de la tabla: por C.O., conductores (app) y caja SIESA, más los totales */
+  const exportarExcel = async () => {
+    const hojaFilas = (etiqueta: string, t: ReturnType<typeof sumarFilas>) => ({
+      concepto: etiqueta, ...Object.fromEntries(columnas.map((c) => [c.titulo, c.valor(t)])), recibos: t.recibos,
+    })
+    const lineas = centros.flatMap((co) => {
+      const delCo = filas.filter((f) => f.id_co === co)
+      const app = delCo.find((f) => f.origen === 'APP')
+      const siesa = delCo.find((f) => f.origen === 'SIESA')
+      return [
+        ...(app ? [hojaFilas(`Conductores (app) · C.O. ${co}`, sumarFilas([app]))] : []),
+        ...(siesa ? [hojaFilas(`Caja SIESA · C.O. ${co}`, sumarFilas([siesa]))] : []),
+        hojaFilas(`Total C.O. ${co}`, sumarFilas(delCo)),
+      ]
+    })
+    await descargarExcel(`recaudo_general_${resumen.fecha_inicial}_${resumen.fecha_final}`, [{
+      nombre: 'Recaudo general',
+      columnas: [{ titulo: 'Descripción o concepto', clave: 'concepto', ancho: 38 }, ...columnas.map((c) => ({ titulo: c.titulo, clave: c.titulo, dinero: true })), { titulo: 'Recibos', clave: 'recibos', ancho: 10 }],
+      filas: lineas,
+      totales: hojaFilas(centros.length > 1 ? 'RECAUDO DEL DÍA (TODOS LOS C.O.)' : 'TOTAL', general),
+    }])
+  }
+
   return (
     <>
+      <div className="flex justify-end">
+        <Button variant="outline" size="sm" className="nu-btn nu-btn-soft h-9 gap-1.5 text-xs" onClick={() => void exportarExcel()}>
+          <FileSpreadsheet className="h-3.5 w-3.5" /> Exportar Excel
+        </Button>
+      </div>
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <div className="nu-card p-4">
           <p className="text-[10px] nu-th">Total recaudado</p>
@@ -1312,8 +1442,8 @@ function PanelMediosPago({ recibo }: { recibo: ReciboCaja | null }) {
     ? [
         { etiqueta: 'Efectivo', valor: recibo.efectivo ?? 0, color: 'bg-emerald-500' },
         { etiqueta: 'Transferencia', valor: recibo.consignacion ?? 0, color: 'bg-blue-500' },
-        { etiqueta: 'T. Crédito', valor: recibo.tarjeta_credito ?? 0, color: 'bg-violet-500' },
         { etiqueta: 'T. Débito', valor: recibo.tarjeta_debito ?? 0, color: 'bg-sky-500' },
+        { etiqueta: 'T. Crédito', valor: recibo.tarjeta_credito ?? 0, color: 'bg-violet-500' },
       ]
     : []
   const total = recibo ? totalPagadoRecibo(recibo) : 0
