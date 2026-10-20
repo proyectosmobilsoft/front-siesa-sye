@@ -74,7 +74,7 @@ export function NuevoReciboTab({ onCreated }: { onCreated: () => void }) {
   const asociado = !!usuarioSiesa?.siesa_rowid && !!usuarioSiesa?.siesa_nombre?.trim()
   const clientes = useQuery({ queryKey: ['rc', 'clientes', busqueda], queryFn: async () => (await apiClient.get<ClientsResponse>('/clients', { params: { search: busqueda, page: 1, pageSize: 20 } })).data.data ?? [], enabled: busqueda.length >= 2 && asociado })
   const parametrosQuery = useQuery({ queryKey: ['rc', 'parametros'], queryFn: reciboCajaApi.getParametros, retry: false })
-  const bancos = useQuery({ queryKey: ['rc', 'cuentas-bancarias'], queryFn: async () => (await maestroCuentasBancariasApi.listarConfig(true)).data })
+  const bancos = useQuery({ queryKey: ['rc', 'cuentas-bancarias'], queryFn: async () => (await maestroCuentasBancariasApi.listarConfig(true, true)).data })
   const parametros: ParametrosRC = useMemo(() => {
     const p = parametrosQuery.data
     return { limite: (p?.limite_ajuste_peso ?? 0) > 0 ? p!.limite_ajuste_peso : FALLBACK_RC.limite, ajusteDescuento: p?.cuentas?.cuenta_ajuste_peso_descuento?.rowid ?? FALLBACK_RC.ajusteDescuento, ajusteIngreso: p?.cuentas?.cuenta_ajuste_peso_ingreso?.rowid ?? FALLBACK_RC.ajusteIngreso, descuentoFinanciero: p?.cuentas?.cuenta_descuento_financiero?.rowid ?? FALLBACK_RC.descuentoFinanciero, anticipo: p?.cuentas?.cuenta_anticipo?.rowid ?? FALLBACK_RC.anticipo }

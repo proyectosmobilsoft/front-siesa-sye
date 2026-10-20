@@ -49,7 +49,7 @@ export function NuevaConfirmacionModal({ onClose, onSaved }: { onClose: () => vo
   const [duplicados, setDuplicados] = useState<DuplicadoConfirmacion[] | null>(null)
   const [creadaId, setCreadaId] = useState<number | null>(null)
   const clientes = useQuery({ queryKey: ['transferencias-confirmacion', 'clientes', busqueda], queryFn: async () => (await apiClient.get<ClientsResponse>('/clients', { params: { search: busqueda, page: 1, pageSize: 20 } })).data.data ?? [], enabled: busqueda.length >= 2 })
-  const bancos = useQuery({ queryKey: ['rc', 'cuentas-bancarias'], queryFn: async () => (await maestroCuentasBancariasApi.listarConfig(true)).data })
+  const bancos = useQuery({ queryKey: ['rc', 'cuentas-bancarias'], queryFn: async () => (await maestroCuentasBancariasApi.listarConfig(true, true)).data })
   useEffect(() => { if (bancos.data?.length === 1) setCuenta(bancos.data[0].f026_id) }, [bancos.data])
   const elegirCliente = async (c: Client) => {
     const version = ++facturaVersion.current

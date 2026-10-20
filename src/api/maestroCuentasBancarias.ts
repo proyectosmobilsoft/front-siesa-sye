@@ -48,11 +48,11 @@ export const maestroCuentasBancariasApi = {
     },
 
     /**
-     * `conductor: true` trae solo la whitelist (lo que ve el conductor; el maestro admin
-     * la administra). Sin él trae todas las cuentas de SIESA, sin filtro.
+     * Por defecto trae la whitelist (la que ve el conductor y administra el maestro).
+     * `todas: true` trae todas las cuentas de SIESA, sin filtro (recibo de caja, transferencias).
      */
-    listarConfig: async (soloActivas = true, conductor = false): Promise<{ success: boolean; data: CuentaBancariaConfig[] }> => {
-        const response = await apiClient.get('/maestros/cuentas-bancarias-config', { params: { activas: soloActivas, ...(conductor ? { conductor: true } : {}) } })
+    listarConfig: async (soloActivas = true, todas = false): Promise<{ success: boolean; data: CuentaBancariaConfig[] }> => {
+        const response = await apiClient.get('/maestros/cuentas-bancarias-config', { params: { activas: soloActivas, ...(todas ? { todas: true } : {}) } })
         return response.data
     },
 

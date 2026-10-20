@@ -32,7 +32,7 @@ export const MaestroCuentasBancariasPage = () => {
     const fetchCuentas = async (searchTerm = search) => {
         try {
             setLoading(true)
-            const res = await maestroCuentasBancariasApi.listarConfig(false, true)
+            const res = await maestroCuentasBancariasApi.listarConfig(false)
             const data = res.data ?? []
             const filtered = searchTerm.trim()
                 ? data.filter((c) => {
