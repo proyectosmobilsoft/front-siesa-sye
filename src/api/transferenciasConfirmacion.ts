@@ -2,6 +2,12 @@ import { apiClient } from './client'
 import { API_CONFIG, API_ORIGIN } from '@/config/api'
 
 export type EstadoTransferencia = 'PENDIENTE' | 'APROBADA' | 'RECHAZADA' | 'ANULADA' | 'EN_USO' | 'USADA'
+export interface PayloadRcResumido {
+  cliente?: string | { nombre?: string; razon_social?: string; nit?: string }
+  valor?: number
+  facturas?: Array<string | { numero?: string; prefijo?: string; documento?: string; valor?: number }>
+  medios?: Array<string | { nombre?: string; medio?: string; descripcion?: string; valor?: number }>
+}
 export interface ConfirmacionTransferencia {
   id: number
   rowid_tercero: number
@@ -23,6 +29,14 @@ export interface ConfirmacionTransferencia {
   usado_at: string | null
   cant_soportes: number
   cant_facturas: number
+  conductor_id?: number | null
+  conductor_nombre?: string | null
+  tiene_payload?: boolean
+  payload?: PayloadRcResumido | null
+  payload_resumido?: PayloadRcResumido | null
+  rc_error?: string | null
+  segundos_espera?: number | null
+  rc_creado_at?: string | null
 }
 export interface FacturaConfirmacion { rowid_sa: number; documento: string; saldo: number }
 export interface SoporteConfirmacion { id: number; url: string; nombre_original: string; mime: string; tamano: number; created_at: string }
@@ -32,16 +46,47 @@ export interface CrearConfirmacion {
   rowid_tercero: number; nit: string; razon_social: string; id_co: string; valor: number; fecha_transferencia: string
   id_cta_bancaria: string; referencia: string; observacion: string; facturas: FacturaConfirmacion[]; soportes: File[]
 }
+export interface ResumenTransferencias extends Partial<Record<EstadoTransferencia, number>> {
+  rc_pendientes: number
+  promedio_espera_seg: number | null
+}
+export interface ListarConfirmacionesParams { estado: EstadoTransferencia | 'TODAS'; tipo?: 'rc_pendiente'; desde?: string; hasta?: string; search?: string; page: number; pageSize: number }
+export interface MiRcPendiente {
+  id: number
+  estado: EstadoTransferencia
+  cliente: string
+  valor: number
+  facturas: Array<{ numero?: string; prefijo?: string }>
+  motivo_rechazo: string | null
+  rc_numero: string | null
+  rc_error: string | null
+  created_at: string
+  revisado_at: string | null
+  segundos_espera: number | null
+  soportes: Array<{ url: string }>
+}
 const base = '/transferencias-confirmacion'
 const multipart = { headers: { 'Content-Type': 'multipart/form-data' } }
 export const soporteUrl = (url: string) => new URL(url, new URL(API_CONFIG.BASE_URL, API_ORIGIN).origin).href
 
 export const transferenciasConfirmacionApi = {
-  listar: async (params: { estado: EstadoTransferencia | 'TODAS'; desde?: string; hasta?: string; search?: string; page: number; pageSize: number }) =>
+  listar: async (params: ListarConfirmacionesParams) =>
     (await apiClient.get<{ success: boolean; data: ConfirmacionTransferencia[]; pagination: { page: number; pageSize: number; total: number; totalPages: number } }>(base, { params })).data,
-  resumen: async () => (await apiClient.get<{ data: Partial<Record<EstadoTransferencia, number>> }>(`${base}/resumen`)).data.data,
+  resumen: async () => (await apiClient.get<{ data: ResumenTransferencias }>(`${base}/resumen`)).data.data,
   disponibles: async (rowid_tercero: number) => (await apiClient.get<{ data: ConfirmacionTransferencia[] }>(`${base}/disponibles`, { params: { rowid_tercero } })).data.data,
+  misPendientes: async (estado?: EstadoTransferencia) => (await apiClient.get<{ data: MiRcPendiente[] }>(`${base}/mis-pendientes`, { params: estado ? { estado } : undefined })).data.data,
   detalle: async (id: number) => (await apiClient.get<{ data: DetalleConfirmacion }>(`${base}/${id}`)).data.data,
+  crearRcPendiente: async (payload: Record<string, unknown>, soportes: File[]) => {
+    const form = new FormData()
+    soportes.forEach(file => form.append('soportes', file))
+    form.append('payload', JSON.stringify(payload))
+    return (await apiClient.post<{ success: boolean; data: { id: number; estado: 'PENDIENTE'; created_at: string } }>(`${base}/rc-pendiente`, form, multipart)).data.data
+  },
+  reenviar: async (id: number, soportes: File[]) => {
+    const form = new FormData()
+    soportes.forEach(file => form.append('soportes', file))
+    return (await apiClient.patch(`${base}/${id}/reenviar`, form, multipart)).data
+  },
   crear: async (body: CrearConfirmacion) => {
     const form = new FormData()
     for (const [key, value] of Object.entries(body)) {
@@ -54,7 +99,8 @@ export const transferenciasConfirmacionApi = {
     const form = new FormData(); files.forEach(file => form.append('soportes', file))
     return (await apiClient.post(`${base}/${id}/soportes`, form, multipart)).data
   },
-  aprobar: async (id: number, valor: number) => (await apiClient.patch(`${base}/${id}/aprobar`, { valor })).data,
+  aprobar: async (id: number, valor: number) => (await apiClient.patch<{ data?: ConfirmacionTransferencia }>(`${base}/${id}/aprobar`, { valor })).data,
+  reintentarRc: async (id: number) => (await apiClient.patch<{ data?: ConfirmacionTransferencia }>(`${base}/${id}/reintentar-rc`)).data,
   rechazar: async (id: number, motivo: string) => (await apiClient.patch(`${base}/${id}/rechazar`, { motivo })).data,
   anular: async (id: number) => (await apiClient.patch(`${base}/${id}/anular`)).data,
 }
