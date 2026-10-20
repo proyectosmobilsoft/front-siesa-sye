@@ -197,6 +197,9 @@ export function NuevoReciboTab({ onCreated }: { onCreated: () => void }) {
     } catch (e) { return errorMensaje(e) }
   }, [cliente, facturas, descuentosEfectivos, aplicar, pagos, parametros, observacion, sesion?.usuario, co, caja, facturasValidas, pagosValidos, totales.clasificacion.tipo])
   const notasFinal = notasManual ?? notasPreview
+  // Lo que se agrega solo después del texto de la persona (facturas, pagos, ajuste y sello)
+  const obsLimpia = observacion.trim()
+  const notasAutomaticas = notasPreview.startsWith(obsLimpia) ? notasPreview.slice(obsLimpia.length).replace(/^ \| /, '') : notasPreview
   const faltantes = [!cliente && 'Cliente', !facturasValidas && 'Al menos 1 factura', coFacturas.length > 1 && 'Facturas de distintos C.O. (haz un recibo por C.O.)', !descuentosValidos && 'El descuento debe ser mayor o igual a 0 y menor que el valor de la factura', !pagosValidos && 'Pagos válidos', !observacion.trim() && 'Observación', notasFinal.length > 255 && 'Las notas superan 255 caracteres', cargandoDescuentos && 'Esperando descuento financiero', totales.clasificacion.tipo === 'faltanteExcesivo' && `Faltante supera el límite de ${formatters.currency(parametros.limite)}`, requiereConfirmacion && (disponibles.isLoading || disponibles.isFetching || disponibles.isError || totalConfirmado < totalTransferencia - 1) && 'Transferencia sin confirmación aprobada'].filter((v): v is string => !!v)
   const confirmarCreacion = (numeroRc: string | number) => {
     reset(); setExito(`RC ${numeroRc} creado`)
@@ -310,21 +313,24 @@ export function NuevoReciboTab({ onCreated }: { onCreated: () => void }) {
           </div>}
         </Card>
         <Card className={`${section} rounded-xl ${!cliente ? 'opacity-60' : ''}`}>
-          <h2 className={`${title} mb-2`}>Observación</h2>
+          <h2 className={`${title} mb-2`}>Observación y notas</h2>
           {!cliente ? <p className="text-sm text-muted-foreground">Elige un cliente para completar la observación.</p> : <>
-            <textarea value={observacion} onChange={e => { cambio(); setObservacion(e.target.value) }} rows={2}
-              className="w-full rounded-md border border-input bg-background p-2 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-              placeholder="Motivo del recaudo" />
-            <p className="mt-1 text-right text-xs text-muted-foreground">{observacion.length} caracteres</p>
-<div className="mt-2 space-y-1">
-              <div className="flex items-center justify-between gap-2 text-xs">
-                <label htmlFor="rc-notas" className="font-semibold text-muted-foreground">Notas del recibo · sugeridas, puedes editarlas</label>
-                <span className={`tabular-nums ${notasFinal.length > 255 ? 'font-semibold text-destructive' : 'text-muted-foreground'}`}>{notasFinal.length}/255</span>
+            {notasManual === null ? (
+              <div className="rounded-md border border-input bg-background focus-within:ring-2 focus-within:ring-ring">
+                <textarea value={observacion} onChange={e => { cambio(); setObservacion(e.target.value) }} rows={2} aria-label="Observación"
+                  className="w-full resize-none rounded-md bg-transparent p-2 text-sm text-foreground focus-visible:outline-none"
+                  placeholder="Escribe aquí el motivo del recaudo" />
+                {notasAutomaticas && <p className="border-t border-dashed border-input px-2 py-1.5 text-xs text-muted-foreground" title="Se agrega solo al guardar">{notasAutomaticas}</p>}
               </div>
-              <textarea id="rc-notas" rows={3} value={notasFinal} onChange={e => { cambio(); setNotasManual(e.target.value) }}
-                className="w-full rounded-md border border-input bg-background p-2 text-xs text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                placeholder="La sugerencia aparecerá aquí" />
-              {notasManual !== null && <button type="button" onClick={() => { cambio(); setNotasManual(null) }} className="text-xs font-medium text-primary hover:underline">Volver a la sugerida</button>}
+            ) : (
+              <textarea value={notasManual} onChange={e => { cambio(); setNotasManual(e.target.value) }} rows={4} aria-label="Notas del recibo"
+                className="w-full rounded-md border border-input bg-background p-2 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" />
+            )}
+            <div className="mt-1 flex items-center justify-between gap-2 text-xs">
+              {notasManual === null
+                ? <button type="button" onClick={() => { cambio(); setNotasManual(notasPreview) }} className="font-medium text-primary hover:underline">Editar todo el texto</button>
+                : <button type="button" onClick={() => { cambio(); setNotasManual(null) }} className="font-medium text-primary hover:underline">Volver al texto automático</button>}
+              <span className={`tabular-nums ${notasFinal.length > 255 ? 'font-semibold text-destructive' : 'text-muted-foreground'}`}>{notasFinal.length}/255</span>
             </div>
           </>}
         </Card>

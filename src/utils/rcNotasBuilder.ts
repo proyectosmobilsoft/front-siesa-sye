@@ -1,4 +1,4 @@
-/** Port de rc_notas_builder.dart. Orden: facturas, observación, pagos, ajuste, sello. */
+/** Port de rc_notas_builder.dart. Orden: observación, facturas, pagos, ajuste, sello. */
 export interface RcNotaFactura { tipo: string; consecutivo: string; valorRecibido: number; descuentoPp?: number; ajusteAlPeso?: number }
 export interface RcNotaMedioPago { nombre: string; valor: number; voucher?: string }
 export type RcNotaAjusteTipo = 'none' | 'ajusteDescuento' | 'ajusteIngreso' | 'anticipo'
@@ -17,7 +17,7 @@ export function buildRcNotas({ observacion, facturas, mediosPago, ajusteTipo, aj
   let obs = observacion.trim()
   let facturasPart = facturas.map(f => `${f.tipo.trim().toUpperCase()}-${f.consecutivo}`).join(', ')
   let pagosPart = mediosPago.length ? `Pago: ${mediosPago.map(p => `${titleCase(p.nombre)} ${formatRcCop(p.valor)}${p.voucher?.trim() ? ` Voucher: ${p.voucher.trim()}` : ''}`).join(', ')}` : ''
-  const assemble = () => join([facturasPart, obs, pagosPart, ajuste, sello])
+  const assemble = () => join([obs, facturasPart, pagosPart, ajuste, sello])
   if (assemble().length <= maxLength) return assemble()
   if (facturas.length) facturasPart = `${facturas.length} facturas`
   if (assemble().length <= maxLength) return assemble()
