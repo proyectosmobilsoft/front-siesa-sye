@@ -34,11 +34,11 @@ export function NuevoModuloPersonalizadoModal({ abierto, onClose, onCreado }: { 
     }
 
     return (
-        <Modal isOpen={abierto} onClose={() => { if (!guardando) onClose() }} title="Nuevo módulo personalizado" className="max-w-lg">
+        <Modal isOpen={abierto} onClose={() => { if (!guardando) onClose() }} title="Nuevo módulo" className="max-w-lg">
             <div className="mt-4 space-y-4">
                 <p className="flex items-start gap-1.5 text-xs text-muted-foreground">
                     <Info className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-                    Crea una sección propia en el menú lateral, como un módulo de pruebas. Después le agregas enlaces (Power BI, Sheets, otra web) y se lo asignas a los roles que lo deben ver.
+                    Crea un módulo propio en el menú lateral. Después le agregas enlaces (Power BI, Sheets, otra web) y se lo asignas a los roles que lo deben ver.
                 </p>
                 <div className="space-y-1.5">
                     <label htmlFor="pers-nombre" className={label}>Nombre</label>

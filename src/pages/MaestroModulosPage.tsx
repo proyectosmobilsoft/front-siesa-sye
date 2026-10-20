@@ -129,13 +129,6 @@ export const MaestroModulosPage = () => {
     })
 
     // --- Módulo ---
-    const nuevoModulo = () => {
-        setEditandoModulo(null)
-        setFormModulo({ codigo: '', nombre: '', grupo: '', icono: '', orden: 100, estado: true })
-        setErrorForm(null)
-        setModuloModalOpen(true)
-    }
-
     const editarModulo = (m: ModuloPermisos) => {
         setEditandoModulo(m)
         setFormModulo({
@@ -151,25 +144,20 @@ export const MaestroModulosPage = () => {
     }
 
     const guardarModulo = async () => {
-        if (!formModulo.codigo.trim() || !formModulo.nombre.trim()) return
+        if (!editandoModulo?.id || !formModulo.nombre.trim()) return
         setSaving(true)
         setErrorForm(null)
         try {
-            const dto = {
-                codigo: formModulo.codigo.trim(),
+            // Solo nombre, icono, orden y estado: el código y el grupo los maneja el sistema
+            await seguridadApi.actualizarModulo(editandoModulo.id, {
                 nombre: formModulo.nombre.trim(),
-                grupo: formModulo.grupo.trim() || null,
                 icono: formModulo.icono.trim() || null,
                 orden: Number(formModulo.orden) || 100,
                 estado: formModulo.estado,
-            }
-            if (editandoModulo?.id) {
-                await seguridadApi.actualizarModulo(editandoModulo.id, dto)
-            } else {
-                await seguridadApi.crearModulo(dto)
-            }
+            })
             setModuloModalOpen(false)
             await fetchModulos()
+            await queryClient.invalidateQueries({ queryKey: MENU_PERSONALIZADO_KEY })
         } catch (err: any) {
             setErrorForm(err?.response?.data?.message || 'Error al guardar el módulo')
         } finally {
@@ -275,15 +263,9 @@ export const MaestroModulosPage = () => {
                         <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
                     </Button>
                     {puedeCrear && (
-                        <Button onClick={nuevoModulo} className="whitespace-nowrap gap-2">
+                        <Button onClick={() => setPersonalizadoModalOpen(true)} className="whitespace-nowrap gap-2">
                             <Plus className="h-4 w-4" />
                             Nuevo Módulo
-                        </Button>
-                    )}
-                    {puedeCrear && (
-                        <Button variant="outline" onClick={() => setPersonalizadoModalOpen(true)} className="whitespace-nowrap gap-2" title="Crea una sección propia en el menú lateral, con enlaces">
-                            <Plus className="h-4 w-4" />
-                            Sección del menú
                         </Button>
                     )}
                 </div>
@@ -464,131 +446,53 @@ export const MaestroModulosPage = () => {
 
             <NuevoModuloPersonalizadoModal abierto={personalizadoModalOpen} onClose={() => setPersonalizadoModalOpen(false)} onCreado={() => void fetchModulos()} />
 
-            {/* Modal Módulo */}
+            {/* Editar módulo: solo lo que importa; el código y el grupo los maneja el sistema */}
             <Modal
                 isOpen={moduloModalOpen}
                 onClose={() => { if (!saving) setModuloModalOpen(false) }}
-                title={editandoModulo ? (esPersonalizado(editandoModulo.codigo) ? 'Editar sección del menú' : 'Editar Módulo') : 'Nuevo Módulo'}
+                title="Editar módulo"
                 className="max-w-lg"
             >
                 <div className="mt-4 space-y-4">
+                    <div className="space-y-1.5">
+                        <label htmlFor="mod-nombre" className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Nombre</label>
+                        <Input id="mod-nombre" value={formModulo.nombre} onChange={(e) => setFormModulo({ ...formModulo, nombre: e.target.value })} className="h-10" autoFocus />
+                    </div>
+                    <div className="space-y-1.5">
+                        <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Icono</span>
+                        <div className="grid grid-cols-7 gap-1.5">
+                            {Object.keys(ICONOS_MENU).map((n) => {
+                                const Icono = iconoMenu(n)
+                                return (
+                                    <button key={n} type="button" title={n} aria-label={n} aria-pressed={formModulo.icono === n} onClick={() => setFormModulo({ ...formModulo, icono: n })}
+                                        className={`flex h-10 items-center justify-center rounded-lg border transition-all ${formModulo.icono === n ? 'border-primary bg-primary/10 text-primary' : 'border-border text-muted-foreground hover:border-muted-foreground/50'}`}>
+                                        <Icono className="h-4 w-4" />
+                                    </button>
+                                )
+                            })}
+                        </div>
+                    </div>
                     <div className="grid gap-4 sm:grid-cols-2">
-                        {!esPersonalizado(editandoModulo?.codigo) && (
                         <div className="space-y-1.5">
-                            <label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Código</label>
-                            <Input
-                                placeholder="CAJAS"
-                                value={formModulo.codigo}
-                                disabled={esPersonalizado(editandoModulo?.codigo)}
-                                title={esPersonalizado(editandoModulo?.codigo) ? 'Las secciones del menú conservan su código y su grupo' : undefined}
-                                onChange={(e) => setFormModulo({ ...formModulo, codigo: e.target.value.toUpperCase() })}
-                                className="h-10 font-mono disabled:opacity-70"
-                            />
-                        </div>
-                        )}
-                        <div className="space-y-1.5">
-                            <label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Nombre</label>
-                            <Input
-                                placeholder="Maestro de Cajas"
-                                value={formModulo.nombre}
-                                onChange={(e) => setFormModulo({ ...formModulo, nombre: e.target.value })}
-                                className="h-10"
-                            />
-                        </div>
-                        {!esPersonalizado(editandoModulo?.codigo) && (
-                        <div className="space-y-1.5">
-                            <label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Grupo</label>
-                            <Input
-                                placeholder="Maestros"
-                                value={formModulo.grupo}
-                                disabled={esPersonalizado(editandoModulo?.codigo)}
-                                onChange={(e) => setFormModulo({ ...formModulo, grupo: e.target.value })}
-                                className="h-10 disabled:opacity-70"
-                            />
-                        </div>
-                        )}
-                        {esPersonalizado(editandoModulo?.codigo) ? (
-                            <div className="space-y-1.5 sm:col-span-2">
-                                <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Icono</span>
-                                <div className="grid grid-cols-7 gap-1.5">
-                                    {Object.keys(ICONOS_MENU).map((n) => {
-                                        const Icono = iconoMenu(n)
-                                        return (
-                                            <button key={n} type="button" title={n} aria-label={n} aria-pressed={formModulo.icono === n} onClick={() => setFormModulo({ ...formModulo, icono: n })}
-                                                className={`flex h-10 items-center justify-center rounded-lg border transition-all ${formModulo.icono === n ? 'border-primary bg-primary/10 text-primary' : 'border-border text-muted-foreground hover:border-muted-foreground/50'}`}>
-                                                <Icono className="h-4 w-4" />
-                                            </button>
-                                        )
-                                    })}
-                                </div>
-                            </div>
-                        ) : (
-                        <div className="space-y-1.5">
-                            <label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Icono</label>
-                            <Input
-                                placeholder="Archive"
-                                value={formModulo.icono}
-                                onChange={(e) => setFormModulo({ ...formModulo, icono: e.target.value })}
-                                className="h-10"
-                            />
-                            <p className="text-[11px] text-muted-foreground">Nombre de un icono de lucide-react</p>
-                        </div>
-                        )}
-                        <div className="space-y-1.5">
-                            <label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Orden</label>
-                            <Input
-                                type="number"
-                                value={formModulo.orden}
-                                onChange={(e) => setFormModulo({ ...formModulo, orden: Number(e.target.value) })}
-                                className="h-10"
-                            />
+                            <label htmlFor="mod-orden" className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Orden</label>
+                            <Input id="mod-orden" type="number" value={formModulo.orden} onChange={(e) => setFormModulo({ ...formModulo, orden: Number(e.target.value) })} className="h-10" />
                         </div>
                         <div className="space-y-1.5">
-                            <label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Estado</label>
+                            <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Estado</span>
                             <div className="flex gap-1.5">
-                                <button
-                                    type="button"
-                                    onClick={() => setFormModulo({ ...formModulo, estado: true })}
-                                    className={`flex-1 rounded-lg border px-3 py-2 text-sm font-medium transition-all ${
-                                        formModulo.estado
-                                            ? 'border-green-500 bg-green-50 text-green-600 dark:bg-green-950/30 dark:text-green-400'
-                                            : 'border-border text-muted-foreground'
-                                    }`}
-                                >
-                                    Activo
-                                </button>
-                                <button
-                                    type="button"
-                                    onClick={() => setFormModulo({ ...formModulo, estado: false })}
-                                    className={`flex-1 rounded-lg border px-3 py-2 text-sm font-medium transition-all ${
-                                        !formModulo.estado
-                                            ? 'border-destructive/30 bg-destructive/10 text-destructive'
-                                            : 'border-border text-muted-foreground'
-                                    }`}
-                                >
-                                    Inactivo
-                                </button>
+                                {([[true, 'Activo'], [false, 'Inactivo']] as const).map(([valor, texto]) => (
+                                    <button key={texto} type="button" aria-pressed={formModulo.estado === valor} onClick={() => setFormModulo({ ...formModulo, estado: valor })}
+                                        className={`flex-1 rounded-lg border px-3 py-2 text-sm font-medium ${formModulo.estado === valor ? 'border-primary bg-primary/10 text-primary' : 'border-border text-muted-foreground'}`}>{texto}</button>
+                                ))}
                             </div>
                         </div>
                     </div>
-
-                    {errorForm && (
-                        <div className="rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm font-medium text-destructive">
-                            {errorForm}
-                        </div>
-                    )}
-
-                    <div className="flex justify-end gap-3 border-t pt-4">
-                        <Button variant="outline" onClick={() => setModuloModalOpen(false)} disabled={saving}>
-                            Cancelar
-                        </Button>
-                        <Button
-                            onClick={guardarModulo}
-                            disabled={saving || !formModulo.codigo.trim() || !formModulo.nombre.trim()}
-                            className="gap-2"
-                        >
+                    {errorForm && <p role="alert" className="rounded-md bg-destructive/10 px-3 py-2 text-sm text-destructive">{errorForm}</p>}
+                    <div className="flex justify-end gap-2 border-t pt-4">
+                        <Button variant="outline" onClick={() => setModuloModalOpen(false)} disabled={saving}>Cancelar</Button>
+                        <Button onClick={guardarModulo} disabled={saving || !formModulo.nombre.trim()} className="gap-2">
                             {saving && <Loader2 className="h-4 w-4 animate-spin" />}
-                            {editandoModulo ? 'Actualizar' : 'Crear Módulo'}
+                            Guardar
                         </Button>
                     </div>
                 </div>
