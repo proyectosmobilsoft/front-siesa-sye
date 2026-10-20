@@ -50,3 +50,39 @@ export function BotonExcel({ nombre, alcance, className, disabled }: {
     </span>
   )
 }
+
+/**
+ * Botón "Exportar Excel" para exportaciones con datos propios (no lee la tabla de la pantalla): ejecuta
+ * `exportar`, muestra el giro mientras trabaja y un aviso si falla.
+ */
+export function BotonExcelDatos({ exportar, etiqueta = 'Exportar Excel', titulo, className, disabled }: {
+  exportar: () => Promise<void>
+  etiqueta?: string
+  titulo?: string
+  className?: string
+  disabled?: boolean
+}) {
+  const [trabajando, setTrabajando] = useState(false)
+  const [aviso, setAviso] = useState<string | null>(null)
+  const ejecutar = async () => {
+    setTrabajando(true)
+    setAviso(null)
+    try {
+      await exportar()
+    } catch (e) {
+      console.error('Error exportando a Excel:', e)
+      setAviso('No se pudo exportar')
+      setTimeout(() => setAviso(null), 3500)
+    } finally {
+      setTrabajando(false)
+    }
+  }
+  return (
+    <span className="inline-flex items-center gap-2">
+      <Button type="button" variant="outline" size="sm" title={titulo} className={cn('h-9 gap-1.5 text-xs', className)} onClick={() => void ejecutar()} disabled={trabajando || disabled}>
+        {trabajando ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <FileSpreadsheet className="h-3.5 w-3.5" />} {etiqueta}
+      </Button>
+      {aviso && <span role="status" className="text-xs text-destructive">{aviso}</span>}
+    </span>
+  )
+}

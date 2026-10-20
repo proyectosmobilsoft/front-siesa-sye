@@ -18,7 +18,8 @@ import { badgeClass } from '@/utils/badges'
 import { Modal } from '@/components/ui/modal'
 import { usePermiso } from '@/hooks/usePermiso'
 import { Cargando } from '@/components/ui/cargando'
-import { BotonExcel } from '@/components/ui/boton-excel'
+import { BotonExcelDatos } from '@/components/ui/boton-excel'
+import { exportarUsuariosCompleto } from '@/utils/exportarSeguridad'
 
 export const SecuritySettingsPage = () => {
     const navigate = useNavigate()
@@ -274,7 +275,7 @@ export const SecuritySettingsPage = () => {
                             autoComplete="off"
                         />
                     </div>
-                    <BotonExcel nombre="usuarios" />
+                    <BotonExcelDatos exportar={exportarUsuariosCompleto} etiqueta="Exportar Excel" titulo="Todos los usuarios (activos e inactivos) y una hoja de conductores" />
                     <Button variant="outline" size="icon" onClick={() => fetchUsuarios(globalFilter)} disabled={loading} title="Actualizar">
                         <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
                     </Button>

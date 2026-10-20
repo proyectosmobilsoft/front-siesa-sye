@@ -17,7 +17,9 @@ import { PermisosPorModulo } from '@/components/maestros/PermisosPorModulo'
 import { badgeClass } from '@/utils/badges'
 import { usePermiso } from '@/hooks/usePermiso'
 import { Cargando } from '@/components/ui/cargando'
-import { BotonExcel } from '@/components/ui/boton-excel'
+import { BotonExcelDatos } from '@/components/ui/boton-excel'
+import { exportarRolesYPermisos } from '@/utils/exportarSeguridad'
+import { useMenuArmado } from '@/hooks/useMenuArmado'
 
 export const MaestroRolesPage = () => {
     const navigate = useNavigate()
@@ -45,6 +47,7 @@ export const MaestroRolesPage = () => {
     const [modulos, setModulos] = useState<ModuloPermisos[]>([])
     const [permisosSeleccionados, setPermisosSeleccionados] = useState<number[]>([])
     const [loadingPermisos, setLoadingPermisos] = useState(false)
+    const { entradas: menuArmado } = useMenuArmado({ incluirVacios: true })
 
     // Estado modal eliminar
     const [isDeleteOpen, setIsDeleteOpen] = useState(false)
@@ -325,7 +328,7 @@ export const MaestroRolesPage = () => {
                     </span>
                 </div>
                 <div className="flex items-center gap-2">
-                    <BotonExcel nombre="roles" />
+                    <BotonExcelDatos exportar={() => exportarRolesYPermisos(roles, modulos, menuArmado)} etiqueta="Exportar Excel" titulo="Roles con sus permisos por menú y una matriz para comparar perfiles" disabled={loading || loadingPermisos} />
                     {puedeCrear && (
                         <Button onClick={handleNewRole} className="whitespace-nowrap">
                             <Plus className="mr-2 h-4 w-4" />
