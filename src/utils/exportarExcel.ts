@@ -18,6 +18,11 @@ export interface HojaExcel {
   filas: Record<string, CeldaExcel>[]
   /** Fila final en negrita (totales). Las claves que no se pasen quedan vacías */
   totales?: Record<string, CeldaExcel>
+  /**
+   * Vista agrupada: por cada fila, `grupo` (negrita y fondo, el título de un conductor) o `detalle`
+   * (sangrada, colgando del grupo anterior; Excel permite plegarla con el botón de esquema).
+   */
+  estilos?: ('grupo' | 'detalle' | undefined)[]
 }
 
 export async function descargarExcel(archivo: string, hojas: HojaExcel[]): Promise<void> {
@@ -27,7 +32,19 @@ export async function descargarExcel(archivo: string, hojas: HojaExcel[]): Promi
     // Excel limita el nombre de la hoja a 31 caracteres y prohíbe algunos símbolos
     const hoja = libro.addWorksheet(h.nombre.replace(/[\\/?*[\]:]/g, ' ').slice(0, 31))
     hoja.columns = h.columnas.map((c) => ({ header: c.titulo, key: c.clave, width: c.ancho ?? (c.dinero ? 16 : 20) }))
-    for (const fila of h.filas) hoja.addRow(fila)
+    h.filas.forEach((datos, i) => {
+      const fila = hoja.addRow(datos)
+      const estilo = h.estilos?.[i]
+      if (estilo === 'grupo') {
+        fila.font = { bold: true }
+        fila.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE8EEF7' } }
+      } else if (estilo === 'detalle') {
+        fila.getCell(1).alignment = { indent: 2 }
+        fila.outlineLevel = 1
+      }
+    })
+    // El grupo va arriba de su detalle, así que el botón de plegar queda en la fila del grupo
+    if (h.estilos) hoja.properties.outlineProperties = { summaryBelow: false, summaryRight: true }
     if (h.totales) hoja.addRow(h.totales).font = { bold: true }
     hoja.getRow(1).font = { bold: true }
     hoja.views = [{ state: 'frozen', ySplit: 1 }]

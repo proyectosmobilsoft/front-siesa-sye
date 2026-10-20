@@ -22,7 +22,7 @@ import { enriquecerTraslados } from '@/components/reciboCaja/cuadreCajaCalculos'
 import { MontoAlineado } from '@/components/ui/monto-alineado'
 import { descargarAnexoCuadrePdf } from '@/utils/cuadreCajaPdf'
 import { Cargando } from '@/components/ui/cargando'
-import { descargarExcel, type HojaExcel } from '@/utils/exportarExcel'
+import { descargarExcel, type CeldaExcel, type HojaExcel } from '@/utils/exportarExcel'
 
 interface ReciboCaja {
   Rowid: number
@@ -616,28 +616,53 @@ function TableroConductoresRC({
         { titulo: 'T. Débito', clave: 'debito', dinero: true }, { titulo: 'T. Crédito', clave: 'credito', dinero: true },
         { titulo: 'Desc. financiero', clave: 'descuento', dinero: true },
       ]
+      const columnasRecibo = [
+        { titulo: 'Documento', clave: 'documento', ancho: 14 }, { titulo: 'Facturas', clave: 'facturas', ancho: 28 }, { titulo: 'C.O.', clave: 'co', ancho: 8 },
+        { titulo: 'Fecha', clave: 'fecha', ancho: 12 }, { titulo: 'Tercero', clave: 'tercero', ancho: 34 }, { titulo: 'NIT', clave: 'nit', ancho: 14 },
+        ...medios, { titulo: 'Total', clave: 'total', dinero: true }, { titulo: 'Estado', clave: 'estado', ancho: 12 },
+      ]
+      // Una fila por recibo, con el conductor al lado (se puede filtrar o armar tabla dinámica)
+      const recibosDe = (c: (typeof conductores)[number], i: number) => detalles[i].map((r) => {
+        const facturas = r.Facturas ?? []
+        return {
+          documento: `${(r.Tipo_Docto || 'RC').trim()} ${r.Numero}`,
+          facturas: facturas.map((f) => `${(f.Tipo || '').trim().toUpperCase()} ${f.Numero}`).join(', '),
+          co: r['C.O.'], fecha: formatters.dateOnly(r.Fecha), tercero: r.Tercero_Nombre ?? '', nit: r.Tercero_Nit ?? '',
+          efectivo: r.efectivo ?? 0, transferencia: r.consignacion ?? 0, debito: r.tarjeta_debito ?? 0, credito: r.tarjeta_credito ?? 0,
+          descuento: facturas.reduce((t, f) => t + (f.Descuento_Pp || 0), 0),
+          total: (r.efectivo ?? 0) + (r.consignacion ?? 0) + (r.tarjeta_credito ?? 0) + (r.tarjeta_debito ?? 0),
+          estado: r.Estado === 1 ? 'Aprobado' : r.Estado === 2 ? 'Anulado' : 'En proceso',
+          conductor: c.conductor_nombre,
+        }
+      })
+      const resumenFilas = conductores.map((c) => ({ conductor: c.conductor_nombre, co: c.centro_operacion_codigo ?? '', efectivo: c.total_efectivo, transferencia: c.total_consignacion, debito: c.total_tarjeta_debito ?? 0, credito: c.total_tarjeta_credito ?? 0, descuento: c.total_descuento_pp ?? 0, total: c.total, totalAPagar: c.total_facturas ?? 0, recibos: c.recibos_count }))
+
+      // Hoja 1: cada conductor con sus recibos debajo (plegable). Los totales del conductor son los oficiales del resumen; los anulados se listan pero no suman
+      const agrupadas: Record<string, CeldaExcel>[] = []
+      const estilos: ('grupo' | 'detalle')[] = []
+      conductores.forEach((c, i) => {
+        agrupadas.push({ documento: c.conductor_nombre, co: c.centro_operacion_codigo ?? '', efectivo: c.total_efectivo, transferencia: c.total_consignacion, debito: c.total_tarjeta_debito ?? 0, credito: c.total_tarjeta_credito ?? 0, descuento: c.total_descuento_pp ?? 0, total: c.total, estado: `${c.recibos_count} RC` })
+        estilos.push('grupo')
+        for (const r of recibosDe(c, i)) { agrupadas.push(r); estilos.push('detalle') }
+      })
       const hojas: HojaExcel[] = [
         {
-          nombre: 'Conductores',
-          columnas: [{ titulo: 'Conductor', clave: 'conductor', ancho: 30 }, { titulo: 'C.O.', clave: 'co', ancho: 8 }, ...medios, { titulo: 'Total pagado', clave: 'total', dinero: true }, { titulo: 'Total a pagar', clave: 'totalAPagar', dinero: true }, { titulo: 'Recibos', clave: 'recibos', ancho: 10 }],
-          filas: conductores.map((c) => ({ conductor: c.conductor_nombre, co: c.centro_operacion_codigo ?? '', efectivo: c.total_efectivo, transferencia: c.total_consignacion, debito: c.total_tarjeta_debito ?? 0, credito: c.total_tarjeta_credito ?? 0, descuento: c.total_descuento_pp ?? 0, total: c.total, totalAPagar: c.total_facturas ?? 0, recibos: c.recibos_count })),
-          totales: { conductor: 'TOTAL', co: '', efectivo: totales.efectivo, transferencia: totales.consignacion, debito: totales.tarjetaDebito, credito: totales.tarjetaCredito, descuento: totales.descuento, total: totales.total, totalAPagar: totales.facturas, recibos: totales.recibos },
+          nombre: 'Por conductor',
+          columnas: [{ ...columnasRecibo[0], titulo: 'Conductor / Documento', ancho: 30 }, ...columnasRecibo.slice(1)],
+          filas: agrupadas,
+          estilos,
+          totales: { documento: 'TOTAL', efectivo: totales.efectivo, transferencia: totales.consignacion, debito: totales.tarjetaDebito, credito: totales.tarjetaCredito, descuento: totales.descuento, total: totales.total, estado: `${totales.recibos} RC` },
         },
         {
-          nombre: 'Recibos',
-          columnas: [{ titulo: 'Conductor', clave: 'conductor', ancho: 28 }, { titulo: 'Documento', clave: 'documento', ancho: 14 }, { titulo: 'Facturas', clave: 'facturas', ancho: 28 }, { titulo: 'C.O.', clave: 'co', ancho: 8 }, { titulo: 'Fecha', clave: 'fecha', ancho: 12 }, { titulo: 'Tercero', clave: 'tercero', ancho: 34 }, { titulo: 'NIT', clave: 'nit', ancho: 14 }, ...medios, { titulo: 'Total', clave: 'total', dinero: true }, { titulo: 'Estado', clave: 'estado', ancho: 12 }],
-          filas: conductores.flatMap((c, i) => detalles[i].map((r) => {
-            const facturas = r.Facturas ?? []
-            const pagado = (r.efectivo ?? 0) + (r.consignacion ?? 0) + (r.tarjeta_credito ?? 0) + (r.tarjeta_debito ?? 0)
-            return {
-              conductor: c.conductor_nombre, documento: `${(r.Tipo_Docto || 'RC').trim()} ${r.Numero}`,
-              facturas: facturas.map((f) => `${(f.Tipo || '').trim().toUpperCase()} ${f.Numero}`).join(', '),
-              co: r['C.O.'], fecha: formatters.dateOnly(r.Fecha), tercero: r.Tercero_Nombre ?? '', nit: r.Tercero_Nit ?? '',
-              efectivo: r.efectivo ?? 0, transferencia: r.consignacion ?? 0, debito: r.tarjeta_debito ?? 0, credito: r.tarjeta_credito ?? 0,
-              descuento: facturas.reduce((t, f) => t + (f.Descuento_Pp || 0), 0), total: pagado,
-              estado: r.Estado === 1 ? 'Aprobado' : r.Estado === 2 ? 'Anulado' : 'En proceso',
-            }
-          })),
+          nombre: 'Detalle',
+          columnas: [{ titulo: 'Conductor', clave: 'conductor', ancho: 28 }, ...columnasRecibo],
+          filas: conductores.flatMap((c, i) => recibosDe(c, i)),
+        },
+        {
+          nombre: 'Resumen',
+          columnas: [{ titulo: 'Conductor', clave: 'conductor', ancho: 30 }, { titulo: 'C.O.', clave: 'co', ancho: 8 }, ...medios, { titulo: 'Total pagado', clave: 'total', dinero: true }, { titulo: 'Total a pagar', clave: 'totalAPagar', dinero: true }, { titulo: 'Recibos', clave: 'recibos', ancho: 10 }],
+          filas: resumenFilas,
+          totales: { conductor: 'TOTAL', co: '', efectivo: totales.efectivo, transferencia: totales.consignacion, debito: totales.tarjetaDebito, credito: totales.tarjetaCredito, descuento: totales.descuento, total: totales.total, totalAPagar: totales.facturas, recibos: totales.recibos },
         },
       ]
       await descargarExcel(`recibos_conductores_${resumen?.fecha_inicial ?? fecha}`, hojas)
