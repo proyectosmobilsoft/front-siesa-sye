@@ -13,7 +13,7 @@ export function FacturasTabla({ facturas, descuentos, descuentosSugeridos, descu
   onDescuento: (rowid: number, valor: number) => void; onRestaurar: (rowid: number) => void
   onAll: () => void; onClear: () => void; onMore: () => void
 }) {
-  return <div className="flex min-h-0 flex-1 flex-col gap-2">
+  return <div className="flex min-h-0 flex-1 flex-col gap-2 lg:min-h-[22rem]">
     <div className="flex shrink-0 flex-wrap items-center gap-1">
       <h2 className="mr-auto text-xs font-semibold uppercase tracking-wider text-muted-foreground">Facturas</h2>
       <Button size="sm" className="h-7 px-2 text-xs" variant="outline" disabled={!facturas.length} onClick={onAll}>Seleccionar todas (pago completo)</Button>

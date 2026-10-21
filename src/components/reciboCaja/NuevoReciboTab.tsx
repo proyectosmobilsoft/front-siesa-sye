@@ -304,7 +304,7 @@ export function NuevoReciboTab({ onCreated }: { onCreated: () => void }) {
           </div>
           {encabezadoManual && coFacturas.length === 1 && coFacturas[0] && coFacturas[0] !== co && <p role="status" className="mt-1 text-xs text-amber-700 dark:text-amber-400">Las facturas son del C.O. {coFacturas[0]} y el recibo quedará en {co}</p>}
         </Card>
-        <Card className={`${section} rounded-xl ${!cliente ? 'opacity-60' : ''} lg:flex lg:min-h-56 lg:flex-1 lg:flex-col`}>
+        <Card className={`${section} rounded-xl ${!cliente ? 'opacity-60' : ''} lg:flex lg:min-h-[26rem] lg:flex-1 lg:flex-col`}>
           {!cliente ? <><h2 className={`${title} mb-2`}>Facturas</h2><p className="text-sm text-muted-foreground">Elige un cliente para cargar sus facturas.</p></> :
             <FacturasTabla facturas={facturas} descuentos={descuentosEfectivos} descuentosSugeridos={descuentos} descuentosManuales={descuentosManuales} aplicar={aplicar} cargando={cargandoFacturas} mas={masFacturas}
               onChange={actualizarFactura}
