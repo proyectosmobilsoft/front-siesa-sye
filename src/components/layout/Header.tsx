@@ -7,6 +7,8 @@ import { useUIStore } from '@/store/uiStore'
 import { getPageMeta } from '@/config/navigation'
 import { Select } from '@/components/ui/select'
 import { useAuthStore, CO_AMBOS } from '@/store/authStore'
+import { useAlarmaTransferencias } from '@/components/transferencias/alarmaContext'
+import { PERMISOS } from '@/config/permisos'
 
 // Decodifica el payload del JWT sin librerías externas
 const decodeJwtPayload = (token: string): Record<string, string> | null => {
@@ -41,6 +43,8 @@ export const Header = () => {
     const { sidebarOpen, setSidebarOpen } = useUIStore()
     const location = useLocation()
     const { sesion, centroOperacionActivo, setCentroOperacionActivo } = useAuthStore()
+    const puedeAprobar = useAuthStore(s => s.permisos.includes(PERMISOS.APROBAR_TRANSFERENCIA))
+    const alarma = useAlarmaTransferencias()
 
     const { nombre, inicial } = getUsuarioFromToken()
     const pagina = getPageMeta(location.pathname)
@@ -92,6 +96,12 @@ export const Header = () => {
 
                 {/* Right — tema + usuario + logout */}
                 <div className="flex items-center gap-3 flex-shrink-0">
+                    {puedeAprobar && alarma && <div className="flex items-center gap-1.5 text-xs">
+                        {!alarma.activa ? <Button size="sm" variant="outline" onClick={alarma.activar}>Activar alarma</Button> : <>
+                            <span role="status" className="hidden whitespace-nowrap text-muted-foreground sm:inline">{alarma.silenciada ? 'Alarma silenciada' : alarma.permisoNotificaciones !== 'granted' ? 'Alarma activa · sin permiso de avisos' : 'Alarma activa'}</span>
+                            {alarma.silenciada ? <Button size="sm" variant="outline" onClick={alarma.activar}>Reactivar</Button> : <Button size="sm" variant="outline" onClick={alarma.silenciar}>Silenciar 5 min</Button>}
+                        </>}
+                    </div>}
                     {(sesion?.centros_operacion?.length ?? 0) > 1 ? (
                         <Select
                             aria-label="Centro de operación activo"

@@ -47,8 +47,11 @@ export interface CrearConfirmacion {
 }
 export interface ResumenTransferencias extends Partial<Record<EstadoTransferencia, number>> {
   rc_pendientes: number
+  solicitudes_pendientes: number
   promedio_espera_seg: number | null
 }
+export interface PendienteAlarma { id: number; conductor_nombre: string | null; cliente: string; valor: number; created_at: string }
+export interface PendientesAlarma { total: number; items: PendienteAlarma[] }
 export interface ListarConfirmacionesParams { estado: EstadoTransferencia | 'TODAS'; tipo?: 'rc_pendiente'; desde?: string; hasta?: string; search?: string; page: number; pageSize: number }
 export interface MiRcPendiente {
   id: number
@@ -73,6 +76,7 @@ export const transferenciasConfirmacionApi = {
   listar: async (params: ListarConfirmacionesParams) =>
     (await apiClient.get<{ success: boolean; data: ConfirmacionTransferencia[]; pagination: { page: number; pageSize: number; total: number; totalPages: number } }>(base, { params })).data,
   resumen: async () => (await apiClient.get<{ data: ResumenTransferencias }>(`${base}/resumen`)).data.data,
+  pendientesAlarma: async () => (await apiClient.get<{ success: boolean; data: PendientesAlarma }>(`${base}/pendientes-alarma`)).data.data,
   disponibles: async (rowid_tercero: number) => (await apiClient.get<{ data: ConfirmacionTransferencia[] }>(`${base}/disponibles`, { params: { rowid_tercero } })).data.data,
   misPendientes: async (estado?: EstadoTransferencia) => (await apiClient.get<{ data: MiRcPendiente[] }>(`${base}/mis-pendientes`, { params: estado ? { estado } : undefined })).data.data,
   detalle: async (id: number) => (await apiClient.get<{ data: DetalleConfirmacion }>(`${base}/${id}`)).data.data,
@@ -99,7 +103,7 @@ export const transferenciasConfirmacionApi = {
     const form = new FormData(); files.forEach(file => form.append('soportes', file))
     return (await apiClient.post(`${base}/${id}/soportes`, form, multipart)).data
   },
-  aprobar: async (id: number, valor: number) => (await apiClient.patch<{ data?: ConfirmacionTransferencia }>(`${base}/${id}/aprobar`, { valor })).data,
+  aprobar: async (id: number, valor?: number) => (await apiClient.patch<{ data?: ConfirmacionTransferencia }>(`${base}/${id}/aprobar`, valor == null ? undefined : { valor })).data,
   reintentarRc: async (id: number) => (await apiClient.patch<{ data?: ConfirmacionTransferencia }>(`${base}/${id}/reintentar-rc`)).data,
   rechazar: async (id: number, motivo: string) => (await apiClient.patch(`${base}/${id}/rechazar`, { motivo })).data,
   anular: async (id: number) => (await apiClient.patch(`${base}/${id}/anular`)).data,

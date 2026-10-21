@@ -31,12 +31,12 @@ export function DetalleConfirmacionModal({ id, onClose, onSaved }: { id: number;
   const puedeAnular = row && (row.created_by_usuario === sesion?.usuario || puedeAprobar)
   const ejecutar = async () => {
     if (!row || !accion) return
-    if (accion === 'aprobar' && !(Number(valor) > 0)) { setError('Ingresa un valor mayor que cero.'); return }
+    if (accion === 'aprobar' && row.tiene_payload && !(Number(valor) > 0)) { setError('Ingresa un valor mayor que cero.'); return }
     if (accion === 'rechazar' && motivo.trim().length < 5) { setError('El motivo debe tener al menos 5 caracteres.'); return }
     setSaving(true); setError('')
     try {
       if (accion === 'aprobar' || accion === 'reintentar') {
-        const response = accion === 'aprobar' ? await transferenciasConfirmacionApi.aprobar(id, Number(valor)) : await transferenciasConfirmacionApi.reintentarRc(id)
+        const response = accion === 'aprobar' ? await transferenciasConfirmacionApi.aprobar(id, row.tiene_payload ? Number(valor) : undefined) : await transferenciasConfirmacionApi.reintentarRc(id)
         if (row.tiene_payload) {
           const actualizado = await detalle.refetch()
           const numero = actualizado.data?.rc_numero || response.data?.rc_numero
@@ -71,7 +71,7 @@ export function DetalleConfirmacionModal({ id, onClose, onSaved }: { id: number;
         <p><span className="block text-xs text-muted-foreground">Cuenta destino</span>{row.id_cta_bancaria}</p>
         <p><span className="block text-xs text-muted-foreground">Referencia</span>{row.referencia || '—'}</p>
         <p><span className="block text-xs text-muted-foreground">C.O.</span>{row.id_co || '—'}</p>
-        {row.tiene_payload && <p><span className="block text-xs text-muted-foreground">Conductor</span>{row.conductor_nombre || '—'}</p>}
+        {row.conductor_id != null && <p><span className="block text-xs text-muted-foreground">Conductor</span>{row.conductor_nombre || '—'}</p>}
         {row.observacion && <p className="sm:col-span-2"><span className="block text-xs text-muted-foreground">Observación</span>{row.observacion}</p>}
       </div>
       {row.tiene_payload && <div className="rounded-lg border border-border p-3"><h3 className="font-semibold">Datos del recibo</h3><p>Cliente: {typeof resumenPayload(row)?.cliente === 'string' ? resumenPayload(row)?.cliente as string : row.razon_social}</p><p>Valor: {formatters.currency(Number(resumenPayload(row)?.valor ?? row.valor))}</p><p>Facturas: {resumenPayload(row)?.facturas?.map(facturaTexto).join(', ') || '—'}</p><p>Medios: {resumenPayload(row)?.medios?.map(medioTexto).join(', ') || '—'}</p></div>}
@@ -92,12 +92,12 @@ export function DetalleConfirmacionModal({ id, onClose, onSaved }: { id: number;
           onQuitar={i => setFiles(prev => prev.filter((_, index) => index !== i))} />
         {files.length > 0 && <Button size="sm" variant="outline" disabled={saving} onClick={() => void subir()}>Subir {files.length} soporte(s)</Button>}
       </div>}
-      {row.estado === 'PENDIENTE' && puedeAprobar && <div className="flex gap-2"><Button onClick={() => { setAccion('aprobar'); setValor(String(row.valor)); setError('') }}>{row.tiene_payload ? 'Aprobar y crear RC' : 'Aprobar'}</Button><Button variant="destructive" onClick={() => { setAccion('rechazar'); setError('') }}>Rechazar</Button></div>}
+      {row.estado === 'PENDIENTE' && puedeAprobar && <div className="flex gap-2"><Button onClick={() => { setAccion('aprobar'); setValor(String(row.valor)); setError('') }}>{row.tiene_payload ? 'Aprobar y crear RC' : 'Aceptar'}</Button><Button variant="destructive" onClick={() => { setAccion('rechazar'); setError('') }}>Rechazar</Button></div>}
       {row.estado === 'APROBADA' && row.tiene_payload && row.rc_error && puedeAprobar && <Button onClick={() => { setAccion('reintentar'); setError('') }}>Reintentar RC</Button>}
       {(row.estado === 'PENDIENTE' || row.estado === 'APROBADA') && puedeAnular && <Button variant="outline" onClick={() => { setAccion('anular'); setError('') }}>Anular</Button>}
       {accion && <div className="space-y-3 rounded-lg border border-border p-3"><h3 className="font-semibold">{accion === 'aprobar' ? 'Confirmar aprobación' : accion === 'rechazar' ? 'Confirmar rechazo' : accion === 'reintentar' ? 'Confirmar reintento de RC' : 'Confirmar anulación'}</h3>
         {(accion === 'aprobar' || accion === 'reintentar') && row.tiene_payload && <p>Se creará el RC a nombre de {row.conductor_nombre || 'el conductor'} con fecha y hora de ahora.</p>}
-        {accion === 'aprobar' && <label className="block space-y-1">{row.tiene_payload ? 'Valor informativo aprobado' : 'Valor aprobado'}<Input type="number" min="0.01" step="0.01" className="text-right tabular-nums" value={valor} onChange={e => setValor(e.target.value)} /></label>}
+        {accion === 'aprobar' && (row.tiene_payload ? <label className="block space-y-1">Valor informativo aprobado<Input type="number" min="0.01" step="0.01" className="text-right tabular-nums" value={valor} onChange={e => setValor(e.target.value)} /></label> : <p>¿Aceptar la transferencia por {formatters.currency(Number(row.valor) || 0)}? El conductor podrá finalizar el recaudo cuando todas sus transferencias estén aprobadas.</p>)}
         {accion === 'rechazar' && <label className="block space-y-1">Motivo (mínimo 5 caracteres)<textarea value={motivo} onChange={e => setMotivo(e.target.value)} rows={3} className="w-full rounded-md border border-input bg-background p-2" /></label>}
         <div className="flex gap-2"><Button onClick={() => void ejecutar()} disabled={saving}>Confirmar</Button><Button variant="outline" onClick={() => setAccion(null)} disabled={saving}>Cancelar</Button></div>
       </div>}

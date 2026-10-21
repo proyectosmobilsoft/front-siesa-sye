@@ -13,6 +13,7 @@ import { useAuth } from '@/hooks/useAuth'
 import { useInactivityTimeout } from '@/hooks/useInactivityTimeout'
 import { InactivityModal } from '@/components/ui/InactivityModal'
 import { Cargando } from '@/components/ui/cargando'
+import { AlarmaTransferenciasProvider } from '@/components/transferencias/AlarmaTransferencias'
 
 // Code-splitting por ruta: antes las ~20 páginas (con dependencias pesadas
 // como exceljs, recharts, framer-motion) se importaban todas de forma
@@ -67,7 +68,7 @@ const queryClient = new QueryClient({
 
 function AppLayout() {
     return (
-        <div className="min-h-screen bg-background">
+        <AlarmaTransferenciasProvider><div className="min-h-screen bg-background">
             <div className="flex h-screen">
                 <Sidebar />
                 <div className="flex-1 flex flex-col overflow-hidden">
@@ -173,7 +174,7 @@ function AppLayout() {
                     </main>
                 </div>
             </div>
-        </div>
+        </div></AlarmaTransferenciasProvider>
     )
 }
 

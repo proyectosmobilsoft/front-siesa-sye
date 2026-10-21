@@ -8,6 +8,9 @@ import { useMediaQuery } from '@/hooks/useMediaQuery'
 import { cn } from '@/lib/utils'
 import { NavItem, registrarPaginasExtra } from '@/config/navigation'
 import { useMenuArmado } from '@/hooks/useMenuArmado'
+import { useAlarmaTransferencias } from '@/components/transferencias/alarmaContext'
+
+const rutaTransferencias = '/tesoreria/confirmacion-transferencias'
 
 export const Sidebar = () => {
     const { sidebarOpen, setSidebarOpen } = useUIStore()
@@ -15,6 +18,7 @@ export const Sidebar = () => {
     const navigate = useNavigate()
     const location = useLocation()
     const isMobile = useMediaQuery('(max-width: 1023px)')
+    const alarma = useAlarmaTransferencias()
     // Acordeón: un solo grupo abierto a la vez. Ahora que TODAS las rutas
     // cuelgan de un grupo, permitir varios abiertos hacía crecer el menú hasta
     // necesitar scroll a medida que el usuario navegaba entre secciones.
@@ -140,6 +144,7 @@ export const Sidebar = () => {
                                 >
                                     <item.icon />
                                     <span className="sidebar-etiqueta flex-1 text-left">{item.name}</span>
+                                    {item.href === rutaTransferencias && !!alarma?.total && <span className={cn('rounded-full bg-destructive px-1.5 text-xs font-bold text-destructive-foreground', !expandido && 'absolute right-1 top-0')}>{alarma.total}</span>}
                                     <span className="sidebar-tooltip">{item.name}</span>
                                 </Link>
                             )
@@ -156,6 +161,7 @@ export const Sidebar = () => {
                                 >
                                     <item.icon />
                                     <span className="sidebar-etiqueta flex-1 text-left">{item.name}</span>
+                                    {item.subItems!.some(sub => sub.href === rutaTransferencias) && !!alarma?.total && <span className={cn('rounded-full bg-destructive px-1.5 text-xs font-bold text-destructive-foreground', !expandido && 'absolute right-1 top-0')}>{alarma.total}</span>}
                                     <ChevronRight
                                         className={cn('sidebar-etiqueta !h-3.5 !w-3.5 shrink-0 opacity-60 transition-transform', abierto && 'rotate-90')}
                                     />
@@ -171,6 +177,7 @@ export const Sidebar = () => {
                                                     className={cn('sidebar-subitem', subItem.href === location.pathname && 'activo')}
                                                 >
                                                     <span className="truncate">{subItem.name}</span>
+                                                    {subItem.href === rutaTransferencias && !!alarma?.total && <span className="ml-auto rounded-full bg-destructive px-1.5 text-xs font-bold text-destructive-foreground">{alarma.total}</span>}
                                                 </Link>
                                             </li>
                                         ))}
