@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
 import { transferenciasConfirmacionApi } from '@/api/transferenciasConfirmacion'
+import { conectarEventos } from '@/api/eventos'
 import { PERMISOS } from '@/config/permisos'
 import { useAuthStore } from '@/store/authStore'
 import { formatters } from '@/utils/formatters'
@@ -72,7 +73,7 @@ export function AlarmaTransferenciasProvider({ children }: { children: ReactNode
     queryKey: ['transferencias-confirmacion', 'alarma', centro, usuarioId],
     queryFn: transferenciasConfirmacionApi.pendientesAlarma,
     enabled: autorizado,
-    refetchInterval: 8_000,
+    refetchInterval: 30_000,
     refetchIntervalInBackground: true,
     retry: false,
   })
@@ -116,6 +117,16 @@ export function AlarmaTransferenciasProvider({ children }: { children: ReactNode
 
   useEffect(() => { setActiva(localStorage.getItem(clave) !== 'false'); callar() }, [clave, centro]) // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => { const timer = window.setInterval(() => setAhora(Date.now()), 1_000); return () => window.clearInterval(timer) }, [])
+
+  useEffect(() => {
+    if (!autorizado || usuarioId == null) return
+    return conectarEventos((evento) => {
+      if (evento === 'transferencia.pendiente' || evento === 'transferencia.actualizada') {
+        void queryClient.invalidateQueries({ queryKey: ['transferencias-confirmacion', 'alarma'] })
+        void queryClient.invalidateQueries({ queryKey: ['transferencias-confirmacion', 'resumen'] })
+      }
+    })
+  }, [autorizado, usuarioId, queryClient])
 
   const elemento = () => {
     if (!audio.current) {
