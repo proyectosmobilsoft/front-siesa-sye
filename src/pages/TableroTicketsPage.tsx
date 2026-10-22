@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { DragDropContext, Draggable, Droppable, type DropResult } from '@hello-pangea/dnd'
 import { ticketsApi, type PipelineTicket, type RazonRechazo, type ResumenTickets, type Ticket, type TipoTrabajo, type VistaTickets } from '@/api/tickets'
-import { CapturaProtegida } from '@/components/tickets/CapturaProtegida'
+import { InfoTicket } from '@/components/tickets/DetalleTicket'
 import { BotonExcelDatos } from '@/components/ui/boton-excel'
 import { Button } from '@/components/ui/button'
 import { descargarExcel } from '@/utils/exportarExcel'
@@ -85,13 +85,7 @@ export default function TableroTicketsPage() {
     {totalPages > 1 && <div className="flex items-center gap-2"><Button variant="outline" disabled={page <= 1} onClick={() => setPage(page - 1)}>Anterior</Button><span>{page} / {totalPages}</span><Button variant="outline" disabled={page >= totalPages} onClick={() => setPage(page + 1)}>Siguiente</Button></div>}
     {detalle && <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 p-4" onMouseDown={e => { if (e.target === e.currentTarget) setDetalle(null) }}><div role="dialog" aria-modal="true" aria-label={`Ticket ${detalle.id}`} className="max-h-[90vh] w-full max-w-2xl space-y-4 overflow-y-auto rounded-xl bg-card p-5">
       <div className="flex justify-between gap-3"><h2 className="text-xl font-bold">INC-{String(detalle.id).padStart(6, '0')} · {detalle.titulo}</h2><button aria-label="Cerrar detalle" onClick={() => setDetalle(null)}>✕</button></div>
-      <p className="text-xs text-muted-foreground">{fecha(detalle.created_at)} · {detalle.reportado_por_nombre} · {detalle.categoria} · prioridad {detalle.prioridad}</p><p className="whitespace-pre-wrap text-sm">{detalle.descripcion}</p>
-      <p className="text-sm">Estado: <strong className="capitalize">{rotulo(detalle.estado)}</strong> · etapa: <strong className="capitalize">{rotulo(detalle.pipeline_estado)}</strong></p>
-      {detalle.ruta && <p className="break-all text-xs text-muted-foreground">Ruta: {detalle.ruta}</p>}
-      {detalle.tomado_por_nombre && <p className="text-xs text-muted-foreground">Tomado por {detalle.tomado_por_nombre}{detalle.tomado_at ? ` · ${fecha(detalle.tomado_at)}` : ''}</p>}
-      {detalle.solucionado_por_nombre && <p className="text-xs text-muted-foreground">Cerrado por {detalle.solucionado_por_nombre}</p>}
-      {!!detalle.capturas?.length && <div className="flex flex-wrap gap-2">{detalle.capturas.map(c => <CapturaProtegida key={c.id} captura={c} grande />)}</div>}
-      {detalle.estado === 'rechazado' && <p>Rechazo: {rotulo(detalle.razon_rechazo ?? '')} · {detalle.motivo_rechazo}</p>}
+      <InfoTicket ticket={detalle} />
       {detalle.estado === 'pendiente' && <div className="space-y-3"><div className="flex gap-2"><Button disabled={ocupado} onClick={() => void ejecutar(() => ticketsApi.aprobar(detalle.id))}>Aprobar</Button><Button variant="destructive" disabled={ocupado} onClick={() => setRechazando(true)}>Rechazar</Button></div>{rechazando && <div className="space-y-2 rounded border p-3"><label className="block text-sm">Razón <select value={razon} onChange={e => setRazon(e.target.value as RazonRechazo)} className="ml-2 rounded border bg-background p-2">{razones.map(r => <option key={r} value={r}>{rotulo(r)}</option>)}</select></label><textarea value={motivo} onChange={e => setMotivo(e.target.value)} placeholder="Motivo adicional" className="w-full rounded border bg-background p-2" /><Button disabled={ocupado} onClick={() => void ejecutar(() => ticketsApi.rechazar(detalle.id, razon, motivo.trim()))}>Confirmar rechazo</Button></div>}</div>}
       {detalle.estado === 'aprobado' && <div className="flex flex-wrap items-center gap-2">{detalle.pipeline_estado === 'sin_tomar' ? <><select value={tipo} onChange={e => setTipo(e.target.value as TipoTrabajo)} className="rounded border bg-background p-2"><option value="soporte">Soporte</option><option value="adicional">Adicional</option><option value="otro">Otro</option></select><Button disabled={ocupado} onClick={() => void ejecutar(() => ticketsApi.tomar(detalle.id, tipo))}>Tomar ticket</Button></> : siguiente[detalle.pipeline_estado] && <Button disabled={ocupado} onClick={() => void ejecutar(() => ticketsApi.mover(detalle.id, siguiente[detalle.pipeline_estado]!))}>Avanzar a {rotulo(siguiente[detalle.pipeline_estado]!)}</Button>}</div>}
     </div></div>}

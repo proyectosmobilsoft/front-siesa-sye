@@ -14,7 +14,7 @@ export interface Ticket {
   prioridad: PrioridadTicket; origen: 'manual' | 'automatico'; ruta: string | null; contexto: Record<string, unknown> | string | null
   reportado_por_id: number; reportado_por_nombre: string; tipo_trabajo: TipoTrabajo | null
   pipeline_estado: PipelineTicket; tomado_por_nombre: string | null; tomado_at: string | null
-  aprobado_at: string | null; rechazado_at: string | null; razon_rechazo: RazonRechazo | null
+  aprobado_at: string | null; aprobado_por_nombre?: string | null; rechazado_at: string | null; rechazado_por_nombre?: string | null; razon_rechazo: RazonRechazo | null
   motivo_rechazo: string | null; notas: string | null; solucionado_at: string | null
   solucionado_por_nombre: string | null; created_at: string; updated_at: string; capturas: CapturaTicket[]
 }
