@@ -5,6 +5,7 @@ import { Bug, X } from 'lucide-react'
 import { ticketsApi, type CategoriaTicket, type PrioridadTicket } from '@/api/tickets'
 import { useAuthStore } from '@/store/authStore'
 import { Button } from '@/components/ui/button'
+import { borrarBorrador, guardarBorrador, leerBorrador } from './borradorTicket'
 
 const permitido = new Set(['image/jpeg', 'image/png', 'image/webp'])
 const maxBytes = 5 * 1024 * 1024
@@ -34,6 +35,29 @@ export function ReportarProblema() {
   const navigate = useNavigate()
   const { sesion, centroOperacionActivo } = useAuthStore()
   const rutas = location.pathname + location.search
+  const usuarioClave = sesion?.id ?? sesion?.usuario ?? 'anonimo'
+  const [borradorCargado, setBorradorCargado] = useState(false)
+
+  // Al entrar (o recargar) se recupera el borrador guardado en el navegador
+  useEffect(() => {
+    let activo = true
+    setBorradorCargado(false)
+    void leerBorrador(usuarioClave).then(borrador => {
+      if (!activo) return
+      if (borrador) { setCategoria(borrador.categoria); setPrioridad(borrador.prioridad); setTitulo(borrador.titulo); setDescripcion(borrador.descripcion); setCapturas(borrador.capturas) }
+      setBorradorCargado(true)
+    })
+    return () => { activo = false }
+  }, [usuarioClave])
+
+  // Cada cambio se guarda tras una breve pausa; no se guarda hasta haber leído el borrador para no pisarlo
+  useEffect(() => {
+    if (!borradorCargado || creado) return
+    const temporizador = window.setTimeout(() => { void guardarBorrador(usuarioClave, { categoria, prioridad, titulo, descripcion, capturas }) }, 400)
+    return () => window.clearTimeout(temporizador)
+  }, [borradorCargado, creado, usuarioClave, categoria, prioridad, titulo, descripcion, capturas])
+  const hayBorrador = !!titulo || !!descripcion || capturas.length > 0
+  const descartar = () => { setTitulo(''); setDescripcion(''); setCapturas([]); setError(''); void borrarBorrador(usuarioClave) }
 
   const agregar = useCallback((files: File[]) => {
     const invalidos = files.find(file => !permitido.has(file.type) || file.size > maxBytes)
@@ -62,13 +86,13 @@ export function ReportarProblema() {
     try {
       const ticket = await ticketsApi.crear({ categoria, titulo, descripcion, prioridad, ruta: rutas, capturas,
         contexto: { navegador: navigator.userAgent, usuario: { id: sesion?.id, nombre: sesion?.nombre_completo || sesion?.usuario }, centro_operacion: centroOperacionActivo, pantalla: `${window.innerWidth}x${window.innerHeight}`, fecha_local: new Date().toString() } })
-      setCreado(ticket.id); setTitulo(''); setDescripcion(''); setCapturas([])
+      setCreado(ticket.id); setTitulo(''); setDescripcion(''); setCapturas([]); void borrarBorrador(usuarioClave)
       window.dispatchEvent(new Event('tickets:actualizar'))
     } catch { setError('No se pudo crear el ticket. Intenta de nuevo.') }
     finally { setEnviando(false) }
   }
   return <>
-    <Button variant="outline" size="sm" onClick={() => { setCreado(null); setAbierto(true) }} className="gap-1.5 whitespace-nowrap"><Bug className="h-4 w-4" /><span className="hidden sm:inline">Reportar problema</span><span className="sm:hidden">Reportar</span></Button>
+    <Button variant="outline" size="sm" onClick={() => { setCreado(null); setAbierto(true) }} className="gap-1.5 whitespace-nowrap"><Bug className="h-4 w-4" /><span className="hidden sm:inline">Reportar problema{capturas.length > 0 ? ` (${capturas.length})` : hayBorrador ? ' •' : ''}</span><span className="sm:hidden">Reportar</span></Button>
     {abierto && createPortal(<div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 p-4" role="presentation" onMouseDown={event => { if (event.target === event.currentTarget) setAbierto(false) }}>
       <div role="dialog" aria-modal="true" aria-label="Reportar problema" className="max-h-[90vh] w-full max-w-xl overflow-y-auto rounded-xl bg-card p-5 shadow-xl">
         <div className="mb-4 flex items-center justify-between"><h2 className="text-lg font-bold">Reportar problema</h2><button type="button" onClick={() => setAbierto(false)} aria-label="Cerrar"><X className="h-5 w-5" /></button></div>
@@ -78,8 +102,9 @@ export function ReportarProblema() {
           <label className="block text-sm">Descripción<textarea required rows={5} value={descripcion} onChange={e => setDescripcion(e.target.value)} className="mt-1 w-full rounded border bg-background p-2" /></label>
           <div onDragOver={e => e.preventDefault()} onDrop={soltar} className="rounded-lg border-2 border-dashed p-4 text-center text-sm"><p>Arrastra o pega capturas aquí</p><p className="text-xs text-muted-foreground">Hasta 5 archivos JPG, PNG o WebP · 5 MB por archivo</p><input ref={input} type="file" accept="image/jpeg,image/png,image/webp" multiple className="hidden" onChange={seleccionar} /><Button type="button" variant="outline" size="sm" className="mt-2" onClick={() => input.current?.click()}>Seleccionar imágenes</Button></div>
           {!!capturas.length && <div className="flex flex-wrap gap-2">{capturas.map((file, index) => <div key={`${file.name}-${index}`} className="relative"><VistaPrevia archivo={file} /><button type="button" onClick={() => setCapturas(actual => actual.filter((_, i) => i !== index))} aria-label={`Quitar ${file.name}`} className="absolute -right-1 -top-1 rounded-full bg-destructive p-0.5 text-white"><X className="h-3 w-3" /></button></div>)}</div>}
+          {hayBorrador && <p className="text-xs text-muted-foreground">Borrador guardado en este navegador: puedes cerrar, cambiar de pantalla y seguir agregando capturas.</p>}
           {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
-          <div className="flex justify-end gap-2"><Button type="button" variant="outline" onClick={() => setAbierto(false)}>Cancelar</Button><Button disabled={enviando}>{enviando ? 'Enviando...' : 'Crear ticket'}</Button></div>
+          <div className="flex justify-end gap-2">{hayBorrador && <Button type="button" variant="ghost" onClick={descartar}>Descartar borrador</Button>}<Button type="button" variant="outline" onClick={() => setAbierto(false)}>Cerrar</Button><Button disabled={enviando}>{enviando ? 'Enviando...' : 'Crear ticket'}</Button></div>
         </form>}
       </div>
     </div>, document.body)}
