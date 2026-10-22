@@ -14,20 +14,36 @@ function leerVistos(clave: string): Set<number> {
   } catch { return new Set() }
 }
 
-function timbre(contexto: AudioContext, salida: GainNode, volumen: number) {
-  if (contexto.state !== 'running') return
-  for (const [inicio, frecuencia] of [[0, 660], [0.28, 523]] as const) {
-    const oscilador = contexto.createOscillator()
-    const ganancia = contexto.createGain()
-    oscilador.type = 'sine'
-    oscilador.frequency.value = frecuencia
-    ganancia.gain.setValueAtTime(0.0001, contexto.currentTime + inicio)
-    ganancia.gain.exponentialRampToValueAtTime(volumen, contexto.currentTime + inicio + 0.04)
-    ganancia.gain.exponentialRampToValueAtTime(0.0001, contexto.currentTime + inicio + 0.23)
-    oscilador.connect(ganancia).connect(salida)
-    oscilador.start(contexto.currentTime + inicio)
-    oscilador.stop(contexto.currentTime + inicio + 0.24)
+// Melodía corta y agradable (arpegio de do mayor con campanita), generada como WAV para reproducirla con <audio>,
+// que Firefox permite tras el primer clic en la página (el audio por WebAudio se quedaba mudo)
+const MELODIA: ReadonlyArray<readonly [number, number, number]> = [
+  [0, 523.25, 0.5], [0.22, 659.25, 0.5], [0.44, 783.99, 0.5], [0.66, 1046.5, 0.9],
+  [1.5, 783.99, 0.4], [1.72, 1046.5, 1.1],
+]
+
+function construirWav(): Blob {
+  const tasa = 22_050
+  const muestras = new Float32Array(Math.ceil(tasa * 3))
+  for (const [inicio, frecuencia, duracion] of MELODIA) {
+    const desde = Math.floor(inicio * tasa)
+    const total = Math.floor(duracion * tasa)
+    for (let i = 0; i < total && desde + i < muestras.length; i++) {
+      const t = i / tasa
+      const base = 2 * Math.abs(2 * ((frecuencia * t) % 1) - 1) - 1
+      const octava = Math.sin(2 * Math.PI * frecuencia * 2 * t)
+      const envolvente = Math.min(1, t / 0.02) * Math.exp(-5 * t / duracion)
+      muestras[desde + i] += (base + 0.3 * octava) * envolvente
+    }
   }
+  const pico = muestras.reduce((max, v) => Math.max(max, Math.abs(v)), 0) || 1
+  const datos = new DataView(new ArrayBuffer(44 + muestras.length * 2))
+  const texto = (offset: number, valor: string) => { for (let i = 0; i < valor.length; i++) datos.setUint8(offset + i, valor.charCodeAt(i)) }
+  texto(0, 'RIFF'); datos.setUint32(4, 36 + muestras.length * 2, true); texto(8, 'WAVEfmt ')
+  datos.setUint32(16, 16, true); datos.setUint16(20, 1, true); datos.setUint16(22, 1, true)
+  datos.setUint32(24, tasa, true); datos.setUint32(28, tasa * 2, true); datos.setUint16(32, 2, true); datos.setUint16(34, 16, true)
+  texto(36, 'data'); datos.setUint32(40, muestras.length * 2, true)
+  muestras.forEach((v, i) => datos.setInt16(44 + i * 2, Math.round((v / pico) * 0.85 * 32767), true))
+  return new Blob([datos], { type: 'audio/wav' })
 }
 
 export function AlarmaTransferenciasProvider({ children }: { children: ReactNode }) {
@@ -38,14 +54,15 @@ export function AlarmaTransferenciasProvider({ children }: { children: ReactNode
   const usuarioId = useAuthStore(s => s.sesion?.id)
   const clave = `alarma-transferencias:${usuarioId ?? 'anonimo'}`
   const claveVistos = `${clave}:vistos:${centro ?? 'todos'}`
-  const [activa, setActiva] = useState(() => localStorage.getItem(clave) === 'true')
-  const [audioListo, setAudioListo] = useState(false)
+  const [activa, setActiva] = useState(() => localStorage.getItem(clave) !== 'false')
+  const [desbloqueado, setDesbloqueado] = useState(false)
+  const [sonidoBloqueado, setSonidoBloqueado] = useState(false)
   const [silenciadaHasta, setSilenciadaHasta] = useState(0)
   const [ahora, setAhora] = useState(Date.now)
   const [revisionVistos, setRevisionVistos] = useState(0)
   const [permisoNotificaciones, setPermisoNotificaciones] = useState<NotificationPermission | 'unsupported'>(() => 'Notification' in window ? Notification.permission : 'unsupported')
-  const audio = useRef<AudioContext | null>(null)
-  const salida = useRef<GainNode | null>(null)
+  const audio = useRef<HTMLAudioElement | null>(null)
+  const urlAudio = useRef('')
   const vistos = useRef(leerVistos(claveVistos))
   const claveVistosActual = useRef(claveVistos)
   const avisados = useRef(new Set<number>())
@@ -74,7 +91,7 @@ export function AlarmaTransferenciasProvider({ children }: { children: ReactNode
     avisos.current.clear()
   }
   const callar = () => {
-    if (audio.current && salida.current) salida.current.gain.setValueAtTime(0, audio.current.currentTime)
+    if (audio.current) { audio.current.pause(); audio.current.currentTime = 0 }
     cerrarAvisos()
   }
   const marcarVistos = (ids: number[]) => {
@@ -97,42 +114,47 @@ export function AlarmaTransferenciasProvider({ children }: { children: ReactNode
     marcarVistos([id])
   }
 
-  useEffect(() => { setActiva(localStorage.getItem(clave) === 'true'); callar() }, [clave, centro]) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { setActiva(localStorage.getItem(clave) !== 'false'); callar() }, [clave, centro]) // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => { const timer = window.setInterval(() => setAhora(Date.now()), 1_000); return () => window.clearInterval(timer) }, [])
 
-  const prepararAudio = () => {
-    try {
-      if (!audio.current) {
-        audio.current = new AudioContext()
-        salida.current = audio.current.createGain()
-        salida.current.connect(audio.current.destination)
-      }
-      void audio.current.resume().then(() => setAudioListo(true)).catch(() => setAudioListo(false))
-    } catch { setAudioListo(false) }
+  const elemento = () => {
+    if (!audio.current) {
+      urlAudio.current = URL.createObjectURL(construirWav())
+      audio.current = new Audio(urlAudio.current)
+      audio.current.preload = 'auto'
+    }
+    return audio.current
   }
 
-  const probar = () => {
-    prepararAudio()
-    const contexto = audio.current
-    const ganancia = salida.current
-    if (!contexto || !ganancia) return
-    void contexto.resume().then(() => { ganancia.gain.setValueAtTime(1, contexto.currentTime); timbre(contexto, ganancia, 0.12) }).catch(() => {})
+  // Un clic del usuario habilita el sonido: se reproduce en silencio y se deja listo
+  const desbloquear = () => {
+    const el = elemento()
+    el.muted = true
+    void el.play().then(() => { el.pause(); el.currentTime = 0; el.muted = false; setDesbloqueado(true); setSonidoBloqueado(false) }).catch(() => { el.muted = false })
+    if ('Notification' in window && Notification.permission === 'default') void Notification.requestPermission().then(setPermisoNotificaciones).catch(() => {})
+  }
+
+  const habilitarSonido = () => {
+    const el = elemento()
+    el.muted = false
+    el.volume = 0.55
+    el.currentTime = 0
+    void el.play().then(() => { setDesbloqueado(true); setSonidoBloqueado(false) }).catch(() => setSonidoBloqueado(true))
   }
 
   useEffect(() => {
-    if (!autorizado || !activa || audioListo) return
-    const desbloquear = () => prepararAudio()
+    if (!autorizado || !activa || desbloqueado) return
     window.addEventListener('click', desbloquear, { once: true })
     return () => window.removeEventListener('click', desbloquear)
-  }, [autorizado, activa, audioListo])
+  }, [autorizado, activa, desbloqueado]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  useEffect(() => () => { cerrarAvisos(); if (audio.current) void audio.current.close() }, []) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => () => { cerrarAvisos(); if (audio.current) audio.current.pause(); if (urlAudio.current) URL.revokeObjectURL(urlAudio.current) }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   const activar = () => {
     setActiva(true)
     localStorage.setItem(clave, 'true')
     setSilenciadaHasta(0)
-    prepararAudio()
+    habilitarSonido()
     if ('Notification' in window) {
       void Notification.requestPermission().then(setPermisoNotificaciones).catch(() => setPermisoNotificaciones(Notification.permission))
     }
@@ -172,13 +194,18 @@ export function AlarmaTransferenciasProvider({ children }: { children: ReactNode
     const creado = Date.parse(item.created_at)
     return Number.isFinite(creado) && ahora - creado > 2 * 60_000
   })
-  const sonando = autorizado && activa && audioListo && !silenciada && !atenderAlRecibir.current && sinVer.length > 0
+  const sonando = autorizado && activa && !silenciada && !atenderAlRecibir.current && sinVer.length > 0
   useEffect(() => {
-    if (!sonando || !audio.current || !salida.current) return
-    salida.current.gain.setValueAtTime(1, audio.current.currentTime)
-    const sonar = () => { if (audio.current && salida.current) timbre(audio.current, salida.current, escalada ? 0.22 : 0.1) }
+    if (!sonando) return
+    const sonar = () => {
+      const el = elemento()
+      el.muted = false
+      el.volume = escalada ? 0.9 : 0.55
+      el.currentTime = 0
+      void el.play().then(() => setSonidoBloqueado(false)).catch(() => setSonidoBloqueado(true))
+    }
     sonar()
-    const timer = window.setInterval(sonar, escalada ? 8_000 : 12_000)
+    const timer = window.setInterval(sonar, escalada ? 9_000 : 12_000)
     return () => window.clearInterval(timer)
   }, [sonando, escalada, idsSinVer])
 
@@ -198,5 +225,5 @@ export function AlarmaTransferenciasProvider({ children }: { children: ReactNode
     if (consulta.data && total === 0) void queryClient.invalidateQueries({ queryKey: ['transferencias-confirmacion', 'resumen'] })
   }, [consulta.data, total, queryClient])
 
-  return <AlarmaContext.Provider value={{ total, activa, silenciada, permisoNotificaciones, activar, silenciar, probar, atenderPendientes, verSolicitud }}>{children}</AlarmaContext.Provider>
+  return <AlarmaContext.Provider value={{ total, activa, silenciada, sonidoBloqueado, permisoNotificaciones, activar, silenciar, habilitarSonido, atenderPendientes, verSolicitud }}>{children}</AlarmaContext.Provider>
 }
