@@ -40,6 +40,7 @@ export const PERMISOS = {
   RC_ANOMALOS:            'VER_RC_ANOMALOS',
   ENTREGA_RECAUDO:        'VER_ENTREGA_RECAUDO',
   CONFIRMACION_TRANSFERENCIA: 'VER_CONFIRMACION_TRANSFERENCIA',
+  APROBADOR_TICKETS:      'APROBADOR_TICKETS',
   APROBAR_TRANSFERENCIA:  'APROBAR_TRANSFERENCIA',
   ASIGNACION_COBRO:       'ASIGNAR_COBRO',                      // Página de asignación de facturas a conductores
   PARAMETROS_RC:          'PARAMETRIZAR_RC',                    // Parámetros contables del Recibo de Caja

@@ -9,8 +9,11 @@ import { cn } from '@/lib/utils'
 import { NavItem, registrarPaginasExtra } from '@/config/navigation'
 import { useMenuArmado } from '@/hooks/useMenuArmado'
 import { useAlarmaTransferencias } from '@/components/transferencias/alarmaContext'
+import { ticketsApi } from '@/api/tickets'
+import { PERMISOS } from '@/config/permisos'
 
 const rutaTransferencias = '/tesoreria/confirmacion-transferencias'
+const rutaTickets = '/tickets/aprobador'
 
 export const Sidebar = () => {
     const { sidebarOpen, setSidebarOpen } = useUIStore()
@@ -19,6 +22,17 @@ export const Sidebar = () => {
     const location = useLocation()
     const isMobile = useMediaQuery('(max-width: 1023px)')
     const alarma = useAlarmaTransferencias()
+    const puedeVerTickets = hasPermiso(PERMISOS.APROBADOR_TICKETS)
+    const [pendientesTickets, setPendientesTickets] = useState(0)
+    useEffect(() => {
+        if (!puedeVerTickets) { setPendientesTickets(0); return }
+        let activo = true
+        const actualizar = () => { ticketsApi.resumen().then(resumen => { if (activo) setPendientesTickets(resumen.pendientes ?? 0) }).catch(() => {}) }
+        actualizar()
+        const timer = window.setInterval(actualizar, 30_000)
+        window.addEventListener('tickets:actualizar', actualizar)
+        return () => { activo = false; window.clearInterval(timer); window.removeEventListener('tickets:actualizar', actualizar) }
+    }, [puedeVerTickets])
     // Acordeón: un solo grupo abierto a la vez. Ahora que TODAS las rutas
     // cuelgan de un grupo, permitir varios abiertos hacía crecer el menú hasta
     // necesitar scroll a medida que el usuario navegaba entre secciones.
@@ -145,6 +159,7 @@ export const Sidebar = () => {
                                     <item.icon />
                                     <span className="sidebar-etiqueta flex-1 text-left">{item.name}</span>
                                     {item.href === rutaTransferencias && !!alarma?.total && <span className={cn('rounded-full bg-destructive px-1.5 text-xs font-bold text-destructive-foreground', !expandido && 'absolute right-1 top-0')}>{alarma.total}</span>}
+                                    {item.href === rutaTickets && pendientesTickets > 0 && <span className="rounded-full bg-destructive px-1.5 text-xs font-bold text-destructive-foreground">{pendientesTickets}</span>}
                                     <span className="sidebar-tooltip">{item.name}</span>
                                 </Link>
                             )
@@ -162,6 +177,7 @@ export const Sidebar = () => {
                                     <item.icon />
                                     <span className="sidebar-etiqueta flex-1 text-left">{item.name}</span>
                                     {item.subItems!.some(sub => sub.href === rutaTransferencias) && !!alarma?.total && <span className={cn('rounded-full bg-destructive px-1.5 text-xs font-bold text-destructive-foreground', !expandido && 'absolute right-1 top-0')}>{alarma.total}</span>}
+                                    {item.subItems!.some(sub => sub.href === rutaTickets) && pendientesTickets > 0 && <span className={cn('rounded-full bg-destructive px-1.5 text-xs font-bold text-destructive-foreground', !expandido && 'absolute right-1 top-0')}>{pendientesTickets}</span>}
                                     <ChevronRight
                                         className={cn('sidebar-etiqueta !h-3.5 !w-3.5 shrink-0 opacity-60 transition-transform', abierto && 'rotate-90')}
                                     />
@@ -178,6 +194,7 @@ export const Sidebar = () => {
                                                 >
                                                     <span className="truncate">{subItem.name}</span>
                                                     {subItem.href === rutaTransferencias && !!alarma?.total && <span className="ml-auto rounded-full bg-destructive px-1.5 text-xs font-bold text-destructive-foreground">{alarma.total}</span>}
+                                                    {subItem.href === rutaTickets && pendientesTickets > 0 && <span className="ml-auto rounded-full bg-destructive px-1.5 text-xs font-bold text-destructive-foreground">{pendientesTickets}</span>}
                                                 </Link>
                                             </li>
                                         ))}

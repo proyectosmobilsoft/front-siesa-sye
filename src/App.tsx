@@ -55,6 +55,8 @@ const TrasladoFondosPage = lazy(() => import('@/pages/TrasladoFondosPage').then(
 const ParametrosReciboCajaPage = lazy(() => import('@/pages/ParametrosReciboCajaPage').then(m => ({ default: m.ParametrosReciboCajaPage })))
 const ConfirmacionTransferenciasPage = lazy(() => import('@/pages/ConfirmacionTransferenciasPage').then(m => ({ default: m.ConfirmacionTransferenciasPage })))
 const RcAnomalosPage = lazy(() => import('@/pages/RcAnomalosPage').then(m => ({ default: m.RcAnomalosPage })))
+const MisTicketsPage = lazy(() => import('@/pages/MisTicketsPage'))
+const TableroTicketsPage = lazy(() => import('@/pages/TableroTicketsPage'))
 
 const queryClient = new QueryClient({
     defaultOptions: {
@@ -79,6 +81,8 @@ function AppLayout() {
                         }>
                             <Routes>
                                 <Route path="/" element={<DashboardPage />} />
+                                <Route path="/tickets/mis" element={<MisTicketsPage />} />
+                                <Route path="/tickets/aprobador" element={<ProtectedRoute permiso={PERMISOS.APROBADOR_TICKETS}><TableroTicketsPage /></ProtectedRoute>} />
 
                                 {/* Egreso/Anticipos: protegido por VER_ANTICIPO */}
                                 <Route path="/egreso" element={

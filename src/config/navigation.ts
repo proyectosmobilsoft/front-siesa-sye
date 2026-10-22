@@ -34,6 +34,7 @@ import {
   Settings2,
   LayoutList,
   CircleHelp,
+  MessagesSquare,
   Presentation,
   type LucideIcon,
 } from 'lucide-react'
@@ -356,6 +357,14 @@ export const navigation: NavItem[] = [
         subtitle: 'Cuenta contable asociada a cada placa del conductor',
         permiso: PERMISOS.INTERFAZ_CONTABLE,
       },
+    ],
+  },
+  {
+    name: 'Tickets',
+    icon: MessagesSquare,
+    subItems: [
+      { name: 'Mis tickets', href: '/tickets/mis', icon: Ticket, subtitle: 'Seguimiento de tus reportes' },
+      { name: 'Tablero de tickets', href: '/tickets/aprobador', icon: ClipboardList, subtitle: 'Aprobación y seguimiento de tickets', permiso: PERMISOS.APROBADOR_TICKETS },
     ],
   },
   {

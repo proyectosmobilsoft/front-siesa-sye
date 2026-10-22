@@ -9,6 +9,7 @@ import { Select } from '@/components/ui/select'
 import { useAuthStore, CO_AMBOS } from '@/store/authStore'
 import { useAlarmaTransferencias } from '@/components/transferencias/alarmaContext'
 import { PERMISOS } from '@/config/permisos'
+import { ReportarProblema } from '@/components/tickets/ReportarProblema'
 
 // Decodifica el payload del JWT sin librerías externas
 const decodeJwtPayload = (token: string): Record<string, string> | null => {
@@ -96,6 +97,7 @@ export const Header = () => {
 
                 {/* Right — tema + usuario + logout */}
                 <div className="flex items-center gap-3 flex-shrink-0">
+                    <ReportarProblema />
                     {puedeAprobar && alarma && <div className="flex items-center gap-1.5 text-xs">
                         {!alarma.activa ? <Button size="sm" variant="outline" onClick={alarma.activar}>Activar alarma</Button> : <>
                             <span role="status" className="hidden whitespace-nowrap text-muted-foreground sm:inline">{alarma.silenciada ? 'Alarma silenciada' : alarma.permisoNotificaciones !== 'granted' ? 'Alarma activa · sin permiso de avisos' : 'Alarma activa'}</span>
