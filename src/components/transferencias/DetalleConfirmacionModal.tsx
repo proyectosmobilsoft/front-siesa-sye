@@ -64,6 +64,20 @@ export function DetalleConfirmacionModal({ id, onClose, onSaved }: { id: number;
     {detalle.isError && <p role="alert" className="text-sm text-destructive">{errorMensaje(detalle.error)}</p>}
     {row && <div className="space-y-5 text-sm">
       {resultado && <p role="status" className="rounded-lg border border-green-500/30 p-3 text-green-700 dark:text-green-400">{resultado}</p>}
+      <div className="space-y-3">
+        <div className="flex flex-wrap items-start gap-2">
+              {row.estado === 'PENDIENTE' && puedeAprobar && <div className="flex gap-2"><Button onClick={() => { setAccion('aprobar'); setValor(String(row.valor)); setError('') }}>{row.tiene_payload ? 'Aprobar y crear RC' : 'Aprobar'}</Button><Button variant="destructive" onClick={() => { setAccion('rechazar'); setError('') }}>Rechazar</Button></div>}
+              {row.estado === 'APROBADA' && row.tiene_payload && row.rc_error && puedeAprobar && <Button onClick={() => { setAccion('reintentar'); setError('') }}>Reintentar RC</Button>}
+              {(row.estado === 'PENDIENTE' || row.estado === 'APROBADA') && puedeAnular && <Button variant="outline" onClick={() => { setAccion('anular'); setError('') }}>Anular</Button>}
+        </div>
+      {accion && <div className="space-y-3 rounded-lg border border-border p-3"><h3 className="font-semibold">{accion === 'aprobar' ? 'Confirmar aprobación' : accion === 'rechazar' ? 'Confirmar rechazo' : accion === 'reintentar' ? 'Confirmar reintento de RC' : 'Confirmar anulación'}</h3>
+        {(accion === 'aprobar' || accion === 'reintentar') && row.tiene_payload && <p>Se creará el RC a nombre de {row.conductor_nombre || 'el conductor'} con fecha y hora de ahora.</p>}
+        {accion === 'aprobar' && (row.tiene_payload ? <label className="block space-y-1">Valor informativo aprobado<Input type="number" min="0.01" step="0.01" className="text-right tabular-nums" value={valor} onChange={e => setValor(e.target.value)} /></label> : <p>¿Aceptar la transferencia por {formatters.currency(Number(row.valor) || 0)}? El conductor podrá finalizar el recaudo cuando todas sus transferencias estén aprobadas.</p>)}
+        {accion === 'rechazar' && <label className="block space-y-1">Motivo (mínimo 5 caracteres)<textarea value={motivo} onChange={e => setMotivo(e.target.value)} rows={3} className="w-full rounded-md border border-input bg-background p-2" /></label>}
+        <div className="flex gap-2"><Button onClick={() => void ejecutar()} disabled={saving}>Confirmar</Button><Button variant="outline" onClick={() => setAccion(null)} disabled={saving}>Cancelar</Button></div>
+      </div>}
+      {error && <p role="alert" className="text-destructive">{error}</p>}
+      </div>
       <div className="grid gap-3 rounded-lg border border-border p-3 sm:grid-cols-2">
         <p><span className="block text-xs text-muted-foreground">Cliente</span><strong>{row.razon_social}</strong><span className="block text-xs">NIT {row.nit}</span></p>
         <p><span className="block text-xs text-muted-foreground">Valor</span><strong className="tabular-nums">{formatters.currency(Number(row.valor) || 0)}</strong></p>
@@ -92,16 +106,6 @@ export function DetalleConfirmacionModal({ id, onClose, onSaved }: { id: number;
           onQuitar={i => setFiles(prev => prev.filter((_, index) => index !== i))} />
         {files.length > 0 && <Button size="sm" variant="outline" disabled={saving} onClick={() => void subir()}>Subir {files.length} soporte(s)</Button>}
       </div>}
-      {row.estado === 'PENDIENTE' && puedeAprobar && <div className="flex gap-2"><Button onClick={() => { setAccion('aprobar'); setValor(String(row.valor)); setError('') }}>{row.tiene_payload ? 'Aprobar y crear RC' : 'Aceptar'}</Button><Button variant="destructive" onClick={() => { setAccion('rechazar'); setError('') }}>Rechazar</Button></div>}
-      {row.estado === 'APROBADA' && row.tiene_payload && row.rc_error && puedeAprobar && <Button onClick={() => { setAccion('reintentar'); setError('') }}>Reintentar RC</Button>}
-      {(row.estado === 'PENDIENTE' || row.estado === 'APROBADA') && puedeAnular && <Button variant="outline" onClick={() => { setAccion('anular'); setError('') }}>Anular</Button>}
-      {accion && <div className="space-y-3 rounded-lg border border-border p-3"><h3 className="font-semibold">{accion === 'aprobar' ? 'Confirmar aprobación' : accion === 'rechazar' ? 'Confirmar rechazo' : accion === 'reintentar' ? 'Confirmar reintento de RC' : 'Confirmar anulación'}</h3>
-        {(accion === 'aprobar' || accion === 'reintentar') && row.tiene_payload && <p>Se creará el RC a nombre de {row.conductor_nombre || 'el conductor'} con fecha y hora de ahora.</p>}
-        {accion === 'aprobar' && (row.tiene_payload ? <label className="block space-y-1">Valor informativo aprobado<Input type="number" min="0.01" step="0.01" className="text-right tabular-nums" value={valor} onChange={e => setValor(e.target.value)} /></label> : <p>¿Aceptar la transferencia por {formatters.currency(Number(row.valor) || 0)}? El conductor podrá finalizar el recaudo cuando todas sus transferencias estén aprobadas.</p>)}
-        {accion === 'rechazar' && <label className="block space-y-1">Motivo (mínimo 5 caracteres)<textarea value={motivo} onChange={e => setMotivo(e.target.value)} rows={3} className="w-full rounded-md border border-input bg-background p-2" /></label>}
-        <div className="flex gap-2"><Button onClick={() => void ejecutar()} disabled={saving}>Confirmar</Button><Button variant="outline" onClick={() => setAccion(null)} disabled={saving}>Cancelar</Button></div>
-      </div>}
-      {error && <p role="alert" className="text-destructive">{error}</p>}
     </div>}
   </Modal>
 }
