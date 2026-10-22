@@ -7,6 +7,9 @@ export interface AlarmaState {
   permisoNotificaciones: NotificationPermission | 'unsupported'
   activar: () => void
   silenciar: () => void
+  probar: () => void
+  atenderPendientes: () => void
+  verSolicitud: (id: number) => void
 }
 
 export const AlarmaContext = createContext<AlarmaState | null>(null)
