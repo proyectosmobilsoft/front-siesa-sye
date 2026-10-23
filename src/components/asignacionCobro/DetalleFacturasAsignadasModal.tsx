@@ -5,6 +5,7 @@ import { asignacionCobroApi, AsignacionCobro, FacturaAsignada } from '@/api/asig
 import { usePermiso } from '@/hooks/usePermiso'
 import { formatters } from '@/utils/formatters'
 import { formatearPeso } from './facturaPendiente'
+import { CondicionPagoChip } from './CondicionPagoChip'
 
 export function formatearFactura(f: FacturaAsignada): string {
     if (f.prefijo_docto && f.numero_factura != null) return `${f.prefijo_docto}-${String(f.numero_factura).padStart(8, '0')}`
@@ -104,7 +105,10 @@ export function DetalleFacturasAsignadasModal({
                                 <tbody>
                                     {lote.facturas.map((f) => (
                                         <tr key={f.id} className="border-b last:border-b-0">
-                                            <td className="px-3 py-2 font-mono text-xs">{formatearFactura(f)}</td>
+                                            <td className="px-3 py-2 font-mono text-xs">
+                                                <div>{formatearFactura(f)}</div>
+                                                <CondicionPagoChip id={f.condicion_pago_id} descripcion={f.condicion_pago} />
+                                            </td>
                                             <td className="px-3 py-2 text-right text-xs tabular-nums text-muted-foreground">{formatearPeso(f.peso_kg ?? 0)}</td>
                                             <td className="px-3 py-2 text-right">
                                                 {f.valor.toLocaleString('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 })}

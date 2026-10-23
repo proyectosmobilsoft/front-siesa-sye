@@ -17,6 +17,7 @@ import {
     formatearPeso,
 } from './facturaPendiente'
 import { Cargando } from '@/components/ui/cargando'
+import { CondicionPagoChip } from './CondicionPagoChip'
 
 interface Props {
     conductores: UsuarioMaster[]
@@ -281,7 +282,10 @@ export const FacturasPendientesTab = ({ conductores, todosLosConductores, onAsig
                                                                     onChange={() => toggleFactura(f.rowid_sa)}
                                                                 />
                                                             </td>
-                                                            <td className="px-3 py-2 font-mono text-xs">{formatearFacturaPendiente(f)}</td>
+                                                            <td className="px-3 py-2 font-mono text-xs">
+                                                    <div>{formatearFacturaPendiente(f)}</div>
+                                                    <CondicionPagoChip id={f.condicion_pago_id} descripcion={f.condicion_pago} />
+                                                </td>
                                                             <td className="px-3 py-2 font-mono text-xs">{f.idco ?? '—'}</td>
                                                             <td className="px-3 py-2 text-xs">{formatearFecha(f.fecha)}</td>
                                                             <td className="px-3 py-2 text-xs">{formatearFecha(f.vence)}</td>

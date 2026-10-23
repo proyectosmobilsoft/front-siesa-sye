@@ -12,6 +12,9 @@ export interface FacturaAsignada {
     valor: number
     /** Peso (kg) de la factura: cantidad facturada × peso del ítem en SIESA. */
     peso_kg?: number
+    /** Condición de pago de la factura en SIESA (ej. CRC = CONTRAENTREGA). */
+    condicion_pago_id?: string | null
+    condicion_pago?: string | null
     estado: EstadoFacturaAsignada
     rc_rowid: number | null
     fecha_cobro: string | null
@@ -88,8 +91,11 @@ export const asignacionCobroApi = {
         return response.data.data
     },
 
-    tablero: async (): Promise<TableroConductorRow[]> => {
-        const response = await apiClient.get<{ success: boolean; data: TableroConductorRow[] }>('/asignacion-cobro/tablero')
+    /** Sin fechas: últimos 30 días. Las fechas (YYYY-MM-DD) son días de Colombia, ambas inclusivas. */
+    tablero: async (rango?: { desde?: string; hasta?: string }): Promise<TableroConductorRow[]> => {
+        const response = await apiClient.get<{ success: boolean; data: TableroConductorRow[] }>('/asignacion-cobro/tablero', {
+            params: { desde: rango?.desde || undefined, hasta: rango?.hasta || undefined },
+        })
         return response.data.data
     },
 

@@ -5,6 +5,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Cargando } from '@/components/ui/cargando'
+import { CondicionPagoChip } from '@/components/asignacionCobro/CondicionPagoChip'
 
 export function FacturasTabla({ facturas, descuentos, descuentosSugeridos, descuentosManuales, aplicar, cargando, mas, onChange, onDescuento, onRestaurar, onAll, onClear, onMore }: {
   facturas: FacturaRC[]; descuentos: Record<number, number>; descuentosSugeridos: Record<number, number>; descuentosManuales: Record<number, number>; aplicar: boolean
@@ -40,7 +41,7 @@ export function FacturasTabla({ facturas, descuentos, descuentosSugeridos, descu
             const abono = f.seleccionada && f.valor < f.saldo - 0.01 && !elegibleDescuento(f, pp)
             return <tr key={f.rowid} className={f.seleccionada ? 'bg-primary/5' : ''}>
               <td className="px-2 py-1.5"><input type="checkbox" aria-label={`Seleccionar ${f.tipo}-${f.consecutivo}`} checked={f.seleccionada} onChange={e => onChange(f.rowid, e.target.checked ? f.saldo : 0, e.target.checked)} className="h-4 w-4 accent-primary" /></td>
-              <td className="px-2 py-1.5"><span className="font-semibold">{f.tipo}-{f.consecutivo}</span><div className="mt-0.5 flex gap-1"><Badge variant="secondary">C.O. {f.idCo || '—'}</Badge>{abono && <Badge variant="secondary">Abono</Badge>}{f.seleccionada && pp > 0 && <Badge variant="outline">Pronto pago</Badge>}</div></td>
+              <td className="px-2 py-1.5"><span className="font-semibold">{f.tipo}-{f.consecutivo}</span><div className="mt-0.5 flex gap-1"><Badge variant="secondary">C.O. {f.idCo || '—'}</Badge>{abono && <Badge variant="secondary">Abono</Badge>}{f.seleccionada && pp > 0 && <Badge variant="outline">Pronto pago</Badge>}</div><div className="mt-0.5"><CondicionPagoChip id={f.condicionPagoId} descripcion={f.condicionPago} /></div></td>
               <td className="px-2 py-1.5 text-right tabular-nums">{formatters.currency(f.saldo)}</td>
               <td className="px-2 py-1.5"><Input type="number" min="0" max={f.saldo} step="0.01" aria-label={`Valor a pagar ${f.tipo}-${f.consecutivo}`} className="h-8 text-right tabular-nums" value={f.valor || ''} placeholder="0" onChange={e => { const value = Number(e.target.value); onChange(f.rowid, value, value > 0) }} /></td>
               <td className="px-2 py-1.5 text-right tabular-nums">{elegible ? <><Input type="number" min="0" max={f.saldo} step="0.01" aria-label={`Descuento financiero ${f.tipo}-${f.consecutivo}`} className={`ml-auto h-8 w-28 text-right tabular-nums ${!Number.isFinite(pp) || pp < 0 || pp >= f.saldo ? 'border-destructive' : ''}`} value={pp} onChange={e => onDescuento(f.rowid, e.target.value === '' ? 0 : Number(e.target.value))} />{manual && <div className="mt-1 text-[11px] text-muted-foreground">Sugerido {formatters.currency(sugerido)} <button type="button" className="text-primary underline" onClick={() => onRestaurar(f.rowid)}>restaurar</button></div>}</> : formatters.currency(0)}</td>

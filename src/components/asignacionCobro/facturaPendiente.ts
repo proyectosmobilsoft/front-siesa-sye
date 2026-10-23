@@ -8,6 +8,8 @@ export interface FacturaPendiente {
     prefijo: string | null
     valor: number
     peso_kg: number
+    condicion_pago_id: string | null
+    condicion_pago: string | null
     fecha: string | null
     vence: string | null
     idco: string | null
@@ -90,6 +92,8 @@ export function normalizarFactura(row: Record<string, unknown>): FacturaPendient
         prefijo,
         valor: parseValor(valorRaw),
         peso_kg: parseValor(primerValor(row, ['peso_kg'])),
+        condicion_pago_id: primerValor<string>(row, ['condicion_pago_id']) ?? null,
+        condicion_pago: primerValor<string>(row, ['condicion_pago']) ?? null,
         fecha: fecha != null ? String(fecha) : null,
         vence: vence != null ? String(vence) : null,
         idco: idco != null ? String(idco) : null,

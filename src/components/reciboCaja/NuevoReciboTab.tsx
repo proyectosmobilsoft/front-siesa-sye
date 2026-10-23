@@ -37,7 +37,7 @@ const numero = (v: unknown) => Number(v) || 0
 const mapFactura = (r: FacturaRaw): FacturaRC => {
   const doc = String(r.doccruce ?? '')
   const partes = doc.split('-')
-  return { rowid: numero(r.rowidsa ?? r.rowid), tipo: partes[0] || String(r.tipo ?? r.idTipoDocto ?? ''), consecutivo: partes[1] || String(r.factura ?? r.consecDocto ?? ''), prefijo: String(r.prefijo ?? partes[0] ?? '').toUpperCase(), saldo: parseMonto(r.saldo), valor: 0, seleccionada: false, idCia: numero(r.f350_id_cia ?? r.idCia) || 1, idCo: String(r.idco ?? '').trim() }
+  return { rowid: numero(r.rowidsa ?? r.rowid), tipo: partes[0] || String(r.tipo ?? r.idTipoDocto ?? ''), consecutivo: partes[1] || String(r.factura ?? r.consecDocto ?? ''), prefijo: String(r.prefijo ?? partes[0] ?? '').toUpperCase(), saldo: parseMonto(r.saldo), valor: 0, seleccionada: false, idCia: numero(r.f350_id_cia ?? r.idCia) || 1, idCo: String(r.idco ?? '').trim(), condicionPagoId: r.condicion_pago_id ? String(r.condicion_pago_id) : null, condicionPago: r.condicion_pago ? String(r.condicion_pago) : null }
 }
 const pagoVacio = (codigo: PagoRC['codigo'] = 'EFE'): PagoRC => ({ id: crypto.randomUUID(), codigo, valor: 0, cuenta: '', fechaConsignacion: hoy(), nroTarjeta: '', autorizacion: '', voucher: '' })
 const section = 'p-3'

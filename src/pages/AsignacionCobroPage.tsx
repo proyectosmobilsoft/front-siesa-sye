@@ -14,6 +14,7 @@ import { asignacionCobroApi, TableroConductorRow } from '@/api/asignacionCobro'
 import { useAuthStore, coPuntual } from '@/store/authStore'
 import { usePermiso } from '@/hooks/usePermiso'
 import { FacturaPendiente, formatearFecha, formatearPeso, formatearFacturaPendiente, normalizarFactura } from '@/components/asignacionCobro/facturaPendiente'
+import { CondicionPagoChip } from '@/components/asignacionCobro/CondicionPagoChip'
 import { FacturasPendientesTab } from '@/components/asignacionCobro/FacturasPendientesTab'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import { DetalleFacturasAsignadasModal } from '@/components/asignacionCobro/DetalleFacturasAsignadasModal'
@@ -52,14 +53,18 @@ export const AsignacionCobroPage = () => {
         }
     }
     const [cargandoTablero, setCargandoTablero] = useState(false)
+    // Rango del tablero (vacío = últimos 30 días).
+    const [tableroDesde, setTableroDesde] = useState('')
+    const [tableroHasta, setTableroHasta] = useState('')
+    const hayRangoTablero = Boolean(tableroDesde || tableroHasta)
 
     const cargarTablero = () => {
         if (!puedeVerTablero) return
         setCargandoTablero(true)
         asignacionCobroApi
-            .tablero()
-            // Solo conductores con facturas asignadas pendientes de cobro.
-            .then((rows) => setTablero(rows.filter((row) => row.pendientes > 0)))
+            .tablero({ desde: tableroDesde, hasta: tableroHasta })
+            // Sin rango: solo conductores con facturas pendientes. Con rango: todos los que tuvieron asignaciones en esas fechas.
+            .then((rows) => setTablero(hayRangoTablero ? rows : rows.filter((row) => row.pendientes > 0)))
             .catch((err) => console.error('Error cargando tablero de cobros:', err))
             .finally(() => setCargandoTablero(false))
     }
@@ -67,7 +72,7 @@ export const AsignacionCobroPage = () => {
     useEffect(() => {
         cargarTablero()
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [])
+    }, [tableroDesde, tableroHasta])
 
     // Búsqueda de cliente
     const [busquedaCliente, setBusquedaCliente] = useState('')
@@ -380,7 +385,10 @@ export const AsignacionCobroPage = () => {
                                                         className="h-4 w-4"
                                                     />
                                                 </td>
-                                                <td className="px-3 py-2 font-mono text-xs">{formatearFacturaPendiente(f)}</td>
+                                                <td className="px-3 py-2 font-mono text-xs">
+                                                    <div>{formatearFacturaPendiente(f)}</div>
+                                                    <CondicionPagoChip id={f.condicion_pago_id} descripcion={f.condicion_pago} />
+                                                </td>
                                                 <td className="px-3 py-2 font-mono text-xs">{f.idco ?? '—'}</td>
                                                 <td className="px-3 py-2 text-xs">{formatearFecha(f.fecha)}</td>
                                                 <td className="px-3 py-2 text-xs">{formatearFecha(f.vence)}</td>
@@ -413,9 +421,22 @@ export const AsignacionCobroPage = () => {
                     <div className="flex items-center justify-between border-b px-4 py-3">
                         <div className="flex items-center gap-2">
                             <Users className="h-4 w-4 text-muted-foreground" />
-                            <span className="text-sm font-semibold">Conductores programados (últimos 30 días)</span>
+                            <span className="text-sm font-semibold">Conductores programados ({hayRangoTablero ? 'rango elegido' : 'últimos 30 días'})</span>
                         </div>
-                        <div className="flex items-center gap-2">
+                        <div className="flex flex-wrap items-center justify-end gap-2">
+                            <label className="flex items-center gap-1 text-xs text-muted-foreground">
+                                Desde
+                                <Input type="date" value={tableroDesde} max={tableroHasta || undefined} onChange={(e) => setTableroDesde(e.target.value)} className="h-8 w-36 text-xs" />
+                            </label>
+                            <label className="flex items-center gap-1 text-xs text-muted-foreground">
+                                Hasta
+                                <Input type="date" value={tableroHasta} min={tableroDesde || undefined} onChange={(e) => setTableroHasta(e.target.value)} className="h-8 w-36 text-xs" />
+                            </label>
+                            {hayRangoTablero && (
+                                <Button variant="ghost" size="sm" className="nu-btn nu-btn-soft" onClick={() => { setTableroDesde(''); setTableroHasta('') }}>
+                                    Últimos 30 días
+                                </Button>
+                            )}
                             <Button
                                 variant="ghost"
                                 size="sm"
@@ -453,7 +474,7 @@ export const AsignacionCobroPage = () => {
                                     { t: 'Por cobrar', v: moneda(tableroVisible.reduce((a, r) => a + (r.saldo_pendiente ?? r.valor_pendiente), 0)) },
                                     { t: 'Carga en ruta', v: kilosTexto(tableroVisible.reduce((a, r) => a + (r.kg_pendiente ?? 0), 0)) },
                                     { t: 'Vencidas', v: String(tableroVisible.reduce((a, r) => a + (r.vencidas ?? 0), 0)), alerta: tableroVisible.some((r) => (r.vencidas ?? 0) > 0) },
-                                    { t: 'Cobradas (30 días)', v: `${tableroVisible.reduce((a, r) => a + r.cobradas, 0)} · ${moneda(tableroVisible.reduce((a, r) => a + r.valor_cobrado, 0))}` },
+                                    { t: hayRangoTablero ? 'Cobradas (rango)' : 'Cobradas (30 días)', v: `${tableroVisible.reduce((a, r) => a + r.cobradas, 0)} · ${moneda(tableroVisible.reduce((a, r) => a + r.valor_cobrado, 0))}` },
                                 ].map((x) => (
                                     <span key={x.t} className={`rounded-full px-3 py-1 ${x.alerta ? 'bg-red-500/10 text-red-600 dark:text-red-400' : 'bg-muted text-muted-foreground'}`}>
                                         {x.t}: <span className="font-semibold text-foreground">{x.v}</span>

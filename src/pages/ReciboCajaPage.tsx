@@ -1,4 +1,5 @@
 import { Fragment, useEffect, useMemo, useState } from 'react'
+import { CondicionPagoChip } from '@/components/asignacionCobro/CondicionPagoChip'
 import { ChevronLeft, ChevronRight, FileText, Hash, Search, RefreshCw, Receipt, Landmark, User, Wallet, Printer, FileSpreadsheet, FolderOpen, Building2, Layers } from 'lucide-react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { Button } from '@/components/ui/button'
@@ -94,6 +95,8 @@ interface FacturaAsignadaPendiente {
   asigno: string
   observacion: string | null
   peso_kg: number
+  condicion_pago_id?: string | null
+  condicion_pago?: string | null
 }
 
 interface PendientesDetalle {
@@ -1739,7 +1742,10 @@ function FacturasAsignadasConductores({ datos }: { datos: PendientesDetalle }) {
                 <tbody>
                   {facturas.map((f) => (
                     <tr key={f.id} className="border-b border-border/40 last:border-0">
-                      <td className="whitespace-nowrap px-4 py-2.5 font-mono font-bold text-primary">{f.factura}</td>
+                      <td className="whitespace-nowrap px-4 py-2.5 font-mono font-bold text-primary">
+                        <div>{f.factura}</div>
+                        <CondicionPagoChip id={f.condicion_pago_id} descripcion={f.condicion_pago} />
+                      </td>
                       <td className="max-w-[240px] px-4 py-2.5">
                         <p className="truncate font-medium">{f.cliente}</p>
                         <p className="font-mono text-[10px] text-muted-foreground">{f.nit}</p>
