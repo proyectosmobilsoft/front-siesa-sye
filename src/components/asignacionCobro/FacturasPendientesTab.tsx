@@ -20,6 +20,8 @@ import { Cargando } from '@/components/ui/cargando'
 
 interface Props {
     conductores: UsuarioMaster[]
+    /** Todos los conductores, sin filtrar por el C.O. del encabezado: se usan para ofrecer los del C.O. de las facturas elegidas */
+    todosLosConductores?: UsuarioMaster[]
     onAsignado: () => void
 }
 
@@ -34,7 +36,7 @@ interface GrupoCliente {
 const moneda = (n: number) => n.toLocaleString('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 })
 const tiempo = (f: string | null) => (f ? Date.parse(f.replace(' ', 'T')) || 0 : 0)
 
-export const FacturasPendientesTab = ({ conductores, onAsignado }: Props) => {
+export const FacturasPendientesTab = ({ conductores, todosLosConductores, onAsignado }: Props) => {
     const centroOperacionActivo = useAuthStore((s) => coPuntual(s.centroOperacionActivo))
 
     const [facturas, setFacturas] = useState<FacturaPendiente[]>([])
@@ -43,6 +45,18 @@ export const FacturasPendientesTab = ({ conductores, onAsignado }: Props) => {
     const [abiertos, setAbiertos] = useState<Set<number>>(new Set())
     const [seleccionadas, setSeleccionadas] = useState<Set<number>>(new Set())
     const [facturaDetalle, setFacturaDetalle] = useState<FacturaPendiente | null>(null)
+
+    // Con facturas elegidas se ofrecen los conductores del C.O. de esas facturas (aunque el encabezado esté en otro C.O.);
+    // sin selección se mantiene el filtro del C.O. del encabezado.
+    const cosSeleccionados = Array.from(new Set(
+        facturas.filter((f) => seleccionadas.has(f.rowid_sa)).map((f) => f.idco?.trim()).filter((co): co is string => !!co)
+    ))
+    const conductoresOpciones = cosSeleccionados.length && todosLosConductores
+        ? todosLosConductores.filter((c) => !c.centros_operacion?.length || cosSeleccionados.every((co) => c.centros_operacion?.some((x) => x.trim() === co)))
+        : conductores
+    useEffect(() => {
+        if (conductorId && !conductoresOpciones.some((c) => String(c.id) === conductorId)) setConductorId('')
+    }, [conductoresOpciones, conductorId])
 
     const [conductorId, setConductorId] = useState('')
     const [observacion, setObservacion] = useState('')
@@ -308,7 +322,7 @@ export const FacturasPendientesTab = ({ conductores, onAsignado }: Props) => {
                         <label className="nu-label">Conductor</label>
                         <Select className="nu-control" value={conductorId} onChange={(e) => setConductorId(e.target.value)}>
                             <option value="">Seleccionar conductor...</option>
-                            {conductores.map((c) => (
+                            {conductoresOpciones.map((c) => (
                                 <option key={c.id} value={c.id}>
                                     {c.nombre_completo || c.usuario}
                                 </option>

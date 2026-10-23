@@ -403,7 +403,7 @@ export const AsignacionCobroPage = () => {
                 </div>
                 </TabsContent>
                 <TabsContent value="pendientes" className="mt-4">
-                    <FacturasPendientesTab conductores={conductoresVisibles} onAsignado={cargarTablero} />
+                    <FacturasPendientesTab conductores={conductoresVisibles} todosLosConductores={conductores} onAsignado={cargarTablero} />
                 </TabsContent>
             </Tabs>
 
