@@ -54,11 +54,11 @@ export const FacturasPendientesTab = ({ conductores, todosLosConductores, onAsig
     const conductoresOpciones = cosSeleccionados.length && todosLosConductores
         ? todosLosConductores.filter((c) => !c.centros_operacion?.length || cosSeleccionados.every((co) => c.centros_operacion?.some((x) => x.trim() === co)))
         : conductores
+
+    const [conductorId, setConductorId] = useState('')
     useEffect(() => {
         if (conductorId && !conductoresOpciones.some((c) => String(c.id) === conductorId)) setConductorId('')
     }, [conductoresOpciones, conductorId])
-
-    const [conductorId, setConductorId] = useState('')
     const [observacion, setObservacion] = useState('')
     const [enviando, setEnviando] = useState(false)
     const [error, setError] = useState<string | null>(null)
