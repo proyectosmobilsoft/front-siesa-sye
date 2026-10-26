@@ -13,6 +13,7 @@ import { useAuth } from '@/hooks/useAuth'
 import { useInactivityTimeout } from '@/hooks/useInactivityTimeout'
 import { InactivityModal } from '@/components/ui/InactivityModal'
 import { Cargando } from '@/components/ui/cargando'
+import { FiltrosTablas } from '@/components/ui/filtros-tablas'
 import { AlarmaTransferenciasProvider } from '@/components/transferencias/AlarmaTransferencias'
 
 // Code-splitting por ruta: antes las ~20 páginas (con dependencias pesadas
@@ -229,6 +230,7 @@ function AppContent() {
         return (
             <>
                 <AppLayout />
+                <FiltrosTablas />
                 <InactivityModal isOpen={showInactivityModal} onClose={handleCloseInactivityModal} />
             </>
         )

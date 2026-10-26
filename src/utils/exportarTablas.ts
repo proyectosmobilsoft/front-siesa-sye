@@ -54,7 +54,8 @@ function tituloAntesDe(tabla: HTMLElement): string | null {
 
 function leerTabla(tabla: HTMLTableElement, nombre: string): HojaExcel | null {
   const cabecera = filasDe(tabla, 'THEAD')
-  const filasCuerpo = filasDe(tabla, 'TBODY')
+  // Las filas que un filtro de columna dejó fuera no se exportan
+  const filasCuerpo = filasDe(tabla, 'TBODY').filter((f) => !f.hasAttribute('data-filtrada'))
   const filasPie = filasDe(tabla, 'TFOOT')
   const filaTitulos = cabecera[cabecera.length - 1] ?? (filasCuerpo[0] && celdasDe(filasCuerpo[0]).some((c) => c.tagName === 'TH') ? filasCuerpo.shift() : undefined)
   if (!filaTitulos) return null
