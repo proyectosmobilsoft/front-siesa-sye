@@ -121,6 +121,11 @@ export const MvpLogisticaPage = () => {
     setError('')
     setExito('')
   }
+  // El camión y el conductor elegidos son de un C.O.: al cambiar de centro ya no valen
+  useEffect(() => {
+    setCod(null)
+    setConductorId(null)
+  }, [co])
   const ejecutar = async (accion: () => Promise<void>) => {
     try {
       setOcupado(true)

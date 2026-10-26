@@ -31,8 +31,10 @@ export function PanelManual({
         >
           <option value="">Seleccione camión</option>
           {vehiculos.map(v => (
-            <option key={v.cod} value={v.cod}>
-              {v.placa} · {v.capacidad_kg ?? 'Sin capacidad'} kg
+            <option key={v.cod} value={v.cod} disabled={!v.capacidad_kg}>
+              {v.capacidad_kg
+                ? `${v.placa} · ${v.capacidad_kg} kg`
+                : `${v.placa} · sin capacidad (configúrela primero)`}
             </option>
           ))}
         </select>
