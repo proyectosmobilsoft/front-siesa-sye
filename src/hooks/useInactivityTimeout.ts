@@ -1,6 +1,8 @@
 import { useEffect, useRef, useCallback } from 'react'
 
 const INACTIVITY_TIMEOUT = 30 * 60 * 1000 // 30 minutos en milisegundos
+// Desactivado: el front no debe sacar al usuario por inactividad. Poner en true para volver a pedir login a los 30 minutos
+const CERRAR_POR_INACTIVIDAD = false
 const LAST_ACTIVITY_KEY = 'last_activity'
 
 /**
@@ -56,7 +58,7 @@ export const useInactivityTimeout = (onTimeout: () => void) => {
 
     useEffect(() => {
         // Solo activar si hay token
-        if (!hasToken()) {
+        if (!CERRAR_POR_INACTIVIDAD || !hasToken()) {
             return
         }
 
