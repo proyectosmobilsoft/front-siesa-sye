@@ -18,8 +18,8 @@ import { useAlarmaTransferencias } from '@/components/transferencias/alarmaConte
 type Tab = EstadoTransferencia | 'TODAS' | 'RC_PENDIENTE'
 const tabs: { label: string; estado: Tab }[] = [
   { label: 'Autorizar transferencias', estado: 'RC_PENDIENTE' },
-  { label: 'Pendientes', estado: 'PENDIENTE' }, { label: 'Aprobadas', estado: 'APROBADA' },
-  { label: 'Usadas en RC', estado: 'USADA' }, { label: 'Rechazadas', estado: 'RECHAZADA' }, { label: 'Todas', estado: 'TODAS' },
+  { label: 'Pendientes', estado: 'PENDIENTE' }, { label: 'Aprobadas sin recibo', estado: 'APROBADA' },
+  { label: 'Con recibo de caja', estado: 'USADA' },
 ]
 const colores: Record<EstadoTransferencia, string> = {
   PENDIENTE: 'bg-amber-500/10 text-amber-700 dark:text-amber-400', APROBADA: 'bg-green-500/10 text-green-700 dark:text-green-400',
@@ -34,7 +34,7 @@ export function ConfirmacionTransferenciasPage() {
   const centro = useAuthStore(s => s.centroOperacionActivo)
   const queryClient = useQueryClient()
   const alarma = useAlarmaTransferencias()
-  const [estado, setEstado] = useState<Tab>(() => puede(P.APROBAR_TRANSFERENCIA) ? 'RC_PENDIENTE' : 'TODAS')
+  const [estado, setEstado] = useState<Tab>(() => puede(P.APROBAR_TRANSFERENCIA) ? 'RC_PENDIENTE' : 'USADA')
   const [ahora, setAhora] = useState(Date.now)
   const [search, setSearch] = useState('')
   const [searchDebounced, setSearchDebounced] = useState('')

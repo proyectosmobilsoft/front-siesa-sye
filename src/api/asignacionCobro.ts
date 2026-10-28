@@ -1,7 +1,8 @@
 import { apiClient } from './client'
 
 export type EstadoAsignacion = 'ASIGNADA' | 'COBRADA' | 'CANCELADA'
-export type EstadoFacturaAsignada = 'PENDIENTE' | 'COBRADA' | 'CANCELADA'
+export type EstadoFacturaAsignada = 'PENDIENTE' | 'COBRADA' | 'CANCELADA' | 'ENTREGADA'
+export type EntregaFactura = 'ASIGNADA' | 'NO_ENTREGADA' | 'ENTREGA_PARCIAL' | 'ENTREGADA'
 
 export interface FacturaAsignada {
     id: number
@@ -18,6 +19,10 @@ export interface FacturaAsignada {
     estado: EstadoFacturaAsignada
     rc_rowid: number | null
     fecha_cobro: string | null
+    /** Seguimiento de la entrega que reporta el conductor. */
+    entrega?: EntregaFactura
+    entrega_nota?: string | null
+    entrega_at?: string | null
 }
 
 export interface AsignacionCobro {

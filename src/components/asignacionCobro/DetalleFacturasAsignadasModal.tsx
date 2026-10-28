@@ -108,6 +108,12 @@ export function DetalleFacturasAsignadasModal({
                                             <td className="px-3 py-2 font-mono text-xs">
                                                 <div>{formatearFactura(f)}</div>
                                                 <CondicionPagoChip id={f.condicion_pago_id} descripcion={f.condicion_pago} />
+                                                {f.entrega && f.entrega !== 'ASIGNADA' && (
+                                                    <span className="mt-0.5 block font-sans text-[11px] text-muted-foreground" title={f.entrega_nota ?? undefined}>
+                                                        {{ NO_ENTREGADA: 'No entregada', ENTREGA_PARCIAL: 'Entrega parcial', ENTREGADA: 'Entregada' }[f.entrega]}
+                                                        {f.entrega_nota ? ` · ${f.entrega_nota}` : ''}
+                                                    </span>
+                                                )}
                                             </td>
                                             <td className="px-3 py-2 text-right text-xs tabular-nums text-muted-foreground">{formatearPeso(f.peso_kg ?? 0)}</td>
                                             <td className="px-3 py-2 text-right">
