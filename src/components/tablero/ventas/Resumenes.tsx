@@ -3,7 +3,7 @@ import { Areas } from '../graficas'
 import { TarjetaResumen } from '../Expandible'
 import { PALETA, compacto, dinero, etiquetaMes, porcentaje } from '../formato'
 import { AYUDAS } from './ayudas'
-import type { DashboardCompras, DashboardInventario, DashboardVentas } from './tipos'
+import type { DashboardCartera, DashboardCompras, DashboardInventario, DashboardVentas } from './tipos'
 import { colorCumplimiento } from './colores'
 
 interface ResumenRC {
@@ -14,11 +14,14 @@ interface ResumenRC {
   }
   mensual: { mes: string; facturado: number; recaudo_cartera: number }[]
 }
-type Vista = 'recaudo' | 'presupuesto' | 'proveedores' | 'compras' | 'inventario'
+type Vista = 'recaudo' | 'presupuesto' | 'proveedores' | 'compras' | 'inventario' | 'cartera'
 export function Resumenes({
   recaudo,
   ventas,
   compras,
+  cartera,
+  cargaCartera,
+  errorCartera,
   inventario,
   cargaInventario,
   errorInventario,
@@ -34,6 +37,9 @@ export function Resumenes({
   recaudo?: ResumenRC
   ventas?: DashboardVentas
   compras?: DashboardCompras
+  cartera?: DashboardCartera
+  cargaCartera: boolean
+  errorCartera: boolean
   inventario?: DashboardInventario
   cargaInventario: boolean
   errorInventario: boolean
@@ -51,9 +57,11 @@ export function Resumenes({
       .filter(p => p.proveedor !== 'OTROS PROVEEDORES')
       .slice(0, 5) ?? []
   const topCompras = compras?.proveedores.filter(p => p.proveedor !== 'OTROS PROVEEDORES').slice(0, 5) ?? []
+  const lotesCartera = cartera ? [...cartera.vencida.slice(0, 1), ...cartera.por_vencer.slice(0, 4)] : []
+  const maxCartera = Math.max(0, ...lotesCartera.map(l => l.saldo))
   const topInventario = inventario?.lineas.slice(0, 5) ?? []
   return (
-    <Malla columnas={5}>
+    <Malla columnas={6}>
       <TarjetaResumen
         titulo="Recaudo de cartera"
         abierta={vista === 'recaudo'}
@@ -236,6 +244,30 @@ export function Resumenes({
                   <div className="h-full rounded-full bg-primary" style={{ width: `${topInventario[0]?.existencia ? Math.max(0, l.existencia / topInventario[0].existencia * 100) : 0}%` }} />
                 </div>
                 <span>{compacto(l.existencia)}</span>
+              </div>
+            ))}
+          </div>
+        </CuerpoConsulta>
+      </TarjetaResumen>
+      <TarjetaResumen
+        titulo="Cartera"
+        abierta={vista === 'cartera'}
+        alAlternar={() => alElegir('cartera')}
+        ayuda={{ fuente: 'Saldos abiertos de facturas de venta en SIESA, por vencimiento según la condición de pago.', formula: 'Vence en 30 días = saldo con vencimiento entre hoy y 30 días' }}
+      >
+        <CuerpoConsulta consulta={{ isLoading: cargaCartera, isError: errorCartera }} altura="h-40">
+          <div className="text-2xl font-bold tabular-nums">{cartera && dinero(cartera.kpis.vence_30)}</div>
+          <div className="mt-1 text-xs text-muted-foreground">
+            Vence en 30 días · Vencida {cartera ? dinero(cartera.kpis.vencida) : '—'}
+          </div>
+          <div className="mt-3 space-y-2">
+            {lotesCartera.map(l => (
+              <div key={l.id} className="flex items-center gap-2 text-[11px]">
+                <span className="w-24 truncate" title={l.nombre}>{l.nombre.replace('Vence en ', '').replace('Vencida ', 'Venc. ').replace(' días', ' d')}</span>
+                <div className="h-2 flex-1 rounded-full bg-muted">
+                  <div className={`h-full rounded-full ${l.id.startsWith('v') ? 'bg-red-500' : 'bg-primary'}`} style={{ width: `${maxCartera ? Math.max(0, l.saldo / maxCartera * 100) : 0}%` }} />
+                </div>
+                <span>{compacto(l.saldo)}</span>
               </div>
             ))}
           </div>

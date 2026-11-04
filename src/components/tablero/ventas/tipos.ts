@@ -215,3 +215,111 @@ export interface DashboardInventario {
   }[]
   bodegas: { codigo: string; bodega: string; cantidad: number; valor: number; vendible: boolean }[]
 }
+
+export interface PuntoCurvaCartera { dias: number; acumulado: number; porcentaje: number }
+
+export interface CumplimientoCartera {
+  facturas: number
+  valor: number
+  a_tiempo: { facturas: number; valor: number }
+  tarde: { facturas: number; valor: number }
+  impaga_vencida: { facturas: number; valor: number }
+  por_vencer: { facturas: number; valor: number }
+  a_tiempo_pct: number | null
+  a_tiempo_valor_pct: number | null
+}
+
+export interface ClienteCartera {
+  tercero: number
+  cliente: string | null
+  nit: string | null
+  facturas: number
+  a_tiempo: number
+  tarde: number
+  impagas: number
+  a_tiempo_pct: number | null
+  valor: number
+  vencido: number
+  pagado_tarde: number
+  dias_retraso_promedio: number | null
+  dias_mora: number
+}
+
+export type EstadoFacturaCartera = 'a_tiempo' | 'tarde' | 'impaga_vencida' | 'por_vencer' | 'pagada'
+
+export interface FacturaCartera {
+  id: number
+  factura: string
+  tercero: number
+  cliente: string | null
+  nit: string | null
+  emision: string | null
+  vencimiento: string | null
+  cancelacion: string | null
+  condicion: string
+  condicion_nombre: string
+  dias: number
+  valor: number
+  saldo: number
+  estado: EstadoFacturaCartera
+  dias_pago: number | null
+  dias_vs_vencimiento: number | null
+}
+
+export interface RespuestaFacturasCartera {
+  pagina: number
+  tamano: number
+  total: number
+  totales: { valor: number; saldo: number; clientes: number }
+  filas: FacturaCartera[]
+}
+
+export interface PlazoCartera {
+  dias: number
+  nombre: string
+  condiciones?: string[]
+  condicion?: string
+  credito: boolean
+  facturas: number
+  facturado: number
+  cobrado: number
+  saldo: number
+  vencido: number
+  cobrado_pct: number | null
+  dias_pago: number | null
+  desviacion_dias: number | null
+  pagado_a_tiempo_pct: number | null
+  cumplimiento: CumplimientoCartera
+  curva: PuntoCurvaCartera[]
+}
+
+export interface LoteCartera { id: string; nombre: string; desde: number; hasta: number | null; facturas: number; saldo: number }
+
+export interface DashboardCartera {
+  desde: string
+  hasta: string
+  umbral_credito_dias: number
+  kpis: {
+    facturado: number
+    venta_credito: number
+    credito_pct: number | null
+    plazo_promedio: number | null
+    dias_pago_promedio: number | null
+    pagado_a_tiempo_pct: number | null
+    cobrado_credito: number
+    saldo_credito: number
+    vencido_credito: number
+    cartera_abierta: number
+    vencida: number
+    vencida_pct: number | null
+    vence_30: number
+    vence_60: number
+  }
+  plazos: PlazoCartera[]
+  condiciones: PlazoCartera[]
+  vencida: LoteCartera[]
+  por_vencer: LoteCartera[]
+  semanas: { semana: number; desde_dias: number; saldo: number }[]
+  mensual: { mes: string; facturado_credito: number; recaudo_credito: number }[]
+  deudores: { tercero: number; cliente: string | null; nit: string | null; facturas: number; vencido: number; dias_mora: number }[]
+}
