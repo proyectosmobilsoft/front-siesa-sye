@@ -1,6 +1,7 @@
 import { Bloque, Malla, SubPestanas, Tabla, Tarjeta } from '../comun'
 import { Areas, BarrasApiladas, BarrasH } from '../graficas'
 import { PALETA, compacto, decimal, dinero, entero, etiquetaMes, porcentaje } from '../formato'
+import { ComoLeer, Lectura } from '../Guia'
 import type { DashboardInventario, LecturaInventario } from '../ventas/tipos'
 
 const FUENTE = 'Existencias de SIESA (t400) a costo promedio, compra neta EA/EAF − NP y costo de lo vendido (facturas y remisiones menos notas), sin IVA.'
@@ -13,14 +14,23 @@ const LECTURAS: Record<LecturaInventario, { texto: string; clase: string }> = {
 const Etiqueta = ({ lectura }: { lectura: LecturaInventario }) => (
   <span className={`inline-block rounded-full px-2 py-0.5 text-[11px] font-medium whitespace-nowrap ${LECTURAS[lectura].clase}`}>{LECTURAS[lectura].texto}</span>
 )
+const Fuerte = ({ children }: { children: React.ReactNode }) => <strong className="font-semibold text-foreground">{children}</strong>
+const GLOSARIO = [
+  { termino: 'Compra neta', significado: 'Lo que compraste a proveedores en el periodo, menos lo que devolviste.' },
+  { termino: 'Costo de ventas', significado: 'Lo que te costó la mercancía que vendiste (no a cuánto la vendiste).' },
+  { termino: 'Compré − vendí (a costo)', significado: 'Compra neta menos costo de ventas. Positivo: compraste más de lo que vendiste y el sobrante debe estar en bodega. Negativo: vendiste más de lo que compraste, o sea, usaste inventario que ya tenías.' },
+  { termino: 'Inventario hoy', significado: 'Lo que hay en bodega ahora, valorado al costo promedio.' },
+  { termino: 'Cobertura', significado: 'Cuántos meses de ventas alcanza a cubrir el inventario actual.' },
+  { termino: `Sin venta en ${180} días`, significado: 'Mercancía que no se vende hace más de seis meses: plata quieta en bodega.' },
+]
 const signo = (v: number) => `${v > 0 ? '+' : ''}${dinero(v)}`
 
 export function InventarioLineas({ d, sub, alElegirSub }: { d: DashboardInventario; sub: string; alElegirSub: (valor: string) => void }) {
   const opciones = [
     { valor: 'resumen', etiqueta: 'Resumen' },
-    { valor: 'lineas', etiqueta: 'Por línea' },
-    { valor: 'mensual', etiqueta: 'Mensual' },
-    { valor: 'bodegas', etiqueta: 'Bodegas' },
+    { valor: 'lineas', etiqueta: 'Línea por línea' },
+    { valor: 'mensual', etiqueta: 'Mes a mes' },
+    { valor: 'bodegas', etiqueta: '¿Dónde está?' },
   ]
   const activa = opciones.some(o => o.valor === sub) ? sub : 'resumen'
   const k = d.kpis
@@ -34,15 +44,23 @@ export function InventarioLineas({ d, sub, alElegirSub }: { d: DashboardInventar
     <SubPestanas opciones={opciones} activa={activa} alElegir={alElegirSub}>
       <div className="flex flex-col gap-4">
         {activa === 'resumen' && <>
+          <Lectura frases={[
+            <>Tienes <Fuerte>{dinero(k.existencia)}</Fuerte> en inventario a costo ({entero(k.items)} ítems){k.meses_cobertura != null && <>, lo que alcanza para unos <Fuerte>{decimal(k.meses_cobertura)} meses</Fuerte> de ventas</>}.</>,
+            <>En el periodo compraste <Fuerte>{dinero(k.compra_neta)}</Fuerte> y lo que vendiste te costó <Fuerte>{dinero(k.costo_ventas)}</Fuerte>: {Math.abs(k.variacion_inventario) < 0.03 * Math.max(k.compra_neta, k.costo_ventas) ? <>compraste casi lo mismo que vendiste.</> : k.variacion_inventario > 0 ? <>compraste <Fuerte>{dinero(k.variacion_inventario)}</Fuerte> más de lo que vendiste.</> : <>vendiste <Fuerte>{dinero(-k.variacion_inventario)}</Fuerte> más de lo que compraste.</>}</>,
+            <><Fuerte>{k.lineas_consumen}</Fuerte> líneas vendieron más de lo que compraron (gastaron inventario), <Fuerte>{k.lineas_acumulan}</Fuerte> compraron más de lo que vendieron y <Fuerte>{k.lineas_equilibradas}</Fuerte> venden lo que compran.</>,
+            k.valor_lento > 0 && <><Fuerte>{dinero(k.valor_lento)}</Fuerte>{k.participacion_lento != null && <> ({porcentaje(k.participacion_lento, 0)})</>} del inventario lleva más de {d.dias_lento} días sin venderse.</>,
+            <>Ojo: la venta a precio siempre sale mayor que la compra porque incluye tu margen. Por eso aquí se compara la compra contra el <Fuerte>costo</Fuerte> de lo vendido, no contra el precio.</>,
+          ].filter(Boolean) as React.ReactNode[]} />
           <Malla columnas={6}>
             <Tarjeta compacta etiqueta="Inventario a costo" valor={dinero(k.existencia)} nota={`${entero(k.items)} ítems con existencia`} ayuda={{ fuente: FUENTE, formula: 'Σ existencia × costo promedio de cada ítem (todas las bodegas)', nota: 'Es la existencia de hoy, no al cierre del rango.' }} />
             <Tarjeta compacta etiqueta="Compra neta" valor={dinero(k.compra_neta)} ayuda={{ fuente: FUENTE, formula: 'Entradas EA/EAF − notas NP del periodo' }} />
             <Tarjeta compacta etiqueta="Costo de lo vendido" valor={dinero(k.costo_ventas)} ayuda={{ fuente: FUENTE, formula: 'Σ costo promedio de los movimientos vendidos, neto de notas crédito', nota: 'La venta a precio es mayor porque incluye el margen; compare compras contra el costo.' }} />
-            <Tarjeta compacta etiqueta="Variación de inventario" valor={signo(k.variacion_inventario)} nota={k.variacion_inventario >= 0 ? 'Compró más de lo que vendió' : 'Vendió más de lo que compró'} ayuda={{ fuente: FUENTE, formula: 'Compra neta − costo de lo vendido' }} />
+            <Tarjeta compacta etiqueta="Compré − vendí (a costo)" valor={signo(k.variacion_inventario)} nota={k.variacion_inventario >= 0 ? 'Compró más de lo que vendió' : 'Vendió más de lo que compró'} ayuda={{ fuente: FUENTE, formula: 'Compra neta − costo de lo vendido' }} />
             <Tarjeta compacta etiqueta="Cobertura" valor={k.meses_cobertura == null ? '—' : `${decimal(k.meses_cobertura)} meses`} ayuda={{ fuente: FUENTE, formula: 'Inventario ÷ costo de ventas mensual promedio del periodo' }} />
             <Tarjeta compacta etiqueta={`Sin venta > ${d.dias_lento} días`} valor={dinero(k.valor_lento)} nota={k.participacion_lento == null ? undefined : `${porcentaje(k.participacion_lento)} del inventario`} ayuda={{ fuente: FUENTE, formula: 'Existencia de ítems cuya última venta fue hace más de 180 días o nunca' }} />
           </Malla>
-          <Bloque titulo="Lectura por línea" descripcion={`${k.lineas_consumen} vendieron inventario previo · ${k.lineas_acumulan} acumularon · ${k.lineas_equilibradas} venden lo que compran`} ayuda={{ fuente: FUENTE, formula: 'Compra neta − costo de ventas; equilibrada si difieren menos de 3 %', nota: 'Una línea con ventas a precio mayores que sus compras no siempre usó inventario: el precio incluye el margen.' }}>
+          <ComoLeer items={GLOSARIO} />
+          <Bloque titulo="¿Qué línea compró de más o vendió de más?" descripcion={`${k.lineas_consumen} vendieron inventario previo · ${k.lineas_acumulan} acumularon · ${k.lineas_equilibradas} venden lo que compran`} ayuda={{ fuente: FUENTE, formula: 'Compra neta − costo de ventas; equilibrada si difieren menos de 3 %', nota: 'Una línea con ventas a precio mayores que sus compras no siempre usó inventario: el precio incluye el margen.' }}>
             <BarrasApiladas agrupadas datos={mayores.map(l => ({ ...l, corta: corto(l.proveedor) }))} ejeX="corta" series={[
               { clave: 'compra_neta', nombre: 'Compra neta', color: PALETA[0] },
               { clave: 'costo_ventas', nombre: 'Costo de ventas', color: PALETA[2] },
@@ -65,7 +83,7 @@ export function InventarioLineas({ d, sub, alElegirSub }: { d: DashboardInventar
             { titulo: 'Compra neta', alinear: 'der', celda: l => dinero(l.compra_neta) },
             { titulo: 'Venta (precio)', alinear: 'der', celda: l => dinero(l.venta) },
             { titulo: 'Costo de ventas', alinear: 'der', celda: l => dinero(l.costo_ventas) },
-            { titulo: 'Variación', alinear: 'der', celda: l => <span className="whitespace-nowrap">{signo(l.variacion_inventario)}</span> },
+            { titulo: 'Compré − vendí', alinear: 'der', celda: l => <span className="whitespace-nowrap">{signo(l.variacion_inventario)}</span> },
             { titulo: 'Inventario hoy', alinear: 'der', celda: l => dinero(l.existencia) },
             { titulo: 'Inicial estimado', alinear: 'der', celda: l => dinero(l.inventario_inicial_estimado) },
             { titulo: 'Cobertura', alinear: 'der', celda: l => l.meses_cobertura == null ? '—' : `${decimal(l.meses_cobertura)} m` },
