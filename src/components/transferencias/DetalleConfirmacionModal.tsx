@@ -82,7 +82,7 @@ export function DetalleConfirmacionModal({ id, onClose, onSaved }: { id: number;
         <p><span className="block text-xs text-muted-foreground">Cliente</span><strong>{row.razon_social}</strong><span className="block text-xs">NIT {row.nit}</span></p>
         <p><span className="block text-xs text-muted-foreground">Valor</span><strong className="tabular-nums">{formatters.currency(Number(row.valor) || 0)}</strong></p>
         <p><span className="block text-xs text-muted-foreground">Fecha de transferencia</span>{formatters.dateOnly(row.fecha_transferencia)}</p>
-        <p><span className="block text-xs text-muted-foreground">Cuenta destino</span>{row.id_cta_bancaria}</p>
+        <p><span className="block text-xs text-muted-foreground">Cuenta destino</span>{row.cuenta_nombre ? <><strong>{row.cuenta_nombre}</strong><span className="block text-xs text-muted-foreground">Cód. {row.id_cta_bancaria}</span></> : row.id_cta_bancaria}</p>
         <p><span className="block text-xs text-muted-foreground">Referencia</span>{row.referencia || '—'}</p>
         <p><span className="block text-xs text-muted-foreground">C.O.</span>{row.id_co || '—'}</p>
         {row.conductor_id != null && <p><span className="block text-xs text-muted-foreground">Conductor</span>{row.conductor_nombre || '—'}</p>}
@@ -95,9 +95,10 @@ export function DetalleConfirmacionModal({ id, onClose, onSaved }: { id: number;
         {row.revisado_at && <p>{row.estado === 'RECHAZADA' ? 'Rechazado' : 'Aprobado'} por {row.revisado_by_usuario || '—'} el {formatters.dateTime(row.revisado_at)}</p>}
         {row.segundos_espera != null && <p>Duración de espera: {duracion(row.segundos_espera)}</p>}
         {row.motivo_rechazo && <p>Motivo: {row.motivo_rechazo}</p>}
-        {row.rc_creado_at && <p>RC {row.rc_numero || '—'} creado el {formatters.dateTime(row.rc_creado_at)}</p>}
+        {row.rc_creado_at && <p>{row.rc_numero ? <>Usada en el <strong>RC {row.rc_numero}</strong></> : row.estado === 'USADA' ? 'Usada en un RC (el número no quedó registrado)' : 'RC'} creado el {formatters.dateTime(row.rc_creado_at)}</p>}
+        {row.rc_relacionadas && row.rc_relacionadas.length > 0 && <div className="mt-1"><p>Este RC usó {row.rc_relacionadas.length + 1} aprobaciones; las otras son:</p><ul className="mt-1 list-disc space-y-0.5 pl-5">{row.rc_relacionadas.map(o => <li key={o.id}>{o.razon_social} · {formatters.currency(Number(o.valor) || 0)} · {o.cuenta_nombre || o.id_cta_bancaria} · {formatters.dateOnly(o.fecha_transferencia)}</li>)}</ul></div>}
         {row.rc_error && <p role="alert" className="text-destructive">Error al crear RC: {row.rc_error}</p>}
-        {row.usado_at && <p>Usado en RC {row.rc_numero || '—'} el {formatters.dateTime(row.usado_at)}</p>}
+        {row.usado_at && !row.rc_creado_at && <p>Usado en RC {row.rc_numero || '—'} el {formatters.dateTime(row.usado_at)}</p>}
       </div>
       {row.estado === 'PENDIENTE' && <div className="space-y-2">
         <h3 className="font-semibold">Agregar soportes</h3>

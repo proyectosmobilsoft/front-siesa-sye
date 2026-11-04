@@ -16,6 +16,8 @@ export interface ConfirmacionTransferencia {
   valor: number
   fecha_transferencia: string
   id_cta_bancaria: string
+  /** Banco o billetera de la cuenta destino (descripción en SIESA); null si no se pudo resolver */
+  cuenta_nombre?: string | null
   referencia: string | null
   observacion: string | null
   estado: EstadoTransferencia
@@ -36,10 +38,13 @@ export interface ConfirmacionTransferencia {
   rc_error?: string | null
   segundos_espera?: number | null
   rc_creado_at?: string | null
+  /** Cuántas aprobaciones se usaron en el mismo RC (incluida esta) */
+  rc_transferencias?: number
 }
 export interface FacturaConfirmacion { rowid_sa: number; documento: string; saldo: number }
 export interface SoporteConfirmacion { id: number; url: string; nombre_original: string; mime: string; tamano: number; created_at: string }
-export interface DetalleConfirmacion extends ConfirmacionTransferencia { facturas: FacturaConfirmacion[]; soportes: SoporteConfirmacion[] }
+export interface AprobacionDelMismoRc { id: number; valor: number; id_cta_bancaria: string; cuenta_nombre?: string | null; fecha_transferencia: string; razon_social: string }
+export interface DetalleConfirmacion extends ConfirmacionTransferencia { facturas: FacturaConfirmacion[]; soportes: SoporteConfirmacion[]; rc_relacionadas?: AprobacionDelMismoRc[] }
 export interface DuplicadoConfirmacion { id: number; razon_social: string; valor: number; fecha_transferencia: string; estado: EstadoTransferencia; referencia: string | null }
 export interface CrearConfirmacion {
   rowid_tercero: number; nit: string; razon_social: string; id_co: string; valor: number; fecha_transferencia: string
