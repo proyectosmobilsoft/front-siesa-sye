@@ -173,3 +173,45 @@ export interface DashboardCompras {
   }[]
   marcas: { marca: string; compra_neta: number }[]
 }
+
+export type LecturaInventario = 'consume' | 'acumula' | 'equilibrada' | 'sin_movimiento'
+
+export interface DashboardInventario {
+  desde: string
+  hasta: string
+  dias_lento: number
+  kpis: {
+    existencia: number
+    items: number
+    compra_neta: number
+    costo_ventas: number
+    variacion_inventario: number
+    valor_lento: number
+    participacion_lento: number | null
+    valor_sin_venta: number
+    meses_cobertura: number | null
+    lineas_consumen: number
+    lineas_acumulan: number
+    lineas_equilibradas: number
+    items_negativos: number
+  }
+  mensual: { mes: string; compra_neta: number; costo_ventas: number; variacion_inventario: number }[]
+  lineas: {
+    proveedor: string
+    lectura: LecturaInventario
+    compra_neta: number
+    venta: number
+    costo_ventas: number
+    variacion_inventario: number
+    existencia: number
+    items: number
+    cantidad: number
+    inventario_inicial_estimado: number
+    cobertura_acumulacion: number | null
+    meses_cobertura: number | null
+    valor_lento: number
+    valor_sin_venta: number
+    negativos: number
+  }[]
+  bodegas: { codigo: string; bodega: string; cantidad: number; valor: number; vendible: boolean }[]
+}

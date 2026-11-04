@@ -3,7 +3,7 @@ import { Areas } from '../graficas'
 import { TarjetaResumen } from '../Expandible'
 import { PALETA, compacto, dinero, etiquetaMes, porcentaje } from '../formato'
 import { AYUDAS } from './ayudas'
-import type { DashboardCompras, DashboardVentas } from './tipos'
+import type { DashboardCompras, DashboardInventario, DashboardVentas } from './tipos'
 import { colorCumplimiento } from './colores'
 
 interface ResumenRC {
@@ -14,11 +14,14 @@ interface ResumenRC {
   }
   mensual: { mes: string; facturado: number; recaudo_cartera: number }[]
 }
-type Vista = 'recaudo' | 'presupuesto' | 'proveedores' | 'compras'
+type Vista = 'recaudo' | 'presupuesto' | 'proveedores' | 'compras' | 'inventario'
 export function Resumenes({
   recaudo,
   ventas,
   compras,
+  inventario,
+  cargaInventario,
+  errorInventario,
   cargaCompras,
   errorCompras,
   cargaRecaudo,
@@ -31,6 +34,9 @@ export function Resumenes({
   recaudo?: ResumenRC
   ventas?: DashboardVentas
   compras?: DashboardCompras
+  inventario?: DashboardInventario
+  cargaInventario: boolean
+  errorInventario: boolean
   cargaCompras: boolean
   errorCompras: boolean
   cargaRecaudo: boolean
@@ -45,8 +51,9 @@ export function Resumenes({
       .filter(p => p.proveedor !== 'OTROS PROVEEDORES')
       .slice(0, 5) ?? []
   const topCompras = compras?.proveedores.filter(p => p.proveedor !== 'OTROS PROVEEDORES').slice(0, 5) ?? []
+  const topInventario = inventario?.lineas.slice(0, 5) ?? []
   return (
-    <Malla columnas={4}>
+    <Malla columnas={5}>
       <TarjetaResumen
         titulo="Recaudo de cartera"
         abierta={vista === 'recaudo'}
@@ -205,6 +212,30 @@ export function Resumenes({
                   <div className="h-full rounded-full bg-primary" style={{ width: `${topCompras[0]?.compra_neta ? Math.max(0, p.compra_neta / topCompras[0].compra_neta * 100) : 0}%` }} />
                 </div>
                 <span>{compacto(p.compra_neta)}</span>
+              </div>
+            ))}
+          </div>
+        </CuerpoConsulta>
+      </TarjetaResumen>
+      <TarjetaResumen
+        titulo="Inventario"
+        abierta={vista === 'inventario'}
+        alAlternar={() => alElegir('inventario')}
+        ayuda={{ fuente: 'Existencias de SIESA a costo promedio frente a compra neta y costo de lo vendido.', formula: 'Variación = compra neta − costo de ventas' }}
+      >
+        <CuerpoConsulta consulta={{ isLoading: cargaInventario, isError: errorInventario }} altura="h-40">
+          <div className="text-2xl font-bold tabular-nums">{inventario && dinero(inventario.kpis.existencia)}</div>
+          <div className="mt-1 text-xs text-muted-foreground">
+            Cobertura {inventario?.kpis.meses_cobertura == null ? '—' : `${inventario.kpis.meses_cobertura.toFixed(1)} meses`}
+          </div>
+          <div className="mt-3 space-y-2">
+            {topInventario.map(l => (
+              <div key={l.proveedor} className="flex items-center gap-2 text-[11px]">
+                <span className="w-24 truncate" title={l.proveedor}>{l.proveedor}</span>
+                <div className="h-2 flex-1 rounded-full bg-muted">
+                  <div className="h-full rounded-full bg-primary" style={{ width: `${topInventario[0]?.existencia ? Math.max(0, l.existencia / topInventario[0].existencia * 100) : 0}%` }} />
+                </div>
+                <span>{compacto(l.existencia)}</span>
               </div>
             ))}
           </div>
