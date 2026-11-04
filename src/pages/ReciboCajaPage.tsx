@@ -26,6 +26,7 @@ import { Cargando } from '@/components/ui/cargando'
 import { BotonExcel } from '@/components/ui/boton-excel'
 import { usePermiso } from '@/hooks/usePermiso'
 import { PERMISOS } from '@/config/permisos'
+import { BotonPdfRC } from '@/components/reciboCaja/BotonPdfRC'
 import { descargarExcel, type CeldaExcel, type HojaExcel } from '@/utils/exportarExcel'
 
 interface ReciboCaja {
@@ -127,6 +128,8 @@ const LIMIT = 50
 const MONEY = new Intl.NumberFormat('es-CO', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 const money = (n: number) => MONEY.format(n)
 const hoyISO = () => new Date().toISOString().slice(0, 10)
+/** Fecha local (YYYY-MM-DD) de hace `dias` días, para el rango por defecto del historial de recibos. */
+const haceDiasIso = (dias: number) => { const d = new Date(); d.setDate(d.getDate() - dias); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}` }
 
 const ESTADO_OPTIONS = [
   { value: 0, label: 'Todos los estados' },
@@ -172,6 +175,9 @@ export const ReciboCajaPage = () => {
   const [tipodoc, setTipodoc] = useState('RC')
   const [estado, setEstado] = useState(0)
   const [numero, setNumero] = useState(0)
+  // El historial se limita por fecha (sin límite son decenas de miles de recibos y tarda minutos)
+  const [recDesde, setRecDesde] = useState(haceDiasIso(6))
+  const [recHasta, setRecHasta] = useState(hoyLocalIso())
   const [razonSocial, setRazonSocial] = useState('')
   const [data, setData] = useState<ReciboCaja[]>([])
   const [total, setTotal] = useState(0)
@@ -271,6 +277,8 @@ export const ReciboCajaPage = () => {
       limit,
     }
     if (estado !== 0) body.p_estado = estado
+    // Al buscar un número puntual no se limita por fecha
+    if (!numero) { body.fecha_inicial = recDesde; body.fecha_final = recHasta }
     if (tipodoc.trim()) body.p_idtipodoc = tipodoc.trim().toUpperCase()
     return body
   }
@@ -562,6 +570,10 @@ export const ReciboCajaPage = () => {
               setEstado={setEstado}
               numero={numero}
               setNumero={setNumero}
+              recDesde={recDesde}
+              setRecDesde={setRecDesde}
+              recHasta={recHasta}
+              setRecHasta={setRecHasta}
               razonSocial={razonSocial}
               setRazonSocial={setRazonSocial}
               fetchRecibos={fetchRecibos}
@@ -1021,6 +1033,10 @@ function History(props: {
   setEstado: (v: number) => void
   numero: number
   setNumero: (v: number) => void
+  recDesde: string
+  setRecDesde: (v: string) => void
+  recHasta: string
+  setRecHasta: (v: string) => void
   razonSocial: string
   setRazonSocial: (v: string) => void
   fetchRecibos: (p?: number) => void
@@ -1040,6 +1056,10 @@ function History(props: {
     setEstado,
     numero,
     setNumero,
+    recDesde,
+    setRecDesde,
+    recHasta,
+    setRecHasta,
     razonSocial,
     setRazonSocial,
     fetchRecibos,
@@ -1050,13 +1070,13 @@ function History(props: {
   // Medios de pago y estado no van en la tabla: salen en el panel derecho
   // al pasar el mouse por un recibo (queda el último señalado).
   const [reciboSeñalado, setReciboSeñalado] = useState<ReciboCaja | null>(null)
-  const columnas = ['Documento', 'Fecha', 'Cliente', 'Creado por', 'C.O.', 'Desc. financiero', 'Total a pagar']
+  const columnas = ['Documento', 'Fecha', 'Cliente', 'Creado por', 'C.O.', 'Desc. financiero', 'Total a pagar', 'PDF']
 
   return (
     <div className="space-y-4">
       {/* Barra de filtros de búsqueda */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex items-center gap-2">
+      <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
+        <div className="flex shrink-0 items-center gap-2">
           <FileText className="h-5 w-5 text-primary" />
           <h2 className="text-sm font-bold text-foreground">Recibos registrados ({total})</h2>
         </div>
@@ -1080,6 +1100,16 @@ function History(props: {
               </option>
             ))}
           </Select>
+
+          <div className="flex items-center gap-1.5">
+            <div className="w-36 shrink-0">
+              <FechaInput value={recDesde} onChange={setRecDesde} max={recHasta || hoyLocalIso()} className="text-xs" />
+            </div>
+            <span className="text-xs text-muted-foreground">a</span>
+            <div className="w-36 shrink-0">
+              <FechaInput value={recHasta} onChange={setRecHasta} min={recDesde || undefined} max={hoyLocalIso()} className="text-xs" />
+            </div>
+          </div>
 
           <Input
             className="nu-control nu-control-sm w-24 text-xs"
@@ -1177,6 +1207,7 @@ function History(props: {
                     </td>
                     <td className="px-4 py-3 text-right text-red-600 dark:text-red-400"><MontoAlineado value={r.descuento_pp ?? 0} alinear="derecha" /></td>
                     <td className="px-4 py-3 text-right"><MontoAlineado value={r.valor_facturas ?? 0} alinear="derecha" /></td>
+                    <td className="px-4 py-3 text-right"><BotonPdfRC rowid={r.Rowid} /></td>
                   </tr>
                 ))
               )}
@@ -1284,6 +1315,8 @@ function DetalleReciboModal({ recibo, onClose }: { recibo: ReciboCaja | null; on
             </dd>
             <dt className="text-muted-foreground">Total</dt>
             <dd className="font-semibold">{money(recibo.Créditos)}</dd>
+            <dt className="text-muted-foreground">Documento</dt>
+            <dd><BotonPdfRC rowid={recibo.Rowid} conTexto className="-ml-2" /></dd>
           </dl>
 
           {cargando ? (
