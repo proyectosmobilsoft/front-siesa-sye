@@ -30,6 +30,8 @@ export interface ConfirmacionTransferencia {
   usado_at: string | null
   cant_soportes: number
   cant_facturas: number
+  /** Facturas a las que se aplicará la transferencia (la lista las trae; el detalle también) */
+  facturas?: FacturaConfirmacion[]
   conductor_id?: number | null
   conductor_nombre?: string | null
   tiene_payload?: boolean
