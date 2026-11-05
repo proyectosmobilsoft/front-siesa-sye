@@ -734,7 +734,7 @@ function TableroConductoresRC({
   }
 
   return (
-    <div className="space-y-4">
+    <div className="max-w-[1350px] space-y-4">
       {/* Resumen del tablero de conductores */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-2">
@@ -886,7 +886,7 @@ function RcConductorDetalle({ rc, loading, conductorNombre }: { rc: ReciboCajaUs
 
   return (
     <div className="overflow-x-auto px-4 py-3">
-      <div className="mb-2 flex justify-end">
+      <div className="mb-2 flex max-w-[1100px] justify-end">
         <BotonPdfRCs
           compacto
           etiqueta={`PDF de los RC de ${conductorNombre}`}
@@ -894,7 +894,7 @@ function RcConductorDetalle({ rc, loading, conductorNombre }: { rc: ReciboCajaUs
           obtenerRowids={() => [...rc].filter((r) => r.Estado !== 2).sort((a, b) => Number(a.Numero) - Number(b.Numero)).map((r) => r.Rowid)}
         />
       </div>
-      <table className="w-full text-xs">
+      <table className="w-full max-w-[1100px] text-xs">
         <thead>
           <tr className="border-b border-border/60">
             <th className="px-3 py-2 text-left nu-th">Documento</th>
@@ -909,7 +909,6 @@ function RcConductorDetalle({ rc, loading, conductorNombre }: { rc: ReciboCajaUs
             <th className="px-3 py-2 text-right nu-th">Desc. financiero</th>
             <th className="px-3 py-2 text-right nu-th">Total</th>
             <th className="px-3 py-2 text-left nu-th">Estado</th>
-            <th className="px-3 py-2 text-right nu-th">PDF</th>
           </tr>
         </thead>
         <tbody>
@@ -958,11 +957,13 @@ function RcConductorDetalle({ rc, loading, conductorNombre }: { rc: ReciboCajaUs
                   <MontoAlineado value={totalRecaudado} alinear="derecha" />
                 </td>
                 <td className="px-3 py-2 text-left">
-                  <span className={cn('rounded-full px-2 py-0.5 text-[10px] font-bold uppercase', estadoBadgeNum(r.Estado))}>
-                    {r.Estado === 1 ? 'Aprobado' : r.Estado === 2 ? 'Anulado' : 'En proceso'}
+                  <span className="inline-flex items-center gap-1.5">
+                    <span className={cn('rounded-full px-2 py-0.5 text-[10px] font-bold uppercase', estadoBadgeNum(r.Estado))}>
+                      {r.Estado === 1 ? 'Aprobado' : r.Estado === 2 ? 'Anulado' : 'En proceso'}
+                    </span>
+                    <BotonPdfRC rowid={r.Rowid} />
                   </span>
                 </td>
-                <td className="px-3 py-2 text-right"><BotonPdfRC rowid={r.Rowid} /></td>
               </tr>
             )
           })}
