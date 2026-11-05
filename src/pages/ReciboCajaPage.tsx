@@ -27,6 +27,7 @@ import { BotonExcel } from '@/components/ui/boton-excel'
 import { usePermiso } from '@/hooks/usePermiso'
 import { PERMISOS } from '@/config/permisos'
 import { BotonPdfRC } from '@/components/reciboCaja/BotonPdfRC'
+import { BotonPdfRCs } from '@/components/reciboCaja/BotonPdfRCs'
 import { descargarExcel, type CeldaExcel, type HojaExcel } from '@/utils/exportarExcel'
 
 interface ReciboCaja {
@@ -626,6 +627,14 @@ function TableroConductoresRC({
   const [cargando, setCargando] = useState<string | null>(null)
   const [exportando, setExportando] = useState(false)
 
+  /** Rowids de los RC vigentes del día (no anulados), por conductor y número; reutiliza el detalle ya abierto. */
+  const rowidsDelDia = async (): Promise<number[]> => {
+    const detalles = await Promise.all(conductores.map((c) =>
+      detalle[c.usuario_creacion] ?? reciboCajaApi.getPorUsuario(c.usuario_creacion, { fechaInicial: resumen?.fecha_inicial, fechaFinal: resumen?.fecha_final, tipo: 'RC' })
+    ))
+    return detalles.flatMap((rcs) => [...rcs].filter((r) => r.Estado !== 2).sort((a, b) => Number(a.Numero) - Number(b.Numero)).map((r) => r.Rowid))
+  }
+
   /** Excel con el resumen por conductor y, en otra hoja, todos los recibos de cada uno (incluye anulados) */
   const exportarExcel = async () => {
     setExportando(true)
@@ -745,6 +754,7 @@ function TableroConductoresRC({
         </div>
 
         <div className="flex items-center gap-3">
+          <BotonPdfRCs obtenerRowids={rowidsDelDia} etiqueta="Generar PDF" deshabilitado={conductores.length === 0} titulo="Un solo PDF con todos los RC del día (sin anulados), cada uno con sus confirmaciones de transferencia" />
           <Button variant="outline" size="sm" className="nu-btn nu-btn-soft h-9 gap-1.5 text-xs" onClick={() => void exportarExcel()} disabled={exportando || conductores.length === 0}>
             {exportando ? <RefreshCw className="h-3.5 w-3.5 animate-spin" /> : <FileSpreadsheet className="h-3.5 w-3.5" />} Exportar Excel
           </Button>
@@ -876,6 +886,14 @@ function RcConductorDetalle({ rc, loading, conductorNombre }: { rc: ReciboCajaUs
 
   return (
     <div className="overflow-x-auto px-4 py-3">
+      <div className="mb-2 flex justify-end">
+        <BotonPdfRCs
+          compacto
+          etiqueta={`PDF de los RC de ${conductorNombre}`}
+          titulo="Un solo PDF con los RC de este conductor (sin anulados), cada uno con sus confirmaciones de transferencia"
+          obtenerRowids={() => [...rc].filter((r) => r.Estado !== 2).sort((a, b) => Number(a.Numero) - Number(b.Numero)).map((r) => r.Rowid)}
+        />
+      </div>
       <table className="w-full text-xs">
         <thead>
           <tr className="border-b border-border/60">
@@ -891,6 +909,7 @@ function RcConductorDetalle({ rc, loading, conductorNombre }: { rc: ReciboCajaUs
             <th className="px-3 py-2 text-right nu-th">Desc. financiero</th>
             <th className="px-3 py-2 text-right nu-th">Total</th>
             <th className="px-3 py-2 text-left nu-th">Estado</th>
+            <th className="px-3 py-2 text-right nu-th">PDF</th>
           </tr>
         </thead>
         <tbody>
@@ -943,6 +962,7 @@ function RcConductorDetalle({ rc, loading, conductorNombre }: { rc: ReciboCajaUs
                     {r.Estado === 1 ? 'Aprobado' : r.Estado === 2 ? 'Anulado' : 'En proceso'}
                   </span>
                 </td>
+                <td className="px-3 py-2 text-right"><BotonPdfRC rowid={r.Rowid} /></td>
               </tr>
             )
           })}

@@ -19,3 +19,22 @@ export async function abrirPdfRC(rowid: number): Promise<void> {
     throw err
   }
 }
+
+/**
+ * Abre en una pestaña nueva un solo PDF con varios recibos de caja; cada uno va seguido de las
+ * confirmaciones de transferencia amarradas a él. Con `soportes` el API agrega las fotos de las
+ * transferencias (solo si el usuario puede verlas).
+ */
+export async function abrirPdfRCs(rowids: number[], opciones: { soportes?: boolean } = {}): Promise<void> {
+  const ventana = window.open('', '_blank')
+  try {
+    const res = await apiClient.post<Blob>('/recibo-caja/pdf', { rowids, soportes: opciones.soportes === true }, { responseType: 'blob', timeout: 5 * 60 * 1000 })
+    const url = URL.createObjectURL(new Blob([res.data], { type: 'application/pdf' }))
+    if (ventana) ventana.location.href = url
+    else window.open(url, '_blank')
+    setTimeout(() => URL.revokeObjectURL(url), 5 * 60 * 1000)
+  } catch (err) {
+    ventana?.close()
+    throw err
+  }
+}
