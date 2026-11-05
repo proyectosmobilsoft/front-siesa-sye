@@ -40,6 +40,7 @@ function RcCelda({ row }: { row: ConfirmacionTransferencia }) {
       : row.estado === 'USADA' ? <span className="text-muted-foreground" title="Se usó en un RC, pero el número no se guardó">RC sin registrar</span>
       : row.tiene_payload && row.estado === 'APROBADA' ? <span className="text-muted-foreground">RC pendiente</span> : <span className="text-muted-foreground">—</span>}
     {varias && <span className="block text-muted-foreground">{row.rc_transferencias} aprobaciones en este RC</span>}
+    {(row.otras_del_recaudo ?? 0) > 0 && !varias && <span className="block text-primary" title="Abre el detalle para ver todas las transferencias del recaudo">+{row.otras_del_recaudo} del mismo recaudo</span>}
     {row.rc_creado_at && <span className="block text-muted-foreground">{formatters.dateTime(row.rc_creado_at)} · {duracion(row.segundos_espera)}</span>}
   </>
 }

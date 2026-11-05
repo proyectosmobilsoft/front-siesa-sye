@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { transferenciasConfirmacionApi } from '@/api/transferenciasConfirmacion'
+import { transferenciasConfirmacionApi, type DetalleConfirmacion, type TransferenciaDelRecaudo } from '@/api/transferenciasConfirmacion'
 import { usePermiso } from '@/hooks/usePermiso'
 import { Modal } from '@/components/ui/modal'
 import { Button } from '@/components/ui/button'
@@ -91,12 +91,12 @@ export function DetalleConfirmacionModal({ id, onClose, onSaved }: { id: number;
       {row.tiene_payload && <div className="rounded-lg border border-border p-3"><h3 className="font-semibold">Datos del recibo</h3><p>Cliente: {typeof resumenPayload(row)?.cliente === 'string' ? resumenPayload(row)?.cliente as string : row.razon_social}</p><p>Valor: {formatters.currency(Number(resumenPayload(row)?.valor ?? row.valor))}</p><p>Facturas: {resumenPayload(row)?.facturas?.map(facturaTexto).join(', ') || '—'}</p><p>Medios: {resumenPayload(row)?.medios?.map(medioTexto).join(', ') || '—'}</p></div>}
       <div><h3 className="font-semibold">Facturas</h3>{row.facturas.length ? <ul className="mt-1 space-y-1">{row.facturas.map(f => <li key={f.rowid_sa} className="flex justify-between gap-3 border-b border-border py-1"><span>{f.documento}</span><span className="tabular-nums">Saldo {formatters.currency(Number(f.saldo) || 0)}</span></li>)}</ul> : <p className="text-muted-foreground">Sin facturas asociadas.</p>}</div>
       <div><h3 className="font-semibold">Soportes</h3><div className="mt-2 grid gap-2 sm:grid-cols-3">{row.soportes.map(s => <SoporteProtegido key={s.id} url={s.url} mime={s.mime} nombre={s.nombre_original} variante="tarjeta" />)}</div></div>
+      <TransferenciasDelRecaudo row={row} />
       <div className="rounded-lg bg-muted/50 p-3"><h3 className="font-semibold">Trazabilidad</h3><p>Enviado por {row.conductor_nombre || row.created_by_usuario} el {formatters.dateTime(row.created_at)}</p>
         {row.revisado_at && <p>{row.estado === 'RECHAZADA' ? 'Rechazado' : 'Aprobado'} por {row.revisado_by_usuario || '—'} el {formatters.dateTime(row.revisado_at)}</p>}
         {row.segundos_espera != null && <p>Duración de espera: {duracion(row.segundos_espera)}</p>}
         {row.motivo_rechazo && <p>Motivo: {row.motivo_rechazo}</p>}
         {row.rc_creado_at && <p>{row.rc_numero ? <>Usada en el <strong>RC {row.rc_numero}</strong></> : row.estado === 'USADA' ? 'Usada en un RC (el número no quedó registrado)' : 'RC'} creado el {formatters.dateTime(row.rc_creado_at)}</p>}
-        {row.rc_relacionadas && row.rc_relacionadas.length > 0 && <div className="mt-1"><p>Este RC usó {row.rc_relacionadas.length + 1} aprobaciones; las otras son:</p><ul className="mt-1 list-disc space-y-0.5 pl-5">{row.rc_relacionadas.map(o => <li key={o.id}>{o.razon_social} · {formatters.currency(Number(o.valor) || 0)} · {o.cuenta_nombre || o.id_cta_bancaria} · {formatters.dateOnly(o.fecha_transferencia)}</li>)}</ul></div>}
         {row.rc_error && <p role="alert" className="text-destructive">Error al crear RC: {row.rc_error}</p>}
         {row.usado_at && !row.rc_creado_at && <p>Usado en RC {row.rc_numero || '—'} el {formatters.dateTime(row.usado_at)}</p>}
       </div>
@@ -109,4 +109,46 @@ export function DetalleConfirmacionModal({ id, onClose, onSaved }: { id: number;
       </div>}
     </div>}
   </Modal>
+}
+
+const ETIQUETA_ESTADO: Record<string, string> = { PENDIENTE: 'Pendiente', APROBADA: 'Aprobada', RECHAZADA: 'Rechazada', ANULADA: 'Anulada', EN_USO: 'En uso', USADA: 'Usada' }
+const CLASE_ESTADO: Record<string, string> = {
+  PENDIENTE: 'bg-amber-500/10 text-amber-700 dark:text-amber-400', APROBADA: 'bg-green-500/10 text-green-700 dark:text-green-400',
+  USADA: 'bg-blue-500/10 text-blue-700 dark:text-blue-400', EN_USO: 'bg-blue-500/10 text-blue-700 dark:text-blue-400',
+  RECHAZADA: 'bg-red-500/10 text-red-700 dark:text-red-400', ANULADA: 'bg-muted text-muted-foreground',
+}
+
+/**
+ * Todas las transferencias de este recaudo (puede haber varias, incluso a bancos distintos), con su estado y, si ya hay RC,
+ * el RC. Junta las del mismo RC con las que el conductor pidió para las mismas facturas, así aparecen aunque una haya sido
+ * rechazada o anulada y aunque todavía no exista el RC.
+ */
+function TransferenciasDelRecaudo({ row }: { row: DetalleConfirmacion }) {
+  const otras = new Map<number, TransferenciaDelRecaudo>()
+  for (const o of row.rc_relacionadas ?? []) otras.set(o.id, { ...o, estado: 'USADA', created_at: row.created_at, rc_numero: row.rc_numero })
+  for (const o of row.del_mismo_recaudo ?? []) otras.set(o.id, o)
+  if (otras.size === 0) return null
+  const todas: TransferenciaDelRecaudo[] = [{ id: row.id, valor: row.valor, estado: row.estado, id_cta_bancaria: row.id_cta_bancaria, cuenta_nombre: row.cuenta_nombre, fecha_transferencia: row.fecha_transferencia, created_at: row.created_at, revisado_by_usuario: row.revisado_by_usuario, revisado_at: row.revisado_at, motivo_rechazo: row.motivo_rechazo, rc_numero: row.rc_numero }, ...otras.values()]
+    .sort((a, b) => a.created_at.localeCompare(b.created_at) || a.id - b.id)
+  const vigentes = todas.filter(t => t.estado !== 'RECHAZADA' && t.estado !== 'ANULADA')
+  const total = vigentes.reduce((suma, t) => suma + (Number(t.valor) || 0), 0)
+  const bancos = new Set(vigentes.map(t => t.cuenta_nombre || t.id_cta_bancaria))
+  return (
+    <div className="rounded-lg border border-border p-3">
+      <h3 className="font-semibold">Transferencias de este recaudo ({todas.length})</h3>
+      <p className="text-xs text-muted-foreground">El mismo conductor las pidió para este cliente y estas mismas facturas. Pueden ir a bancos distintos y se usan juntas en un solo RC.</p>
+      <ul className="mt-2 space-y-1.5">
+        {todas.map(t => (
+          <li key={t.id} className={`flex flex-wrap items-center gap-x-3 gap-y-1 rounded-md px-2 py-1.5 ${t.id === row.id ? 'bg-primary/5 ring-1 ring-primary/30' : 'bg-muted/30'}`}>
+            <span className="font-medium">#{t.id}{t.id === row.id && <span className="ml-1 text-[11px] font-normal text-primary">(esta)</span>}</span>
+            <span className="min-w-0 flex-1 truncate">{t.cuenta_nombre || t.id_cta_bancaria}</span>
+            <span className="font-semibold tabular-nums">{formatters.currency(Number(t.valor) || 0)}</span>
+            <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${CLASE_ESTADO[t.estado] ?? ''}`}>{ETIQUETA_ESTADO[t.estado] ?? t.estado}{t.rc_numero ? ` · RC ${t.rc_numero}` : ''}</span>
+            {t.motivo_rechazo && <span className="basis-full text-xs text-muted-foreground">Motivo: {t.motivo_rechazo}</span>}
+          </li>
+        ))}
+      </ul>
+      <p className="mt-2 text-sm">Total vigente: <strong className="tabular-nums">{formatters.currency(total)}</strong> en {vigentes.length} transferencia(s){bancos.size > 1 ? ` · ${bancos.size} bancos distintos` : ''}</p>
+    </div>
+  )
 }

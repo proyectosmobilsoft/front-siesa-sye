@@ -42,11 +42,14 @@ export interface ConfirmacionTransferencia {
   rc_creado_at?: string | null
   /** Cuántas aprobaciones se usaron en el mismo RC (incluida esta) */
   rc_transferencias?: number
+  /** Otras confirmaciones del mismo recaudo (mismo conductor, cliente y facturas, con menos de 3 h de diferencia) */
+  otras_del_recaudo?: number
 }
 export interface FacturaConfirmacion { rowid_sa: number; documento: string; saldo: number }
 export interface SoporteConfirmacion { id: number; url: string; nombre_original: string; mime: string; tamano: number; created_at: string }
 export interface AprobacionDelMismoRc { id: number; valor: number; id_cta_bancaria: string; cuenta_nombre?: string | null; fecha_transferencia: string; razon_social: string }
-export interface DetalleConfirmacion extends ConfirmacionTransferencia { facturas: FacturaConfirmacion[]; soportes: SoporteConfirmacion[]; rc_relacionadas?: AprobacionDelMismoRc[] }
+export interface TransferenciaDelRecaudo { id: number; valor: number; estado: EstadoTransferencia; id_cta_bancaria: string; cuenta_nombre?: string | null; fecha_transferencia: string; created_at: string; revisado_by_usuario?: string | null; revisado_at?: string | null; motivo_rechazo?: string | null; rc_numero?: string | number | null }
+export interface DetalleConfirmacion extends ConfirmacionTransferencia { facturas: FacturaConfirmacion[]; soportes: SoporteConfirmacion[]; rc_relacionadas?: AprobacionDelMismoRc[]; del_mismo_recaudo?: TransferenciaDelRecaudo[] }
 export interface DuplicadoConfirmacion { id: number; razon_social: string; valor: number; fecha_transferencia: string; estado: EstadoTransferencia; referencia: string | null }
 export interface CrearConfirmacion {
   rowid_tercero: number; nit: string; razon_social: string; id_co: string; valor: number; fecha_transferencia: string
