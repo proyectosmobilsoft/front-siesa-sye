@@ -80,6 +80,12 @@ const MedioPagoSelector = ({
     </div>
 )
 
+/**
+ * Identificador único de una caja: el código solo no alcanza porque se repite entre C.O. (la `001` es
+ * Caja General del 001 y también Mostrador Alematerias del 002).
+ */
+const claveCaja = (c: Pick<CajaTraspaso, 'id_co' | 'id_caja'>) => `${String(c.id_co ?? '').trim()}|${String(c.id_caja).trim()}`
+
 const CajaSelector = ({
     label,
     value,
@@ -101,16 +107,17 @@ const CajaSelector = ({
     const opcion = (c: CajaTraspaso, idx: number) => {
         if (!c || c.id_caja === undefined || c.id_caja === null) return null
         const idVal = String(c.id_caja).trim()
+        const clave = claveCaja(c)
         const auxSuffix = c.auxiliar ? ` · Aux ${c.auxiliar}` : ''
         const labelText = c.nombre ? `${c.nombre}${auxSuffix}` : `Caja ${idVal}${auxSuffix}`
         return (
-            <option key={`${idVal}-${c.id_co || ''}-${idx}`} value={idVal} disabled={idVal === disabledValue}>
+            <option key={`${clave}-${idx}`} value={clave} disabled={clave === disabledValue}>
                 {labelText} · {formatters.currency(saldoPorMedio(c, medioPago))}
             </option>
         )
     }
     const centros = [...new Set(cajas.map((c) => String(c.id_co ?? '').trim()))].sort()
-    const cajaSeleccionada = cajas.find((c) => c?.id_caja && String(c.id_caja).trim() === value)
+    const cajaSeleccionada = cajas.find((c) => c?.id_caja && claveCaja(c) === value)
 
     return (
         <div className="flex-1 space-y-1.5">
@@ -161,7 +168,7 @@ const CajaSaldoDashboard = ({
     medioPago: MedioPagoTraspaso
     cajaOrigen: string
     cajaDestino: string
-    onSeleccionar: (idCaja: string) => void
+    onSeleccionar: (clave: string) => void
 }) => {
     if (cajas.length === 0) return null
 
@@ -182,16 +189,17 @@ const CajaSaldoDashboard = ({
                 {cajas.map((c, idx) => {
                     if (!c || c.id_caja === undefined || c.id_caja === null) return null
                     const idVal = String(c.id_caja).trim()
+                    const clave = claveCaja(c)
                     const saldo = saldoPorMedio(c, medioPago)
-                    const esOrigen = idVal === cajaOrigen
-                    const esDestino = idVal === cajaDestino
+                    const esOrigen = clave === cajaOrigen
+                    const esDestino = clave === cajaDestino
 
                     return (
                         <motion.button
-                            key={`${idVal}-${c.id_co || ''}-${idx}`}
+                            key={`${clave}-${idx}`}
                             type="button"
                             layout
-                            onClick={() => onSeleccionar(idVal)}
+                            onClick={() => onSeleccionar(clave)}
                             className={`flex flex-col items-start gap-1 rounded-lg border p-2.5 text-left transition-colors ${
                                 esOrigen
                                     ? 'border-primary bg-primary/5 ring-1 ring-primary'
@@ -274,13 +282,17 @@ export const TrasladoFondosPage = () => {
         setCajaDestino('')
     }, [centroOperacionActivo])
 
-    const nombreCaja = (id?: string | null) => {
+    const nombreCaja = (id?: string | null, co?: string | null) => {
         if (!id || typeof id !== 'string') return ''
         const idLimpio = id.trim()
-        const cajaEncontrada = cajas?.find((c) => c?.id_caja && String(c.id_caja).trim() === idLimpio)
+        const coLimpio = co ? String(co).trim() : ''
+        const cajaEncontrada = cajas?.find((c) => c?.id_caja && String(c.id_caja).trim() === idLimpio && (!coLimpio || String(c.id_co ?? '').trim() === coLimpio))
         if (!cajaEncontrada) return `Caja ${idLimpio}`
         return cajaEncontrada.nombre ? `${cajaEncontrada.nombre}` : `Caja ${idLimpio}`
     }
+
+    const cajaDeClave = (clave: string) => (cajas ?? []).find((c) => c?.id_caja && claveCaja(c) === clave)
+    const nombreDeClave = (clave: string) => cajaDeClave(clave)?.nombre || `Caja ${clave.split('|')[1] ?? clave}`
 
     const limpiarFiltroFechas = () => {
         setFechaInicial('')
@@ -289,11 +301,11 @@ export const TrasladoFondosPage = () => {
 
     const valorNumerico = Number(valor)
     const mismasCajas = cajaOrigen !== '' && cajaOrigen === cajaDestino
-    const cajaOrigenSeleccionada = cajas?.find((c) => c?.id_caja && String(c.id_caja).trim() === cajaOrigen)
+    const cajaOrigenSeleccionada = cajaDeClave(cajaOrigen)
     const saldoOrigen = saldoPorMedio(cajaOrigenSeleccionada, medioPago)
     const saldoInsuficiente = !!cajaOrigen && valorNumerico > 0 && valorNumerico > saldoOrigen
     const formularioValido = !!cajaOrigen && !!cajaDestino && !mismasCajas && valorNumerico > 0 && !cargandoCajas
-    const cajaDestinoSeleccionada = cajas?.find((c) => c?.id_caja && String(c.id_caja).trim() === cajaDestino)
+    const cajaDestinoSeleccionada = cajaDeClave(cajaDestino)
     const saldoDestino = saldoPorMedio(cajaDestinoSeleccionada, medioPago)
 
     // Barrido sugerido: la ruta (origen → destino) más usada en los últimos
@@ -302,15 +314,15 @@ export const TrasladoFondosPage = () => {
         const conteo = new Map<string, number>()
         for (const t of (historial ?? []).slice(0, 40)) {
             if ((t.medio_pago || 'EFE') !== medioPago) continue
-            const k = `${String(t.id_caja_origen).trim()}|${String(t.id_caja_destino).trim()}`
+            const k = `${claveCaja({ id_co: t.id_co_origen, id_caja: t.id_caja_origen })}>${claveCaja({ id_co: t.id_co_destino, id_caja: t.id_caja_destino })}`
             conteo.set(k, (conteo.get(k) ?? 0) + 1)
         }
         const ordenadas = [...conteo.entries()].sort((a, b) => b[1] - a[1])
         for (const [k] of ordenadas) {
-            const [origen, destino] = k.split('|')
-            const caja = cajasCo.find((c) => String(c.id_caja).trim() === origen)
+            const [origen, destino] = k.split('>')
+            const caja = cajasCo.find((c) => claveCaja(c) === origen)
             const saldo = saldoPorMedio(caja, medioPago)
-            if (caja && saldo > 0 && (cajas ?? []).some((c) => String(c.id_caja).trim() === destino)) {
+            if (caja && saldo > 0 && (cajas ?? []).some((c) => claveCaja(c) === destino)) {
                 return { origen, destino, saldo }
             }
         }
@@ -364,9 +376,9 @@ export const TrasladoFondosPage = () => {
             hoja.addRow({
                 tc: `TC-${t.numero_tc ?? t.id}`,
                 fecha: formatters.dateTime(t.fecha),
-                origen: nombreCaja(t.id_caja_origen),
+                origen: nombreCaja(t.id_caja_origen, t.id_co_origen),
                 co_origen: t.id_co_origen,
-                destino: nombreCaja(t.id_caja_destino),
+                destino: nombreCaja(t.id_caja_destino, t.id_co_destino),
                 co_destino: t.id_co_destino,
                 medio: MEDIOS_PAGO.find((m) => m.value === (t.medio_pago || 'EFE'))?.label ?? t.medio_pago,
                 valor: Number(t.valor),
@@ -412,9 +424,14 @@ export const TrasladoFondosPage = () => {
         setConfirmando(false)
         setExito(false)
         try {
+            if (!cajaOrigenSeleccionada || !cajaDestinoSeleccionada) return
             await crearTraslado.mutateAsync({
-                id_caja_origen: cajaOrigen,
-                id_caja_destino: cajaDestino,
+                id_caja_origen: String(cajaOrigenSeleccionada.id_caja).trim(),
+                id_caja_destino: String(cajaDestinoSeleccionada.id_caja).trim(),
+                id_co_origen: String(cajaOrigenSeleccionada.id_co).trim(),
+                rowid_auxiliar_origen: cajaOrigenSeleccionada.rowid_auxiliar,
+                id_co_destino: String(cajaDestinoSeleccionada.id_co).trim(),
+                rowid_auxiliar_destino: cajaDestinoSeleccionada.rowid_auxiliar,
                 valor: valorNumerico,
                 notas: notas.trim() || undefined,
                 medio_pago: medioPago,
@@ -475,7 +492,7 @@ export const TrasladoFondosPage = () => {
                         >
                             <Zap className="h-4 w-4 shrink-0 text-primary" />
                             <span>
-                                <span className="font-semibold text-foreground">Barrido sugerido:</span> {nombreCaja(barrido.origen)} → {nombreCaja(barrido.destino)} ·{' '}
+                                <span className="font-semibold text-foreground">Barrido sugerido:</span> {nombreDeClave(barrido.origen)} → {nombreDeClave(barrido.destino)} ·{' '}
                                 <span className="font-bold text-primary">{formatters.currency(barrido.saldo)}</span>
                             </span>
                         </button>
@@ -565,9 +582,9 @@ export const TrasladoFondosPage = () => {
                                 className="overflow-hidden"
                             >
                                 <div className="flex flex-wrap items-center gap-2 rounded-lg bg-muted/50 px-4 py-3 text-sm">
-                                    <span className="font-medium">{nombreCaja(cajaOrigen)}</span>
+                                    <span className="font-medium">{nombreDeClave(cajaOrigen)}</span>
                                     <ArrowRight className="h-3.5 w-3.5 text-muted-foreground" />
-                                    <span className="font-medium">{nombreCaja(cajaDestino)}</span>
+                                    <span className="font-medium">{nombreDeClave(cajaDestino)}</span>
                                     <span className="rounded-full bg-background px-2 py-0.5 text-[11px] font-semibold text-muted-foreground border">
                                         {MEDIOS_PAGO.find((m) => m.value === medioPago)?.label}
                                     </span>
@@ -773,9 +790,9 @@ export const TrasladoFondosPage = () => {
                                                 TC-{t.numero_tc ?? t.id}
                                             </span>
                                             <span className="text-xs font-medium text-foreground flex items-center gap-1">
-                                                {nombreCaja(t.id_caja_origen)}
+                                                {nombreCaja(t.id_caja_origen, t.id_co_origen)}
                                                 <ArrowRight className="h-3 w-3 text-muted-foreground" />
-                                                {nombreCaja(t.id_caja_destino)}
+                                                {nombreCaja(t.id_caja_destino, t.id_co_destino)}
                                             </span>
                                             {t.medio_pago && t.medio_pago !== 'EFE' && (
                                                 <span className="rounded-full bg-muted px-1.5 py-0.5 text-[10px] font-bold uppercase text-muted-foreground">
@@ -895,7 +912,7 @@ export const TrasladoFondosPage = () => {
                                         Centro operativo {trasladoSeleccionado.id_co_origen}
                                     </span>
                                 </div>
-                                <p className="text-sm font-bold">{nombreCaja(trasladoSeleccionado.id_caja_origen)}</p>
+                                <p className="text-sm font-bold">{nombreCaja(trasladoSeleccionado.id_caja_origen, trasladoSeleccionado.id_co_origen)}</p>
                                 <div className="text-xs text-muted-foreground pt-1.5 border-t border-border/50 flex justify-start gap-6">
                                     <span>Caja ID: <strong className="text-foreground">{trasladoSeleccionado.id_caja_origen ? String(trasladoSeleccionado.id_caja_origen).trim() : 'N/A'}</strong></span>
                                     {trasladoSeleccionado.rowid_auxiliar_origen && (
@@ -910,7 +927,7 @@ export const TrasladoFondosPage = () => {
                                         Centro operativo {trasladoSeleccionado.id_co_destino}
                                     </span>
                                 </div>
-                                <p className="text-sm font-bold">{nombreCaja(trasladoSeleccionado.id_caja_destino)}</p>
+                                <p className="text-sm font-bold">{nombreCaja(trasladoSeleccionado.id_caja_destino, trasladoSeleccionado.id_co_destino)}</p>
                                 <div className="text-xs text-muted-foreground pt-1.5 border-t border-border/50 flex justify-start gap-6">
                                     <span>Caja ID: <strong className="text-foreground">{trasladoSeleccionado.id_caja_destino ? String(trasladoSeleccionado.id_caja_destino).trim() : 'N/A'}</strong></span>
                                     {trasladoSeleccionado.rowid_auxiliar_destino && (
