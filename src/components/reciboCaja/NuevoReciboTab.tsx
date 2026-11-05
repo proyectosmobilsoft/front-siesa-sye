@@ -21,6 +21,8 @@ import { FacturasTabla } from './FacturasTabla'
 import { MediosPago } from './MediosPago'
 import { ResumenRecibo } from './ResumenRecibo'
 import { Cargando } from '@/components/ui/cargando'
+import { TrasladoDespuesDelRC, type FondosDelRC, type TrasladosHechos } from './TrasladoDespuesDelRC'
+import { usePermiso } from '@/hooks/usePermiso'
 
 type MeResponse = { data?: { siesa_rowid?: number | null; siesa_nombre?: string | null }; siesa_rowid?: number | null; siesa_nombre?: string | null }
 type FacturaRaw = Record<string, unknown>
@@ -65,6 +67,11 @@ export function NuevoReciboTab({ onCreated }: { onCreated: () => void }) {
   const [encabezadoManual, setEncabezadoManual] = useState(false)
   const [error, setError] = useState('')
   const [exito, setExito] = useState('')
+  // Lo que dejó el último RC en la caja, para ofrecer el traslado de fondos (reset() limpia el formulario)
+  const [fondos, setFondos] = useState<FondosDelRC | null>(null)
+  const [trasladando, setTrasladando] = useState(false)
+  const [trasladosHechos, setTrasladosHechos] = useState<TrasladosHechos>({})
+  const { puede, P } = usePermiso()
   const [guardando, setGuardando] = useState(false)
   const [verificando, setVerificando] = useState(false)
   const descuentoVersion = useRef(0)
@@ -224,7 +231,11 @@ export function NuevoReciboTab({ onCreated }: { onCreated: () => void }) {
   }
   const faltantes = [!cliente && 'Cliente', !facturasValidas && 'Al menos 1 factura', coFacturas.length > 1 && 'Facturas de distintos C.O. (haz un recibo por C.O.)', !descuentosValidos && 'El descuento debe ser mayor o igual a 0 y menor que el valor de la factura', !pagosValidos && 'Pagos válidos', !(notasManual !== null ? notasManual : observacion).trim() && 'Observación', notasFinal.length > 255 && 'Las notas superan 255 caracteres', cargandoDescuentos && 'Esperando descuento financiero', totales.clasificacion.tipo === 'faltanteExcesivo' && `Faltante supera el límite de ${formatters.currency(parametros.limite)}`, requiereConfirmacion && (disponibles.isLoading || disponibles.isFetching || disponibles.isError || totalConfirmado < totalTransferencia - 1) && 'Transferencia sin confirmación aprobada'].filter((v): v is string => !!v)
   const confirmarCreacion = (numeroRc: string | number) => {
+    const suma = (codigo: PagoRC['codigo']) => redondear(pagos.filter(p => p.codigo === codigo && p.valor > 0).reduce((total, p) => total + p.valor, 0))
+    const dejado = { efectivo: suma('EFE'), debito: suma('TD'), credito: suma('TC') }
     reset(); setExito(`RC ${numeroRc} creado`)
+    setFondos(dejado.efectivo + dejado.debito + dejado.credito > 0 ? { numero: String(numeroRc), co, caja, ...dejado } : null)
+    setTrasladosHechos({})
     void queryClient.invalidateQueries({ queryKey: ['recibo-caja'] })
     void queryClient.invalidateQueries({ queryKey: ['rc'] })
     void queryClient.invalidateQueries({ queryKey: ['transferencias-confirmacion'] })
@@ -277,8 +288,13 @@ export function NuevoReciboTab({ onCreated }: { onCreated: () => void }) {
   if (!asociado) return <p className="m-4 rounded-xl border border-amber-500/30 bg-amber-500/10 p-4 text-sm font-medium text-amber-700 dark:text-amber-400">Tu usuario no está asociado a un usuario de SIESA; pide al administrador que lo asocie en Maestro de usuarios.</p>
   return <div className="p-3 pb-28 lg:flex lg:h-full lg:min-h-0 lg:flex-col lg:pb-3">
     {exito && <div role="status" className="mb-3 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-3 text-sm font-semibold text-emerald-700 dark:text-emerald-400">
-      <span>{exito}</span><Button variant="outline" onClick={reset}>Nuevo recibo</Button>
+      <span>{exito}</span>
+      <span className="flex flex-wrap items-center gap-2">
+        {fondos && puede(P.CREAR_TRASLADO_FONDOS) && <Button variant="outline" onClick={() => setTrasladando(true)}>Trasladar fondos</Button>}
+        <Button variant="outline" onClick={() => { setFondos(null); reset() }}>Nuevo recibo</Button>
+      </span>
     </div>}
+    {trasladando && fondos && <TrasladoDespuesDelRC rc={fondos} hechos={trasladosHechos} alHacer={(codigo, hecho) => setTrasladosHechos(actual => ({ ...actual, [codigo]: hecho }))} alCerrar={() => setTrasladando(false)} />}
     {verificando && <div role="status" className="mb-3 rounded-xl border border-amber-500/30 bg-amber-500/10 p-2 text-sm text-amber-700 dark:text-amber-400">Verificando si el recibo se creó…</div>}
     {error && <div role="alert" className="mb-4 flex items-start gap-3 rounded-xl border border-red-500/30 bg-red-500/10 p-4 text-red-700 dark:text-red-400 lg:hidden">
       <AlertCircle className="mt-0.5 h-5 w-5 shrink-0" />

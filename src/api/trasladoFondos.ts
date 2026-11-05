@@ -27,6 +27,14 @@ export interface CrearTrasladoFondosPayload {
   notas?: string
   /** Default EFE si se omite. TC/TD mueven saldo de tarjeta en vez de efectivo. */
   medio_pago?: MedioPagoTraspaso
+  /**
+   * C.O. y auxiliar de cada caja. Hay códigos de caja repetidos entre C.O. (la `001` es Caja General del
+   * 001 y también Mostrador Alematerias del 002); mandarlos evita que el API elija la caja equivocada.
+   */
+  id_co_origen?: string
+  rowid_auxiliar_origen?: number
+  id_co_destino?: string
+  rowid_auxiliar_destino?: number
 }
 
 export const trasladoFondosApi = {
