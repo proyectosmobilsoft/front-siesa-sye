@@ -281,7 +281,17 @@ export function DashboardReciboCajaPage() {
       />
 
       <Resumenes recaudo={d} ventas={consultaVentas.data} compras={consultaCompras.data} cartera={consultaCartera.data} cargaCartera={consultaCartera.isLoading || (consultaCartera.isFetching && !consultaCartera.data)} errorCartera={consultaCartera.isError} inventario={consultaInventario.data} cargaInventario={consultaInventario.isLoading || (consultaInventario.isFetching && !consultaInventario.data)} errorInventario={consultaInventario.isError} cargaCompras={consultaCompras.isLoading || (consultaCompras.isFetching && !consultaCompras.data)} errorCompras={consultaCompras.isError} cargaRecaudo={consulta.isLoading || (consulta.isFetching && !d)} errorRecaudo={consulta.isError} cargaVentas={consultaVentas.isLoading || (consultaVentas.isFetching && !consultaVentas.data)} errorVentas={consultaVentas.isError} vista={vista} alElegir={elegirVista} />
-      <PanelExpandible vista={vista} titulo={vista === 'recaudo' ? 'Recaudo de cartera' : vista === 'presupuesto' ? 'Ventas vs presupuesto' : vista === 'compras' ? 'Compras por proveedor' : vista === 'inventario' ? 'Inventario por marca/proveedor' : vista === 'cartera' ? 'Cartera y vencimientos' : 'Ventas por marca/proveedor'} alCerrar={() => elegirVista(null)}>
+      <PanelExpandible vista={vista} titulo={vista === 'recaudo' || vista === 'cartera' ? 'Cobranza' : vista === 'presupuesto' ? 'Ventas vs presupuesto' : vista === 'compras' ? 'Compras por proveedor' : vista === 'inventario' ? 'Inventario por marca/proveedor' : 'Ventas por marca/proveedor'} alCerrar={() => elegirVista(null)}>
+        {(vista === 'recaudo' || vista === 'cartera') && (
+          <div className="mb-4 inline-flex rounded-xl bg-muted p-1" role="tablist" aria-label="Cobranza">
+            {([['cartera', 'Lo que falta cobrar', 'Cartera'], ['recaudo', 'Lo que entró', 'Recaudo']] as const).map(([v, t, s]) => (
+              <button key={v} type="button" role="tab" aria-selected={vista === v} onClick={() => vista !== v && elegirVista(v)}
+                className={`rounded-lg px-4 py-2 text-sm font-semibold transition ${vista === v ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}>
+                {t} <span className="font-normal text-muted-foreground">· {s}</span>
+              </button>
+            ))}
+          </div>
+        )}
         {vista === 'recaudo' && <CuerpoConsulta consulta={{ isLoading: consulta.isLoading || (consulta.isFetching && !d), isError: consulta.isError }} vacio={!valido} mensajeVacio="Elige un rango de fechas válido" altura="h-96">{d && <Contenido d={d} sub={sub} alElegirSub={elegirSub} />}</CuerpoConsulta>}
         {vista === 'presupuesto' && <CuerpoConsulta consulta={{ isLoading: consultaVentas.isLoading || (consultaVentas.isFetching && !consultaVentas.data), isError: consultaVentas.isError }} vacio={!valido} mensajeVacio="Elige un rango de fechas válido" altura="h-96">{consultaVentas.data && <VentasPresupuesto d={consultaVentas.data} sub={sub} alElegirSub={elegirSub} />}</CuerpoConsulta>}
         {vista === 'proveedores' && <CuerpoConsulta consulta={{ isLoading: consultaVentas.isLoading || (consultaVentas.isFetching && !consultaVentas.data), isError: consultaVentas.isError }} vacio={!valido} mensajeVacio="Elige un rango de fechas válido" altura="h-96">{consultaVentas.data && <VentasProveedores d={consultaVentas.data} sub={sub} alElegirSub={elegirSub} />}</CuerpoConsulta>}

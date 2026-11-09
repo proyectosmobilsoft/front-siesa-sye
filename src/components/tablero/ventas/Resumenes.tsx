@@ -20,8 +20,8 @@ export function Resumenes({
   ventas,
   compras,
   cartera,
-  cargaCartera,
-  errorCartera,
+  cargaCartera: _cargaCartera,
+  errorCartera: _errorCartera,
   inventario,
   cargaInventario,
   errorInventario,
@@ -57,20 +57,18 @@ export function Resumenes({
       .filter(p => p.proveedor !== 'OTROS PROVEEDORES')
       .slice(0, 5) ?? []
   const topCompras = compras?.proveedores.filter(p => p.proveedor !== 'OTROS PROVEEDORES').slice(0, 5) ?? []
-  const lotesCartera = cartera ? [...cartera.vencida.slice(0, 1), ...cartera.por_vencer.slice(0, 4)] : []
-  const maxCartera = Math.max(0, ...lotesCartera.map(l => l.saldo))
   const topInventario = inventario?.lineas.slice(0, 5) ?? []
   return (
-    <Malla columnas={6}>
+    <Malla columnas={5}>
       <TarjetaResumen
-        titulo="Recaudo de cartera"
-        abierta={vista === 'recaudo'}
-        alAlternar={() => alElegir('recaudo')}
+        titulo="Cobranza"
+        abierta={vista === 'recaudo' || vista === 'cartera'}
+        alAlternar={() => alElegir(vista === 'recaudo' || vista === 'cartera' ? vista : 'cartera')}
         ayuda={{
           fuente:
-            'Recibos de caja (RC) cruzados con facturas SIESA; facturas del periodo.',
+            'Recaudo: recibos de caja (RC) cruzados con facturas SIESA. Por cobrar: saldos abiertos de facturas de venta (sin ventas corporativas ni cartera antigua).',
           formula:
-            'Cobro de cartera = Σ medios de pago de RC cruzados · Cobertura = cobro ÷ facturado',
+            'Cobrado = Σ medios de pago de RC cruzados · Por cobrar hoy = saldo abierto de facturas',
         }}
       >
         <CuerpoConsulta
@@ -79,6 +77,11 @@ export function Resumenes({
         >
           <div className="text-2xl font-bold tabular-nums">
             {recaudo && dinero(recaudo.kpis.recaudo_cartera)}
+          </div>
+          <div className="mt-1 text-xs text-muted-foreground">
+            Cobrado en el rango · Por cobrar hoy{' '}
+            <strong className="text-foreground">{cartera ? dinero(cartera.kpis.cartera_abierta) : '—'}</strong>
+            {cartera && <> ({cartera.kpis.vencida_pct == null ? '—' : porcentaje(cartera.kpis.vencida_pct)} vencido)</>}
           </div>
           <div className="mt-1 text-xs text-muted-foreground">
             Variación{' '}
@@ -244,30 +247,6 @@ export function Resumenes({
                   <div className="h-full rounded-full bg-primary" style={{ width: `${topInventario[0]?.existencia ? Math.max(0, l.existencia / topInventario[0].existencia * 100) : 0}%` }} />
                 </div>
                 <span>{compacto(l.existencia)}</span>
-              </div>
-            ))}
-          </div>
-        </CuerpoConsulta>
-      </TarjetaResumen>
-      <TarjetaResumen
-        titulo="Cartera"
-        abierta={vista === 'cartera'}
-        alAlternar={() => alElegir('cartera')}
-        ayuda={{ fuente: 'Saldos abiertos de facturas de venta en SIESA, por vencimiento según la condición de pago.', formula: 'Vence en 30 días = saldo con vencimiento entre hoy y 30 días' }}
-      >
-        <CuerpoConsulta consulta={{ isLoading: cargaCartera, isError: errorCartera }} altura="h-40">
-          <div className="text-2xl font-bold tabular-nums">{cartera && dinero(cartera.kpis.vence_30)}</div>
-          <div className="mt-1 text-xs text-muted-foreground">
-            Vence en 30 días · Vencida {cartera ? dinero(cartera.kpis.vencida) : '—'}
-          </div>
-          <div className="mt-3 space-y-2">
-            {lotesCartera.map(l => (
-              <div key={l.id} className="flex items-center gap-2 text-[11px]">
-                <span className="w-24 truncate" title={l.nombre}>{l.nombre.replace('Vence en ', '').replace('Vencida ', 'Venc. ').replace(' días', ' d')}</span>
-                <div className="h-2 flex-1 rounded-full bg-muted">
-                  <div className={`h-full rounded-full ${l.id.startsWith('v') ? 'bg-red-500' : 'bg-primary'}`} style={{ width: `${maxCartera ? Math.max(0, l.saldo / maxCartera * 100) : 0}%` }} />
-                </div>
-                <span>{compacto(l.saldo)}</span>
               </div>
             ))}
           </div>
