@@ -28,7 +28,7 @@ export function Encabezado({ titulo, descripcion, accion }: { titulo: string; de
 }
 
 /** Tarjeta con título, para agrupar una gráfica, una tabla o unos totales. */
-export function Bloque({ titulo, descripcion, accion, children, className, ayuda, detalle }: { titulo: string; descripcion?: string; accion?: ReactNode; children: ReactNode; className?: string; ayuda?: Ayuda; detalle?: EspecDetalle }) {
+export function Bloque({ titulo, descripcion, accion, children, className, ayuda, detalle }: { titulo: string; descripcion?: ReactNode; accion?: ReactNode; children: ReactNode; className?: string; ayuda?: Ayuda; detalle?: EspecDetalle }) {
   const info = useAyuda(ayuda)
   const detalles = useDetalle()
   return (

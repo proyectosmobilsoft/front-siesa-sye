@@ -24,6 +24,7 @@ import {
 } from '../formato'
 import { DETALLE_VENTAS } from '../detalle/especificaciones'
 import type { DashboardVentas } from './tipos'
+import { VentasDepartamento } from './VentasDepartamento'
 import { AYUDAS } from './ayudas'
 import { Diferencia, Progreso } from './utiles'
 import { tonoCumplimiento } from './colores'
@@ -103,6 +104,7 @@ export function VentasPresupuesto({
     { etiqueta: 'Líneas', valor: 'líneas' },
     { etiqueta: 'Matriz', valor: 'matriz' },
     { etiqueta: 'Descuentos', valor: 'descuentos' },
+    { etiqueta: 'Por departamento', valor: 'departamentos' },
   ]
   const activa = opciones.some(opcion => opcion.valor === sub) ? sub : 'resumen'
   const diasRango = Math.max(
@@ -364,6 +366,7 @@ export function VentasPresupuesto({
                 />
               </Bloque>
             </Malla>
+            <VentasDepartamento d={d} soloTabla alVerMas={() => alElegirSub('departamentos')} />
           </>
         )}
         {activa === 'asesores' && (
@@ -666,6 +669,7 @@ export function VentasPresupuesto({
             </Bloque>
           </>
         )}
+        {activa === 'departamentos' && <VentasDepartamento d={d} />}
         {activa === 'descuentos' && (
           <>
             <Bloque

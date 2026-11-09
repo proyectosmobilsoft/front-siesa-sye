@@ -4,6 +4,18 @@ export interface Rango {
 }
 
 export interface DashboardVentas {
+  /** Venta del periodo por departamento del cliente (contacto principal en SIESA). Misma regla de venta, sin IVA. */
+  por_departamento: {
+    departamento: string
+    venta: number
+    kg: number
+    participacion: number | null
+    clientes: number
+    ciudades: { nombre: string; venta: number }[]
+    vendedores: { nombre: string; venta: number }[]
+    lineas: { nombre: string; venta: number }[]
+    top_clientes: { cliente: string; nit: string | null; ciudad: string | null; venta: number }[]
+  }[]
   desde: string
   hasta: string
   periodo_anterior: Rango // mismo largo, inmediatamente antes
@@ -271,6 +283,10 @@ export interface RespuestaFacturasCartera {
   tamano: number
   total: number
   totales: { valor: number; saldo: number; clientes: number }
+  /** Los 8 clientes con más valor dentro del filtro. */
+  top_clientes?: { tercero: number; cliente: string | null; facturas: number; valor: number; saldo: number }[]
+  /** Días de atraso frente al vencimiento (pagadas: hasta el pago; abiertas: hasta hoy). tramo 0 = a tiempo, 999 = más de 90. */
+  atraso?: { tramo: number; nombre: string; facturas: number; valor: number }[]
   filas: FacturaCartera[]
 }
 
@@ -295,6 +311,72 @@ export interface PlazoCartera {
 
 export interface LoteCartera { id: string; nombre: string; desde: number; hasta: number | null; facturas: number; saldo: number }
 
+/** Documento con una condición de pago que no corresponde a su tipo (ej. C01 de mostrador a crédito 30 días). */
+export interface DocumentoErroneoCartera {
+  co: string
+  tipo: string
+  consecutivo: number
+  fecha: string
+  cliente: string | null
+  nit: string | null
+  condicion: string
+  condicion_nombre: string | null
+  valor: number
+}
+
+/** Estados de una contraentrega frente a su pago (GET /dashboard/cartera/casos). */
+export type EstadoContraentrega = 'a_tiempo' | 'tarde_30' | 'tarde_mas_30' | 'sin_pagar' | 'por_vencer' | 'pagada'
+
+export interface TotalesContraentrega {
+  documentos: number
+  valor: number
+  estados: Record<EstadoContraentrega, { documentos: number; valor: number }>
+  /** Casos a seguir: pagadas después de `dias_tarde` días + vencidas sin pagar. */
+  problema_documentos: number
+  problema_pct: number | null
+  problema_valor_pct: number | null
+}
+
+export interface CasoContraentrega {
+  tercero: number
+  cliente: string | null
+  nit: string | null
+  tipo: string
+  consecutivo: number
+  condicion: string
+  condicion_nombre: string
+  fecha: string
+  vence: string
+  pagada_el: string | null
+  estado: 'tarde_mas_30' | 'sin_pagar'
+  /** Días desde la emisión hasta el pago (o hasta hoy si no ha pagado). */
+  dias: number
+  valor: number
+  saldo: number
+}
+
+export interface CasosCartera {
+  desde: string
+  hasta: string
+  dias_tarde: number
+  contraentrega: TotalesContraentrega & {
+    por_condicion: (TotalesContraentrega & { condicion: string; nombre: string })[]
+    mensual: (TotalesContraentrega & { mes: string })[]
+    clientes: { tercero: number; cliente: string | null; nit: string | null; documentos: number; tarde_mas_30: number; sin_pagar: number; valor: number; saldo: number; dias_promedio: number | null }[]
+    casos: CasoContraentrega[]
+  }
+  c01: {
+    documentos: number
+    valor: number
+    por_condicion: { condicion: string; nombre: string | null; dias: number | null; documentos: number; valor: number; clase: 'contado' | 'contraentrega' | 'credito_valido' | 'credito_erroneo'; pct: number | null }[]
+    erroneas_documentos: number
+    erroneas_pct: number | null
+    erroneas_valor: number
+    credito_valido: string[]
+    documentos_erroneos: DocumentoErroneoCartera[]
+  }
+}
+
 export interface DashboardCartera {
   desde: string
   hasta: string
@@ -302,6 +384,11 @@ export interface DashboardCartera {
   kpis: {
     facturado: number
     venta_credito: number
+    venta_credito_bruto: number
+    venta_credito_restas: number
+    /** Vendido a crédito neto del vendedor DISTRIBUCIONES SYE (otra área): no está en venta_credito. */
+    venta_credito_otra_area: number
+    venta_neta: number
     credito_pct: number | null
     plazo_promedio: number | null
     dias_pago_promedio: number | null
@@ -315,6 +402,30 @@ export interface DashboardCartera {
     vence_30: number
     vence_60: number
   }
+  venta_credito: {
+    desglose: { tipo: string; resta: boolean; documentos: number; valor: number }[]
+    errores: DocumentoErroneoCartera[]
+    c01_credito_valido: string[]
+    otra_area: { nit: string; venta_credito: number; desglose: { tipo: string; resta: boolean; documentos: number; valor: number }[] }
+  }
+  /** Línea de tiempo: 12 meses que terminan en el mes de `hasta` (no depende de `desde`). Sin DISTRIBUCIONES SYE. */
+  historia: {
+    mes: string
+    /** Vendido a crédito neto (con IVA, menos notas y devoluciones), igual que kpis.venta_credito. */
+    vendido_credito: number
+    venta_neta: number
+    credito_pct: number | null
+    documentos_credito: number
+    /** Abonos recibidos en el mes a facturas de crédito (de cualquier emisión; sin RMA). */
+    recaudo_credito: number
+    /** Lo vendido a crédito ese mes que hoy sigue vencido sin pagar. */
+    vencido_hoy: number
+    facturas_vencidas_hoy: number
+  }[]
+  /** Cartera vendida antes del corte (2023): fuera de todos los totales, para depurar. */
+  cartera_antigua: { corte: string; saldo: number; facturas: number; clientes: { tercero: number; cliente: string | null; nit: string | null; facturas: number; saldo: number; desde: string; hasta: string }[] }
+  /** Facturas a crédito vencidas hoy por mes de venta (año en curso) o año (anteriores). Saldo de hoy. */
+  vencidas_por_venta: { periodo: string; facturas: number; clientes: number; saldo: number }[]
   plazos: PlazoCartera[]
   condiciones: PlazoCartera[]
   vencida: LoteCartera[]
@@ -322,4 +433,64 @@ export interface DashboardCartera {
   semanas: { semana: number; desde_dias: number; saldo: number }[]
   mensual: { mes: string; facturado_credito: number; recaudo_credito: number }[]
   deudores: { tercero: number; cliente: string | null; nit: string | null; facturas: number; vencido: number; dias_mora: number }[]
+}
+
+/** Plata en la calle y descuento financiero (GET /dashboard/cartera/descuentos). */
+export type ClaseCondicion = 'credito' | 'contraentrega' | 'contado' | 'sin_condicion'
+export interface DescuentosCartera {
+  desde: string
+  hasta: string
+  calle: {
+    saldo: number
+    vencido: number
+    documentos: number
+    vencido_pct: number | null
+    por_clase: { clase: ClaseCondicion; saldo: number; vencido: number; documentos: number; pct: number | null }[]
+    por_condicion: { condicion: string; nombre: string; dias: number | null; clase: ClaseCondicion; documentos: number; clientes: number; saldo: number; vencido: number; pct: number | null }[]
+    otra_area: { nit: string; saldo: number; vencido: number; documentos: number }
+  }
+  descuento: {
+    total: number
+    valor_con_descuento: number
+    tasa_efectiva: number | null
+    tomaron: number
+    documentos: number
+    tomaron_pct: number | null
+    dias_con: number | null
+    dias_sin: number | null
+    mensual: { mes: string; descuento: number; recaudo: number; documentos: number; pct: number | null }[]
+    por_condicion: {
+      condicion: string; nombre: string; dias: number | null; clase: ClaseCondicion; documentos: number; valor: number; pagadas: number
+      tomaron: number; tomaron_pct: number | null; descuento: number; tasa_efectiva: number | null
+      dias_con: number | null; dias_sin: number | null; dias_ganados: number | null
+    }[]
+  }
+}
+
+/** Cuadre de cartera del periodo (GET /dashboard/cartera/saldos): saldo anterior + facturado − abonos = saldo final. */
+export type GrupoAbono = 'recaudo' | 'cruces' | 'notas' | 'ajustes' | 'otros'
+export interface CuadreCartera {
+  saldo_anterior: number
+  documentos_anterior: number
+  vencido_anterior: number
+  facturado: number
+  facturado_periodo: number
+  abonos_saldo_anterior: Record<GrupoAbono | 'total', number>
+  abonos_periodo: Record<GrupoAbono | 'total', number>
+  abonos_total: Record<GrupoAbono | 'total', number>
+  /** Recibos de caja aplicados a deudas del saldo anterior ÷ saldo anterior. */
+  cobrado_anterior_pct: number | null
+  bajo_anterior_pct: number | null
+  saldo_final: number
+  documentos_final: number
+  saldo_final_de_anterior: number
+  saldo_final_del_periodo: number
+  vencido_final: number
+}
+export interface SaldosCartera extends CuadreCartera {
+  desde: string
+  hasta: string
+  grupos: GrupoAbono[]
+  /** Ventas corporativas (vendedores 0001 y 9897), fuera de los totales. */
+  otra_area: CuadreCartera & { nit: string }
 }
