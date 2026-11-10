@@ -182,6 +182,7 @@ export function SelectorRango({
   alCambiarHasta,
   min,
   max,
+  extra,
 }: {
   preset: PresetRango | null
   desde: string
@@ -191,6 +192,8 @@ export function SelectorRango({
   alCambiarHasta: (v: string) => void
   min?: string
   max?: string
+  /** Controles adicionales al final de la fila (ej. botón "Periodo y comparar"). */
+  extra?: ReactNode
 }) {
   return (
     <div className="mb-5 flex flex-wrap items-end gap-3">
@@ -217,6 +220,7 @@ export function SelectorRango({
         Hasta
         <FechaInput value={hasta} onChange={alCambiarHasta} min={desde || min} max={max} className="h-10 w-40 rounded-xl" />
       </label>
+      {extra}
     </div>
   )
 }

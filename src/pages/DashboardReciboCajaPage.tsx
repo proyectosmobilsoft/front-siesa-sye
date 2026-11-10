@@ -25,6 +25,7 @@ import { apiClient } from '@/api/client'
 import { useAuthStore, coPuntual } from '@/store/authStore'
 import { useFechasLimite, hoyLocalIso } from '@/hooks/useFechasLimite'
 import { Bloque, CuerpoConsulta, Encabezado, Malla, SelectorRango, SubPestanas, BotonTabla, Tabla, Tarjeta } from '@/components/tablero/comun'
+import { BotonPeriodo } from '@/components/tablero/PeriodoModal'
 import { Areas, Barras, BarrasApiladas, BarrasH, BarrasApiladasH, ClientesDispersion, Dona } from '@/components/tablero/graficas'
 import { PALETA, decimal, dinero, entero, etiquetaMes, kilos, porcentaje, rangoDePreset, type PresetRango } from '@/components/tablero/formato'
 
@@ -278,6 +279,7 @@ export function DashboardReciboCajaPage() {
           setPreset(null)
           setRango((r) => ({ ...r, hasta: v }))
         }}
+        extra={<BotonPeriodo alAplicar={(r) => { setPreset(null); setRango(r) }} />}
       />
 
       <Resumenes recaudo={d} ventas={consultaVentas.data} compras={consultaCompras.data} cartera={consultaCartera.data} cargaCartera={consultaCartera.isLoading || (consultaCartera.isFetching && !consultaCartera.data)} errorCartera={consultaCartera.isError} inventario={consultaInventario.data} cargaInventario={consultaInventario.isLoading || (consultaInventario.isFetching && !consultaInventario.data)} errorInventario={consultaInventario.isError} cargaCompras={consultaCompras.isLoading || (consultaCompras.isFetching && !consultaCompras.data)} errorCompras={consultaCompras.isError} cargaRecaudo={consulta.isLoading || (consulta.isFetching && !d)} errorRecaudo={consulta.isError} cargaVentas={consultaVentas.isLoading || (consultaVentas.isFetching && !consultaVentas.data)} errorVentas={consultaVentas.isError} vista={vista} alElegir={elegirVista} />
