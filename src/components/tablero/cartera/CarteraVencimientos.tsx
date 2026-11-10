@@ -316,7 +316,7 @@ function GraficasPlazo({ p, r, estado = 'todas' }: { p: PlazoCartera; r?: Respue
   })).filter(e => e.valor > 0)
   const atraso = (r?.atraso ?? []).filter(a => a.facturas > 0).map(a => ({ nombre: a.nombre, valor: a.facturas, color: colorTramo(a.tramo) }))
   const totalValor = r?.totales.valor ?? 0
-  const top = (r?.top_clientes ?? []).map((x, i) => ({ nombre: (x.cliente ?? String(x.tercero)).slice(0, 22), valor: x.valor, color: PALETA[i % PALETA.length] }))
+  const top = (r?.top_clientes ?? []).map((x, i) => ({ nombre: (n => n.length > 24 ? `${n.slice(0, 23)}…` : n)(x.cliente ?? String(x.tercero)), valor: x.valor, color: PALETA[i % PALETA.length] }))
   const top1 = r?.top_clientes?.[0]
   // Atraso promedio del filtro (ponderado por valor); solo si están todas las facturas cargadas en la página.
   const completas = r != null && r.filas.length >= r.total
@@ -364,7 +364,7 @@ function GraficasPlazo({ p, r, estado = 'todas' }: { p: PlazoCartera; r?: Respue
           <div className="rounded-2xl border border-border p-3">
             <p className="text-[13px] font-semibold">¿Quién concentra el valor?</p>
             <p className="text-[11.5px] text-muted-foreground">{top1 && totalValor ? `${top1.cliente ?? 'El primero'} es el ${porcentaje(top1.valor / totalValor, 0)} del filtro` : 'Clientes con más valor en el filtro'}</p>
-            {top.length ? <BarrasH3D datos={top} formato={dinero} nombreValor="Valor" anchoEtiqueta={120} /> : <p className="py-16 text-center text-xs text-muted-foreground">Sin datos</p>}
+            {top.length ? <BarrasH3D datos={top} formato={dinero} nombreValor="Valor" anchoEtiqueta={180} /> : <p className="py-16 text-center text-xs text-muted-foreground">Sin datos</p>}
           </div>
         </div>
       </>}
@@ -470,6 +470,7 @@ function PendientesRango({ d, alCerrar }: { d: DashboardCartera; alCerrar: () =>
 /** Tablero con todas las facturas de un plazo (o condición) y filtro por estado. */
 function FacturasDelPlazo({ d, p, alCerrar }: { d: DashboardCartera; p: PlazoCartera; alCerrar: () => void }) {
   const [estado, setEstado] = useState<FiltroEstado>('todas')
+  const [conDescuento, setConDescuento] = useState(false)
   const [texto, setTexto] = useState('')
   const [buscar, setBuscar] = useState('')
   const [pagina, setPagina] = useState(1)
@@ -487,23 +488,38 @@ function FacturasDelPlazo({ d, p, alCerrar }: { d: DashboardCartera; p: PlazoCar
     { valor: 'por_vencer', etiqueta: 'Aún en plazo', n: c.por_vencer.facturas, clase: 'border-slate-400 bg-slate-100 text-slate-700' },
   ]
   const consulta = useQuery({
-    queryKey: ['cartera-facturas-plazo', d.desde, d.hasta, p.condicion ?? p.dias, estado, buscar, pagina],
+    queryKey: ['cartera-facturas-plazo', d.desde, d.hasta, p.condicion ?? p.dias, estado, buscar, pagina, conDescuento],
     queryFn: () => consultaFacturas({
       desde: d.desde, hasta: d.hasta, dias: p.condicion ? undefined : p.dias, condicion: p.condicion,
-      estado: estado === 'todas' ? undefined : estado, buscar: buscar || undefined,
+      estado: estado === 'todas' ? undefined : estado, buscar: buscar || undefined, descuento: conDescuento ? 1 : undefined,
       orden: estado === 'impaga_vencida' ? 'mora' : 'recientes', pagina, tamano: TAMANO_PAGINA,
     }),
     placeholderData: previo => previo,
     staleTime: 5 * 60 * 1000,
   })
+  // Aprovechamiento del descuento financiero de toda la condición (no depende del filtro elegido).
+  const resumenDescuento = useQuery({
+    queryKey: ['cartera-facturas-plazo-descuento', d.desde, d.hasta, p.condicion ?? p.dias],
+    queryFn: () => consultaFacturas({ desde: d.desde, hasta: d.hasta, dias: p.condicion ? undefined : p.dias, condicion: p.condicion, pagina: 1, tamano: 1 }),
+    staleTime: 5 * 60 * 1000,
+  })
+  const rd = resumenDescuento.data
+  const aprovechan = rd && rd.total ? rd.totales.facturas_descuento / rd.total : null
   const r = consulta.data
   const paginas = r ? Math.max(1, Math.ceil(r.total / r.tamano)) : 1
   return (
     <Modal isOpen onClose={alCerrar} title={<span>{nombre} <span className="text-[13px] font-normal text-muted-foreground">· facturas emitidas del {fechaCorta(d.desde)} al {fechaCorta(d.hasta)}</span></span>} className="max-w-6xl">
       <div className="mb-3 flex flex-wrap items-center gap-2">
+        {rd && rd.totales.facturas_descuento > 0 && (
+          <button type="button" onClick={() => { setConDescuento(!conDescuento); setEstado('todas'); setPagina(1) }} aria-pressed={conDescuento}
+            title={`${entero(rd.totales.clientes_descuento)} de ${entero(rd.totales.clientes)} clientes pagaron con descuento financiero · ${dinero(rd.totales.descuento)} descontados`}
+            className={`h-9 rounded-full border px-3 text-[13px] ${conDescuento ? 'border-violet-500 bg-violet-50 font-semibold text-violet-800 dark:bg-violet-500/15 dark:text-violet-200' : 'border-violet-300 bg-background text-violet-700 hover:bg-violet-50 dark:text-violet-300'}`}>
+            Aprovecharon el descuento <span className="tabular-nums">({entero(rd.totales.facturas_descuento)} · {porcentaje(aprovechan ?? 0, 0)})</span>
+          </button>
+        )}
         {filtros.map(f => (
-          <button key={f.valor} type="button" onClick={() => { setEstado(f.valor); setPagina(1) }} aria-pressed={estado === f.valor}
-            className={`h-9 rounded-full border px-3 text-[13px] ${estado === f.valor ? `${f.clase} font-semibold` : 'border-input bg-background text-foreground hover:bg-muted'}`}>
+          <button key={f.valor} type="button" onClick={() => { setEstado(f.valor); setConDescuento(false); setPagina(1) }} aria-pressed={!conDescuento && estado === f.valor}
+            className={`h-9 rounded-full border px-3 text-[13px] ${!conDescuento && estado === f.valor ? `${f.clase} font-semibold` : 'border-input bg-background text-foreground hover:bg-muted'}`}>
             {f.etiqueta} <span className="tabular-nums">({entero(f.n)})</span>
           </button>
         ))}
@@ -617,6 +633,7 @@ function TablaFacturas({ filas }: { filas: FacturaCartera[] }) {
       { titulo: 'Días vs vencimiento', alinear: 'der', celda: f => f.dias_vs_vencimiento == null ? '—' : <span className={colorDesviacion(f.dias_vs_vencimiento)}>{desviacion(f.dias_vs_vencimiento)}</span> },
       { titulo: 'Valor', alinear: 'der', celda: f => dinero(f.valor) },
       { titulo: 'Saldo', alinear: 'der', celda: f => (f.saldo > 1 ? dinero(f.saldo) : '—') },
+      ...(filas.some(f => f.descuento > 0) ? [{ titulo: 'Descuento', alinear: 'der' as const, celda: (f: FacturaCartera) => (f.descuento > 0 ? <span className="text-violet-700 dark:text-violet-300">{dinero(f.descuento)} <span className="text-[11px]">({porcentaje(f.valor ? f.descuento / f.valor : 0, 1)})</span></span> : '—') }] : []),
     ]} />
   )
 }

@@ -71,7 +71,11 @@ export function BarrasH3D({ datos, formato, nombreValor = 'Valor', anchoEtiqueta
 export function BarrasApiladas3D<T extends Record<string, unknown>>({ datos, ejeX, series, formato, altura = 300 }: { datos: T[]; ejeX: string; series: Serie[]; formato: Formato; altura?: number }) {
   const id = idSeguro(useId())
   return <div className="min-w-0 w-full" style={{ height: altura }} role="img" aria-label="Barras apiladas"><ResponsiveContainer width="100%" height="100%"><BarChart data={datos} margin={{ top: 14, right: 20, bottom: 8, left: 0 }}>
-    {defs(id, series.map(s => s.color))}<CartesianGrid stroke={REJILLA} vertical={false} /><XAxis dataKey={ejeX} tick={EJE} tickLine={false} axisLine={{ stroke: REJILLA }} /><YAxis tick={EJE} tickLine={false} axisLine={false} tickFormatter={compacto} width={52} /><Tooltip {...tooltip} formatter={(v, n) => [formato(Number(v)), String(n)]} /><Legend {...leyenda} />
+    {defs(id, series.map(s => s.color))}<CartesianGrid stroke={REJILLA} vertical={false} /><XAxis dataKey={ejeX} tick={EJE} tickLine={false} axisLine={{ stroke: REJILLA }} /><YAxis tick={EJE} tickLine={false} axisLine={false} tickFormatter={compacto} width={52} /><Tooltip {...tooltip} formatter={(v, n, item) => {
+      // % de cada parte dentro de la barra (ej. vencido vs al día).
+      const total = series.reduce((s, x) => s + (Number((item.payload as Record<string, unknown>)[x.clave]) || 0), 0)
+      return [`${formato(Number(v))}${total ? ` (${porcentaje(Number(v) / total, 0)})` : ''}`, String(n)]
+    }} /><Legend {...leyenda} />
     {series.map((s, i) => <Bar key={s.clave} dataKey={s.clave} name={s.nombre} stackId="total" fill={s.color} maxBarSize={42} isAnimationActive={false} shape={formaBarra(id, i, s.color, false)} />)}
   </BarChart></ResponsiveContainer></div>
 }

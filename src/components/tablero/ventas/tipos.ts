@@ -276,13 +276,19 @@ export interface FacturaCartera {
   estado: EstadoFacturaCartera
   dias_pago: number | null
   dias_vs_vencimiento: number | null
+  /** Descuento financiero aplicado al pagar (0 si no lo aprovechó). */
+  descuento: number
 }
 
 export interface RespuestaFacturasCartera {
   pagina: number
   tamano: number
   total: number
-  totales: { valor: number; saldo: number; clientes: number }
+  totales: {
+    valor: number; saldo: number; clientes: number
+    /** Descuento financiero aplicado (pronto pago) en las facturas del filtro. */
+    descuento: number; facturas_descuento: number; clientes_descuento: number
+  }
   /** Los 8 clientes con más valor dentro del filtro. */
   top_clientes?: { tercero: number; cliente: string | null; facturas: number; valor: number; saldo: number }[]
   /** Días de atraso frente al vencimiento (pagadas: hasta el pago; abiertas: hasta hoy). tramo 0 = a tiempo, 999 = más de 90. */
@@ -462,6 +468,7 @@ export interface DescuentosCartera {
     por_condicion: {
       condicion: string; nombre: string; dias: number | null; clase: ClaseCondicion; documentos: number; valor: number; pagadas: number
       tomaron: number; tomaron_pct: number | null; descuento: number; tasa_efectiva: number | null
+      clientes: number; clientes_tomaron: number; clientes_tomaron_pct: number | null
       dias_con: number | null; dias_sin: number | null; dias_ganados: number | null
     }[]
   }
