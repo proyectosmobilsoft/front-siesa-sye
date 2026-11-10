@@ -18,6 +18,9 @@ type Tipo = (typeof TIPOS)[number]['id']
 const MESES = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic']
 const MESES_LARGO = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre']
 const dos = (n: number) => String(n).padStart(2, '0')
+/** Primer año con datos de cartera y ventas en SIESA (la primera factura es del 14/01/2019). */
+const PRIMER_ANIO = 2019
+const aniosDisponibles = (actual: number) => Array.from({ length: actual - PRIMER_ANIO + 1 }, (_, i) => actual - i)
 const hoyIso = () => { const d = new Date(); return `${d.getFullYear()}-${dos(d.getMonth() + 1)}-${dos(d.getDate())}` }
 
 const mesesDe = (tipo: Tipo) => TIPOS.find(t => t.id === tipo)!.meses
@@ -62,7 +65,7 @@ const obtener = async <T,>(ruta: string, params: { desde: string; hasta: string 
 function Comparar({ anioActual }: { anioActual: number }) {
   const [tipo, setTipo] = useState<Tipo>('mes')
   const [n, setN] = useState(new Date().getMonth() === 0 ? 0 : new Date().getMonth() - 1)
-  const anios = [anioActual - 4, anioActual - 3, anioActual - 2, anioActual - 1, anioActual]
+  const anios = [...aniosDisponibles(anioActual)].reverse()
   const [elegidos, setElegidos] = useState<number[]>([anioActual - 2, anioActual - 1, anioActual])
   const periodos = useMemo(() => [...elegidos].sort().map(a => ({ anio: a, ...rangoPeriodo(tipo, Math.min(n, 12 / mesesDe(tipo) - 1), a) })).filter(p => !p.futuro), [elegidos, tipo, n])
   const nn = Math.min(n, 12 / mesesDe(tipo) - 1)
@@ -102,7 +105,7 @@ function Comparar({ anioActual }: { anioActual: number }) {
         <div className="flex flex-wrap gap-1.5">
           {anios.map(a => {
             const on = elegidos.includes(a)
-            return <button key={a} type="button" aria-pressed={on} onClick={() => setElegidos(on ? elegidos.filter(x => x !== a) : [...elegidos, a].slice(-4))}
+            return <button key={a} type="button" aria-pressed={on} onClick={() => setElegidos(on ? elegidos.filter(x => x !== a) : [...elegidos, a].slice(-5))}
               className={`h-9 rounded-lg border px-3 text-sm ${on ? 'border-primary bg-primary/10 font-semibold text-primary' : 'border-input bg-background text-foreground hover:bg-muted'}`}>{on ? '✓ ' : ''}{a}</button>
           })}
         </div>
@@ -142,7 +145,7 @@ function Comparar({ anioActual }: { anioActual: number }) {
         <p className="mb-2 text-[12px] text-muted-foreground">Un color por año{cargando ? ' · calculando…' : ''}</p>
         <BarrasApiladas agrupadas datos={grafica} ejeX="nombre" series={filas.map((f, i) => ({ clave: String(f.anio), nombre: f.nombre, color: PALETA[i % PALETA.length] }))} formato={dinero} altura={300} />
       </div>
-      <p className="text-[11.5px] text-muted-foreground">Cada año puede tardar unos segundos la primera vez (se calcula con SIESA); después queda en caché. El recaudo respeta el C.O. elegido arriba; ventas y cartera son de toda la empresa.</p>
+      <p className="text-[11.5px] text-muted-foreground">Cada año puede tardar unos segundos la primera vez (se calcula con SIESA); después queda en caché. El recaudo respeta el C.O. elegido arriba; ventas y cartera son de toda la empresa. Los datos de SIESA empiezan el 14/01/2019, por eso el saldo inicial de enero de 2019 es $0.</p>
     </>}
   </div>
 }
@@ -184,7 +187,7 @@ export function BotonPeriodo({ alAplicar }: { alAplicar: (rango: { desde: string
           <TipoSelector tipo={tipo} alCambiar={t => { setTipo(t); setN(t === 'anio' ? 0 : null) }} />
           <label className="flex flex-col gap-1 text-[12px] font-medium text-muted-foreground">Año
             <select value={anio} onChange={e => setAnio(Number(e.target.value))} className="h-9 rounded-lg border border-input bg-background px-2 text-sm text-foreground">
-              {[anioActual, anioActual - 1, anioActual - 2, anioActual - 3, anioActual - 4].map(a => <option key={a} value={a}>{a}</option>)}
+              {aniosDisponibles(anioActual).map(a => <option key={a} value={a}>{a}</option>)}
             </select>
           </label>
         </div>
