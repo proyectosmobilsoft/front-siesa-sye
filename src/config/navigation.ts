@@ -274,6 +274,7 @@ export const navigation: NavItem[] = [
     href: '/propuesta',
     icon: Presentation,
     subtitle: 'Propuesta de integración ERP Siesa Zero-Impact',
+    permiso: PERMISOS.PROPUESTA,
   },
   {
     name: 'Maestros',

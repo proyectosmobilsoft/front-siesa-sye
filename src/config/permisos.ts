@@ -47,6 +47,7 @@ export const PERMISOS = {
   TABLERO_COBROS:         'VER_TABLERO_COBROS',
   CONFIGURACION:          'VER_CONFIGURACION',
   INTERFAZ_CONTABLE:      'VER_INTERFAZ_CONTABLE',
+  PROPUESTA:              'VER_PROPUESTA',                      // Propuesta comercial (no la ven cajeras ni operativos)
 
   // ─── Acciones sobre anticipos ───
   CREAR_ANTICIPO:         'CREAR_ANTICIPO',

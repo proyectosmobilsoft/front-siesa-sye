@@ -174,7 +174,7 @@ function AppLayout() {
                                 {/* Compatibilidad con enlaces antiguos, sin mantener un módulo duplicado. */}
                                 <Route path="/configuracion/seguridad" element={<Navigate to="/maestro/usuarios" replace />} />
                                 <Route path="/ayuda" element={<HelpPage />} />
-                                <Route path="/propuesta" element={<PropuestaPage />} />
+                                <Route path="/propuesta" element={<ProtectedRoute permiso={PERMISOS.PROPUESTA}><PropuestaPage /></ProtectedRoute>} />
                             </Routes>
                         </Suspense>
                     </main>
