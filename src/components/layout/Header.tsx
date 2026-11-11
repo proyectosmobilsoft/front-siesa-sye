@@ -101,8 +101,7 @@ export const Header = () => {
                     {puedeAprobar && alarma && <div className="flex items-center gap-1.5 text-xs">
                         {!alarma.activa ? <Button size="sm" variant="outline" onClick={alarma.activar}>Activar alarma</Button> : <>
                             {alarma.sonidoBloqueado && <Button size="sm" variant="destructive" onClick={alarma.habilitarSonido}>Sonido bloqueado: clic aquí</Button>}
-                            <span role="status" className="hidden whitespace-nowrap text-muted-foreground sm:inline">{alarma.silenciada ? 'Alarma silenciada' : alarma.permisoNotificaciones !== 'granted' ? 'Alarma activa · sin permiso de avisos' : 'Alarma activa'}</span>
-                            {alarma.silenciada ? <Button size="sm" variant="outline" onClick={alarma.activar}>Reactivar</Button> : <Button size="sm" variant="outline" onClick={alarma.silenciar}>Silenciar 5 min</Button>}
+                            <span role="status" className="hidden whitespace-nowrap text-muted-foreground sm:inline">{alarma.permisoNotificaciones !== 'granted' ? 'Alarma activa · sin permiso de avisos' : 'Alarma activa'}</span>
                         </>}
                     </div>}
                     {(sesion?.centros_operacion?.length ?? 0) > 1 ? (

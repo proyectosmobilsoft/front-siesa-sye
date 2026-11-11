@@ -60,7 +60,7 @@ export interface ResumenTransferencias extends Partial<Record<EstadoTransferenci
   solicitudes_pendientes: number
   promedio_espera_seg: number | null
 }
-export interface PendienteAlarma { id: number; conductor_nombre: string | null; cliente: string; valor: number; created_at: string }
+export interface PendienteAlarma { id: number; conductor_nombre: string | null; cliente: string; valor: number; created_at: string; /** Id más bajo de las transferencias del mismo recaudo (mismo RC) */ grupo?: number | null }
 export interface PendientesAlarma { total: number; items: PendienteAlarma[] }
 export interface ListarConfirmacionesParams { estado: EstadoTransferencia | 'TODAS'; tipo?: 'rc_pendiente'; desde?: string; hasta?: string; search?: string; page: number; pageSize: number }
 export interface MiRcPendiente {

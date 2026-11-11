@@ -8,11 +8,22 @@ import { useAuthStore } from '@/store/authStore'
 import { formatters } from '@/utils/formatters'
 import { AlarmaContext } from './alarmaContext'
 
-function leerVistos(clave: string): Set<number> {
+// Una solicitud vista (o de un recaudo visto) deja de sonar 5 min; si sigue pendiente, vuelve a sonar.
+const VISTA_MS = 5 * 60_000
+type Vistos = Map<string, number>
+
+function leerVistos(clave: string): Vistos {
   try {
-    const ids: unknown = JSON.parse(sessionStorage.getItem(clave) || '[]')
-    return new Set(Array.isArray(ids) ? ids.filter((id): id is number => Number.isInteger(id)) : [])
-  } catch { return new Set() }
+    const datos: unknown = JSON.parse(sessionStorage.getItem(clave) || '{}')
+    if (!datos || typeof datos !== 'object' || Array.isArray(datos)) return new Map()
+    return new Map(Object.entries(datos as Record<string, unknown>).filter((e): e is [string, number] => typeof e[1] === 'number'))
+  } catch { return new Map() }
+}
+
+/** Vista hace menos de 5 min, ella o cualquier transferencia de su mismo recaudo */
+function enRevision(vistos: Vistos, item: { id: number; grupo?: number | null }, ahora: number): boolean {
+  const reciente = (clave: string) => { const t = vistos.get(clave); return t != null && ahora - t < VISTA_MS }
+  return reciente(`id:${item.id}`) || (item.grupo != null && reciente(`grupo:${item.grupo}`))
 }
 
 // Melodía corta y agradable (arpegio de do mayor con campanita), generada como WAV para reproducirla con <audio>,
@@ -58,7 +69,6 @@ export function AlarmaTransferenciasProvider({ children }: { children: ReactNode
   const [activa, setActiva] = useState(() => localStorage.getItem(clave) !== 'false')
   const [desbloqueado, setDesbloqueado] = useState(false)
   const [sonidoBloqueado, setSonidoBloqueado] = useState(false)
-  const [silenciadaHasta, setSilenciadaHasta] = useState(0)
   const [ahora, setAhora] = useState(Date.now)
   const [revisionVistos, setRevisionVistos] = useState(0)
   const [permisoNotificaciones, setPermisoNotificaciones] = useState<NotificationPermission | 'unsupported'>(() => 'Notification' in window ? Notification.permission : 'unsupported')
@@ -68,7 +78,6 @@ export function AlarmaTransferenciasProvider({ children }: { children: ReactNode
   const claveVistosActual = useRef(claveVistos)
   const avisados = useRef(new Set<number>())
   const avisos = useRef(new Map<number, Notification>())
-  const atenderAlRecibir = useRef(false)
   const consulta = useQuery({
     queryKey: ['transferencias-confirmacion', 'alarma', centro, usuarioId],
     queryFn: transferenciasConfirmacionApi.pendientesAlarma,
@@ -78,13 +87,11 @@ export function AlarmaTransferenciasProvider({ children }: { children: ReactNode
     retry: false,
   })
   const total = autorizado ? consulta.data?.total ?? 0 : 0
-  const silenciada = silenciadaHasta > ahora
 
   if (claveVistosActual.current !== claveVistos) {
     claveVistosActual.current = claveVistos
     vistos.current = leerVistos(claveVistos)
     avisados.current.clear()
-    atenderAlRecibir.current = false
   }
 
   const cerrarAvisos = () => {
@@ -95,24 +102,24 @@ export function AlarmaTransferenciasProvider({ children }: { children: ReactNode
     if (audio.current) { audio.current.pause(); audio.current.currentTime = 0 }
     cerrarAvisos()
   }
-  const marcarVistos = (ids: number[]) => {
-    let cambio = false
-    for (const id of ids) if (!vistos.current.has(id)) { vistos.current.add(id); cambio = true }
-    if (cambio) {
-      sessionStorage.setItem(claveVistos, JSON.stringify([...vistos.current]))
-      setRevisionVistos(n => n + 1)
-    }
+  const marcarVistos = (claves: string[]) => {
+    const momento = Date.now()
+    for (const [c, t] of vistos.current) if (momento - t >= VISTA_MS) vistos.current.delete(c)
+    for (const c of claves) vistos.current.set(c, momento)
+    try { sessionStorage.setItem(claveVistos, JSON.stringify(Object.fromEntries(vistos.current))) } catch { /* sin almacenamiento */ }
+    setAhora(momento)
+    setRevisionVistos(n => n + 1)
   }
-  const atenderPendientes = () => {
-    if (!autorizado) return
-    callar()
-    if (consulta.data) marcarVistos(consulta.data.items.map(item => item.id))
-    else atenderAlRecibir.current = true
-  }
+  // La alarma solo se calla cuando la cajera abre "Ver detalle": queda en revisión esa solicitud y todo su recaudo
+  // (mismo RC), incluidas las transferencias que lleguen después. Si en 5 min sigue pendiente, vuelve a sonar.
   const verSolicitud = (id: number) => {
     if (!autorizado) return
-    atenderPendientes()
-    marcarVistos([id])
+    callar()
+    const grupo = consulta.data?.items.find(item => item.id === id)?.grupo
+    marcarVistos([`id:${id}`, ...(grupo != null ? [`grupo:${grupo}`] : [])])
+    void queryClient.fetchQuery({ queryKey: ['transferencias-confirmacion', 'detalle', id], queryFn: () => transferenciasConfirmacionApi.detalle(id) })
+      .then(d => marcarVistos([`id:${id}`, ...(grupo != null ? [`grupo:${grupo}`] : []), ...(d.del_mismo_recaudo ?? []).map(o => `id:${o.id}`)]))
+      .catch(() => {})
   }
 
   useEffect(() => { setActiva(localStorage.getItem(clave) !== 'false'); callar() }, [clave, centro]) // eslint-disable-line react-hooks/exhaustive-deps
@@ -164,28 +171,20 @@ export function AlarmaTransferenciasProvider({ children }: { children: ReactNode
   const activar = () => {
     setActiva(true)
     localStorage.setItem(clave, 'true')
-    setSilenciadaHasta(0)
     habilitarSonido()
     if ('Notification' in window) {
       void Notification.requestPermission().then(setPermisoNotificaciones).catch(() => setPermisoNotificaciones(Notification.permission))
     }
   }
 
-  const silenciar = () => { setSilenciadaHasta(Date.now() + 5 * 60_000); callar() }
-
   useEffect(() => {
     if (!autorizado || !consulta.data) return
-    if (atenderAlRecibir.current) {
-      atenderAlRecibir.current = false
-      marcarVistos(consulta.data.items.map(item => item.id))
-      return
-    }
     const pendientes = new Set(consulta.data.items.map(item => item.id))
     for (const [id, aviso] of avisos.current) if (!pendientes.has(id)) { aviso.close(); avisos.current.delete(id) }
     for (const id of avisados.current) if (!pendientes.has(id)) avisados.current.delete(id)
     if (!activa || permisoNotificaciones !== 'granted') return
     for (const item of consulta.data.items) {
-      if (vistos.current.has(item.id) || avisados.current.has(item.id)) continue
+      if (enRevision(vistos.current, item, Date.now()) || avisados.current.has(item.id)) continue
       avisados.current.add(item.id)
       try {
         const aviso = new Notification('Autorización de transferencia pendiente', {
@@ -194,18 +193,18 @@ export function AlarmaTransferenciasProvider({ children }: { children: ReactNode
         })
         avisos.current.set(item.id, aviso)
         aviso.onclose = () => { if (avisos.current.get(item.id) === aviso) avisos.current.delete(item.id) }
-        aviso.onclick = () => { window.focus(); atenderPendientes(); navigate('/tesoreria/confirmacion-transferencias') }
+        aviso.onclick = () => { window.focus(); navigate('/tesoreria/confirmacion-transferencias') }
       } catch { /* El navegador puede bloquear avisos aunque haya concedido permiso. */ }
     }
   }, [autorizado, consulta.data, activa, permisoNotificaciones, navigate, revisionVistos]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  const sinVer = autorizado ? consulta.data?.items.filter(item => !vistos.current.has(item.id)) ?? [] : []
+  const sinVer = autorizado ? consulta.data?.items.filter(item => !enRevision(vistos.current, item, ahora)) ?? [] : []
   const idsSinVer = sinVer.map(item => item.id).join(',')
   const escalada = sinVer.some(item => {
     const creado = Date.parse(item.created_at)
     return Number.isFinite(creado) && ahora - creado > 2 * 60_000
   })
-  const sonando = autorizado && activa && !silenciada && !atenderAlRecibir.current && sinVer.length > 0
+  const sonando = autorizado && activa && sinVer.length > 0
   useEffect(() => {
     if (!sonando) return
     const sonar = () => {
@@ -236,5 +235,5 @@ export function AlarmaTransferenciasProvider({ children }: { children: ReactNode
     if (consulta.data && total === 0) void queryClient.invalidateQueries({ queryKey: ['transferencias-confirmacion', 'resumen'] })
   }, [consulta.data, total, queryClient])
 
-  return <AlarmaContext.Provider value={{ total, activa, silenciada, sonidoBloqueado, permisoNotificaciones, activar, silenciar, habilitarSonido, atenderPendientes, verSolicitud }}>{children}</AlarmaContext.Provider>
+  return <AlarmaContext.Provider value={{ total, activa, sonidoBloqueado, permisoNotificaciones, activar, habilitarSonido, verSolicitud }}>{children}</AlarmaContext.Provider>
 }

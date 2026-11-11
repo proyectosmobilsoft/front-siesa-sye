@@ -74,7 +74,6 @@ export function ConfirmacionTransferenciasPage() {
   useEffect(() => { if (!toast) return; const timer = setTimeout(() => setToast(''), 4000); return () => clearTimeout(timer) }, [toast])
   useEffect(() => { const timer = setInterval(() => setAhora(Date.now()), 30_000); return () => clearInterval(timer) }, [])
   const rcTab = estado === 'RC_PENDIENTE'
-  useEffect(() => { if (rcTab) alarma?.atenderPendientes() }, [rcTab]) // eslint-disable-line react-hooks/exhaustive-deps -- Solo al entrar; nuevos ids deben volver a sonar.
   const abrirDetalle = (id: number) => { alarma?.verSolicitud(id); setDetalleId(id) }
   const lista = useQuery({ queryKey: ['transferencias-confirmacion', 'lista', centro, estado, desde, hasta, searchDebounced, page], queryFn: () => transferenciasConfirmacionApi.listar({ estado: rcTab ? 'PENDIENTE' : estado, desde: desde || undefined, hasta: hasta || undefined, search: searchDebounced || undefined, page, pageSize: 20 }), refetchInterval: 8_000 })
   const resumen = useQuery({ queryKey: ['transferencias-confirmacion', 'resumen', centro], queryFn: transferenciasConfirmacionApi.resumen, refetchInterval: 30_000 })
