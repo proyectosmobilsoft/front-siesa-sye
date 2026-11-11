@@ -292,7 +292,7 @@ export const ReciboCajaPage = () => {
     try {
       const todos: ReciboCaja[] = []
       for (let p = 1; p <= 500; p++) {
-        const res = await apiClient.post<{ success: boolean; total: number; data: ReciboCaja[] }>('/recibo-caja/listar', cuerpoListar(p, 200))
+        const res = await apiClient.post<{ success: boolean; total: number; data: ReciboCaja[] }>('/recibo-caja/listar', cuerpoListar(p, 200), { silenciarAviso: true })
         const lote = res.data.data ?? []
         todos.push(...lote)
         if (lote.length < 200 || todos.length >= (res.data.total ?? 0)) break
@@ -327,7 +327,7 @@ export const ReciboCajaPage = () => {
     setError(null)
     try {
       const body = cuerpoListar(p, LIMIT)
-      const res = await apiClient.post<{ success: boolean; total: number; data: ReciboCaja[] }>('/recibo-caja/listar', body)
+      const res = await apiClient.post<{ success: boolean; total: number; data: ReciboCaja[] }>('/recibo-caja/listar', body, { silenciarAviso: true })
       setData(res.data.data ?? [])
       setTotal(res.data.total ?? 0)
       setPage(p)

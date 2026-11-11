@@ -85,9 +85,9 @@ export const CajaModal = ({ isOpen, onClose, caja, cajasExistentes = [] }: CajaM
             }
 
             if (isEditing && caja?.id) {
-                await maestroCajasApi.actualizarCaja(caja.id, dto)
+                await maestroCajasApi.actualizarCaja(caja.id, dto, true)
             } else {
-                await maestroCajasApi.crearCaja(dto)
+                await maestroCajasApi.crearCaja(dto, true)
             }
             onClose()
         } catch (err: any) {

@@ -34,8 +34,8 @@ export const menuPersonalizadoApi = {
         const res = await apiClient.get(BASE)
         return res.data?.data ?? []
     },
-    crearModulo: async (data: { nombre: string; icono?: string | null; orden?: number }) => {
-        const res = await apiClient.post(`${BASE}/modulos`, data)
+    crearModulo: async (data: { nombre: string; icono?: string | null; orden?: number }, silenciarAviso = false) => {
+        const res = await apiClient.post(`${BASE}/modulos`, data, { silenciarAviso })
         return res.data
     },
     /** Roles y si ven la sección */
@@ -45,8 +45,8 @@ export const menuPersonalizadoApi = {
         const res = await apiClient.get(`${BASE}/modulos/${moduloId}/items`)
         return res.data?.data ?? []
     },
-    crearEnlace: async (moduloId: number, data: EnlaceDto) => (await apiClient.post(`${BASE}/modulos/${moduloId}/items`, data)).data,
-    actualizarEnlace: async (id: number, data: EnlaceDto) => (await apiClient.put(`${BASE}/items/${id}`, data)).data,
+    crearEnlace: async (moduloId: number, data: EnlaceDto, silenciarAviso = false) => (await apiClient.post(`${BASE}/modulos/${moduloId}/items`, data, { silenciarAviso })).data,
+    actualizarEnlace: async (id: number, data: EnlaceDto, silenciarAviso = false) => (await apiClient.put(`${BASE}/items/${id}`, data, { silenciarAviso })).data,
     eliminarEnlace: async (id: number) => (await apiClient.delete(`${BASE}/items/${id}`)).data,
 }
 

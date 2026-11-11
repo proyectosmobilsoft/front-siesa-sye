@@ -46,9 +46,9 @@ export const ConceptoModal = ({ isOpen, onClose, concepto }: ConceptoModalProps)
             }
 
             if (isEditing && concepto?.id != null) {
-                await conceptosApi.actualizar(concepto.id, payload)
+                await conceptosApi.actualizar(concepto.id, payload, true)
             } else {
-                await conceptosApi.crear(payload)
+                await conceptosApi.crear(payload, true)
             }
             onClose()
         } catch (err: any) {

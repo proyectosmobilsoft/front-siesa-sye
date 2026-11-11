@@ -28,7 +28,7 @@ export function NuevoModuloPersonalizadoModal({ abierto, onClose, onCreado }: { 
         if (!nombre.trim()) return
         setGuardando(true); setError(null)
         try {
-            await menuPersonalizadoApi.crearModulo({ nombre: nombre.trim(), icono })
+            await menuPersonalizadoApi.crearModulo({ nombre: nombre.trim(), icono }, true)
             await queryClient.invalidateQueries({ queryKey: MENU_PERSONALIZADO_KEY })
             onCreado(); onClose()
         } catch (e) { setError(mensajeError(e, 'No se pudo crear el módulo')) } finally { setGuardando(false) }
@@ -115,8 +115,8 @@ export function EnlacesPersonalizados({ moduloId, puedeEditar, puedeAsignarRoles
         if (!editando) return
         setGuardando(true); setError(null)
         try {
-            if (editando === 'nuevo') await menuPersonalizadoApi.crearEnlace(moduloId, form)
-            else await menuPersonalizadoApi.actualizarEnlace(editando.id, form)
+            if (editando === 'nuevo') await menuPersonalizadoApi.crearEnlace(moduloId, form, true)
+            else await menuPersonalizadoApi.actualizarEnlace(editando.id, form, true)
             setEditando(null); await cargar(); await refrescarMenu()
         } catch (e) { setError(mensajeError(e, 'No se pudo guardar el enlace')) } finally { setGuardando(false) }
     }

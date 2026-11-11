@@ -53,13 +53,13 @@ export const interfazContableApi = {
         return response.data
     },
 
-    crear: async (data: GuardarInterfazContableDto) => {
-        const response = await apiClient.post(BASE, data)
+    crear: async (data: GuardarInterfazContableDto, silenciarAviso = false) => {
+        const response = await apiClient.post(BASE, data, { silenciarAviso })
         return response.data
     },
 
-    actualizar: async (id: number, data: Partial<GuardarInterfazContableDto>) => {
-        const response = await apiClient.put(`${BASE}/${id}`, data)
+    actualizar: async (id: number, data: Partial<GuardarInterfazContableDto>, silenciarAviso = false) => {
+        const response = await apiClient.put(`${BASE}/${id}`, data, { silenciarAviso })
         return response.data
     },
 

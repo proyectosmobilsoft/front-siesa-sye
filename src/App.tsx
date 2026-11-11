@@ -14,6 +14,7 @@ import { useInactivityTimeout } from '@/hooks/useInactivityTimeout'
 import { InactivityModal } from '@/components/ui/InactivityModal'
 import { Cargando } from '@/components/ui/cargando'
 import { FiltrosTablas } from '@/components/ui/filtros-tablas'
+import { Avisos } from '@/components/ui/avisos'
 import { AlarmaTransferenciasProvider } from '@/components/transferencias/AlarmaTransferencias'
 
 // Code-splitting por ruta: antes las ~20 páginas (con dependencias pesadas
@@ -266,6 +267,7 @@ function App() {
 
     return (
         <QueryClientProvider client={queryClient}>
+            <Avisos />
             <Router
                 future={{
                     v7_startTransition: true,

@@ -28,7 +28,7 @@ export const LoginPage = () => {
             const loginData = { usuario: usuarioNormalizado, credencial: contraseña }
 
             console.log('📤 Enviando datos de login:', loginData)
-            const res = await apiClient.post('/auth/login', loginData)
+            const res = await apiClient.post('/auth/login', loginData, { silenciarAviso: true })
 
             if (!res.data?.token) {
                 console.warn('⚠️ El login fue exitoso pero no se recibió token')

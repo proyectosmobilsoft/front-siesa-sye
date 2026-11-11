@@ -31,11 +31,12 @@ export const anticiposOperativosApi = {
     })
   },
 
-  update: async (id: number, payload: AnticipoOperativoUpdatePayload): Promise<AnticipoOperativo> => {
+  update: async (id: number, payload: AnticipoOperativoUpdatePayload, silenciarAviso = false): Promise<AnticipoOperativo> => {
     return withRetry(async () => {
       const response = await apiClient.put<{ success: boolean; data: AnticipoOperativo }>(
         `/anticipos-operativos/solicitudes/${id}`,
-        payload
+        payload,
+        { silenciarAviso }
       )
       return response.data.data
     })

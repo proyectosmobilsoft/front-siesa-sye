@@ -53,7 +53,7 @@ export function DetalleFacturasAsignadasModal({
     const handleQuitar = async (facturaId: number) => {
         try {
             setQuitandoId(facturaId)
-            await asignacionCobroApi.cancelarFactura(facturaId)
+            await asignacionCobroApi.cancelarFactura(facturaId, true)
             await cargar()
         } catch (err: any) {
             setError(err?.response?.data?.message || 'No se pudo quitar la factura')

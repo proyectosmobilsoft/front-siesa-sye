@@ -249,13 +249,13 @@ export const seguridadApi = {
         return raw
     },
 
-    crearUsuario: async (data: CreateUsuarioMasterDto) => {
-        const response = await apiClient.post('/auth-secundario/usuarios', data)
+    crearUsuario: async (data: CreateUsuarioMasterDto, silenciarAviso = false) => {
+        const response = await apiClient.post('/auth-secundario/usuarios', data, { silenciarAviso })
         return response.data
     },
 
-    actualizarUsuario: async (id: number, data: UpdateUsuarioMasterDto) => {
-        const response = await apiClient.put(`/auth-secundario/usuarios/${id}`, data)
+    actualizarUsuario: async (id: number, data: UpdateUsuarioMasterDto, silenciarAviso = false) => {
+        const response = await apiClient.put(`/auth-secundario/usuarios/${id}`, data, { silenciarAviso })
         return response.data
     },
 

@@ -68,8 +68,8 @@ export interface CrearAsignacionDto {
 }
 
 export const asignacionCobroApi = {
-    crear: async (data: CrearAsignacionDto): Promise<AsignacionCobro> => {
-        const response = await apiClient.post<{ success: boolean; data: AsignacionCobro }>('/asignacion-cobro', data)
+    crear: async (data: CrearAsignacionDto, silenciarAviso = false): Promise<AsignacionCobro> => {
+        const response = await apiClient.post<{ success: boolean; data: AsignacionCobro }>('/asignacion-cobro', data, { silenciarAviso })
         return response.data.data
     },
 
@@ -78,8 +78,8 @@ export const asignacionCobroApi = {
         return response.data.data
     },
 
-    cancelarFactura: async (facturaId: number): Promise<AsignacionCobro> => {
-        const response = await apiClient.delete<{ success: boolean; data: AsignacionCobro }>(`/asignacion-cobro/factura/${facturaId}`)
+    cancelarFactura: async (facturaId: number, silenciarAviso = false): Promise<AsignacionCobro> => {
+        const response = await apiClient.delete<{ success: boolean; data: AsignacionCobro }>(`/asignacion-cobro/factura/${facturaId}`, { silenciarAviso })
         return response.data.data
     },
 

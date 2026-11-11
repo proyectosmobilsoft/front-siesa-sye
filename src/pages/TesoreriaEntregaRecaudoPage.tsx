@@ -183,7 +183,7 @@ const TableroConciliacion = ({ movimientos, onResuelto }: { movimientos: Movimie
         setGuardando(true)
         setError(null)
         try {
-            await conductorEfectivoApi.resolverDiferencia(ids)
+            await conductorEfectivoApi.resolverDiferencia(ids, true)
             setSeleccionado(null)
             onResuelto()
         } catch (err: unknown) {
@@ -367,7 +367,7 @@ const ValidarEntregaModal = ({ entrega, onClose, onConfirmado }: ValidarEntregaM
         setLoading(true)
         setError(null)
         try {
-            await conductorEfectivoApi.confirmar(entrega.id, contado)
+            await conductorEfectivoApi.confirmar(entrega.id, contado, true)
             onConfirmado()
         } catch (err: unknown) {
             const apiError = err as { response?: { data?: { message?: string } } }
@@ -733,7 +733,7 @@ const DocumentarRCAnuladoModal = ({
                 rcRowid: recibo.Rowid,
                 numeroRcReemplazo: numero,
                 observacion,
-            })
+            }, true)
             onGuardado()
         } catch (err: unknown) {
             const apiError = err as { response?: { data?: { message?: string } } }

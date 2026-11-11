@@ -62,13 +62,13 @@ export const maestroCuentasBancariasApi = {
         return response.data
     },
 
-    crearConfig: async (data: CuentaBancariaConfigDto) => {
-        const response = await apiClient.post('/maestros/cuentas-bancarias-config', data)
+    crearConfig: async (data: CuentaBancariaConfigDto, silenciarAviso = false) => {
+        const response = await apiClient.post('/maestros/cuentas-bancarias-config', data, { silenciarAviso })
         return response.data
     },
 
-    actualizarConfig: async (id: number, data: CuentaBancariaConfigDto) => {
-        const response = await apiClient.put(`/maestros/cuentas-bancarias-config/${id}`, data)
+    actualizarConfig: async (id: number, data: CuentaBancariaConfigDto, silenciarAviso = false) => {
+        const response = await apiClient.put(`/maestros/cuentas-bancarias-config/${id}`, data, { silenciarAviso })
         return response.data
     },
 

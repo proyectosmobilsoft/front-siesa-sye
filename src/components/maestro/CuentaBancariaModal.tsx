@@ -77,9 +77,9 @@ export const CuentaBancariaModal = ({ isOpen, onClose, cuenta }: CuentaBancariaM
             }
 
             if (isEditing && cuenta?.id) {
-                await maestroCuentasBancariasApi.actualizarConfig(cuenta.id, dto)
+                await maestroCuentasBancariasApi.actualizarConfig(cuenta.id, dto, true)
             } else {
-                await maestroCuentasBancariasApi.crearConfig(dto)
+                await maestroCuentasBancariasApi.crearConfig(dto, true)
             }
             onClose()
         } catch (err: any) {

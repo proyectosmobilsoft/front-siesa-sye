@@ -101,20 +101,20 @@ export const transferenciasConfirmacionApi = {
     soportes.forEach(file => form.append('soportes', file))
     return (await apiClient.patch(`${base}/${id}/reenviar`, form, multipart)).data
   },
-  crear: async (body: CrearConfirmacion) => {
+  crear: async (body: CrearConfirmacion, silenciarAviso = false) => {
     const form = new FormData()
     for (const [key, value] of Object.entries(body)) {
       if (key === 'soportes') (value as File[]).forEach(file => form.append('soportes', file))
       else form.append(key, key === 'facturas' ? JSON.stringify(value) : String(value))
     }
-    return (await apiClient.post<{ data: ConfirmacionTransferencia & { posibles_duplicados: DuplicadoConfirmacion[] } }>(base, form, multipart)).data.data
+    return (await apiClient.post<{ data: ConfirmacionTransferencia & { posibles_duplicados: DuplicadoConfirmacion[] } }>(base, form, { ...multipart, silenciarAviso })).data.data
   },
-  agregarSoportes: async (id: number, files: File[]) => {
+  agregarSoportes: async (id: number, files: File[], silenciarAviso = false) => {
     const form = new FormData(); files.forEach(file => form.append('soportes', file))
-    return (await apiClient.post(`${base}/${id}/soportes`, form, multipart)).data
+    return (await apiClient.post(`${base}/${id}/soportes`, form, { ...multipart, silenciarAviso })).data
   },
-  aprobar: async (id: number, valor?: number) => (await apiClient.patch<{ data?: ConfirmacionTransferencia }>(`${base}/${id}/aprobar`, valor == null ? undefined : { valor })).data,
-  reintentarRc: async (id: number) => (await apiClient.patch<{ data?: ConfirmacionTransferencia }>(`${base}/${id}/reintentar-rc`)).data,
-  rechazar: async (id: number, motivo: string) => (await apiClient.patch(`${base}/${id}/rechazar`, { motivo })).data,
-  anular: async (id: number) => (await apiClient.patch(`${base}/${id}/anular`)).data,
+  aprobar: async (id: number, valor?: number, silenciarAviso = false) => (await apiClient.patch<{ data?: ConfirmacionTransferencia }>(`${base}/${id}/aprobar`, valor == null ? undefined : { valor }, { silenciarAviso })).data,
+  reintentarRc: async (id: number, silenciarAviso = false) => (await apiClient.patch<{ data?: ConfirmacionTransferencia }>(`${base}/${id}/reintentar-rc`, undefined, { silenciarAviso })).data,
+  rechazar: async (id: number, motivo: string, silenciarAviso = false) => (await apiClient.patch(`${base}/${id}/rechazar`, { motivo }, { silenciarAviso })).data,
+  anular: async (id: number, silenciarAviso = false) => (await apiClient.patch(`${base}/${id}/anular`, undefined, { silenciarAviso })).data,
 }

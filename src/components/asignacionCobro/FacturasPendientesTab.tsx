@@ -176,7 +176,7 @@ export const FacturasPendientesTab = ({ conductores, todosLosConductores, onAsig
                             valor: f.valor,
                         }
                     }),
-                })
+                }, true)
                 asignadas += lista.length
             }
             setExito(`${asignadas} factura(s) de ${porCliente.size} cliente(s) asignada(s) correctamente`)

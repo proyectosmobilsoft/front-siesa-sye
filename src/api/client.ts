@@ -1,6 +1,29 @@
 import axios, { AxiosError, InternalAxiosRequestConfig } from 'axios'
 import { API_CONFIG } from '@/config/api'
 import { useAuthStore } from '@/store/authStore'
+import { aviso } from '@/store/avisosStore'
+
+declare module 'axios' {
+  interface AxiosRequestConfig {
+    silenciarAviso?: boolean
+  }
+}
+
+function mensajeErrorApi(error: AxiosError): string {
+  const data = error.response?.data
+  if (data && typeof data === 'object') {
+    const detalle = data as { message?: unknown; error?: unknown }
+    if (typeof detalle.message === 'string' && detalle.message.trim()) return detalle.message
+    if (typeof detalle.error === 'string' && detalle.error.trim()) return detalle.error
+  }
+  switch (error.response?.status) {
+    case 400: return 'Datos inválidos'
+    case 403: return 'No tienes permiso para esta acción'
+    case 404: return 'No encontrado'
+    case 409: return 'Ya existe un registro con esos datos'
+    default: return (error.response?.status ?? 0) >= 500 ? 'Error del servidor, intenta de nuevo' : error.response ? 'No se pudo completar la acción' : 'Sin conexión con el servidor'
+  }
+}
 
 /**
  * Cliente HTTP configurado para toda la aplicación
@@ -65,6 +88,10 @@ apiClient.interceptors.response.use(
   },
   (error: AxiosError) => {
     // Manejo robusto de errores
+    const metodo = error.config?.method?.toUpperCase()
+    if (error.response?.status !== 401 && !error.config?.silenciarAviso && metodo && ['POST', 'PUT', 'PATCH', 'DELETE'].includes(metodo)) {
+      aviso.error(mensajeErrorApi(error))
+    }
     if (error.response) {
       // El servidor respondió con un código de error
       const status = error.response.status

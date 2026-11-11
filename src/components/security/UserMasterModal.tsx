@@ -179,11 +179,11 @@ export const UserMasterModal = ({ isOpen, onClose, user }: UserMasterModalProps)
 
             if (isEditing && user?.id) {
                 console.log('📤 PUT /auth-secundario/usuarios/' + user.id + ':', JSON.stringify(userData, null, 2))
-                await seguridadApi.actualizarUsuario(user.id, userData)
+                await seguridadApi.actualizarUsuario(user.id, userData, true)
                 console.log('✅ Usuario actualizado')
             } else {
                 console.log('📤 POST /auth-secundario/usuarios:', JSON.stringify(userData, null, 2))
-                await seguridadApi.crearUsuario(userData)
+                await seguridadApi.crearUsuario(userData, true)
                 console.log('✅ Usuario creado')
             }
             onClose()

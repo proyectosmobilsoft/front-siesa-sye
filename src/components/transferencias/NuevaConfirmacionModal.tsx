@@ -63,7 +63,7 @@ export function NuevaConfirmacionModal({ onClose, onSaved }: { onClose: () => vo
     if (!cliente || !(Number(valor) > 0) || !fecha || !cuenta || soportes.length < 1) { setError('Completa cliente, valor, fecha, cuenta y al menos un soporte.'); return }
     setGuardando(true); setError('')
     try {
-      const res = await transferenciasConfirmacionApi.crear({ rowid_tercero: cliente.f9740_id, nit: String(cliente.f9740_nit ?? ''), razon_social: cliente.f9740_razon_social || cliente.f9740_nombre || '', id_co: coPuntual(centro) ?? '', valor: Number(valor), fecha_transferencia: fecha, id_cta_bancaria: cuenta, referencia: referencia.trim(), observacion: observacion.trim(), facturas: facturas.filter(row => seleccionadas.includes(row.rowid_sa)), soportes })
+      const res = await transferenciasConfirmacionApi.crear({ rowid_tercero: cliente.f9740_id, nit: String(cliente.f9740_nit ?? ''), razon_social: cliente.f9740_razon_social || cliente.f9740_nombre || '', id_co: coPuntual(centro) ?? '', valor: Number(valor), fecha_transferencia: fecha, id_cta_bancaria: cuenta, referencia: referencia.trim(), observacion: observacion.trim(), facturas: facturas.filter(row => seleccionadas.includes(row.rowid_sa)), soportes }, true)
       if (res.posibles_duplicados?.length) { setCreadaId(res.id); setDuplicados(res.posibles_duplicados) }
       else onSaved('Confirmación registrada correctamente')
     } catch (e) { setError(mensajeError(e)) } finally { setGuardando(false) }

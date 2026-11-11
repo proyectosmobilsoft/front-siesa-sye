@@ -36,7 +36,7 @@ export function DetalleConfirmacionModal({ id, onClose, onSaved }: { id: number;
     setSaving(true); setError('')
     try {
       if (accion === 'aprobar' || accion === 'reintentar') {
-        const response = accion === 'aprobar' ? await transferenciasConfirmacionApi.aprobar(id, row.tiene_payload ? Number(valor) : undefined) : await transferenciasConfirmacionApi.reintentarRc(id)
+        const response = accion === 'aprobar' ? await transferenciasConfirmacionApi.aprobar(id, row.tiene_payload ? Number(valor) : undefined, true) : await transferenciasConfirmacionApi.reintentarRc(id, true)
         if (row.tiene_payload) {
           const actualizado = await detalle.refetch()
           const numero = actualizado.data?.rc_numero || response.data?.rc_numero
@@ -46,8 +46,8 @@ export function DetalleConfirmacionModal({ id, onClose, onSaved }: { id: number;
           return
         }
       }
-      if (accion === 'rechazar') await transferenciasConfirmacionApi.rechazar(id, motivo.trim())
-      if (accion === 'anular') await transferenciasConfirmacionApi.anular(id)
+      if (accion === 'rechazar') await transferenciasConfirmacionApi.rechazar(id, motivo.trim(), true)
+      if (accion === 'anular') await transferenciasConfirmacionApi.anular(id, true)
       onSaved({ aprobar: 'Transferencia aprobada', rechazar: 'Transferencia rechazada', anular: 'Transferencia anulada', reintentar: 'RC creado' }[accion])
     } catch (e) { setError(errorMensaje(e)); await detalle.refetch(); void queryClient.invalidateQueries({ queryKey: ['transferencias-confirmacion', 'lista'] }); void queryClient.invalidateQueries({ queryKey: ['transferencias-confirmacion', 'resumen'] }) } finally { setSaving(false) }
   }
@@ -56,7 +56,7 @@ export function DetalleConfirmacionModal({ id, onClose, onSaved }: { id: number;
     if (validation) { setError(validation); return }
     if (!files.length) { setError('Selecciona al menos un soporte.'); return }
     setSaving(true); setError('')
-    try { await transferenciasConfirmacionApi.agregarSoportes(id, files); onSaved('Soportes agregados') }
+    try { await transferenciasConfirmacionApi.agregarSoportes(id, files, true); onSaved('Soportes agregados') }
     catch (e) { setError(errorMensaje(e)) } finally { setSaving(false) }
   }
   return <Modal isOpen onClose={() => { if (!saving) onClose() }} title={`Confirmación #${id}`} className="max-w-2xl">

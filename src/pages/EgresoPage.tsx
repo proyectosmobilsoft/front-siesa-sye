@@ -595,7 +595,7 @@ const EditModal = ({ anticipo, onClose, onSaved }: EditModalProps) => {
         try {
             setSaving(true)
             setError(null)
-            await anticiposOperativosApi.update(anticipo.id, form)
+            await anticiposOperativosApi.update(anticipo.id, form, true)
             onSaved()
         } catch (err: any) {
             setError(err?.response?.data?.message || 'Error al guardar los cambios')

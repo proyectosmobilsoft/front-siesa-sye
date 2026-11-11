@@ -25,10 +25,11 @@ export const conductorEfectivoApi = {
     })
   },
 
-  confirmar: async (id: number, valorConfirmado?: number): Promise<MovimientoEfectivo> => {
+  confirmar: async (id: number, valorConfirmado?: number, silenciarAviso = false): Promise<MovimientoEfectivo> => {
     const response = await apiClient.post<{ success: boolean; data: MovimientoEfectivo }>(
       `/conductor-efectivo/entrega/${id}/confirmar`,
-      valorConfirmado != null ? { valor_confirmado: valorConfirmado } : {}
+      valorConfirmado != null ? { valor_confirmado: valorConfirmado } : {},
+      { silenciarAviso }
     )
     return response.data.data
   },
@@ -44,10 +45,11 @@ export const conductorEfectivoApi = {
     return response.data.data
   },
 
-  resolverDiferencia: async (movimientoIds: number[]): Promise<MovimientoEfectivo[]> => {
+  resolverDiferencia: async (movimientoIds: number[], silenciarAviso = false): Promise<MovimientoEfectivo[]> => {
     const response = await apiClient.post<{ success: boolean; data: MovimientoEfectivo[] }>(
       '/conductor-efectivo/entrega/resolver-diferencia',
-      { movimiento_ids: movimientoIds }
+      { movimiento_ids: movimientoIds },
+      { silenciarAviso }
     )
     return response.data.data
   },

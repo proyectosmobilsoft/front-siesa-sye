@@ -159,13 +159,13 @@ export const financieroApi = {
         return response.data
     },
 
-    crearCondicionPago: async (data: CrearCondicionPagoDto) => {
-        const response = await apiClient.post('/maestros/condiciones-pago', data)
+    crearCondicionPago: async (data: CrearCondicionPagoDto, silenciarAviso = false) => {
+        const response = await apiClient.post('/maestros/condiciones-pago', data, { silenciarAviso })
         return response.data
     },
 
-    actualizarCondicionPago: async (code: string, data: ActualizarCondicionPagoDto) => {
-        const response = await apiClient.put(`/maestros/condiciones-pago/${code}`, data)
+    actualizarCondicionPago: async (code: string, data: ActualizarCondicionPagoDto, silenciarAviso = false) => {
+        const response = await apiClient.put(`/maestros/condiciones-pago/${code}`, data, { silenciarAviso })
         return response.data
     },
 

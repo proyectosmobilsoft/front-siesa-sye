@@ -147,7 +147,7 @@ export function NuevoReciboTab({ onCreated }: { onCreated: () => void }) {
     if (!elegibles.length) { setDescuentos({}); setCargandoDescuentos(false); return }
     setCargandoDescuentos(true)
     Promise.all(elegibles.map(async f => {
-      const r = await apiClient.post<{ data?: { valor_descuento?: number | string }; valor_descuento?: number | string }>('/financiero/hallar-dsctos-sas', { p_id_cia: f.idCia, p_fecha: hoy(), p_rowid_sa: f.rowid, p_id_medio_pago: 'CG1', p_ind_tipo_tercero: 1 })
+      const r = await apiClient.post<{ data?: { valor_descuento?: number | string }; valor_descuento?: number | string }>('/financiero/hallar-dsctos-sas', { p_id_cia: f.idCia, p_fecha: hoy(), p_rowid_sa: f.rowid, p_id_medio_pago: 'CG1', p_ind_tipo_tercero: 1 }, { silenciarAviso: true })
       return [f.rowid, Math.max(0, parseMonto(r.data.data?.valor_descuento ?? r.data.valor_descuento))] as const
     })).then(entries => {
       if (version !== descuentoVersion.current) return
@@ -276,7 +276,7 @@ export function NuevoReciboTab({ onCreated }: { onCreated: () => void }) {
         intento.current = { key: crypto.randomUUID(), payload }
       }
       const actual = intento.current
-      const res = await apiClient.post<{ success?: boolean; status?: string; data?: Record<string, unknown>; message?: string }>('/recibo-caja/procesar', actual.payload, { headers: { 'Idempotency-Key': actual.key }, timeout: 120000 })
+      const res = await apiClient.post<{ success?: boolean; status?: string; data?: Record<string, unknown>; message?: string }>('/recibo-caja/procesar', actual.payload, { headers: { 'Idempotency-Key': actual.key }, timeout: 120000, silenciarAviso: true })
       if (res.status === 202 || res.data.status === 'PROCESSING') { await verificarCreacion(actual.key); return }
       if (res.data.success === false) throw new Error(res.data.message || 'No se pudo crear el recibo')
       const numeroRc = String(res.data.data?.numero_docto ?? res.data.data?.p_numero_docto ?? actual.payload.p_numero_docto)

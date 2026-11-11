@@ -6,6 +6,7 @@ import { seguridadApi, AuthRole, UsuarioMaster, SiesaUsuario, MaquinariaAsignada
 import { paisesApi, Pais } from '@/api/paises'
 import { maquinariaApi, Maquinaria } from '@/api/maquinaria'
 import { ChevronDown, Loader2, CheckCircle2, XCircle, RefreshCw, Copy, Plus } from 'lucide-react'
+import { aviso } from '@/store/avisosStore'
 
 /**
  * Genera combinaciones de usuario a partir de nombre completo.
@@ -92,6 +93,9 @@ export const UserFormModal = ({ isOpen, onClose, user }: UserFormModalProps) => 
     // Form states
     const [name, setName] = useState(user?.nombre_completo || '')
     const [email, setEmail] = useState(user?.email || '')
+    const [errorGuardado, setErrorGuardado] = useState<string | null>(null)
+    const [guardando, setGuardando] = useState(false)
+    const correoInvalido = email !== '' && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
     const [codigoPais, setCodigoPais] = useState('+57')
     const [telefono, setTelefono] = useState('')
     const [centrosOperacion, setCentrosOperacion] = useState<string[]>(
@@ -178,6 +182,7 @@ export const UserFormModal = ({ isOpen, onClose, user }: UserFormModalProps) => 
     // Cargar roles y países al abrir el modal
     useEffect(() => {
         if (isOpen) {
+            setErrorGuardado(null)
             loadRoles()
             loadPaises()
             // Resetear estados si es nuevo usuario
@@ -549,6 +554,12 @@ export const UserFormModal = ({ isOpen, onClose, user }: UserFormModalProps) => 
     }
 
     const handleSave = async () => {
+        if (guardando) return
+        if (correoInvalido) {
+            setErrorGuardado('Correo inválido, revisa que no tenga espacios ni datos de más')
+            return
+        }
+        setErrorGuardado(null)
         // Construir teléfono completo con código de país
         const telefonoCompleto = telefono.trim() 
             ? `${codigoPais}${telefono.trim()}` 
@@ -624,8 +635,10 @@ export const UserFormModal = ({ isOpen, onClose, user }: UserFormModalProps) => 
             }
 
             try {
-                const response = await seguridadApi.actualizarUsuario(user.id, payload)
+                setGuardando(true)
+                const response = await seguridadApi.actualizarUsuario(user.id, payload, true)
                 console.log('✅ Respuesta del servidor:', JSON.stringify(response, null, 2))
+                aviso.exito('Usuario actualizado')
                 onClose()
             } catch (err: any) {
                 console.error('❌ Error actualizando usuario:', err)
@@ -633,6 +646,9 @@ export const UserFormModal = ({ isOpen, onClose, user }: UserFormModalProps) => 
                     console.error('📋 Status:', err.response.status)
                     console.error('📋 Response data:', JSON.stringify(err.response.data, null, 2))
                 }
+                setErrorGuardado(err?.response?.data?.message || err?.response?.data?.error || 'No se pudo actualizar el usuario')
+            } finally {
+                setGuardando(false)
             }
         } else {
             // --- MODO CREACIÓN (POST) ---
@@ -660,8 +676,10 @@ export const UserFormModal = ({ isOpen, onClose, user }: UserFormModalProps) => 
             console.log(JSON.stringify(payload, null, 2))
 
             try {
-                const response = await seguridadApi.crearUsuario(payload)
+                setGuardando(true)
+                const response = await seguridadApi.crearUsuario(payload, true)
                 console.log('✅ Respuesta del servidor:', JSON.stringify(response, null, 2))
+                aviso.exito('Usuario creado')
                 onClose()
             } catch (err: any) {
                 console.error('❌ Error creando usuario:', err)
@@ -669,6 +687,9 @@ export const UserFormModal = ({ isOpen, onClose, user }: UserFormModalProps) => 
                     console.error('📋 Status:', err.response.status)
                     console.error('📋 Response data:', JSON.stringify(err.response.data, null, 2))
                 }
+                setErrorGuardado(err?.response?.data?.message || err?.response?.data?.error || 'No se pudo crear el usuario')
+            } finally {
+                setGuardando(false)
             }
         }
     }
@@ -680,7 +701,7 @@ export const UserFormModal = ({ isOpen, onClose, user }: UserFormModalProps) => 
             title={isEditing ? 'Editar Usuario' : 'Nuevo Usuario'}
             className="max-w-5xl"
         >
-            <div className="mt-2 space-y-7">
+            <div className="mt-2 space-y-7" onChangeCapture={() => setErrorGuardado(null)}>
                 {/* ─── Información personal ─── */}
                 <SeccionTitulo>Información personal</SeccionTitulo>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
@@ -698,8 +719,11 @@ export const UserFormModal = ({ isOpen, onClose, user }: UserFormModalProps) => 
                             type="email"
                             placeholder="juan@email.com"
                             value={email}
-                            onChange={(e) => setEmail(e.target.value)}
+                            onChange={(e) => { setEmail(e.target.value); setErrorGuardado(null) }}
+                            className={correoInvalido ? 'border-destructive focus-visible:ring-destructive' : undefined}
+                            aria-invalid={correoInvalido}
                         />
+                        {correoInvalido && <p className="text-xs text-destructive">Correo inválido, revisa que no tenga espacios ni datos de más</p>}
                     </div>
                     <div className="space-y-2">
                         <Etiqueta>Celular</Etiqueta>
@@ -1122,6 +1146,7 @@ export const UserFormModal = ({ isOpen, onClose, user }: UserFormModalProps) => 
                 {/* Acciones: pegadas abajo y separadas del contenido. La nota de
                     campos obligatorios va a la izquierda para no competir con los
                     botones, que quedan alineados a la derecha (acción primaria al final). */}
+                {errorGuardado && <div role="alert" className="rounded-md border border-destructive/50 bg-destructive/10 p-3 text-sm text-destructive">{errorGuardado}</div>}
                 <div className="flex flex-col-reverse gap-3 border-t pt-5 sm:flex-row sm:items-center sm:justify-between">
                     <p className="text-xs text-muted-foreground">
                         Los campos marcados con <span className="text-destructive">*</span> son obligatorios
@@ -1130,10 +1155,10 @@ export const UserFormModal = ({ isOpen, onClose, user }: UserFormModalProps) => 
                         <Button variant="outline" onClick={onClose} className="min-w-[110px]">Cancelar</Button>
                         <Button
                             onClick={handleSave}
-                            disabled={!usuario || !roleId || (!isEditing && centrosOperacion.length === 0)}
+                            disabled={guardando || correoInvalido || !usuario || !roleId || (!isEditing && centrosOperacion.length === 0)}
                             className="min-w-[160px]"
                         >
-                            {isEditing ? 'Actualizar Usuario' : 'Guardar Usuario'}
+                            {guardando ? 'Guardando...' : isEditing ? 'Actualizar Usuario' : 'Guardar Usuario'}
                         </Button>
                     </div>
                 </div>

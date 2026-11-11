@@ -22,13 +22,13 @@ export const maestroCajasApi = {
         return response.data
     },
 
-    crearCaja: async (data: CajaDto) => {
-        const response = await apiClient.post('/maestros/cajas', data)
+    crearCaja: async (data: CajaDto, silenciarAviso = false) => {
+        const response = await apiClient.post('/maestros/cajas', data, { silenciarAviso })
         return response.data
     },
 
-    actualizarCaja: async (id: number, data: CajaDto) => {
-        const response = await apiClient.put(`/maestros/cajas/${id}`, data)
+    actualizarCaja: async (id: number, data: CajaDto, silenciarAviso = false) => {
+        const response = await apiClient.put(`/maestros/cajas/${id}`, data, { silenciarAviso })
         return response.data
     },
 

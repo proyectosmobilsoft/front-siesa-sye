@@ -81,12 +81,12 @@ export const reciboCajaApi = {
     rcRowid: number
     numeroRcReemplazo: number
     observacion?: string
-  }): Promise<DocumentacionRCAnulado> => {
+  }, silenciarAviso = false): Promise<DocumentacionRCAnulado> => {
     const response = await apiClient.post<{ success: boolean; data: DocumentacionRCAnulado }>('/recibo-caja/anulaciones', {
       rc_rowid: rcRowid,
       numero_rc_reemplazo: numeroRcReemplazo,
       observacion: observacion || undefined,
-    })
+    }, { silenciarAviso })
     return response.data.data
   },
 

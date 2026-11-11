@@ -47,13 +47,13 @@ export const conceptosApi = {
         return response.data
     },
 
-    crear: async (data: CrearConceptoDto) => {
-        const response = await apiClient.post('/maestros/conceptos', data)
+    crear: async (data: CrearConceptoDto, silenciarAviso = false) => {
+        const response = await apiClient.post('/maestros/conceptos', data, { silenciarAviso })
         return response.data
     },
 
-    actualizar: async (id: number, data: ActualizarConceptoDto) => {
-        const response = await apiClient.put(`/maestros/conceptos/${id}`, data)
+    actualizar: async (id: number, data: ActualizarConceptoDto, silenciarAviso = false) => {
+        const response = await apiClient.put(`/maestros/conceptos/${id}`, data, { silenciarAviso })
         return response.data
     },
 

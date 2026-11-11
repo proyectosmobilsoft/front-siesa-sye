@@ -89,9 +89,9 @@ export const InterfazContableModal = ({ isOpen, onClose, registro }: InterfazCon
             }
 
             if (isEditing && registro?.id != null) {
-                await interfazContableApi.actualizar(registro.id, payload)
+                await interfazContableApi.actualizar(registro.id, payload, true)
             } else {
-                await interfazContableApi.crear(payload)
+                await interfazContableApi.crear(payload, true)
             }
             onClose()
         } catch (err: any) {
