@@ -23,6 +23,7 @@ import {
 } from 'lucide-react'
 import { apiClient } from '@/api/client'
 import { useAuthStore, coPuntual } from '@/store/authStore'
+import { PERMISOS } from '@/config/permisos'
 import { useFechasLimite, hoyLocalIso } from '@/hooks/useFechasLimite'
 import { Bloque, CuerpoConsulta, Encabezado, Malla, SelectorRango, SubPestanas, BotonTabla, Tabla, Tarjeta } from '@/components/tablero/comun'
 import { BotonPeriodo } from '@/components/tablero/PeriodoModal'
@@ -208,7 +209,10 @@ const TONO_NOTA = {
 export function DashboardReciboCajaPage() {
   const [parametros, setParametros] = useSearchParams()
   const valorVista = parametros.get('vista')
-  const vista = valorVista === 'recaudo' || valorVista === 'presupuesto' || valorVista === 'proveedores' || valorVista === 'compras' || valorVista === 'inventario' || valorVista === 'cartera' ? valorVista : null
+  // Ventas, compras e inventario solo con VER_DASHBOARD (INC-000005: la cajera no debe ver ventas).
+  // Sin el permiso queda solo Cobranza (recaudo y cartera), que es lo que usa tesorería.
+  const verVentas = useAuthStore((s) => s.hasPermiso(PERMISOS.DASHBOARD))
+  const vista = valorVista === 'recaudo' || valorVista === 'cartera' || (verVentas && (valorVista === 'presupuesto' || valorVista === 'proveedores' || valorVista === 'compras' || valorVista === 'inventario')) ? valorVista : null
   const sub = parametros.get('sub') ?? 'resumen'
   const elegirSub = (valor: string) => setParametros(actuales => { const siguientes = new URLSearchParams(actuales); siguientes.set('sub', valor); return siguientes })
   const elegirVista = (v: 'recaudo' | 'presupuesto' | 'proveedores' | 'compras' | 'inventario' | 'cartera' | null) => {
@@ -230,19 +234,19 @@ export function DashboardReciboCajaPage() {
   const consultaVentas = useQuery({
     queryKey: ['dashboard-ventas', rango.desde, rango.hasta],
     queryFn: async () => (await apiClient.get<{ success: boolean; data: DashboardVentas }>('/dashboard/ventas', { params: rango })).data.data,
-    enabled: valido,
+    enabled: valido && verVentas,
     staleTime: 5 * 60 * 1000,
   })
   const consultaCompras = useQuery({
     queryKey: ['dashboard-compras', rango.desde, rango.hasta],
     queryFn: async () => (await apiClient.get<{ success: boolean; data: DashboardCompras }>('/dashboard/compras', { params: rango })).data.data,
-    enabled: valido,
+    enabled: valido && verVentas,
     staleTime: 5 * 60 * 1000,
   })
   const consultaInventario = useQuery({
     queryKey: ['dashboard-inventario', rango.desde, rango.hasta],
     queryFn: async () => (await apiClient.get<{ success: boolean; data: DashboardInventario }>('/dashboard/inventario', { params: rango })).data.data,
-    enabled: valido,
+    enabled: valido && verVentas,
     staleTime: 5 * 60 * 1000,
   })
   const consultaCartera = useQuery({
@@ -258,8 +262,10 @@ export function DashboardReciboCajaPage() {
     <DetalleProvider rango={valido ? rango : undefined}>
     <section className="mx-auto max-w-[1600px] p-4 sm:p-6 lg:p-8">
       <Encabezado
-        titulo="Dashboard de Recaudo y Ventas"
-        descripcion={`Recaudo de cartera${co ? ` (C.O. ${co})` : ' (todos los C.O.)'}, ventas vs presupuesto, ventas por marca, compras a proveedores, inventario y cartera por vencimiento (ambos C.O.).`}
+        titulo={verVentas ? 'Dashboard de Recaudo y Ventas' : 'Dashboard de Recaudo'}
+        descripcion={verVentas
+          ? `Recaudo de cartera${co ? ` (C.O. ${co})` : ' (todos los C.O.)'}, ventas vs presupuesto, ventas por marca, compras a proveedores, inventario y cartera por vencimiento (ambos C.O.).`
+          : `Recaudo de cartera${co ? ` (C.O. ${co})` : ' (todos los C.O.)'} y cartera por vencimiento (ambos C.O.).`}
       />
       <SelectorRango
         preset={preset}
@@ -282,7 +288,7 @@ export function DashboardReciboCajaPage() {
         extra={<BotonPeriodo alAplicar={(r) => { setPreset(null); setRango(r) }} />}
       />
 
-      <Resumenes recaudo={d} ventas={consultaVentas.data} compras={consultaCompras.data} cartera={consultaCartera.data} cargaCartera={consultaCartera.isLoading || (consultaCartera.isFetching && !consultaCartera.data)} errorCartera={consultaCartera.isError} inventario={consultaInventario.data} cargaInventario={consultaInventario.isLoading || (consultaInventario.isFetching && !consultaInventario.data)} errorInventario={consultaInventario.isError} cargaCompras={consultaCompras.isLoading || (consultaCompras.isFetching && !consultaCompras.data)} errorCompras={consultaCompras.isError} cargaRecaudo={consulta.isLoading || (consulta.isFetching && !d)} errorRecaudo={consulta.isError} cargaVentas={consultaVentas.isLoading || (consultaVentas.isFetching && !consultaVentas.data)} errorVentas={consultaVentas.isError} vista={vista} alElegir={elegirVista} />
+      <Resumenes recaudo={d} ventas={consultaVentas.data} compras={consultaCompras.data} cartera={consultaCartera.data} cargaCartera={consultaCartera.isLoading || (consultaCartera.isFetching && !consultaCartera.data)} errorCartera={consultaCartera.isError} inventario={consultaInventario.data} cargaInventario={consultaInventario.isLoading || (consultaInventario.isFetching && !consultaInventario.data)} errorInventario={consultaInventario.isError} cargaCompras={consultaCompras.isLoading || (consultaCompras.isFetching && !consultaCompras.data)} errorCompras={consultaCompras.isError} cargaRecaudo={consulta.isLoading || (consulta.isFetching && !d)} errorRecaudo={consulta.isError} cargaVentas={consultaVentas.isLoading || (consultaVentas.isFetching && !consultaVentas.data)} errorVentas={consultaVentas.isError} vista={vista} alElegir={elegirVista} soloCobranza={!verVentas} />
       <PanelExpandible vista={vista} titulo={vista === 'recaudo' || vista === 'cartera' ? 'Cobranza' : vista === 'presupuesto' ? 'Ventas vs presupuesto' : vista === 'compras' ? 'Compras por proveedor' : vista === 'inventario' ? 'Inventario por marca/proveedor' : 'Ventas por marca/proveedor'} alCerrar={() => elegirVista(null)}>
         {(vista === 'recaudo' || vista === 'cartera') && (
           <div className="mb-4 inline-flex rounded-xl bg-muted p-1" role="tablist" aria-label="Cobranza">

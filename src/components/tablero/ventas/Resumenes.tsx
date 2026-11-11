@@ -33,6 +33,7 @@ export function Resumenes({
   errorVentas,
   vista,
   alElegir,
+  soloCobranza = false,
 }: {
   recaudo?: ResumenRC
   ventas?: DashboardVentas
@@ -51,6 +52,8 @@ export function Resumenes({
   errorVentas: boolean
   vista: Vista | null
   alElegir: (v: Vista) => void
+  /** Sin VER_DASHBOARD solo se muestra Cobranza: ventas, compras e inventario son información gerencial (INC-000005). */
+  soloCobranza?: boolean
 }) {
   const top =
     ventas?.proveedores
@@ -59,7 +62,7 @@ export function Resumenes({
   const topCompras = compras?.proveedores.filter(p => p.proveedor !== 'OTROS PROVEEDORES').slice(0, 5) ?? []
   const topInventario = inventario?.lineas.slice(0, 5) ?? []
   return (
-    <Malla columnas={5}>
+    <Malla columnas={soloCobranza ? 2 : 5}>
       <TarjetaResumen
         titulo="Cobranza"
         abierta={vista === 'recaudo' || vista === 'cartera'}
@@ -118,6 +121,7 @@ export function Resumenes({
           )}
         </CuerpoConsulta>
       </TarjetaResumen>
+      {!soloCobranza && (<>
       <TarjetaResumen
         titulo="Ventas vs presupuesto"
         abierta={vista === 'presupuesto'}
@@ -252,6 +256,7 @@ export function Resumenes({
           </div>
         </CuerpoConsulta>
       </TarjetaResumen>
+      </>)}
     </Malla>
   )
 }

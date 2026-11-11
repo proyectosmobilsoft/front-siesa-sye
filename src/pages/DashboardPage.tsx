@@ -26,17 +26,30 @@ const ResumenPedidos = () => (
     </DetalleProvider>
 )
 
+const Bienvenida = () => (
+    <div className="mx-auto mt-16 max-w-md rounded-3xl bg-card p-8 text-center ring-1 ring-border/80">
+        <h2 className="text-lg font-semibold text-foreground">Bienvenido a SYE</h2>
+        <p className="mt-2 text-sm text-muted-foreground">Elige en el menú de la izquierda la pantalla con la que vas a trabajar.</p>
+    </div>
+)
+
 export const DashboardPage = () => {
     const hasPermiso = useAuthStore((s) => s.hasPermiso)
     const [abierto, setAbierto] = useState(true)
 
+    // Pedidos, ventas y vendedores es información gerencial: solo con VER_DASHBOARD (INC-000005).
+    // "/" no lleva ProtectedRoute (es a donde redirige un permiso faltante), por eso se decide aquí.
+    const verVentas = hasPermiso(PERMISOS.DASHBOARD)
+
     if (!hasPermiso(PERMISOS.RECIBO_CAJA)) {
         return (
             <div className="flex-1 p-6">
-                <ResumenPedidos />
+                {verVentas ? <ResumenPedidos /> : <Bienvenida />}
             </div>
         )
     }
+
+    if (!verVentas) return <div className="flex-1"><DashboardReciboCajaPage /></div>
 
     return (
         <div className="flex-1">
