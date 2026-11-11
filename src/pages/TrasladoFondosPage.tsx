@@ -4,6 +4,7 @@ import {
     ArrowRightLeft,
     AlertCircle,
     CheckCircle2,
+    XCircle,
     Loader2,
     Landmark,
     History,
@@ -35,6 +36,31 @@ const MEDIOS_PAGO: { value: MedioPagoTraspaso; label: string; shortLabel: string
     { value: 'TD', label: 'Tarjeta débito', shortLabel: 'Débito', icon: CreditCard },
     { value: 'TC', label: 'Tarjeta crédito', shortLabel: 'Crédito', icon: CreditCard },
 ]
+
+const ESTADOS_TC = {
+    aprobado: { label: 'Aprobado SIESA', icon: CheckCircle2, className: 'bg-emerald-500/10 border-emerald-500/30 text-emerald-600 dark:text-emerald-400' },
+    anulado: { label: 'Anulado en SIESA', icon: XCircle, className: 'bg-destructive/10 border-destructive/30 text-destructive' },
+    elaboracion: { label: 'En elaboración', icon: AlertCircle, className: 'bg-amber-500/10 border-amber-500/30 text-amber-700 dark:text-amber-400' },
+    sin_documento: { label: 'Sin documento SIESA', icon: AlertCircle, className: 'bg-muted border-border text-muted-foreground' },
+    sin_verificar: { label: 'Sin verificar', icon: AlertCircle, className: 'bg-muted border-border text-muted-foreground' },
+} as const
+
+const estadoTc = (estado: TrasladoFondosMov['estado_siesa']) => ESTADOS_TC[estado ?? 'sin_verificar']
+
+const EstadoTcBadge = ({ estado, pequeno = false }: { estado: TrasladoFondosMov['estado_siesa']; pequeno?: boolean }) => {
+    const { label, icon: Icon, className } = estadoTc(estado)
+    return (
+        <span className={`inline-flex items-center gap-1 rounded-full border font-semibold ${pequeno ? 'px-1.5 py-0.5 text-[10px]' : 'px-2.5 py-0.5 text-xs'} ${className}`}>
+            <Icon className="h-3 w-3" /> {label}
+        </span>
+    )
+}
+
+const fechaAnulacionBogota = (fecha: string) => new Intl.DateTimeFormat('es-CO', {
+    day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: false,
+    // SIESA guarda la hora local de Colombia y el driver la entrega como UTC: se muestra tal cual.
+    timeZone: 'UTC',
+}).format(new Date(fecha))
 
 const saldoPorMedio = (caja: CajaTraspaso | undefined, medioPago: MedioPagoTraspaso): number => {
     if (!caja) return 0
@@ -260,6 +286,7 @@ export const TrasladoFondosPage = () => {
     const [confirmando, setConfirmando] = useState(false)
     const [filtroCaja, setFiltroCaja] = useState('')
     const [filtroMedio, setFiltroMedio] = useState<'' | MedioPagoTraspaso>('')
+    const [filtroEstado, setFiltroEstado] = useState<'vigentes' | 'anulados' | 'todos'>('vigentes')
 
     const rangoInvalido = !!fechaInicial && !!fechaFinal && fechaInicial > fechaFinal
 
@@ -313,6 +340,7 @@ export const TrasladoFondosPage = () => {
     const barrido = useMemo(() => {
         const conteo = new Map<string, number>()
         for (const t of (historial ?? []).slice(0, 40)) {
+            if (t.estado_siesa === 'anulado') continue
             if ((t.medio_pago || 'EFE') !== medioPago) continue
             const k = `${claveCaja({ id_co: t.id_co_origen, id_caja: t.id_caja_origen })}>${claveCaja({ id_co: t.id_co_destino, id_caja: t.id_caja_destino })}`
             conteo.set(k, (conteo.get(k) ?? 0) + 1)
@@ -336,20 +364,22 @@ export const TrasladoFondosPage = () => {
         setValor(String(barrido.saldo))
     }
 
-    // Historial filtrado por caja y medio, con totales por medio.
+    // Historial filtrado por caja, medio y estado, con totales por medio.
     const historialFiltrado = useMemo(
         () =>
             (historial ?? []).filter(
                 (t) =>
                     (!filtroCaja || String(t.id_caja_origen).trim() === filtroCaja || String(t.id_caja_destino).trim() === filtroCaja) &&
-                    (!filtroMedio || (t.medio_pago || 'EFE') === filtroMedio)
+                    (!filtroMedio || (t.medio_pago || 'EFE') === filtroMedio) &&
+                    (filtroEstado === 'todos' || (t.estado_siesa === 'anulado') === (filtroEstado === 'anulados'))
             ),
-        [historial, filtroCaja, filtroMedio]
+        [historial, filtroCaja, filtroMedio, filtroEstado]
     )
     const totalesHistorial = useMemo(() => {
         const porMedio: Record<string, number> = {}
         let total = 0
         for (const t of historialFiltrado) {
+            if (t.estado_siesa === 'anulado') continue
             const m = t.medio_pago || 'EFE'
             porMedio[m] = (porMedio[m] ?? 0) + Number(t.valor)
             total += Number(t.valor)
@@ -368,6 +398,7 @@ export const TrasladoFondosPage = () => {
             { header: 'Caja destino', key: 'destino', width: 28 },
             { header: 'C.O. destino', key: 'co_destino', width: 12 },
             { header: 'Medio', key: 'medio', width: 14 },
+            { header: 'Estado', key: 'estado', width: 24 },
             { header: 'Valor', key: 'valor', width: 16 },
             { header: 'Registró', key: 'usuario', width: 24 },
             { header: 'Notas', key: 'notas', width: 32 },
@@ -381,6 +412,7 @@ export const TrasladoFondosPage = () => {
                 destino: nombreCaja(t.id_caja_destino, t.id_co_destino),
                 co_destino: t.id_co_destino,
                 medio: MEDIOS_PAGO.find((m) => m.value === (t.medio_pago || 'EFE'))?.label ?? t.medio_pago,
+                estado: estadoTc(t.estado_siesa).label,
                 valor: Number(t.valor),
                 usuario: t.usuario_nombre || '',
                 notas: t.motivo || '',
@@ -722,6 +754,11 @@ export const TrasladoFondosPage = () => {
                             <option key={m.value} value={m.value}>{m.label}</option>
                         ))}
                     </Select>
+                    <Select value={filtroEstado} onChange={(e) => setFiltroEstado(e.target.value as 'vigentes' | 'anulados' | 'todos')} className="h-9 w-36 text-xs" aria-label="Filtrar por estado">
+                        <option value="vigentes">Vigentes</option>
+                        <option value="anulados">Anulados</option>
+                        <option value="todos">Todos</option>
+                    </Select>
                     <Button type="button" variant="ghost" size="sm" onClick={exportarHistorial} disabled={historialFiltrado.length === 0} className="h-9 gap-1.5 text-xs">
                         <Download className="h-3.5 w-3.5" /> Excel
                     </Button>
@@ -799,6 +836,7 @@ export const TrasladoFondosPage = () => {
                                                     {MEDIOS_PAGO.find((m) => m.value === t.medio_pago)?.label ?? t.medio_pago}
                                                 </span>
                                             )}
+                                            {t.estado_siesa === 'anulado' && <EstadoTcBadge estado={t.estado_siesa} pequeno />}
                                         </div>
                                         <p className="text-xs text-muted-foreground">
                                             {formatters.dateTime(t.fecha)} · {t.usuario_nombre || 'Administrador'}
@@ -808,7 +846,7 @@ export const TrasladoFondosPage = () => {
                                     </div>
                                     <div className="flex items-center gap-2 text-right">
                                         <div>
-                                            <p className="text-sm font-bold tabular-nums">{formatters.currency(t.valor)}</p>
+                                            <p className={`text-sm font-bold tabular-nums ${t.estado_siesa === 'anulado' ? 'line-through opacity-50' : ''}`}>{formatters.currency(t.valor)}</p>
                                             <span className="text-[11px] font-medium text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity">
                                                 Ver resumen
                                             </span>
@@ -881,10 +919,13 @@ export const TrasladoFondosPage = () => {
                                     <h2 className="text-xl font-extrabold tracking-tight">
                                         TC-{trasladoSeleccionado.numero_tc ?? trasladoSeleccionado.id}
                                     </h2>
-                                    <span className="rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-600 dark:text-emerald-400 px-2.5 py-0.5 text-xs font-semibold flex items-center gap-1">
-                                        <CheckCircle2 className="h-3 w-3" /> Aprobado SIESA
-                                    </span>
+                                    <EstadoTcBadge estado={trasladoSeleccionado.estado_siesa} />
                                 </div>
+                                {trasladoSeleccionado.estado_siesa === 'anulado' && (
+                                    <p className="mt-1 text-xs text-destructive">
+                                        Anulado por {trasladoSeleccionado.usuario_anulacion || '—'} el {trasladoSeleccionado.fecha_anulacion ? fechaAnulacionBogota(trasladoSeleccionado.fecha_anulacion) : '—'}
+                                    </p>
+                                )}
                                 <p className="text-xs text-muted-foreground mt-0.5">
                                     Docto SIESA #{trasladoSeleccionado.rowid_docto_siesa ?? 'N/A'} · Período {trasladoSeleccionado.periodo_tc ?? 'N/A'}
                                 </p>

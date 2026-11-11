@@ -377,6 +377,9 @@ export interface TrasladoFondosMov {
   periodo_tc: number | null
   tipo?: string | null
   medio_pago?: MedioPagoTraspaso | null
+  estado_siesa: 'aprobado' | 'anulado' | 'elaboracion' | 'sin_documento' | null
+  usuario_anulacion: string | null
+  fecha_anulacion: string | null
 }
 
 export interface TrasladosFondosMovResponse {

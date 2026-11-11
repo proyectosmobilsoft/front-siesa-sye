@@ -53,7 +53,7 @@ export function TrasladoDespuesDelRC({ rc, hechos, alHacer, alCerrar }: { rc: Fo
     if (!origen || !destino) return null
     const ayer = new Date(Date.now() - 86_400_000); const manana = new Date(Date.now() + 86_400_000)
     const historial = await trasladoFondosApi.listar({ fechaInicial: diaIso(ayer), fechaFinal: diaIso(manana) })
-    return historial.find(t => limpio(t.id_caja_origen) === limpio(origen.id_caja) && limpio(t.id_co_origen) === limpio(origen.id_co)
+    return historial.find(t => t.estado_siesa !== 'anulado' && limpio(t.id_caja_origen) === limpio(origen.id_caja) && limpio(t.id_co_origen) === limpio(origen.id_co)
       && limpio(t.id_caja_destino) === limpio(destino.id_caja) && limpio(t.id_co_destino) === limpio(destino.id_co)
       && Number(t.valor) === valor && (t.medio_pago || 'EFE') === medio.codigo && Date.parse(t.created_at) >= desde - 60_000 && t.numero_tc != null) ?? null
   }
