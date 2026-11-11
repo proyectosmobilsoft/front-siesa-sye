@@ -29,6 +29,8 @@ import { PERMISOS } from '@/config/permisos'
 import { BotonPdfRC } from '@/components/reciboCaja/BotonPdfRC'
 import { BotonPdfRCs } from '@/components/reciboCaja/BotonPdfRCs'
 import { descargarExcel, type CeldaExcel, type HojaExcel } from '@/utils/exportarExcel'
+import { descargarPdf } from '@/utils/exportarPdf'
+import { aviso } from '@/store/avisosStore'
 
 interface ReciboCaja {
   Rowid: number
@@ -627,18 +629,8 @@ function TableroConductoresRC({
   const [cargando, setCargando] = useState<string | null>(null)
   const [exportando, setExportando] = useState(false)
 
-  /** Rowids de los RC vigentes del día (no anulados), por conductor y número; reutiliza el detalle ya abierto. */
-  const rowidsDelDia = async (): Promise<number[]> => {
-    const detalles = await Promise.all(conductores.map((c) =>
-      detalle[c.usuario_creacion] ?? reciboCajaApi.getPorUsuario(c.usuario_creacion, { fechaInicial: resumen?.fecha_inicial, fechaFinal: resumen?.fecha_final, tipo: 'RC' })
-    ))
-    return detalles.flatMap((rcs) => [...rcs].filter((r) => r.Estado !== 2).sort((a, b) => Number(a.Numero) - Number(b.Numero)).map((r) => r.Rowid))
-  }
-
-  /** Excel con el resumen por conductor y, en otra hoja, todos los recibos de cada uno (incluye anulados) */
-  const exportarExcel = async () => {
-    setExportando(true)
-    try {
+  /** Hojas del reporte (Excel y PDF): resumen por conductor y todos los recibos de cada uno (incluye anulados) */
+  const armarHojas = async (): Promise<HojaExcel[]> => {
       // El detalle se reutiliza si ya se abrió en pantalla; si no, se trae ahora
       const detalles = await Promise.all(conductores.map((c) =>
         detalle[c.usuario_creacion] ?? reciboCajaApi.getPorUsuario(c.usuario_creacion, { fechaInicial: resumen?.fecha_inicial, fechaFinal: resumen?.fecha_final, tipo: 'RC' }).catch(() => [] as ReciboCajaUsuario[])))
@@ -696,11 +688,36 @@ function TableroConductoresRC({
           totales: { conductor: 'TOTAL', co: '', efectivo: totales.efectivo, transferencia: totales.consignacion, debito: totales.tarjetaDebito, credito: totales.tarjetaCredito, descuento: totales.descuento, total: totales.total, totalAPagar: totales.facturas, recibos: totales.recibos },
         },
       ]
-      await descargarExcel(`recibos_conductores_${resumen?.fecha_inicial ?? fecha}`, hojas)
+      return hojas
+  }
+
+  const exportarExcel = async () => {
+    setExportando(true)
+    try {
+      await descargarExcel(`recibos_conductores_${resumen?.fecha_inicial ?? fecha}`, await armarHojas())
     } catch (err) {
       console.error('Error exportando recibos de conductores:', err)
+      aviso.error('No se pudo generar el Excel')
     } finally {
       setExportando(false)
+    }
+  }
+
+  /** El mismo reporte del Excel, en PDF. La hoja "Detalle" es la misma información sin agrupar (sirve para filtrar en Excel), por eso no va. */
+  const [generandoPdf, setGenerandoPdf] = useState(false)
+  const exportarPdf = async () => {
+    setGenerandoPdf(true)
+    try {
+      const hojas = (await armarHojas()).filter((h) => h.nombre !== 'Detalle')
+      const rango = resumen?.fecha_inicial && resumen?.fecha_final && resumen.fecha_inicial !== resumen.fecha_final
+        ? `del ${formatters.dateOnly(resumen.fecha_inicial)} al ${formatters.dateOnly(resumen.fecha_final)}`
+        : `del ${formatters.dateOnly(resumen?.fecha_inicial ?? fecha)}`
+      await descargarPdf(`recibos_conductores_${resumen?.fecha_inicial ?? fecha}`, 'Recibos de caja por conductor', `RC ${rango} · ${conductores.length} conductores · ${totales.recibos} RC`, hojas)
+    } catch (err) {
+      console.error('Error generando el PDF de recibos de conductores:', err)
+      aviso.error('No se pudo generar el PDF')
+    } finally {
+      setGenerandoPdf(false)
     }
   }
 
@@ -754,7 +771,9 @@ function TableroConductoresRC({
         </div>
 
         <div className="flex items-center gap-3">
-          <BotonPdfRCs obtenerRowids={rowidsDelDia} etiqueta="Generar PDF" deshabilitado={conductores.length === 0} titulo="Un solo PDF con todos los RC del día (sin anulados), cada uno con sus confirmaciones de transferencia" />
+          <Button variant="outline" size="sm" className="nu-btn nu-btn-soft h-9 gap-1.5 text-xs" onClick={() => void exportarPdf()} disabled={generandoPdf || conductores.length === 0} title="El mismo reporte del Excel (por conductor y resumen), en PDF">
+            {generandoPdf ? <RefreshCw className="h-3.5 w-3.5 animate-spin" /> : <Printer className="h-3.5 w-3.5" />} Generar PDF
+          </Button>
           <Button variant="outline" size="sm" className="nu-btn nu-btn-soft h-9 gap-1.5 text-xs" onClick={() => void exportarExcel()} disabled={exportando || conductores.length === 0}>
             {exportando ? <RefreshCw className="h-3.5 w-3.5 animate-spin" /> : <FileSpreadsheet className="h-3.5 w-3.5" />} Exportar Excel
           </Button>
