@@ -826,7 +826,9 @@ const RecibosConductorModal = ({ grupo, onClose, rango }: { grupo: GrupoConducto
     const queryClient = useQueryClient()
     const siesaNombre = grupo?.conductorSiesaNombre
     const fechaInicial = rango?.fechaInicial
-    const fechaFinal = rango?.fechaFinal ?? rango?.fechaInicial
+    // "Hasta" vacío en el filtro significa "hasta hoy" (como el resto del tablero),
+    // no "solo el día de Desde": antes el modal buscaba un solo día y no mostraba los RC.
+    const fechaFinal = rango?.fechaFinal ?? (rango?.fechaInicial ? hoyLocalIso() : undefined)
     const { data, isLoading, error } = useQuery({
         queryKey: ['recibo-caja', 'por-usuario', siesaNombre, fechaInicial, fechaFinal],
         queryFn: () => reciboCajaApi.getPorUsuario(siesaNombre as string, { fechaInicial, fechaFinal, tipo: 'RC' }),
