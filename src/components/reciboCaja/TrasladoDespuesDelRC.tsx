@@ -25,6 +25,7 @@ type Estado = { fase: 'listo' | 'confirmando' | 'enviando' | 'error' | 'incierto
 const resultadoIncierto = (e: unknown) => axios.isAxiosError(e) && (!e.response || e.code === 'ECONNABORTED' || e.response.status >= 500)
 const diaIso = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 const limpio = (v: unknown) => String(v ?? '').trim()
+const AUXILIAR_CAJA_GENERAL = '11050501'
 const mensajeError = (e: unknown) => (e as { response?: { data?: { message?: string } }; message?: string }).response?.data?.message ?? (e as Error).message ?? 'No se pudo hacer el traslado'
 
 /**
@@ -38,7 +39,13 @@ export function TrasladoDespuesDelRC({ rc, hechos, alHacer, alCerrar }: { rc: Fo
   const crear = useCrearTrasladoFondos()
   const lista = cajas.data
   const origen: CajaTraspaso | undefined = useMemo(() => lista?.find(c => limpio(c.id_caja) === rc.caja && limpio(c.id_co) === rc.co), [lista, rc.caja, rc.co])
-  const destino: CajaTraspaso | undefined = useMemo(() => lista?.find(c => limpio(c.id_co) === rc.co && limpio(c.nombre).toUpperCase() === 'CAJA GENERAL'), [lista, rc.co])
+  // La Caja General se reconoce por su auxiliar (11050501 en el 001 y en el 002): el maestro de cajas
+  // la renombra ("CAJA GENERAL 002"), así que comparar el nombre exacto no la encontraba.
+  const destino: CajaTraspaso | undefined = useMemo(() => {
+    const delCo = lista?.filter(c => limpio(c.id_co) === rc.co) ?? []
+    return delCo.find(c => limpio(c.auxiliar) === AUXILIAR_CAJA_GENERAL)
+      ?? delCo.find(c => limpio(c.nombre).toUpperCase().startsWith('CAJA GENERAL'))
+  }, [lista, rc.co])
   const filas = MEDIOS.filter(m => rc[m.campo] > 0)
   const [valores, setValores] = useState<Record<string, string>>(() => Object.fromEntries(MEDIOS.map(m => [m.codigo, String(rc[m.campo])])))
   const [estados, setEstados] = useState<Record<string, Estado>>({})
