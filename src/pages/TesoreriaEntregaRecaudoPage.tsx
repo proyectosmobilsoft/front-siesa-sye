@@ -677,10 +677,13 @@ const ConductorGrupoRow = ({ grupo, idx, onValidar, onAnular, puedeAnular, onVer
 
 // ─── Modal: recibos de caja del conductor ────────────────────────────────────
 
+const facturasDelRC = (r: ReciboCajaUsuario) => (r.Facturas ?? []).map((f) => `${(f.Tipo || '').trim()}-${f.Numero}`)
+
 const exportarRecibosCSV = (recibos: ReciboCajaUsuario[], conductorNombre: string) => {
-    const encabezados = ['Fecha', 'Numero', 'Tercero', 'Efectivo', 'Transferencia', 'Total', 'Estado']
+    const encabezados = ['Fecha', 'Factura', 'Numero', 'Tercero', 'Efectivo', 'Transferencia', 'Total', 'Estado']
     const filas = recibos.map((r) => [
         r.Fecha ? formatters.dateOnly(r.Fecha) : '',
+        facturasDelRC(r).join(' / '),
         r.Numero,
         r.Tercero_Nombre || r.Id_tercero,
         r.efectivo ?? 0,
@@ -989,6 +992,7 @@ const RecibosConductorModal = ({ grupo, onClose, rango }: { grupo: GrupoConducto
                             <thead className="sticky top-0 bg-card">
                                 <tr className="border-b border-border">
                                     <th className="px-3 py-2 text-left font-medium uppercase tracking-wide text-muted-foreground">Fecha</th>
+                                    <th className="px-3 py-2 text-left font-medium uppercase tracking-wide text-muted-foreground">Factura</th>
                                     <th className="px-3 py-2 text-left font-medium uppercase tracking-wide text-muted-foreground">N°</th>
                                     <th className="px-3 py-2 text-left font-medium uppercase tracking-wide text-muted-foreground">Tercero</th>
                                     <th className="px-3 py-2 text-right font-medium uppercase tracking-wide text-muted-foreground">Efectivo</th>
@@ -1005,6 +1009,9 @@ const RecibosConductorModal = ({ grupo, onClose, rango }: { grupo: GrupoConducto
                                     return (
                                     <tr key={r.Rowid} className={cn("border-b border-border/50 hover:bg-muted/20", r.Estado === 2 && "opacity-60 bg-red-500/5")}>
                                         <td className="whitespace-nowrap px-3 py-2 font-mono text-muted-foreground">{formatters.dateOnly(r.Fecha)}</td>
+                                        <td className="whitespace-nowrap px-3 py-2 font-mono">
+                                            {facturasDelRC(r).length ? facturasDelRC(r).map((f) => <div key={f}>{f}</div>) : <span className="text-muted-foreground">—</span>}
+                                        </td>
                                         <td className="px-3 py-2 font-mono font-bold text-primary">{r.Numero}</td>
                                         <td className="max-w-[160px] truncate px-3 py-2">{r.Tercero_Nombre || r.Id_tercero}</td>
                                         <td className="px-3 py-2 text-right font-mono font-semibold">
@@ -1051,7 +1058,7 @@ const RecibosConductorModal = ({ grupo, onClose, rango }: { grupo: GrupoConducto
                             </tbody>
                             <tfoot className="sticky bottom-0 bg-card">
                                 <tr className="border-t-2 border-border bg-muted/60">
-                                    <td colSpan={3} className="px-3 py-3 text-right text-[10px] font-black uppercase tracking-wider text-muted-foreground">
+                                    <td colSpan={4} className="px-3 py-3 text-right text-[10px] font-black uppercase tracking-wider text-muted-foreground">
                                         Totales
                                     </td>
                                     <td className="whitespace-nowrap px-3 py-3 text-right font-mono text-xs font-extrabold text-emerald-600">
