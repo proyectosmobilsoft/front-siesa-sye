@@ -350,43 +350,10 @@ export const ReciboCajaPage = () => {
 
   return (
     <div className={cn('nu mx-auto max-w-[1400px] space-y-6 p-4 sm:p-6 lg:p-8 2xl:max-w-[1600px]', tab === 'nuevo' ? 'lg:flex lg:h-full lg:min-h-0 lg:flex-col lg:gap-3 lg:space-y-0 lg:p-4' : 'xl:[zoom:1.12] 2xl:[zoom:1.15]')}>
-      {/* ── Header de la vista ── */}
-      <div className={cn('flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between', tab === 'nuevo' && 'lg:shrink-0 lg:gap-2')}>
-        <div className="flex items-center gap-3">
-          <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-primary/10 text-primary shadow-sm ring-1 ring-primary/20">
-            <Receipt className="h-5 w-5" />
-          </div>
-          <div>
-            <h1 className="text-xl font-bold tracking-tight text-foreground sm:text-2xl">Recibo de Caja & Arqueo</h1>
-            <p className="text-xs text-muted-foreground">Consulta, arqueo diario y flujo de recaudos por caja y conductor</p>
-          </div>
-        </div>
-
-        {/* Indicadores clave superiores */}
-        <div className="flex flex-wrap items-center gap-2 text-xs">
-          <div className="flex items-center gap-2 nu-card px-3.5 py-2">
-            <Wallet className="h-4 w-4 text-muted-foreground" />
-            <span className="font-medium text-muted-foreground">Saldo Anterior:</span>
-            <span className="font-mono font-bold text-primary">{money(saldoAnterior)}</span>
-          </div>
-
-          <div className="flex items-center gap-2 nu-card px-3.5 py-2">
-            <Hash className="h-4 w-4 text-muted-foreground" />
-            <span className="font-medium text-muted-foreground">Cuadre N°:</span>
-            <span className="font-mono font-bold text-red-600 dark:text-red-400">00000641</span>
-          </div>
-
-          <div className="flex items-center gap-1.5 rounded-xl border border-primary/20 bg-primary/5 px-3 py-2 font-medium text-primary shadow-xs">
-            <Layers className="h-3.5 w-3.5" />
-            <span>Anexo de Cuadre</span>
-          </div>
-        </div>
-      </div>
-
       {/* ── Contenedor principal con Navegación por pestañas ── */}
       <div className={cn('space-y-6 nu-card', tab === 'nuevo' && 'lg:flex lg:min-h-0 lg:flex-1 lg:flex-col lg:space-y-0')}>
         {/* Barra de Pestañas estilo píldora */}
-        <div className={cn('flex items-center px-4 pt-4', tab === 'nuevo' && 'lg:shrink-0 lg:px-3 lg:pt-2')}>
+        <div className={cn('flex flex-wrap items-center gap-3 px-4 pt-4', tab === 'nuevo' && 'lg:shrink-0 lg:px-3 lg:pt-2')}>
           <div className="flex flex-wrap gap-1 nu-seg">
             <button
               onClick={() => setTab('conductores')}
@@ -427,6 +394,25 @@ export const ReciboCajaPage = () => {
             >
               <Receipt className="h-3.5 w-3.5" /> Nuevo recibo
             </button>}
+          </div>
+          {/* Indicadores clave, en la misma línea de las pestañas */}
+          <div className="ml-auto flex flex-wrap items-center gap-2 text-xs">
+            <div className="flex items-center gap-2 nu-card px-3.5 py-2">
+              <Wallet className="h-4 w-4 text-muted-foreground" />
+              <span className="font-medium text-muted-foreground">Saldo Anterior:</span>
+              <span className="font-mono font-bold text-primary">{money(saldoAnterior)}</span>
+            </div>
+
+            <div className="flex items-center gap-2 nu-card px-3.5 py-2">
+              <Hash className="h-4 w-4 text-muted-foreground" />
+              <span className="font-medium text-muted-foreground">Cuadre N°:</span>
+              <span className="font-mono font-bold text-red-600 dark:text-red-400">00000641</span>
+            </div>
+
+            <div className="flex items-center gap-1.5 rounded-xl border border-primary/20 bg-primary/5 px-3 py-2 font-medium text-primary shadow-xs">
+              <Layers className="h-3.5 w-3.5" />
+              <span>Anexo de Cuadre</span>
+            </div>
           </div>
         </div>
 

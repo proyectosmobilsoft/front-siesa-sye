@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { Download, Search, ShieldAlert, SlidersHorizontal } from 'lucide-react'
+import { Download, Search, SlidersHorizontal } from 'lucide-react'
 import { rcAnomaliasApi, type CodigoAnomalia, type RcAnomalo, type SeveridadAnomalia } from '@/api/rcAnomalias'
 import { RcAnomaloModal } from '@/components/rcAnomalos/RcAnomaloModal'
 import { canalRc, diferenciaAnomalia, etiquetaCanal, etiquetaEstado } from '@/components/rcAnomalos/filters'
@@ -100,7 +100,7 @@ export function RcAnomalosPage() {
   }
   const totalProblemas = (datos?.rcs.length ?? 0) + (datos?.procesos.length ?? 0)
   return <div className="flex min-h-full flex-col gap-3 p-4 text-sm lg:h-full lg:min-h-0 lg:p-5">
-    <div className="flex flex-wrap items-center justify-between gap-2"><div><h1 className="flex items-center gap-2 text-xl font-bold"><ShieldAlert className="h-5 w-5 text-primary" />RC Anómalos</h1><p className="text-xs text-muted-foreground">Recibos con problemas contables o de proceso · C.O. {consultaActual?.co ?? co}</p></div><span role="status" className="text-xs font-medium text-muted-foreground">{consulta.isFetching ? `Revisando ${formatters.number(datos?.total_rc_revisados ?? 0)} RC…` : datos ? `Revisados ${formatters.number(datos.total_rc_revisados)} RC · ${formatters.number(datos.rcs.length)} con anomalías` : 'Selecciona el rango y consulta'}</span></div>
+    <div className="flex flex-wrap items-center justify-end gap-2 mb-4"><span role="status" className="text-xs font-medium text-muted-foreground">{consulta.isFetching ? `Revisando ${formatters.number(datos?.total_rc_revisados ?? 0)} RC…` : datos ? `Revisados ${formatters.number(datos.total_rc_revisados)} RC · ${formatters.number(datos.rcs.length)} con anomalías` : 'Selecciona el rango y consulta'}</span></div>
     <div className="rounded-xl border border-border bg-card p-3">
       <div className="flex flex-wrap items-end gap-2">
         <label className={`${tituloFiltro} w-36`}>Desde<FechaInput value={desde} onChange={setDesde} max={hasta || undefined} className="!h-9" /></label>

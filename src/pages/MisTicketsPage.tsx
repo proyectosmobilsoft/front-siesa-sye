@@ -13,7 +13,7 @@ export default function MisTicketsPage() {
   const cargar = () => { setCargando(true); ticketsApi.mis().then(data => { setTickets(data); setError('') }).catch(() => setError('No se pudieron cargar tus tickets.')).finally(() => setCargando(false)) }
   useEffect(cargar, [])
   return <div className="mx-auto max-w-5xl space-y-5 p-4 lg:p-8">
-    <div className="flex items-center justify-between"><div><h1 className="text-2xl font-bold">Mis tickets</h1><p className="text-sm text-muted-foreground">Estado de los problemas y mejoras que reportaste</p></div><Button variant="outline" onClick={cargar}>Actualizar</Button></div>
+    <div className="flex flex-wrap items-center justify-end gap-2 mb-4"><Button variant="outline" onClick={cargar}>Actualizar</Button></div>
     {cargando && <p>Cargando...</p>}{error && <p role="alert" className="text-destructive">{error}</p>}
     {!cargando && !error && !tickets.length && <p className="rounded-lg border p-6 text-muted-foreground">Aún no has creado tickets.</p>}
     {tickets.map(ticket => <article key={ticket.id} role="button" tabIndex={0} onClick={() => setDetalle(ticket)} onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') setDetalle(ticket) }} className="cursor-pointer rounded-xl border bg-card p-4 shadow-sm transition hover:border-primary/50 hover:shadow-md">

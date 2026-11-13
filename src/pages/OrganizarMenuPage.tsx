@@ -163,11 +163,7 @@ export function OrganizarMenuPage() {
 
     return (
         <div className="mx-auto max-w-7xl space-y-4 p-4 sm:p-6">
-            <div className="flex flex-wrap items-center gap-3">
-                <div className="min-w-0 flex-1">
-                    <h1 className="text-lg font-bold">Organizar el menú</h1>
-                    <p className="text-sm text-muted-foreground">Arrastra cada página al menú donde la quieres. Lo ven todos los usuarios; qué roles entran a cada una se decide en Roles.</p>
-                </div>
+            <div className="flex flex-wrap items-center justify-end gap-3">
                 <span className={cn('flex items-center gap-1.5 text-xs font-medium', estado === 'error' ? 'text-destructive' : 'text-muted-foreground')} role="status">
                     {estado === 'guardando' && <><Loader2 className="h-3.5 w-3.5 animate-spin" /> Guardando…</>}
                     {estado === 'guardado' && <><Check className="h-3.5 w-3.5 text-emerald-600" /> Guardado</>}

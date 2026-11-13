@@ -1,4 +1,4 @@
-import { motion, AnimatePresence } from 'framer-motion'
+import { motion } from 'framer-motion'
 import { PanelLeftClose, PanelLeftOpen } from 'lucide-react'
 import { useLocation } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
@@ -60,7 +60,7 @@ export const Header = () => {
                         'radial-gradient(circle at 100% 100%, transparent 24px, hsl(var(--card)) 25px)'
                 }}
             />
-            <div className="flex h-16 items-center justify-between px-4 lg:px-6">
+            <div className="flex h-20 items-center justify-between px-4 lg:px-6">
                 {/* Left — control retráctil del menú + título/subtítulo de página */}
                 <div className="flex items-center gap-3 min-w-0">
                     <Button
@@ -74,25 +74,24 @@ export const Header = () => {
                         {sidebarOpen ? <PanelLeftClose className="h-4 w-4" /> : <PanelLeftOpen className="h-4 w-4" />}
                     </Button>
 
-                    <AnimatePresence mode="wait">
+                    {/* Sin AnimatePresence mode="wait": si la salida no terminaba (re-renders seguidos),
+                        el título de la página anterior quedaba pegado. Ahora solo entra con un fundido. */}
                         <motion.div
                             key={location.pathname}
                             initial={{ opacity: 0, y: 4 }}
                             animate={{ opacity: 1, y: 0 }}
-                            exit={{ opacity: 0, y: -4 }}
                             transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
                             className="flex min-w-0 items-center gap-2.5"
                         >
                             <div className="min-w-0 leading-tight">
-                                <p className="truncate text-sm font-bold text-foreground">
+                                <p className="truncate text-lg font-bold tracking-[-0.01em] text-foreground md:text-xl">
                                     {pagina?.name ?? 'Dashboard'}
                                 </p>
-                                <p className="hidden truncate text-xs text-muted-foreground md:block">
+                                <p className="hidden truncate text-sm text-muted-foreground md:block">
                                     {pagina?.subtitle}
                                 </p>
                             </div>
                         </motion.div>
-                    </AnimatePresence>
                 </div>
 
                 {/* Right — tema + usuario + logout */}

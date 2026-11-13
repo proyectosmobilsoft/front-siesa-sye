@@ -22,10 +22,10 @@ import {
   Wallet,
 } from 'lucide-react'
 import { apiClient } from '@/api/client'
-import { useAuthStore, coPuntual } from '@/store/authStore'
+import { useAuthStore } from '@/store/authStore'
 import { PERMISOS } from '@/config/permisos'
 import { useFechasLimite, hoyLocalIso } from '@/hooks/useFechasLimite'
-import { Bloque, CuerpoConsulta, Encabezado, Malla, SelectorRango, SubPestanas, BotonTabla, Tabla, Tarjeta } from '@/components/tablero/comun'
+import { Bloque, CuerpoConsulta, Malla, SelectorRango, SubPestanas, BotonTabla, Tabla, Tarjeta } from '@/components/tablero/comun'
 import { BotonPeriodo } from '@/components/tablero/PeriodoModal'
 import { Areas, Barras, BarrasApiladas, BarrasH, BarrasApiladasH, ClientesDispersion, Dona } from '@/components/tablero/graficas'
 import { PALETA, decimal, dinero, entero, etiquetaMes, kilos, porcentaje, rangoDePreset, type PresetRango } from '@/components/tablero/formato'
@@ -256,17 +256,10 @@ export function DashboardReciboCajaPage() {
     staleTime: 5 * 60 * 1000,
   })
   const d = consulta.data
-  const co = coPuntual(centroOperacionActivo)
 
   return (
     <DetalleProvider rango={valido ? rango : undefined}>
     <section className="mx-auto max-w-[1600px] p-4 sm:p-6 lg:p-8">
-      <Encabezado
-        titulo={verVentas ? 'Dashboard de Recaudo y Ventas' : 'Dashboard de Recaudo'}
-        descripcion={verVentas
-          ? `Recaudo de cartera${co ? ` (C.O. ${co})` : ' (todos los C.O.)'}, ventas vs presupuesto, ventas por marca, compras a proveedores, inventario y cartera por vencimiento (ambos C.O.).`
-          : `Recaudo de cartera${co ? ` (C.O. ${co})` : ' (todos los C.O.)'} y cartera por vencimiento (ambos C.O.).`}
-      />
       <SelectorRango
         preset={preset}
         desde={rango.desde}

@@ -10,7 +10,6 @@ import {
 } from 'lucide-react'
 import { useAuthStore } from '@/store/authStore'
 import { formatters } from '@/utils/formatters'
-import { Encabezado } from '@/components/tablero/comun'
 import { Modal } from '@/components/ui/modal'
 import {
   logisticaApi,
@@ -233,10 +232,6 @@ export const MvpLogisticaPage = () => {
   if (!co)
     return (
       <div className="mx-auto max-w-[1600px] space-y-5 p-4 sm:p-6">
-        <Encabezado
-          titulo="MVP Logística"
-          descripcion="Planifique entregas por ubicación, peso y capacidad"
-        />
         <p className="rounded-xl border bg-card p-4 text-sm">
           Logística solo opera en los C.O. 001 y 002. Seleccione uno de ellos (o
           «Ambos») en el selector de C.O. de arriba.
@@ -245,32 +240,28 @@ export const MvpLogisticaPage = () => {
     )
   return (
     <div className="mx-auto max-w-[1600px] space-y-5 p-4 sm:p-6">
-      <Encabezado
-        titulo="MVP Logística"
-        descripcion="Planifique entregas por ubicación, peso y capacidad"
-        accion={
-          coActivo === 'AMBOS' ? (
-            <label className="text-sm">
-              Centro de operación{' '}
-              <select
-                className="ml-2 rounded-lg border bg-card p-2"
-                value={co}
-                onChange={e => {
-                  setCoElegido(e.target.value)
-                  setSeleccionadas(new Set())
-                  limpiar()
-                }}
-              >
-                {centros.map(c => (
-                  <option key={c} value={c}>
-                    {c}
-                  </option>
-                ))}
-              </select>
-            </label>
-          ) : undefined
-        }
-      />
+      {coActivo === 'AMBOS' && (
+        <div className="flex flex-wrap items-center justify-end gap-2 mb-4">
+          <label className="text-sm">
+            Centro de operación{' '}
+            <select
+              className="ml-2 rounded-lg border bg-card p-2"
+              value={co}
+              onChange={e => {
+                setCoElegido(e.target.value)
+                setSeleccionadas(new Set())
+                limpiar()
+              }}
+            >
+              {centros.map(c => (
+                <option key={c} value={c}>
+                  {c}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
+      )}
       <div className="flex flex-wrap gap-2 border-b">
         {(
           [
