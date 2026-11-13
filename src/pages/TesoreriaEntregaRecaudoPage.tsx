@@ -870,6 +870,12 @@ const RecibosConductorModal = ({ grupo, onClose, rango }: { grupo: GrupoConducto
     const totalEfectivo = Math.min(valorEntrega, totalActivo)
     const totalConsignacion = 0
     const totalGeneral = totalEfectivo
+    // Pie de la tabla: suma de cada columna de los RC activos (los anulados no suman aunque se muestren).
+    // Las tarjetas de arriba siguen mostrando lo aplicable a la entrega.
+    const activos = todosRecibos.filter((r) => r.Estado !== 2)
+    const pieEfectivo = activos.reduce((s, r) => s + (r.efectivo ?? 0), 0)
+    const pieTransferencia = activos.reduce((s, r) => s + (r.consignacion ?? 0), 0)
+    const pieDescuento = activos.reduce((s, r) => s + (r.Facturas ?? []).reduce((t, f) => t + (f.Descuento_Pp || 0), 0), 0)
     const etiquetaPeriodo = fechaInicial === fechaFinal ? `del ${formatters.dateOnly(fechaInicial)}` : `${formatters.dateOnly(fechaInicial)} — ${formatters.dateOnly(fechaFinal)}`
 
     return (
@@ -1064,13 +1070,16 @@ const RecibosConductorModal = ({ grupo, onClose, rango }: { grupo: GrupoConducto
                                         Totales
                                     </td>
                                     <td className="whitespace-nowrap px-3 py-3 text-right font-mono text-xs font-extrabold text-emerald-600">
-                                        {formatters.currency(totalEfectivo)}
+                                        {formatters.currency(pieEfectivo)}
+                                    </td>
+                                    <td className="whitespace-nowrap px-3 py-3 text-right font-mono text-xs font-extrabold text-foreground">
+                                        {formatters.currency(pieTransferencia)}
                                     </td>
                                     <td className="whitespace-nowrap px-3 py-3 text-right font-mono text-xs font-extrabold text-muted-foreground">
-                                        {formatters.currency(totalConsignacion)}
+                                        {formatters.currency(pieDescuento)}
                                     </td>
                                     <td className="whitespace-nowrap px-3 py-3 text-right font-mono text-xs font-extrabold text-primary">
-                                        {formatters.currency(totalGeneral)}
+                                        {formatters.currency(pieEfectivo + pieTransferencia)}
                                     </td>
                                     <td />
                                     <td />
