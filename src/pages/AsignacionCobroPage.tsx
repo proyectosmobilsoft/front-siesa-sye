@@ -1,6 +1,6 @@
 import { motion } from 'framer-motion'
 import { useState, useEffect, useRef, useMemo } from 'react'
-import { Search, Loader2, Send, RefreshCw, Users, ShieldCheck, Eye } from 'lucide-react'
+import { Search, Loader2, Send, RefreshCw, Users, ShieldCheck, Eye, ArrowUp, ArrowDown, ArrowUpDown } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Select } from '@/components/ui/select'
@@ -22,6 +22,9 @@ import { BotonExcel } from '@/components/ui/boton-excel'
 
 const moneda = (n: number) => n.toLocaleString('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 })
 const kilosTexto = (kg: number) => `${new Intl.NumberFormat('es-CO', { maximumFractionDigits: 0 }).format(kg)} kg`
+
+/** Facturas por página en la tabla del cliente (algunos tienen cientos). */
+const FACTURAS_POR_PAGINA = 10
 
 export const AsignacionCobroPage = () => {
     const { puede, P } = usePermiso()
@@ -83,6 +86,20 @@ export const AsignacionCobroPage = () => {
 
     // Facturas pendientes del cliente
     const [facturas, setFacturas] = useState<FacturaPendiente[]>([])
+    const [paginaFacturas, setPaginaFacturas] = useState(1)
+    // Orden por fecha (todas las facturas del cliente, antes de paginar). Clic: ascendente; otro clic: descendente.
+    const [ordenFacturas, setOrdenFacturas] = useState<{ campo: 'fecha' | 'vence'; asc: boolean } | null>(null)
+    const facturasOrdenadas = useMemo(() => {
+        if (!ordenFacturas) return facturas
+        const valor = (f: FacturaPendiente) => new Date(f[ordenFacturas.campo] ?? 0).getTime() || 0
+        return [...facturas].sort((a, b) => (ordenFacturas.asc ? 1 : -1) * (valor(a) - valor(b)))
+    }, [facturas, ordenFacturas])
+    const ordenarPor = (campo: 'fecha' | 'vence') => {
+        setOrdenFacturas((o) => (o?.campo === campo ? { campo, asc: !o.asc } : { campo, asc: true }))
+        setPaginaFacturas(1)
+    }
+    // Cliente nuevo o recarga: volver a la primera página
+    useEffect(() => { setPaginaFacturas(1) }, [facturas])
     const [cargandoFacturas, setCargandoFacturas] = useState(false)
     const [seleccionadas, setSeleccionadas] = useState<Set<number>>(new Set())
     const [facturaDetalle, setFacturaDetalle] = useState<FacturaPendiente | null>(null)
@@ -367,15 +384,25 @@ export const AsignacionCobroPage = () => {
                                             <th className="h-10 w-10 px-3"></th>
                                             <th className="h-10 px-3 text-left nu-th">Factura</th>
                                             <th className="h-10 px-3 text-left nu-th">C.O.</th>
-                                            <th className="h-10 px-3 text-left nu-th">Emisión</th>
-                                            <th className="h-10 px-3 text-left nu-th">Vence</th>
+                                            <th className="h-10 px-3 text-left nu-th">
+                                                <button type="button" onClick={() => ordenarPor('fecha')} title="Ordenar por fecha" className="inline-flex items-center gap-1 hover:text-foreground">
+                                                    Emisión
+                                                    {ordenFacturas?.campo === 'fecha' ? (ordenFacturas.asc ? <ArrowUp className="h-3.5 w-3.5" /> : <ArrowDown className="h-3.5 w-3.5" />) : <ArrowUpDown className="h-3.5 w-3.5 opacity-40" />}
+                                                </button>
+                                            </th>
+                                            <th className="h-10 px-3 text-left nu-th">
+                                                <button type="button" onClick={() => ordenarPor('vence')} title="Ordenar por fecha" className="inline-flex items-center gap-1 hover:text-foreground">
+                                                    Vence
+                                                    {ordenFacturas?.campo === 'vence' ? (ordenFacturas.asc ? <ArrowUp className="h-3.5 w-3.5" /> : <ArrowDown className="h-3.5 w-3.5" />) : <ArrowUpDown className="h-3.5 w-3.5 opacity-40" />}
+                                                </button>
+                                            </th>
                                             <th className="h-10 px-3 text-right nu-th">Peso</th>
                                             <th className="h-10 px-3 text-right nu-th">Valor</th>
                                             <th className="h-10 w-10 px-3"></th>
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        {facturas.map((f) => (
+                                        {facturasOrdenadas.slice((paginaFacturas - 1) * FACTURAS_POR_PAGINA, paginaFacturas * FACTURAS_POR_PAGINA).map((f) => (
                                             <tr key={f.rowid_sa} className="border-b hover:bg-muted/30">
                                                 <td className="px-3 py-2">
                                                     <input
@@ -407,6 +434,22 @@ export const AsignacionCobroPage = () => {
                                 </table>
                             )}
                         </div>
+                        {clienteSeleccionado && !cargandoFacturas && facturas.length > FACTURAS_POR_PAGINA && (
+                            <div className="flex shrink-0 items-center justify-between gap-3 border-t px-4 py-2 text-xs text-muted-foreground">
+                                <span className="tabular-nums">
+                                    {(paginaFacturas - 1) * FACTURAS_POR_PAGINA + 1}–{Math.min(paginaFacturas * FACTURAS_POR_PAGINA, facturas.length)} de {facturas.length} facturas
+                                </span>
+                                <div className="flex items-center gap-2">
+                                    <Button variant="ghost" size="sm" className="nu-btn nu-btn-soft h-8" disabled={paginaFacturas <= 1} onClick={() => setPaginaFacturas((p) => p - 1)}>
+                                        Anterior
+                                    </Button>
+                                    <span className="tabular-nums">Página {paginaFacturas} de {Math.ceil(facturas.length / FACTURAS_POR_PAGINA)}</span>
+                                    <Button variant="ghost" size="sm" className="nu-btn nu-btn-soft h-8" disabled={paginaFacturas >= Math.ceil(facturas.length / FACTURAS_POR_PAGINA)} onClick={() => setPaginaFacturas((p) => p + 1)}>
+                                        Siguiente
+                                    </Button>
+                                </div>
+                            </div>
+                        )}
                     </div>
                 </div>
                 </TabsContent>
