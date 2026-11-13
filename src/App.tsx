@@ -41,6 +41,7 @@ const MaestroDescuentosFinancierosPage = lazy(() => import('@/pages/MaestroDescu
 const MaestroCajasPage = lazy(() => import('@/pages/MaestroCajasPage').then(m => ({ default: m.MaestroCajasPage })))
 const AsignacionCobroPage = lazy(() => import('@/pages/AsignacionCobroPage').then(m => ({ default: m.AsignacionCobroPage })))
 const MvpLogisticaPage = lazy(() => import('@/pages/MvpLogisticaPage').then(m => ({ default: m.MvpLogisticaPage })))
+const UbicacionRcPage = lazy(() => import('@/pages/UbicacionRcPage').then(m => ({ default: m.UbicacionRcPage })))
 const MaestroCuentasBancariasPage = lazy(() => import('@/pages/MaestroCuentasBancariasPage').then(m => ({ default: m.MaestroCuentasBancariasPage })))
 const MaestroConceptosPage = lazy(() => import('@/pages/MaestroConceptosPage').then(m => ({ default: m.MaestroConceptosPage })))
 const MaestroMaquinariaPage = lazy(() => import('@/pages/MaestroMaquinariaPage').then(m => ({ default: m.MaestroMaquinariaPage })))
@@ -165,6 +166,7 @@ function AppLayout() {
                                 <Route path="/tesoreria/parametros-rc" element={<ProtectedRoute permiso={PERMISOS.PARAMETROS_RC}><ParametrosReciboCajaPage /></ProtectedRoute>} />
                                 <Route path={RUTAS.asignarFacturas} element={<ProtectedRoute permiso={PERMISOS.ASIGNACION_COBRO}><AsignacionCobroPage /></ProtectedRoute>} />
                                 <Route path={RUTAS.mvpLogistica} element={<ProtectedRoute permiso={PERMISOS.ASIGNACION_COBRO}><MvpLogisticaPage /></ProtectedRoute>} />
+                                <Route path={RUTAS.ubicacionRc} element={<ProtectedRoute permiso={PERMISOS.ASIGNACION_COBRO}><UbicacionRcPage /></ProtectedRoute>} />
                                 {/* Compatibilidad con las rutas anteriores (favoritos, enlaces). */}
                                 {Object.entries(RUTAS_ANTERIORES).map(([desde, hacia]) => (
                                     <Route key={desde} path={desde} element={<Navigate to={hacia} replace />} />

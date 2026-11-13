@@ -178,6 +178,50 @@ export interface Cuadrante {
   origen: 'DIRECCIONES' | 'DIBUJO'
   activo: boolean
 }
+export interface UbicacionRc {
+  lat: number
+  lon: number
+  precision_m: number | null
+  fuente: 'GPS' | 'ULTIMA_CONOCIDA'
+  simulada: boolean
+  fecha_gps: string | null
+}
+export interface ReciboUbicacion {
+  rowid_rc: number
+  numero_rc: number
+  id_co: string
+  fecha: string
+  cliente: string
+  nit: string
+  rowid_tercero: number
+  valor: number
+  ubicacion: UbicacionRc | null
+  motivo_sin_ubicacion: 'SIN_PERMISO' | 'GPS_APAGADO' | 'SIN_FIX' | 'INVALIDA' | 'SIN_DATO' | null
+}
+export interface ConductorUbicacion {
+  usuario_siesa: string
+  /** Login de la cuenta de la app que hizo los RC (null si no se sabe) */
+  usuario_app: string | null
+  conductor_nombre: string
+  conductor_id: number | null
+  /** Otras cuentas de la app con el mismo usuario SIESA (vacío si no es compartido) */
+  cuentas_compartidas: string[]
+  recibos: ReciboUbicacion[]
+}
+/** Detalle de un RC de la app: facturas cruzadas y medios de pago */
+export interface DetalleReciboUbicacion {
+  rowid_rc: number
+  numero_rc: number
+  id_co: string
+  notas: string | null
+  facturas: { factura: string; emision: string | null; vence: string | null; aplicado: number; descuento_pp: number; condicion_pago_id: string | null; condicion_pago: string | null }[]
+  medios_pago: { medio: string; valor: number }[]
+}
+export interface RespuestaUbicacionRc {
+  fecha_inicial: string
+  fecha_final: string
+  conductores: ConductorUbicacion[]
+}
 export interface ResumenCuadrante {
   cuadrante: Cuadrante
   facturas: FacturaLogistica[]
@@ -198,6 +242,12 @@ export interface ResumenCuadrante {
 const dato = async <T>(promesa: Promise<{ data: { data: T } }>): Promise<T> =>
   (await promesa).data.data
 export const logisticaApi = {
+  ubicacionRc: ({ fechaInicial, fechaFinal, idCo }: { fechaInicial: string; fechaFinal: string; idCo: string }) =>
+    dato(apiClient.get<{ data: RespuestaUbicacionRc }>('/logistica/ubicacion-rc', {
+      params: { fecha_inicial: fechaInicial, fecha_final: fechaFinal, id_co: idCo },
+    })),
+  detalleUbicacionRc: (rowidRc: number) =>
+    dato(apiClient.get<{ data: DetalleReciboUbicacion }>(`/logistica/ubicacion-rc/${rowidRc}`)),
   cuadrantes: () =>
     dato(apiClient.get<{ data: Cuadrante[] }>('/logistica/cuadrantes')),
   crearCuadrante: (

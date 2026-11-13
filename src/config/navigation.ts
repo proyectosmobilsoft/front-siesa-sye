@@ -27,6 +27,7 @@ import {
   Percent,
   ListChecks,
   Route,
+  MapPin,
   Truck,
   Calculator,
   Settings,
@@ -82,6 +83,7 @@ export interface NavItem {
 export const RUTAS = {
   asignarFacturas: '/logistica/asignar-facturas',
   mvpLogistica: '/logistica/mvp',
+  ubicacionRc: '/logistica/ubicacion',
 } as const
 
 /** Rutas anteriores (cuando vivían en Logística o en Tesorería con otro nombre): redirigen a la actual. */
@@ -275,6 +277,14 @@ export const navigation: NavItem[] = [
     icon: Presentation,
     subtitle: 'Propuesta de integración ERP Siesa Zero-Impact',
     permiso: PERMISOS.PROPUESTA,
+  },
+  {
+    // Enlace directo: tablero de dónde se hizo cada RC (GPS de la app)
+    name: 'Ubicación',
+    href: RUTAS.ubicacionRc,
+    icon: MapPin,
+    subtitle: 'Dónde hizo cada conductor sus recibos de caja',
+    permiso: PERMISOS.ASIGNACION_COBRO,
   },
   {
     name: 'Maestros',

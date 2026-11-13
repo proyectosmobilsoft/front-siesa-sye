@@ -1,3 +1,18 @@
 .dark .tiles-logistica {
   filter: brightness(0.78) contrast(1.05) saturate(0.8);
 }
+
+.rc-marker-pulse { background: transparent; border: 0; }
+.rc-marker-pulse span {
+  display: block; width: 20px; height: 20px; border: 3px solid white;
+  border-radius: 50%; background: hsl(var(--primary));
+  box-shadow: 0 0 0 4px hsl(var(--primary) / 0.25);
+  animation: rc-pulse 1.8s ease-out infinite;
+}
+@keyframes rc-pulse {
+  50% { box-shadow: 0 0 0 13px hsl(var(--primary) / 0); }
+  100% { box-shadow: 0 0 0 4px hsl(var(--primary) / 0); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .rc-marker-pulse span { animation: none; }
+}
