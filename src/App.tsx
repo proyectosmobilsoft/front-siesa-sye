@@ -11,6 +11,7 @@ import { useUIStore } from '@/store/uiStore'
 import { lazy, Suspense, useCallback, useEffect, useState } from 'react'
 import { useAuth } from '@/hooks/useAuth'
 import { useInactivityTimeout } from '@/hooks/useInactivityTimeout'
+import { useRegistrarUsoPestana } from '@/hooks/useRegistrarUsoPestana'
 import { InactivityModal } from '@/components/ui/InactivityModal'
 import { Cargando } from '@/components/ui/cargando'
 import { FiltrosTablas } from '@/components/ui/filtros-tablas'
@@ -72,6 +73,8 @@ const queryClient = new QueryClient({
 })
 
 function AppLayout() {
+    useRegistrarUsoPestana()
+
     return (
         <AlarmaTransferenciasProvider><div className="min-h-screen bg-background">
             <div className="flex h-screen">
