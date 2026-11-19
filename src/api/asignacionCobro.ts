@@ -1,7 +1,7 @@
 import { apiClient } from './client'
 
 export type EstadoAsignacion = 'ASIGNADA' | 'COBRADA' | 'CANCELADA'
-export type EstadoFacturaAsignada = 'PENDIENTE' | 'COBRADA' | 'CANCELADA'
+export type EstadoFacturaAsignada = 'PENDIENTE' | 'COBRADA' | 'CANCELADA' | 'ENTREGADA'
 
 export interface FacturaAsignada {
     id: number
@@ -35,7 +35,35 @@ export interface AsignacionCobro {
     facturas: FacturaAsignada[]
 }
 
+/** Factura a crédito entregada por el conductor SIN recibo de caja: sale del tablero, cartera la cobra después. */
+export interface EntregadaSinRc {
+    id: number
+    asignacion_id: number
+    entrega_id: number | null
+    rowid_factura: number
+    numero_factura: number | null
+    prefijo_docto: string | null
+    valor: number
+    /** Saldo vigente en SIESA (null si no se pudo consultar). */
+    saldo: number | null
+    /** true si ya se pagó (saldo <= 0). */
+    pagada: boolean | null
+    id_co: string
+    rowid_tercero: number
+    cliente_nombre: string | null
+    cliente_nit: string | null
+    conductor_id: number
+    conductor_nombre: string | null
+    receptor_nombre: string | null
+    nota: string | null
+    entrega_at: string
+    /** ids de las fotos de la entrega (se piden con fotoEntrega). */
+    fotos: number[]
+}
+
 export interface TableroConductorRow {
+    entregadas?: number
+    valor_entregado?: number
     conductor_id: number
     conductor_nombre?: string
     total_facturas: number
@@ -97,6 +125,20 @@ export const asignacionCobroApi = {
             params: { desde: rango?.desde || undefined, hasta: rango?.hasta || undefined },
         })
         return response.data.data
+    },
+
+    /** Facturas a crédito entregadas sin RC. Sin fechas: últimos 30 días (días de Colombia, inclusivas). */
+    entregadasSinRc: async (rango?: { desde?: string; hasta?: string; conductorId?: number }): Promise<EntregadaSinRc[]> => {
+        const response = await apiClient.get<{ success: boolean; data: EntregadaSinRc[] }>('/asignacion-cobro/entregadas-sin-rc', {
+            params: { desde: rango?.desde || undefined, hasta: rango?.hasta || undefined, conductorId: rango?.conductorId || undefined },
+        })
+        return response.data.data
+    },
+
+    /** Foto de una entrega como URL local (la API pide sesión, no se puede usar como <img src> directo). Liberar con URL.revokeObjectURL. */
+    fotoEntrega: async (fotoId: number): Promise<string> => {
+        const response = await apiClient.get<Blob>(`/asignacion-cobro/entregas/fotos/${fotoId}/archivo`, { responseType: 'blob' })
+        return URL.createObjectURL(response.data)
     },
 
     /** Todas las facturas PENDIENTE de cualquier cliente/conductor, para no ofrecerlas de nuevo al armar un lote. */

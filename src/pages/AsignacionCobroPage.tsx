@@ -16,6 +16,7 @@ import { usePermiso } from '@/hooks/usePermiso'
 import { FacturaPendiente, formatearFecha, formatearPeso, formatearFacturaPendiente, normalizarFactura } from '@/components/asignacionCobro/facturaPendiente'
 import { CondicionPagoChip } from '@/components/asignacionCobro/CondicionPagoChip'
 import { FacturasPendientesTab } from '@/components/asignacionCobro/FacturasPendientesTab'
+import { EntregadasSinRcTab } from '@/components/asignacionCobro/EntregadasSinRcTab'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import { DetalleFacturasAsignadasModal } from '@/components/asignacionCobro/DetalleFacturasAsignadasModal'
 import { BotonExcel } from '@/components/ui/boton-excel'
@@ -269,6 +270,7 @@ export const AsignacionCobroPage = () => {
                 <TabsList className="nu-seg">
                     <TabsTrigger value="cliente" className="nu-seg-item">Por cliente</TabsTrigger>
                     <TabsTrigger value="pendientes" className="nu-seg-item">Facturas pendientes</TabsTrigger>
+                    {puedeVerTablero && <TabsTrigger value="entregadas" className="nu-seg-item">Entregadas sin RC</TabsTrigger>}
                 </TabsList>
                 <TabsContent value="cliente" className="mt-4">
                 <div className="grid min-h-[420px] shrink-0 grid-cols-1 gap-4 lg:grid-cols-3">
@@ -456,6 +458,11 @@ export const AsignacionCobroPage = () => {
                 <TabsContent value="pendientes" className="mt-4">
                     <FacturasPendientesTab conductores={conductoresVisibles} todosLosConductores={conductores} onAsignado={cargarTablero} />
                 </TabsContent>
+                {puedeVerTablero && (
+                    <TabsContent value="entregadas" className="mt-4">
+                        <EntregadasSinRcTab />
+                    </TabsContent>
+                )}
             </Tabs>
 
             {/* Tablero: conductores programados y su avance */}
