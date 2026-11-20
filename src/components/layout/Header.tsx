@@ -10,6 +10,7 @@ import { useAuthStore, CO_AMBOS } from '@/store/authStore'
 import { useAlarmaTransferencias } from '@/components/transferencias/alarmaContext'
 import { PERMISOS } from '@/config/permisos'
 import { ReportarProblema } from '@/components/tickets/ReportarProblema'
+import { PestanasHeader } from './PestanasHeader'
 
 // Decodifica el payload del JWT sin librerías externas
 const decodeJwtPayload = (token: string): Record<string, string> | null => {
@@ -93,6 +94,8 @@ export const Header = () => {
                             </div>
                         </motion.div>
                 </div>
+
+                <PestanasHeader />
 
                 {/* Right — tema + usuario + logout */}
                 <div className="flex items-center gap-3 flex-shrink-0">

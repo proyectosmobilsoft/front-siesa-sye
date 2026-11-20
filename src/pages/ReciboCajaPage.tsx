@@ -1,6 +1,6 @@
 import { Fragment, useEffect, useMemo, useState } from 'react'
 import { CondicionPagoChip } from '@/components/asignacionCobro/CondicionPagoChip'
-import { ChevronLeft, ChevronRight, FileText, Hash, Search, RefreshCw, Receipt, Landmark, User, Wallet, Printer, FileSpreadsheet, FolderOpen, Building2, Layers } from 'lucide-react'
+import { ChevronLeft, ChevronRight, FileText, Hash, Search, RefreshCw, Receipt, Landmark, User, Wallet, Printer, FileSpreadsheet, FolderOpen, Building2, Layers, Truck } from 'lucide-react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { Button } from '@/components/ui/button'
 import { FechaInput } from '@/components/ui/fecha-input'
@@ -13,7 +13,8 @@ import { apiClient } from '@/api/client'
 import { reciboCajaApi } from '@/api/reciboCaja'
 import { trasladoFondosApi } from '@/api/trasladoFondos'
 import type { CajaTraspaso, TrasladoFondosMov } from '@/api/types'
-import { ResumenConductoresDia, ReciboCajaUsuario } from '@/api/types'
+import { ResumenConductoresDia, ResumenConductoresDiaItem, ReciboCajaUsuario } from '@/api/types'
+import { asignacionCobroApi, type EntregadaSinRc } from '@/api/asignacionCobro'
 import { formatters } from '@/utils/formatters'
 import { useAuthStore, coPuntual } from '@/store/authStore'
 import { NuevoReciboTab } from '@/components/reciboCaja/NuevoReciboTab'
@@ -592,7 +593,40 @@ function TableroConductoresRC({
   const { data: limites } = useFechasLimite()
   // Solo conductores que hicieron RC en la fecha; los que solo tienen facturas
   // asignadas pendientes (sin plata recaudada) se ven en Tesorería → Asignar Facturas.
-  const conductores = (resumen?.conductores ?? []).filter((c) => c.recibos_count > 0)
+  // Facturas a crédito entregadas sin RC en el mismo rango: salen como filas "Entregado sin RC" dentro de cada conductor.
+  // Si la consulta falla (sin permiso o API vieja) el tablero sale igual con solo los RC.
+  const [entregas, setEntregas] = useState<EntregadaSinRc[]>([])
+  useEffect(() => {
+    if (!resumen?.fecha_inicial) { setEntregas([]); return }
+    let vigente = true
+    asignacionCobroApi
+      .entregadasSinRc({ desde: resumen.fecha_inicial, hasta: resumen.fecha_final })
+      .then((r) => { if (vigente) setEntregas(r) })
+      .catch(() => { if (vigente) setEntregas([]) })
+    return () => { vigente = false }
+  }, [resumen?.fecha_inicial, resumen?.fecha_final])
+  const esDelConductor = (c: Pick<ResumenConductoresDiaItem, 'conductor_id' | 'usuario_creacion'>, e: EntregadaSinRc) =>
+    (c.conductor_id != null && e.conductor_id === c.conductor_id) ||
+    (!!e.usuario_siesa && e.usuario_siesa.trim().toLowerCase() === c.usuario_creacion.trim().toLowerCase())
+  const entregasDe = (c: ResumenConductoresDiaItem) => entregas.filter((e) => esDelConductor(c, e))
+  const conductores = useMemo(() => {
+    const conRc = (resumen?.conductores ?? []).filter((c) => c.recibos_count > 0)
+    // Conductor que solo entregó sin RC ese día: aparece igual, con los montos en cero.
+    const soloEntregas = new Map<number, ResumenConductoresDiaItem>()
+    for (const e of entregas) {
+      if (conRc.some((c) => esDelConductor(c, e)) || soloEntregas.has(e.conductor_id)) continue
+      soloEntregas.set(e.conductor_id, {
+        usuario_creacion: e.usuario_siesa ?? `conductor-${e.conductor_id}`,
+        conductor_nombre: e.conductor_nombre ?? `Conductor #${e.conductor_id}`,
+        conductor_id: e.conductor_id,
+        centro_operacion_codigo: e.id_co,
+        total_efectivo: 0, total_consignacion: 0, total: 0, recibos_count: 0,
+        asignacion_pendientes: 0, asignacion_valor_pendiente: 0, asignacion_cobradas_rango: 0, asignacion_valor_cobrado_rango: 0,
+      })
+    }
+    return [...conRc, ...soloEntregas.values()]
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [resumen, entregas])
   const totales = conductores.reduce(
     (acc, c) => ({
       recibos: acc.recibos + c.recibos_count,
@@ -737,7 +771,7 @@ function TableroConductoresRC({
   }
 
   return (
-    <div className="max-w-[1350px] space-y-4">
+    <div className="w-full space-y-4">
       {/* Resumen del tablero de conductores */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-2">
@@ -795,7 +829,7 @@ function TableroConductoresRC({
                 </tr>
               ) : (
                 conductores.map((c, idx) => (
-                  <>
+                  <Fragment key={c.usuario_creacion}>
                     <motion.tr
                       key={c.usuario_creacion}
                       className={cn(
@@ -823,6 +857,7 @@ function TableroConductoresRC({
                             <span className="font-semibold text-foreground">{c.conductor_nombre}</span>
                             <span className="text-[11px] text-muted-foreground">
                               {c.recibos_count} RC{c.recibos_count !== 1 ? 's' : ''}
+                              {entregasDe(c).length > 0 && ` · ${entregasDe(c).length} entregada${entregasDe(c).length !== 1 ? 's' : ''} sin RC`}
                             </span>
                           </div>
                         </div>
@@ -839,13 +874,17 @@ function TableroConductoresRC({
                       <td className="px-4 py-3 text-right font-semibold text-foreground"><MontoAlineado value={c.total_facturas ?? 0} alinear="derecha" /></td>
                     </motion.tr>
                     {expandido === c.usuario_creacion && (
-                      <tr>
-                        <td colSpan={columnas} className="bg-muted/20 p-0">
-                          <RcConductorDetalle rc={detalle[c.usuario_creacion]} loading={cargando === c.usuario_creacion} conductorNombre={c.conductor_nombre} />
-                        </td>
-                      </tr>
+                      <RcConductorFilas
+                        rc={detalle[c.usuario_creacion]}
+                        loading={cargando === c.usuario_creacion}
+                        conductorNombre={c.conductor_nombre}
+                        entregas={entregasDe(c)}
+                        columnas={columnas}
+                        tieneTarjetaDebito={tieneTarjetaDebito}
+                        tieneTarjetaCredito={tieneTarjetaCredito}
+                      />
                     )}
-                  </>
+                  </Fragment>
                 ))
               )}
             </tbody>
@@ -877,148 +916,174 @@ function TableroConductoresRC({
   )
 }
 
-function RcConductorDetalle({ rc, loading, conductorNombre }: { rc: ReciboCajaUsuario[] | undefined; loading: boolean; conductorNombre: string }) {
+/**
+ * Filas de un conductor expandido (sus RC y sus facturas entregadas sin RC). Son filas de la MISMA tabla del tablero:
+ * las cifras de plata quedan alineadas debajo de las columnas del conductor (antes era una tabla anidada más angosta
+ * y las columnas no coincidían). La primera celda ocupa las columnas Conductor + C.O.
+ */
+function RcConductorFilas({ rc: rcRecibido, loading, conductorNombre, entregas = [], columnas, tieneTarjetaDebito, tieneTarjetaCredito }: {
+  rc: ReciboCajaUsuario[] | undefined
+  loading: boolean
+  conductorNombre: string
+  entregas?: EntregadaSinRc[]
+  columnas: number
+  tieneTarjetaDebito: boolean
+  tieneTarjetaCredito: boolean
+}) {
   const [reciboFacturas, setReciboFacturas] = useState<ReciboCajaUsuario | null>(null)
+  const rc = rcRecibido ?? []
 
   if (loading) {
-    return <Cargando compacto texto="Cargando RC" />
+    return <tr><td colSpan={columnas} className="bg-muted/20 p-0"><Cargando compacto texto="Cargando RC" /></td></tr>
   }
-  if (!rc || rc.length === 0) {
-    return <div className="px-8 py-6 text-center text-xs font-bold uppercase tracking-widest text-muted-foreground">Sin RC para mostrar</div>
+  if (rc.length === 0 && entregas.length === 0) {
+    return <tr><td colSpan={columnas} className="bg-muted/20 px-8 py-6 text-center text-xs font-bold uppercase tracking-widest text-muted-foreground">Sin RC para mostrar</td></tr>
   }
-  const tieneTarjetaCredito = rc.some((recibo) => (recibo.tarjeta_credito ?? 0) > 0)
-  const tieneTarjetaDebito = rc.some((recibo) => (recibo.tarjeta_debito ?? 0) > 0)
+
+  const celda = 'bg-muted/20 px-4 py-2 text-right'
+  const guion = <span className="text-muted-foreground">—</span>
+  const fechaEntrega = (iso: string) => new Date(iso.endsWith('Z') ? iso : `${iso}Z`).toLocaleDateString('es-CO', { timeZone: 'America/Bogota' })
 
   return (
-    <div className="overflow-x-auto px-4 py-3">
-      <div className="mb-2 flex max-w-[1100px] justify-end">
-        <BotonPdfRCs
-          compacto
-          etiqueta={`PDF de los RC de ${conductorNombre}`}
-          titulo="Un solo PDF con los RC de este conductor (sin anulados), cada uno con sus confirmaciones de transferencia"
-          obtenerRowids={() => [...rc].filter((r) => r.Estado !== 2).sort((a, b) => Number(a.Numero) - Number(b.Numero)).map((r) => r.Rowid)}
-        />
-      </div>
-      <table className="w-full max-w-[1100px] text-xs">
-        <thead>
-          <tr className="border-b border-border/60">
-            <th className="px-3 py-2 text-left nu-th">Documento</th>
-            <th className="px-3 py-2 text-left nu-th">Factura</th>
-            <th className="px-3 py-2 text-left nu-th">C.O.</th>
-            <th className="px-3 py-2 text-left nu-th">Fecha</th>
-            <th className="px-3 py-2 text-left nu-th">Tercero</th>
-            <th className="px-3 py-2 text-right nu-th">Efectivo</th>
-            <th className="px-3 py-2 text-right nu-th">Transferencia</th>
-            {tieneTarjetaDebito && <th className="px-3 py-2 text-right nu-th">T. débito</th>}
-            {tieneTarjetaCredito && <th className="px-3 py-2 text-right nu-th">T. crédito</th>}
-            <th className="px-3 py-2 text-right nu-th">Desc. financiero</th>
-            <th className="px-3 py-2 text-right nu-th">Total</th>
-            <th className="px-3 py-2 text-left nu-th">Estado</th>
-          </tr>
-        </thead>
-        <tbody>
-          {rc.map((r) => {
-            const facturas = r.Facturas ?? []
-            const factura = facturas.length > 0
-              ? facturas
-                .map((f) => `${(f.Tipo || '').trim().toUpperCase()} ${f.Numero}`)
-                .join(', ')
-              : '—'
-            const descuentoFinanciero = facturas.reduce((total, factura) => total + (factura.Descuento_Pp || 0), 0)
-            const totalRecaudado = (r.efectivo ?? 0) + (r.consignacion ?? 0) + (r.tarjeta_credito ?? 0) + (r.tarjeta_debito ?? 0)
+    <>
+      {rc.length > 0 && (
+        <tr>
+          <td colSpan={columnas} className="bg-muted/20 px-4 pt-3">
+            <div className="flex justify-end">
+              <BotonPdfRCs
+                compacto
+                etiqueta={`PDF de los RC de ${conductorNombre}`}
+                titulo="Un solo PDF con los RC de este conductor (sin anulados), cada uno con sus confirmaciones de transferencia"
+                obtenerRowids={() => [...rc].filter((r) => r.Estado !== 2).sort((a, b) => Number(a.Numero) - Number(b.Numero)).map((r) => r.Rowid)}
+              />
+            </div>
+          </td>
+        </tr>
+      )}
+      {rc.map((r) => {
+        const facturas = r.Facturas ?? []
+        const factura = facturas.length > 0 ? facturas.map((f) => `${(f.Tipo || '').trim().toUpperCase()} ${f.Numero}`).join(', ') : '—'
+        const descuentoFinanciero = facturas.reduce((total, f) => total + (f.Descuento_Pp || 0), 0)
+        const totalRecaudado = (r.efectivo ?? 0) + (r.consignacion ?? 0) + (r.tarjeta_credito ?? 0) + (r.tarjeta_debito ?? 0)
+        const valorFacturas = facturas.reduce((total, f) => total + (f.Valor_Aplicado || 0), 0)
 
-            return (
-              <tr key={r.Rowid} className="border-b border-border/30 last:border-0 hover:bg-muted/30">
-                <td className="px-3 py-2 font-semibold text-primary">
-                  <span className="flex items-center gap-1">
-                    <Hash className="h-3 w-3" />
-                    {(r.Tipo_Docto || 'RC').trim()}#{r.Numero}
+        return (
+          <tr key={r.Rowid} className="border-t border-border/30 hover:bg-muted/30">
+            <td colSpan={2} className="bg-muted/20 py-2 pl-14 pr-3">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
+                    <span className="flex items-center gap-1 font-semibold text-primary"><Hash className="h-3 w-3" />{(r.Tipo_Docto || 'RC').trim()}#{r.Numero}</span>
+                    {facturas.length > 1 ? (
+                      <Button variant="ghost" size="sm" className="nu-btn nu-btn-soft h-6 px-2 text-[10px]" onClick={() => setReciboFacturas(r)}>
+                        Ver {facturas.length} facturas
+                      </Button>
+                    ) : facturas.length === 0 && r.Notas ? (
+                      <span className="truncate italic text-muted-foreground" title={`Según notas del RC: ${r.Notas}`}>{r.Notas.toUpperCase()}</span>
+                    ) : (
+                      <span className="text-muted-foreground">{factura}</span>
+                    )}
+                    <span className="tabular-nums text-muted-foreground">· {formatters.dateOnly(r.Fecha)} · C.O. {r['C.O.']}</span>
+                  </div>
+                  <div className="truncate font-medium" title={r.Tercero_Nombre}>{r.Tercero_Nombre}</div>
+                </div>
+                <span className="inline-flex shrink-0 items-center gap-1.5">
+                  <span className={cn('rounded-full px-2 py-0.5 text-[10px] font-bold uppercase', estadoBadgeNum(r.Estado))}>
+                    {r.Estado === 1 ? 'Aprobado' : r.Estado === 2 ? 'Anulado' : 'En proceso'}
                   </span>
-                </td>
-                <td className="max-w-[220px] px-3 py-2 text-muted-foreground">
-                  {facturas.length > 1 ? (
-                    <Button variant="ghost" size="sm" className="nu-btn nu-btn-soft h-7 px-2 text-[10px]" onClick={() => setReciboFacturas(r)}>
-                      Ver {facturas.length} facturas
-                    </Button>
-                  ) : facturas.length === 0 && r.Notas ? (
-                    <span className="block truncate italic" title={`Según notas del RC: ${r.Notas}`}>
-                      {r.Notas.toUpperCase()}
-                    </span>
-                  ) : (
-                    <span className="block truncate">{factura}</span>
-                  )}
-                </td>
-                <td className="px-3 py-2 tabular-nums text-muted-foreground">{r['C.O.']}</td>
-                <td className="px-3 py-2 tabular-nums text-muted-foreground">{formatters.dateOnly(r.Fecha)}</td>
-                <td className="max-w-[200px] truncate px-3 py-2 font-medium">{r.Tercero_Nombre}</td>
-                <td className="px-3 py-2 text-right"><MontoAlineado value={r.efectivo ?? 0} alinear="derecha" /></td>
-                <td className="px-3 py-2 text-right"><MontoAlineado value={r.consignacion ?? 0} alinear="derecha" /></td>
-                {tieneTarjetaDebito && <td className="px-3 py-2 text-right text-sky-600 dark:text-sky-400"><MontoAlineado value={r.tarjeta_debito ?? 0} alinear="derecha" /></td>}
-                {tieneTarjetaCredito && <td className="px-3 py-2 text-right text-violet-600 dark:text-violet-400"><MontoAlineado value={r.tarjeta_credito ?? 0} alinear="derecha" /></td>}
-                <td className="px-3 py-2 text-right text-red-600 dark:text-red-400">
-                  <MontoAlineado value={descuentoFinanciero} alinear="derecha" />
-                </td>
-                <td className="px-3 py-2 text-right font-semibold">
-                  <MontoAlineado value={totalRecaudado} alinear="derecha" />
-                </td>
-                <td className="px-3 py-2 text-left">
-                  <span className="inline-flex items-center gap-1.5">
-                    <span className={cn('rounded-full px-2 py-0.5 text-[10px] font-bold uppercase', estadoBadgeNum(r.Estado))}>
-                      {r.Estado === 1 ? 'Aprobado' : r.Estado === 2 ? 'Anulado' : 'En proceso'}
-                    </span>
-                    <BotonPdfRC rowid={r.Rowid} />
-                  </span>
-                </td>
-              </tr>
-            )
-          })}
-        </tbody>
-      </table>
-      <Modal
-        isOpen={!!reciboFacturas}
-        onClose={() => setReciboFacturas(null)}
-        title={
-          <>
-            <span className="block">Conductor: {conductorNombre}</span>
-            <span className="block">
-              Recaudo {(reciboFacturas?.Tipo_Docto || 'RC').trim()}#{reciboFacturas?.Numero ?? ''} · Fecha: {formatearFechaHoraRc(reciboFacturas)}
-            </span>
-          </>
-        }
-        className="max-w-2xl"
-      >
-        <div className="overflow-hidden rounded-lg border border-border">
-          <table className="w-full text-sm">
-            <thead className="bg-muted/50 text-xs uppercase tracking-wider text-muted-foreground">
-              <tr>
-                <th className="px-4 py-3 text-left">Factura</th>
-                <th className="px-4 py-3 text-right">Valor factura</th>
-                <th className="px-4 py-3 text-right">Desc. financiero</th>
-                <th className="px-4 py-3 text-right">Recaudado</th>
-              </tr>
-            </thead>
-            <tbody>
-              {(reciboFacturas?.Facturas ?? []).map((factura) => (
-                <tr key={factura.Rowid} className="border-t border-border/60">
-                  <td className="px-4 py-3 tabular-nums">{(factura.Tipo || '').trim().toUpperCase()} {factura.Numero}</td>
-                  <td className="px-4 py-3 text-right"><MontoAlineado value={factura.Valor_Aplicado} alinear="derecha" /></td>
-                  <td className="px-4 py-3 text-right text-red-600 dark:text-red-400"><MontoAlineado value={factura.Descuento_Pp ?? 0} alinear="derecha" /></td>
-                  <td className="px-4 py-3 text-right font-semibold"><MontoAlineado value={factura.Valor_Aplicado - (factura.Descuento_Pp ?? 0)} alinear="derecha" /></td>
-                </tr>
-              ))}
-            </tbody>
-            <tfoot>
-              <tr className="border-t-2 border-border bg-muted/30 font-semibold">
-                <td className="px-4 py-3">Total</td>
-                <td className="px-4 py-3 text-right"><MontoAlineado value={(reciboFacturas?.Facturas ?? []).reduce((acc, f) => acc + (f.Valor_Aplicado ?? 0), 0)} alinear="derecha" /></td>
-                <td className="px-4 py-3 text-right text-red-600 dark:text-red-400"><MontoAlineado value={(reciboFacturas?.Facturas ?? []).reduce((acc, f) => acc + (f.Descuento_Pp ?? 0), 0)} alinear="derecha" /></td>
-                <td className="px-4 py-3 text-right font-bold text-primary"><MontoAlineado value={(reciboFacturas?.Facturas ?? []).reduce((acc, f) => acc + (f.Valor_Aplicado ?? 0) - (f.Descuento_Pp ?? 0), 0)} alinear="derecha" /></td>
-              </tr>
-            </tfoot>
-          </table>
-        </div>
-      </Modal>
-    </div>
+                  <BotonPdfRC rowid={r.Rowid} />
+                </span>
+              </div>
+            </td>
+            <td className={celda}><MontoAlineado value={r.efectivo ?? 0} alinear="derecha" /></td>
+            <td className={celda}><MontoAlineado value={r.consignacion ?? 0} alinear="derecha" /></td>
+            {tieneTarjetaDebito && <td className={cn(celda, 'text-sky-600 dark:text-sky-400')}><MontoAlineado value={r.tarjeta_debito ?? 0} alinear="derecha" /></td>}
+            {tieneTarjetaCredito && <td className={cn(celda, 'text-violet-600 dark:text-violet-400')}><MontoAlineado value={r.tarjeta_credito ?? 0} alinear="derecha" /></td>}
+            <td className={cn(celda, 'text-red-600 dark:text-red-400')}><MontoAlineado value={descuentoFinanciero} alinear="derecha" /></td>
+            <td className={cn(celda, 'font-semibold')}><MontoAlineado value={totalRecaudado} alinear="derecha" /></td>
+            <td className={celda}>{facturas.length > 0 ? <MontoAlineado value={valorFacturas} alinear="derecha" /> : guion}</td>
+          </tr>
+        )
+      })}
+      {entregas.map((e) => (
+        <tr key={`entrega-${e.id}`} className="border-t border-border/30 hover:bg-muted/30">
+          <td colSpan={2} className="bg-muted/20 py-2 pl-14 pr-3">
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
+                  <span className="flex items-center gap-1 font-semibold text-indigo-600 dark:text-indigo-400"><Truck className="h-3 w-3" />Entrega</span>
+                  <span className="text-muted-foreground">{`${(e.prefijo_docto ?? '').trim()} ${e.numero_factura ?? e.rowid_factura}`.trim()}</span>
+                  <span className="tabular-nums text-muted-foreground">· {fechaEntrega(e.entrega_at)} · C.O. {e.id_co}</span>
+                </div>
+                <div className="truncate font-medium" title={e.cliente_nombre ?? undefined}>{e.cliente_nombre ?? `Cliente #${e.rowid_tercero}`}</div>
+                <div className="truncate text-[10px] text-muted-foreground">Recibió: {e.receptor_nombre ?? '—'}</div>
+              </div>
+              <span
+                className="shrink-0 rounded-full border border-indigo-500/20 bg-indigo-500/15 px-2 py-0.5 text-[10px] font-bold uppercase text-indigo-700 dark:text-indigo-400"
+                title={e.pagada ? 'Ya se pagó después de la entrega' : 'Se entregó sin recibo de caja: queda por cobrar'}
+              >
+                Entregado sin RC{e.pagada ? ' · pagada' : ''}
+              </span>
+            </div>
+          </td>
+          <td className={celda}>{guion}</td>
+          <td className={celda}>{guion}</td>
+          {tieneTarjetaDebito && <td className={celda}>{guion}</td>}
+          {tieneTarjetaCredito && <td className={celda}>{guion}</td>}
+          <td className={celda}>{guion}</td>
+          <td className={celda}>{guion}</td>
+          <td className={celda}><MontoAlineado value={e.valor} alinear="derecha" /></td>
+        </tr>
+      ))}
+      <tr className="h-0">
+        <td colSpan={columnas} className="p-0">
+          <Modal
+            isOpen={!!reciboFacturas}
+            onClose={() => setReciboFacturas(null)}
+            title={
+              <>
+                <span className="block">Conductor: {conductorNombre}</span>
+                <span className="block">
+                  Recaudo {(reciboFacturas?.Tipo_Docto || 'RC').trim()}#{reciboFacturas?.Numero ?? ''} · Fecha: {formatearFechaHoraRc(reciboFacturas)}
+                </span>
+              </>
+            }
+            className="max-w-2xl"
+          >
+            <div className="overflow-hidden rounded-lg border border-border">
+              <table className="w-full text-sm">
+                <thead className="bg-muted/50 text-xs uppercase tracking-wider text-muted-foreground">
+                  <tr>
+                    <th className="px-4 py-3 text-left">Factura</th>
+                    <th className="px-4 py-3 text-right">Valor factura</th>
+                    <th className="px-4 py-3 text-right">Desc. financiero</th>
+                    <th className="px-4 py-3 text-right">Recaudado</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {(reciboFacturas?.Facturas ?? []).map((factura) => (
+                    <tr key={factura.Rowid} className="border-t border-border/60">
+                      <td className="px-4 py-3 tabular-nums">{(factura.Tipo || '').trim().toUpperCase()} {factura.Numero}</td>
+                      <td className="px-4 py-3 text-right"><MontoAlineado value={factura.Valor_Aplicado} alinear="derecha" /></td>
+                      <td className="px-4 py-3 text-right text-red-600 dark:text-red-400"><MontoAlineado value={factura.Descuento_Pp ?? 0} alinear="derecha" /></td>
+                      <td className="px-4 py-3 text-right font-semibold"><MontoAlineado value={factura.Valor_Aplicado - (factura.Descuento_Pp ?? 0)} alinear="derecha" /></td>
+                    </tr>
+                  ))}
+                </tbody>
+                <tfoot>
+                  <tr className="border-t-2 border-border bg-muted/30 font-semibold">
+                    <td className="px-4 py-3">Total</td>
+                    <td className="px-4 py-3 text-right"><MontoAlineado value={(reciboFacturas?.Facturas ?? []).reduce((acc, f) => acc + (f.Valor_Aplicado ?? 0), 0)} alinear="derecha" /></td>
+                    <td className="px-4 py-3 text-right text-red-600 dark:text-red-400"><MontoAlineado value={(reciboFacturas?.Facturas ?? []).reduce((acc, f) => acc + (f.Descuento_Pp ?? 0), 0)} alinear="derecha" /></td>
+                    <td className="px-4 py-3 text-right font-bold text-primary"><MontoAlineado value={(reciboFacturas?.Facturas ?? []).reduce((acc, f) => acc + (f.Valor_Aplicado ?? 0) - (f.Descuento_Pp ?? 0), 0)} alinear="derecha" /></td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+          </Modal>
+        </td>
+      </tr>
+    </>
   )
 }
 

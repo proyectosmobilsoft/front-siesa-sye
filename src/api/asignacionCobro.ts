@@ -54,6 +54,8 @@ export interface EntregadaSinRc {
     cliente_nit: string | null
     conductor_id: number
     conductor_nombre: string | null
+    /** Usuario de SIESA del conductor (el mismo `usuario_creacion` de sus RC). */
+    usuario_siesa: string | null
     receptor_nombre: string | null
     nota: string | null
     entrega_at: string

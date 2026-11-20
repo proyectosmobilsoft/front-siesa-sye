@@ -1,5 +1,6 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom'
+import { BrowserRouter as Router, Routes, Route, Navigate, useLocation, type Location } from 'react-router-dom'
+import { PestanasPanels } from '@/components/layout/PestanasPanels'
 import { Sidebar } from '@/components/layout/Sidebar'
 import { Header } from '@/components/layout/Header'
 import { DashboardPage } from '@/pages/DashboardPage'
@@ -8,12 +9,11 @@ import { ProtectedRoute } from '@/components/auth/ProtectedRoute'
 import { PERMISOS } from '@/config/permisos'
 import { RUTAS, RUTAS_ANTERIORES } from '@/config/navigation'
 import { useUIStore } from '@/store/uiStore'
-import { lazy, Suspense, useCallback, useEffect, useState } from 'react'
+import { lazy, useCallback, useEffect, useState } from 'react'
 import { useAuth } from '@/hooks/useAuth'
 import { useInactivityTimeout } from '@/hooks/useInactivityTimeout'
 import { useRegistrarUsoPestana } from '@/hooks/useRegistrarUsoPestana'
 import { InactivityModal } from '@/components/ui/InactivityModal'
-import { Cargando } from '@/components/ui/cargando'
 import { FiltrosTablas } from '@/components/ui/filtros-tablas'
 import { Avisos } from '@/components/ui/avisos'
 import { AlarmaTransferenciasProvider } from '@/components/transferencias/AlarmaTransferencias'
@@ -72,6 +72,108 @@ const queryClient = new QueryClient({
     },
 })
 
+/** Todas las rutas de la app para una ubicación dada: PestanasPanels la pinta una vez por pestaña abierta. */
+function RutasApp({ ubicacion }: { ubicacion: Location }) {
+    return (
+        <Routes location={ubicacion}>
+            <Route path="/" element={<DashboardPage />} />
+            <Route path="/tickets/mis" element={<MisTicketsPage />} />
+            <Route path="/tickets/aprobador" element={<ProtectedRoute permiso={PERMISOS.APROBADOR_TICKETS}><TableroTicketsPage /></ProtectedRoute>} />
+
+            {/* Egreso/Anticipos: protegido por VER_ANTICIPO */}
+            <Route path="/egreso" element={
+                <ProtectedRoute permiso={PERMISOS.EGRESO}><EgresoPage /></ProtectedRoute>
+            } />
+
+            {/* Relación de Conceptos: protegido por VER_CONCEPTOS (solo rol Administrador) */}
+            <Route path="/maestro/relacion-conceptos" element={
+                <ProtectedRoute permiso={PERMISOS.CONCEPTOS}><MaestroConceptosPage /></ProtectedRoute>
+            } />
+
+            {/* Maquinaria: protegido por VER_MAQUINARIA (solo rol Administrador) */}
+            <Route path="/maestro/maquinaria" element={
+                <ProtectedRoute permiso={PERMISOS.MAQUINARIA}><MaestroMaquinariaPage /></ProtectedRoute>
+            } />
+
+            {/* Interfaz Contable Vehículos: protegido por VER_INTERFAZ_CONTABLE */}
+            <Route path="/maestro/interfaz-contable-vehiculos" element={
+                <ProtectedRoute permiso={PERMISOS.INTERFAZ_CONTABLE}><InterfazContableVehiculosPage /></ProtectedRoute>
+            } />
+
+            {/* Maestro de Cajas: protegido por VER_CAJAS (solo rol Administrador) */}
+            <Route path="/maestro/cajas" element={
+                <ProtectedRoute permiso={PERMISOS.CAJAS}><MaestroCajasPage /></ProtectedRoute>
+            } />
+
+            {/* Maestro de Cuentas Bancarias: protegido por VER_CUENTAS_BANCARIAS (solo rol Administrador) */}
+            <Route path="/maestro/cuentas-bancarias" element={
+                <ProtectedRoute permiso={PERMISOS.CUENTAS_BANCARIAS}><MaestroCuentasBancariasPage /></ProtectedRoute>
+            } />
+
+            {/* Módulos y Permisos (catálogo de seguridad): protegido por VER_MODULOS */}
+            <Route path="/maestro/modulos" element={
+                <ProtectedRoute permiso={PERMISOS.MODULOS}><MaestroModulosPage /></ProtectedRoute>
+            } />
+
+            {/* Organizar el menú lateral (configuración global): VER_MODULOS para entrar, EDITAR_MODULO para cambiar */}
+            <Route path="/maestro/organizar-menu" element={
+                <ProtectedRoute permiso={PERMISOS.MODULOS}><OrganizarMenuPage /></ProtectedRoute>
+            } />
+
+            {/* Gestión de Ventas: protegido por VER_RECIBO */}
+            <Route path="/facturas/gestion-ventas" element={
+                <ProtectedRoute permiso={PERMISOS.GESTION_VENTAS}><GestionVentasPage /></ProtectedRoute>
+            } />
+
+            {/* Dashboard ("/") queda SIN ProtectedRoute a propósito: es el
+                destino al que ProtectedRoute redirige cuando falta un permiso,
+                así que protegerlo con VER_DASHBOARD crearía un bucle de
+                redirección para quien no lo tuviera. */}
+
+            {/* Comercial */}
+            <Route path="/clientes" element={<ProtectedRoute permiso={PERMISOS.CLIENTES}><ClientsPage /></ProtectedRoute>} />
+            <Route path="/productos" element={<ProtectedRoute permiso={PERMISOS.PRODUCTOS}><ProductsPage /></ProtectedRoute>} />
+            <Route path="/pedidos" element={<ProtectedRoute permiso={PERMISOS.PEDIDOS}><PedidosPage /></ProtectedRoute>} />
+            <Route path="/ferreganga" element={<ProtectedRoute permiso={PERMISOS.FERREGANGA}><FerregangaPage /></ProtectedRoute>} />
+            {/* /companias no está en el menú y no tiene permiso propio */}
+            <Route path="/companias" element={<CompaniesPage />} />
+
+            {/* Facturación */}
+            <Route path="/facturas/analisis-financiero" element={<ProtectedRoute permiso={PERMISOS.ANALISIS_FINANCIERO}><AnalisisFinancieroPage /></ProtectedRoute>} />
+
+            {/* Reportes: cada uno con su propio permiso de vista */}
+            <Route path="/reportes" element={<ProtectedRoute permiso={PERMISOS.REPORTE_PEDIDOS}><ReportsPage /></ProtectedRoute>} />
+            <Route path="/reportes/ventas" element={<ProtectedRoute permiso={PERMISOS.REPORTE_VENTAS}><SalesSummaryPage /></ProtectedRoute>} />
+            <Route path="/reportes/vendedores" element={<ProtectedRoute permiso={PERMISOS.REPORTE_VENDEDORES}><VendorsPage /></ProtectedRoute>} />
+
+            <Route path="/tesoreria/traslado-fondos" element={<ProtectedRoute permiso={PERMISOS.TRASLADO_FONDOS}><TrasladoFondosPage /></ProtectedRoute>} />
+            <Route path="/maestro/roles" element={<ProtectedRoute permiso={PERMISOS.ROLES}><MaestroRolesPage /></ProtectedRoute>} />
+            {/* Maestro de Usuarios es el acceso único a la administración de usuarios. */}
+            <Route path="/maestro/usuarios" element={<ProtectedRoute permiso={PERMISOS.USUARIOS}><SecuritySettingsPage /></ProtectedRoute>} />
+            <Route path="/maestro/descuentos-financieros" element={<ProtectedRoute permiso={PERMISOS.DESCUENTOS}><MaestroDescuentosFinancierosPage /></ProtectedRoute>} />
+            <Route path="/tesoreria/recibo-caja" element={<ProtectedRoute permiso={PERMISOS.RECIBO_CAJA}><ReciboCajaPage /></ProtectedRoute>} />
+            <Route path="/tesoreria/rc-anomalos" element={<ProtectedRoute permiso={PERMISOS.RC_ANOMALOS}><RcAnomalosPage /></ProtectedRoute>} />
+            <Route path="/tesoreria/dashboard-recaudo" element={<ProtectedRoute permiso={PERMISOS.RECIBO_CAJA}><DashboardReciboCajaPage /></ProtectedRoute>} />
+            <Route path="/tesoreria/entrega-recaudo" element={<ProtectedRoute permiso={PERMISOS.ENTREGA_RECAUDO}><TesoreriaEntregaRecaudoPage /></ProtectedRoute>} />
+            <Route path="/tesoreria/confirmacion-transferencias" element={<ProtectedRoute permiso={PERMISOS.CONFIRMACION_TRANSFERENCIA}><ConfirmacionTransferenciasPage /></ProtectedRoute>} />
+            <Route path="/tesoreria/parametros-rc" element={<ProtectedRoute permiso={PERMISOS.PARAMETROS_RC}><ParametrosReciboCajaPage /></ProtectedRoute>} />
+            <Route path={RUTAS.asignarFacturas} element={<ProtectedRoute permiso={PERMISOS.ASIGNACION_COBRO}><AsignacionCobroPage /></ProtectedRoute>} />
+            <Route path={RUTAS.mvpLogistica} element={<ProtectedRoute permiso={PERMISOS.ASIGNACION_COBRO}><MvpLogisticaPage /></ProtectedRoute>} />
+            <Route path={RUTAS.ubicacionRc} element={<ProtectedRoute permiso={PERMISOS.ASIGNACION_COBRO}><UbicacionRcPage /></ProtectedRoute>} />
+            {/* Compatibilidad con las rutas anteriores (favoritos, enlaces). */}
+            {Object.entries(RUTAS_ANTERIORES).map(([desde, hacia]) => (
+                <Route key={desde} path={desde} element={<Navigate to={hacia} replace />} />
+            ))}
+            <Route path="/personalizado/:itemId" element={<PersonalizadoPage />} />
+            <Route path="/configuracion" element={<ProtectedRoute permiso={PERMISOS.CONFIGURACION}><SettingsPage /></ProtectedRoute>} />
+            {/* Compatibilidad con enlaces antiguos, sin mantener un módulo duplicado. */}
+            <Route path="/configuracion/seguridad" element={<Navigate to="/maestro/usuarios" replace />} />
+            <Route path="/ayuda" element={<HelpPage />} />
+            <Route path="/propuesta" element={<ProtectedRoute permiso={PERMISOS.PROPUESTA}><PropuestaPage /></ProtectedRoute>} />
+        </Routes>
+    )
+}
+
 function AppLayout() {
     useRegistrarUsoPestana()
 
@@ -82,106 +184,7 @@ function AppLayout() {
                 <div className="flex-1 flex flex-col overflow-hidden">
                     <Header />
                     <main className="flex-1 overflow-auto custom-scrollbar">
-                        <Suspense fallback={
-                            <Cargando texto="Cargando" className="h-full" />
-                        }>
-                            <Routes>
-                                <Route path="/" element={<DashboardPage />} />
-                                <Route path="/tickets/mis" element={<MisTicketsPage />} />
-                                <Route path="/tickets/aprobador" element={<ProtectedRoute permiso={PERMISOS.APROBADOR_TICKETS}><TableroTicketsPage /></ProtectedRoute>} />
-
-                                {/* Egreso/Anticipos: protegido por VER_ANTICIPO */}
-                                <Route path="/egreso" element={
-                                    <ProtectedRoute permiso={PERMISOS.EGRESO}><EgresoPage /></ProtectedRoute>
-                                } />
-
-                                {/* Relación de Conceptos: protegido por VER_CONCEPTOS (solo rol Administrador) */}
-                                <Route path="/maestro/relacion-conceptos" element={
-                                    <ProtectedRoute permiso={PERMISOS.CONCEPTOS}><MaestroConceptosPage /></ProtectedRoute>
-                                } />
-
-                                {/* Maquinaria: protegido por VER_MAQUINARIA (solo rol Administrador) */}
-                                <Route path="/maestro/maquinaria" element={
-                                    <ProtectedRoute permiso={PERMISOS.MAQUINARIA}><MaestroMaquinariaPage /></ProtectedRoute>
-                                } />
-
-                                {/* Interfaz Contable Vehículos: protegido por VER_INTERFAZ_CONTABLE */}
-                                <Route path="/maestro/interfaz-contable-vehiculos" element={
-                                    <ProtectedRoute permiso={PERMISOS.INTERFAZ_CONTABLE}><InterfazContableVehiculosPage /></ProtectedRoute>
-                                } />
-
-                                {/* Maestro de Cajas: protegido por VER_CAJAS (solo rol Administrador) */}
-                                <Route path="/maestro/cajas" element={
-                                    <ProtectedRoute permiso={PERMISOS.CAJAS}><MaestroCajasPage /></ProtectedRoute>
-                                } />
-
-                                {/* Maestro de Cuentas Bancarias: protegido por VER_CUENTAS_BANCARIAS (solo rol Administrador) */}
-                                <Route path="/maestro/cuentas-bancarias" element={
-                                    <ProtectedRoute permiso={PERMISOS.CUENTAS_BANCARIAS}><MaestroCuentasBancariasPage /></ProtectedRoute>
-                                } />
-
-                                {/* Módulos y Permisos (catálogo de seguridad): protegido por VER_MODULOS */}
-                                <Route path="/maestro/modulos" element={
-                                    <ProtectedRoute permiso={PERMISOS.MODULOS}><MaestroModulosPage /></ProtectedRoute>
-                                } />
-
-                                {/* Organizar el menú lateral (configuración global): VER_MODULOS para entrar, EDITAR_MODULO para cambiar */}
-                                <Route path="/maestro/organizar-menu" element={
-                                    <ProtectedRoute permiso={PERMISOS.MODULOS}><OrganizarMenuPage /></ProtectedRoute>
-                                } />
-
-                                {/* Gestión de Ventas: protegido por VER_RECIBO */}
-                                <Route path="/facturas/gestion-ventas" element={
-                                    <ProtectedRoute permiso={PERMISOS.GESTION_VENTAS}><GestionVentasPage /></ProtectedRoute>
-                                } />
-
-                                {/* Dashboard ("/") queda SIN ProtectedRoute a propósito: es el
-                                    destino al que ProtectedRoute redirige cuando falta un permiso,
-                                    así que protegerlo con VER_DASHBOARD crearía un bucle de
-                                    redirección para quien no lo tuviera. */}
-
-                                {/* Comercial */}
-                                <Route path="/clientes" element={<ProtectedRoute permiso={PERMISOS.CLIENTES}><ClientsPage /></ProtectedRoute>} />
-                                <Route path="/productos" element={<ProtectedRoute permiso={PERMISOS.PRODUCTOS}><ProductsPage /></ProtectedRoute>} />
-                                <Route path="/pedidos" element={<ProtectedRoute permiso={PERMISOS.PEDIDOS}><PedidosPage /></ProtectedRoute>} />
-                                <Route path="/ferreganga" element={<ProtectedRoute permiso={PERMISOS.FERREGANGA}><FerregangaPage /></ProtectedRoute>} />
-                                {/* /companias no está en el menú y no tiene permiso propio */}
-                                <Route path="/companias" element={<CompaniesPage />} />
-
-                                {/* Facturación */}
-                                <Route path="/facturas/analisis-financiero" element={<ProtectedRoute permiso={PERMISOS.ANALISIS_FINANCIERO}><AnalisisFinancieroPage /></ProtectedRoute>} />
-
-                                {/* Reportes: cada uno con su propio permiso de vista */}
-                                <Route path="/reportes" element={<ProtectedRoute permiso={PERMISOS.REPORTE_PEDIDOS}><ReportsPage /></ProtectedRoute>} />
-                                <Route path="/reportes/ventas" element={<ProtectedRoute permiso={PERMISOS.REPORTE_VENTAS}><SalesSummaryPage /></ProtectedRoute>} />
-                                <Route path="/reportes/vendedores" element={<ProtectedRoute permiso={PERMISOS.REPORTE_VENDEDORES}><VendorsPage /></ProtectedRoute>} />
-
-                                <Route path="/tesoreria/traslado-fondos" element={<ProtectedRoute permiso={PERMISOS.TRASLADO_FONDOS}><TrasladoFondosPage /></ProtectedRoute>} />
-                                <Route path="/maestro/roles" element={<ProtectedRoute permiso={PERMISOS.ROLES}><MaestroRolesPage /></ProtectedRoute>} />
-                                {/* Maestro de Usuarios es el acceso único a la administración de usuarios. */}
-                                <Route path="/maestro/usuarios" element={<ProtectedRoute permiso={PERMISOS.USUARIOS}><SecuritySettingsPage /></ProtectedRoute>} />
-                                <Route path="/maestro/descuentos-financieros" element={<ProtectedRoute permiso={PERMISOS.DESCUENTOS}><MaestroDescuentosFinancierosPage /></ProtectedRoute>} />
-                                <Route path="/tesoreria/recibo-caja" element={<ProtectedRoute permiso={PERMISOS.RECIBO_CAJA}><ReciboCajaPage /></ProtectedRoute>} />
-                                <Route path="/tesoreria/rc-anomalos" element={<ProtectedRoute permiso={PERMISOS.RC_ANOMALOS}><RcAnomalosPage /></ProtectedRoute>} />
-                                <Route path="/tesoreria/dashboard-recaudo" element={<ProtectedRoute permiso={PERMISOS.RECIBO_CAJA}><DashboardReciboCajaPage /></ProtectedRoute>} />
-                                <Route path="/tesoreria/entrega-recaudo" element={<ProtectedRoute permiso={PERMISOS.ENTREGA_RECAUDO}><TesoreriaEntregaRecaudoPage /></ProtectedRoute>} />
-                                <Route path="/tesoreria/confirmacion-transferencias" element={<ProtectedRoute permiso={PERMISOS.CONFIRMACION_TRANSFERENCIA}><ConfirmacionTransferenciasPage /></ProtectedRoute>} />
-                                <Route path="/tesoreria/parametros-rc" element={<ProtectedRoute permiso={PERMISOS.PARAMETROS_RC}><ParametrosReciboCajaPage /></ProtectedRoute>} />
-                                <Route path={RUTAS.asignarFacturas} element={<ProtectedRoute permiso={PERMISOS.ASIGNACION_COBRO}><AsignacionCobroPage /></ProtectedRoute>} />
-                                <Route path={RUTAS.mvpLogistica} element={<ProtectedRoute permiso={PERMISOS.ASIGNACION_COBRO}><MvpLogisticaPage /></ProtectedRoute>} />
-                                <Route path={RUTAS.ubicacionRc} element={<ProtectedRoute permiso={PERMISOS.ASIGNACION_COBRO}><UbicacionRcPage /></ProtectedRoute>} />
-                                {/* Compatibilidad con las rutas anteriores (favoritos, enlaces). */}
-                                {Object.entries(RUTAS_ANTERIORES).map(([desde, hacia]) => (
-                                    <Route key={desde} path={desde} element={<Navigate to={hacia} replace />} />
-                                ))}
-                                <Route path="/personalizado/:itemId" element={<PersonalizadoPage />} />
-                                <Route path="/configuracion" element={<ProtectedRoute permiso={PERMISOS.CONFIGURACION}><SettingsPage /></ProtectedRoute>} />
-                                {/* Compatibilidad con enlaces antiguos, sin mantener un módulo duplicado. */}
-                                <Route path="/configuracion/seguridad" element={<Navigate to="/maestro/usuarios" replace />} />
-                                <Route path="/ayuda" element={<HelpPage />} />
-                                <Route path="/propuesta" element={<ProtectedRoute permiso={PERMISOS.PROPUESTA}><PropuestaPage /></ProtectedRoute>} />
-                            </Routes>
-                        </Suspense>
+                        <PestanasPanels renderRutas={(ubicacion) => <RutasApp ubicacion={ubicacion} />} />
                     </main>
                 </div>
             </div>
