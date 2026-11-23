@@ -116,12 +116,16 @@ export interface PermisoEnRol {
     codigo: string
     descripcion?: string
     estado?: boolean
+    web: boolean
+    movil: boolean
 }
 
 export interface AuthRole {
     id: number
     nombre: string
     pin: boolean // true si usa PIN, false si usa contraseña
+    readonly web?: boolean // Derivado de los permisos; solo lectura
+    readonly movil?: boolean // Derivado de los permisos; solo lectura
     estado: number | boolean // 1/true = activo, 0/false = inactivo
     permisos?: PermisoEnRol[]
 }
@@ -142,6 +146,8 @@ export interface Permiso {
     id?: number
     codigo: string
     nombre?: string
+    web: boolean
+    movil: boolean
 }
 
 export interface ListarPermisosResponse {
@@ -169,6 +175,8 @@ export interface PermisoDeModulo {
     orden: number
     /** Solo lo devuelve el modo `todos` del maestro; en Roles siempre es true */
     estado?: boolean
+    web: boolean
+    movil: boolean
 }
 
 export interface ModuloPermisos {
@@ -208,6 +216,8 @@ export interface CrearPermisoDto {
     etiqueta?: string | null
     orden?: number
     estado?: boolean
+    web: boolean
+    movil: boolean
 }
 
 export const seguridadApi = {
@@ -293,12 +303,16 @@ export const seguridadApi = {
                         codigo: fuente.codigo ?? fuente.Codigo ?? '',
                         descripcion: fuente.descripcion ?? fuente.Descripcion,
                         estado: fuente.estado ?? fuente.Estado,
+                        web: !!(fuente.web ?? fuente.Web),
+                        movil: !!(fuente.movil ?? fuente.Movil),
                     }
                 })
                 return {
                     id: role.id,
                     nombre: role.nombre,
                     pin: role.pin,
+                    web: !!(role.web ?? role.Web),
+                    movil: !!(role.movil ?? role.Movil),
                     estado: role.estado ?? role.Estado ?? 1,
                     permisos,
                 }
@@ -315,6 +329,8 @@ export const seguridadApi = {
                 id: p.id ?? p.ID,
                 codigo: p.codigo ?? p.Codigo ?? '',
                 nombre: p.nombre ?? p.Nombre,
+                web: !!(p.web ?? p.Web),
+                movil: !!(p.movil ?? p.Movil),
             }))
             return raw
         }
@@ -349,6 +365,8 @@ export const seguridadApi = {
                 tipo: (p.tipo || 'ACCION') as TipoPermiso,
                 orden: p.orden ?? 999,
                 estado: p.estado ?? true,
+                web: !!(p.web ?? p.Web),
+                movil: !!(p.movil ?? p.Movil),
             })),
         }))
         return { success: raw?.success, data }

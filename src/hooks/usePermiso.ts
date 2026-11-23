@@ -6,11 +6,11 @@ import { PERMISOS } from '@/config/permisos'
  *
  * Uso:
  *   const { puede } = usePermiso()
- *   puede('EDITAR_ANTICIPO')  → true / false
+ *   puede('EDITAR_EGRESO')   → true / false
  *
  * También exporta el objeto PERMISOS para no importarlo por separado:
  *   const { puede, P } = usePermiso()
- *   puede(P.EDITAR_ANTICIPO)
+ *   puede(P.EDITAR_EGRESO)
  */
 export const usePermiso = () => {
   const { hasPermiso, sesion, permisos } = useAuthStore()

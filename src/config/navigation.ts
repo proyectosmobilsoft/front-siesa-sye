@@ -261,12 +261,12 @@ export const navigation: NavItem[] = [
         subtitle: 'Cuentas contables y límite de ajuste al peso del recibo de caja',
         permiso: PERMISOS.PARAMETROS_RC,
       },
-      // Egreso/Anticipos vive aquí porque es salida de dinero: requiere VER_ANTICIPO
+      // Egreso vive aquí porque es salida de dinero: requiere VER_EGRESO
       {
         name: 'Egreso',
         href: '/egreso',
         icon: Wallet,
-        subtitle: 'Gestión de anticipos operativos',
+        subtitle: 'Gestión de egresos operativos',
         permiso: PERMISOS.EGRESO,
       },
     ],
@@ -394,6 +394,7 @@ export const navigation: NavItem[] = [
         href: '/ayuda',
         icon: CircleHelp,
         subtitle: 'Documentación y soporte',
+        permiso: PERMISOS.AYUDA,
       },
     ],
   },

@@ -223,6 +223,19 @@ export interface AnticiposOperativosResponse {
   data: AnticipoOperativo[]
 }
 
+export interface AnticipoOperativoCrearPayload {
+  area_departamento: string
+  motivo_general: string
+  periodo_inicial?: string
+  periodo_final?: string
+  prioridad: string
+  forma_entrega: 'Transferencia'
+  fecha_requerida_dinero?: string
+  observaciones: string | null
+  responsable_aprobacion?: 'Tesorería'
+  valor_solicitado: number
+}
+
 export interface AnticipoOperativoUpdatePayload {
   estado?: string
   observaciones_financieras?: string

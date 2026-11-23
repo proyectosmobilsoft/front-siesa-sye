@@ -76,7 +76,7 @@ export const MaestroModulosPage = () => {
     const [permisoModalOpen, setPermisoModalOpen] = useState(false)
     const [editandoPermiso, setEditandoPermiso] = useState<PermisoDeModulo | null>(null)
     const [formPermiso, setFormPermiso] = useState({
-        codigo: '', descripcion: '', etiqueta: '', tipo: 'ACCION' as TipoPermiso, orden: 100, estado: true,
+        codigo: '', descripcion: '', etiqueta: '', tipo: 'ACCION' as TipoPermiso, orden: 100, estado: true, web: true, movil: false,
         moduloId: null as number | null,
     })
 
@@ -175,7 +175,7 @@ export const MaestroModulosPage = () => {
     // --- Permiso ---
     const nuevoPermiso = () => {
         setEditandoPermiso(null)
-        setFormPermiso({ codigo: '', descripcion: '', etiqueta: '', tipo: 'ACCION', orden: 100, estado: true, moduloId: seleccionado })
+        setFormPermiso({ codigo: '', descripcion: '', etiqueta: '', tipo: 'ACCION', orden: 100, estado: true, web: true, movil: false, moduloId: seleccionado })
         setErrorForm(null)
         setPermisoModalOpen(true)
     }
@@ -189,6 +189,8 @@ export const MaestroModulosPage = () => {
             tipo: p.tipo,
             orden: p.orden,
             estado: p.estado !== false,
+            web: p.web,
+            movil: p.movil,
             moduloId: seleccionado,
         })
         setErrorForm(null)
@@ -196,7 +198,7 @@ export const MaestroModulosPage = () => {
     }
 
     const guardarPermiso = async () => {
-        if (!formPermiso.codigo.trim()) return
+        if (!formPermiso.codigo.trim() || (!formPermiso.web && !formPermiso.movil)) return
         setSaving(true)
         setErrorForm(null)
         try {
@@ -206,6 +208,8 @@ export const MaestroModulosPage = () => {
                 tipo: formPermiso.tipo,
                 orden: Number(formPermiso.orden) || 100,
                 estado: formPermiso.estado,
+                web: formPermiso.web,
+                movil: formPermiso.movil,
             }
             if (editandoPermiso) {
                 // El código sigue igual en BD; solo cambian etiqueta y módulo (null = Sin clasificar)
@@ -622,6 +626,21 @@ export const MaestroModulosPage = () => {
                     </div>
 
                     <div className="space-y-1.5">
+                        <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Plataformas</span>
+                        <div className="flex gap-4 text-sm">
+                            <label className="flex items-center gap-2">
+                                <input type="checkbox" checked={formPermiso.web} onChange={(e) => setFormPermiso({ ...formPermiso, web: e.target.checked })} />
+                                Web
+                            </label>
+                            <label className="flex items-center gap-2">
+                                <input type="checkbox" checked={formPermiso.movil} onChange={(e) => setFormPermiso({ ...formPermiso, movil: e.target.checked })} />
+                                Móvil
+                            </label>
+                        </div>
+                        {!formPermiso.web && !formPermiso.movil && <p className="text-xs text-destructive">Selecciona al menos una plataforma.</p>}
+                    </div>
+
+                    <div className="space-y-1.5">
                         <label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Estado</label>
                         <div className="flex gap-1.5">
                             <button
@@ -659,7 +678,7 @@ export const MaestroModulosPage = () => {
                         <Button variant="outline" onClick={() => setPermisoModalOpen(false)} disabled={saving}>
                             Cancelar
                         </Button>
-                        <Button onClick={guardarPermiso} disabled={saving || !formPermiso.codigo.trim()} className="gap-2">
+                        <Button onClick={guardarPermiso} disabled={saving || !formPermiso.codigo.trim() || (!formPermiso.web && !formPermiso.movil)} className="gap-2">
                             {saving && <Loader2 className="h-4 w-4 animate-spin" />}
                             {editandoPermiso ? 'Actualizar' : 'Crear Permiso'}
                         </Button>

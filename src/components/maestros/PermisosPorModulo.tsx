@@ -48,17 +48,21 @@ export const PermisosPorModulo = ({ modulos: modulosBd, loading, seleccion, onCh
     const seleccionSet = useMemo(() => new Set(seleccion), [seleccion])
     const [abiertos, setAbiertos] = useState<Set<string>>(new Set())
     const [search, setSearch] = useState('')
+    const [plataforma, setPlataforma] = useState<'todos' | 'web' | 'movil'>('todos')
 
-    useEffect(() => { setAbiertos(new Set()); setSearch('') }, [resetKey, modulosBd])
+    useEffect(() => { setAbiertos(new Set()); setSearch(''); setPlataforma('todos') }, [resetKey, modulosBd])
 
     const buscando = search.trim().length > 0
+    const modulosPlataforma = useMemo(() => modulos
+        .map((m) => ({ ...m, permisos: m.permisos.filter((p) => plataforma === 'todos' || p[plataforma]) }))
+        .filter((m) => m.permisos.length > 0), [modulos, plataforma])
     const visibles = useMemo(() => {
-        if (!buscando) return modulos
+        if (!buscando) return modulosPlataforma
         const q = sinAcentos(search)
-        return modulos.filter((m) =>
+        return modulosPlataforma.filter((m) =>
             sinAcentos(m.nombre).includes(q) || sinAcentos(m.grupoMenu).includes(q) ||
             m.permisos.some((p) => sinAcentos(p.codigo).includes(q) || sinAcentos(p.etiqueta).includes(q)))
-    }, [modulos, search, buscando])
+    }, [modulosPlataforma, search, buscando])
     const menus = useMemo(() => agruparPorMenu(visibles), [visibles])
 
     const alternarRama = (clave: string) =>
@@ -72,15 +76,30 @@ export const PermisosPorModulo = ({ modulos: modulosBd, loading, seleccion, onCh
     const alternarGrupo = (ms: ModuloMenu[]) => {
         const todos = ids(ms)
         const completo = todos.every((id) => seleccionSet.has(id))
-        if (completo) { const quitar = new Set(todos); onChange(seleccion.filter((id) => !quitar.has(id))) }
-        else onChange([...seleccion, ...todos.filter((id) => !seleccionSet.has(id))])
+        if (completo) {
+            const quitar = new Set(todos)
+            for (const m of ms) {
+                if (m.permisos.some((p) => p.tipo === 'VISTA')) {
+                    modulos.find((original) => original.codigo === m.codigo)?.permisos.forEach((p) => quitar.add(p.id))
+                }
+            }
+            onChange(seleccion.filter((id) => !quitar.has(id)))
+        } else {
+            const agregar = new Set(todos)
+            for (const m of ms) {
+                const vista = modulos.find((original) => original.codigo === m.codigo)?.permisos.find((p) => p.tipo === 'VISTA')
+                if (vista && m.permisos.some((p) => p.tipo !== 'VISTA')) agregar.add(vista.id)
+            }
+            onChange([...seleccion, ...[...agregar].filter((id) => !seleccionSet.has(id))])
+        }
     }
 
     const alternarPermiso = (m: ModuloMenu, p: PermisoDeModulo) => {
-        const vista = m.permisos.find((x) => x.tipo === 'VISTA')
+        const permisosDelModulo = modulos.find((original) => original.codigo === m.codigo)?.permisos ?? m.permisos
+        const vista = permisosDelModulo.find((x) => x.tipo === 'VISTA')
         if (p.tipo === 'VISTA') {
             // Sin acceso a la pantalla no hay acciones: se quitan todas las del submenú
-            if (seleccionSet.has(p.id)) { const quitar = new Set(m.permisos.map((x) => x.id)); onChange(seleccion.filter((id) => !quitar.has(id))) }
+            if (seleccionSet.has(p.id)) { const quitar = new Set(permisosDelModulo.map((x) => x.id)); onChange(seleccion.filter((id) => !quitar.has(id))) }
             else onChange([...seleccion, p.id])
             return
         }
@@ -100,6 +119,15 @@ export const PermisosPorModulo = ({ modulos: modulosBd, loading, seleccion, onCh
             <div className="relative">
                 <Search className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                 <Input aria-label="Buscar menú, submenú o permiso" placeholder="Buscar menú, submenú o permiso..." value={search} onChange={(e) => setSearch(e.target.value)} className="h-9 pl-8" disabled={loading} />
+            </div>
+
+            <div className="flex gap-1.5" role="group" aria-label="Filtrar permisos por plataforma">
+                {(['todos', 'web', 'movil'] as const).map((valor) => (
+                    <button key={valor} type="button" aria-pressed={plataforma === valor} onClick={() => setPlataforma(valor)}
+                        className={`rounded-full border px-3 py-1 text-xs font-medium ${plataforma === valor ? 'border-primary bg-primary/10 text-primary' : 'border-border text-muted-foreground hover:bg-muted/50'}`}>
+                        {valor === 'todos' ? 'Todos' : valor === 'web' ? 'Web' : 'Móvil'}
+                    </button>
+                ))}
             </div>
 
             {loading ? (
@@ -149,6 +177,8 @@ export const PermisosPorModulo = ({ modulos: modulosBd, loading, seleccion, onCh
                                                                 <label key={p.id} title={p.codigo} className="flex cursor-pointer items-center gap-2 rounded px-2 py-1 text-sm hover:bg-muted/50">
                                                                     <input type="checkbox" checked={seleccionSet.has(p.id)} onChange={() => alternarPermiso(m, p)} className="h-4 w-4 shrink-0 rounded border-input" />
                                                                     <span className="truncate">{p.tipo === 'VISTA' ? 'Entrar a la pantalla' : p.etiqueta}</span>
+                                                                    {p.web && <span className="shrink-0 rounded-full bg-blue-500/10 px-1.5 text-[10px] font-medium text-blue-700 dark:text-blue-300">Web</span>}
+                                                                    {p.movil && <span className="shrink-0 rounded-full bg-green-500/10 px-1.5 text-[10px] font-medium text-green-700 dark:text-green-300">Móvil</span>}
                                                                     {ETIQUETA_TIPO[p.tipo] && <span className="shrink-0 rounded-full bg-muted px-1.5 text-[10px] uppercase text-muted-foreground">{ETIQUETA_TIPO[p.tipo]}</span>}
                                                                 </label>
                                                             ))}
@@ -164,6 +194,7 @@ export const PermisosPorModulo = ({ modulos: modulosBd, loading, seleccion, onCh
                     })}
                 </div>
             )}
+            <p className="text-xs text-muted-foreground">El rol podrá entrar a la web si tiene algún permiso web, y a la app móvil si tiene algún permiso móvil.</p>
         </div>
     )
 }

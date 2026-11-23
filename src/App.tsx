@@ -80,7 +80,7 @@ function RutasApp({ ubicacion }: { ubicacion: Location }) {
             <Route path="/tickets/mis" element={<MisTicketsPage />} />
             <Route path="/tickets/aprobador" element={<ProtectedRoute permiso={PERMISOS.APROBADOR_TICKETS}><TableroTicketsPage /></ProtectedRoute>} />
 
-            {/* Egreso/Anticipos: protegido por VER_ANTICIPO */}
+            {/* Egreso/Anticipos: protegido por VER_EGRESO */}
             <Route path="/egreso" element={
                 <ProtectedRoute permiso={PERMISOS.EGRESO}><EgresoPage /></ProtectedRoute>
             } />
@@ -168,7 +168,7 @@ function RutasApp({ ubicacion }: { ubicacion: Location }) {
             <Route path="/configuracion" element={<ProtectedRoute permiso={PERMISOS.CONFIGURACION}><SettingsPage /></ProtectedRoute>} />
             {/* Compatibilidad con enlaces antiguos, sin mantener un módulo duplicado. */}
             <Route path="/configuracion/seguridad" element={<Navigate to="/maestro/usuarios" replace />} />
-            <Route path="/ayuda" element={<HelpPage />} />
+            <Route path="/ayuda" element={<ProtectedRoute permiso={PERMISOS.AYUDA}><HelpPage /></ProtectedRoute>} />
             <Route path="/propuesta" element={<ProtectedRoute permiso={PERMISOS.PROPUESTA}><PropuestaPage /></ProtectedRoute>} />
         </Routes>
     )

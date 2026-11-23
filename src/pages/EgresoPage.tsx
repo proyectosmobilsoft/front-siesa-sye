@@ -1,5 +1,5 @@
 import { motion, AnimatePresence } from 'framer-motion'
-import { useState, Fragment } from 'react'
+import { useState, useMemo, Fragment } from 'react'
 import { createPortal } from 'react-dom'
 import {
     Search,
@@ -38,6 +38,10 @@ import { useQueryClient } from '@tanstack/react-query'
 import { usePermiso } from '@/hooks/usePermiso'
 import { Cargando } from '@/components/ui/cargando'
 import { BotonExcel } from '@/components/ui/boton-excel'
+import { BotonCrear } from '@/components/ui/boton-crear'
+import { CrearEgresoModal } from '@/components/egreso/CrearEgresoModal'
+import { DesembolsoModal } from '@/components/egreso/DesembolsoModal'
+import { aviso } from '@/store/avisosStore'
 
 // ─── Utilidades de UI ────────────────────────────────────────────────────────
 
@@ -55,18 +59,37 @@ const getPrioridadBadge = (prioridad: string) => {
     }
 }
 
+const normalizarEstado = (estado: string) => estado?.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase() ?? ''
+
+const filtrosEstado = [
+    { estado: 'TODOS', etiqueta: 'Todos' },
+    { estado: 'PENDIENTE', etiqueta: 'Por autorizar' },
+    { estado: 'AUTORIZADA', etiqueta: 'Autorizadas' },
+    { estado: 'ESPERA EFECTIVO', etiqueta: 'En espera de efectivo' },
+    { estado: 'DESEMBOLSADO', etiqueta: 'Desembolsados' },
+    { estado: 'RECHAZADA', etiqueta: 'Rechazados' },
+] as const
+
+type FiltroEstado = typeof filtrosEstado[number]['estado']
+
 const getEstadoBadge = (estado: string) => {
-    switch (estado?.toLowerCase()) {
-        case 'aprobado':
-        case 'completado':
-            return 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
-        case 'pendiente':
+    switch (normalizarEstado(estado)) {
+        case 'AUTORIZADA':
             return 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
-        case 'rechazado':
-        case 'cancelado':
+        case 'ESPERA EFECTIVO':
+            return 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400'
+        case 'DESEMBOLSADO':
+            return 'bg-teal-100 text-teal-700 dark:bg-teal-900/30 dark:text-teal-400'
+        case 'APROBADO':
+        case 'COMPLETADO':
+            return 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
+        case 'PENDIENTE':
+            return 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
+        case 'RECHAZADA':
+        case 'RECHAZADO':
+        case 'CANCELADO':
             return 'bg-destructive/10 text-destructive'
-        case 'en revisión':
-        case 'en revision':
+        case 'EN REVISION':
             return 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400'
         default:
             return 'bg-muted text-muted-foreground'
@@ -412,7 +435,7 @@ const DistribucionAccordion = ({ anticipo, totalColumnas }: DistribucionAccordio
                             </div>
                         ) : !data || data.length === 0 ? (
                             <p className="text-sm text-muted-foreground py-2 italic">
-                                No se encontró distribución para este anticipo.
+                                No se encontró distribución para este egreso.
                             </p>
                         ) : (
                             <div className="rounded-lg border bg-card overflow-hidden">
@@ -510,7 +533,7 @@ const ViewModal = ({ anticipo, onClose }: ViewModalProps) => {
             <div className="space-y-6">
                 <div className="flex items-center justify-between border-b pb-4">
                     <div>
-                        <h2 className="text-lg font-bold">Anticipo #{anticipo.numero_anticipo}</h2>
+                        <h2 className="text-lg font-bold">Egreso #{anticipo.numero_anticipo}</h2>
                         <p className="text-sm text-muted-foreground">Detalle completo de la solicitud</p>
                     </div>
                     <span className={`px-3 py-1 rounded-full text-xs font-semibold ${getEstadoBadge(anticipo.estado)}`}>
@@ -519,7 +542,7 @@ const ViewModal = ({ anticipo, onClose }: ViewModalProps) => {
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
-                    <Campo label="Número de anticipo" value={anticipo.numero_anticipo} />
+                    <Campo label="Número de egreso" value={anticipo.numero_anticipo} />
                     <Campo label="Solicitante" value={anticipo.usuario_nombre} />
                     <Campo label="Área / Departamento" value={anticipo.area_departamento} />
                     <Campo label="Responsable aprobación" value={anticipo.responsable_aprobacion} />
@@ -609,7 +632,7 @@ const EditModal = ({ anticipo, onClose, onSaved }: EditModalProps) => {
             <div className="space-y-5">
                 <div className="border-b pb-4">
                     <h2 className="text-lg font-bold">Editar solicitud</h2>
-                    <p className="text-sm text-muted-foreground">Anticipo #{anticipo.numero_anticipo} — {anticipo.usuario_nombre}</p>
+                    <p className="text-sm text-muted-foreground">Egreso #{anticipo.numero_anticipo} — {anticipo.usuario_nombre}</p>
                 </div>
 
                 <div className="space-y-1.5">
@@ -687,6 +710,50 @@ export const EgresoPage = () => {
     const [expandedRowId, setExpandedRowId] = useState<number | null>(null)
     const [viewingAnticipo, setViewingAnticipo] = useState<AnticipoOperativo | null>(null)
     const [editingAnticipo, setEditingAnticipo] = useState<AnticipoOperativo | null>(null)
+    const [crearAbierto, setCrearAbierto] = useState(false)
+    const [filtroEstado, setFiltroEstado] = useState<FiltroEstado>(() =>
+        puede(P.AUTORIZAR_EGRESO) ? 'PENDIENTE' : puede(P.DESEMBOLSAR_EGRESO) ? 'AUTORIZADA' : 'TODOS'
+    )
+    const [autorizando, setAutorizando] = useState<AnticipoOperativo | null>(null)
+    const [rechazando, setRechazando] = useState<AnticipoOperativo | null>(null)
+    const [desembolsando, setDesembolsando] = useState<AnticipoOperativo | null>(null)
+    const [motivoRechazo, setMotivoRechazo] = useState('')
+    const [errorEstado, setErrorEstado] = useState<string | null>(null)
+    const [guardandoEstado, setGuardandoEstado] = useState(false)
+
+    const solicitudesFiltradas = useMemo(() =>
+        (solicitudes || []).filter((item) =>
+            filtroEstado === 'TODOS' || normalizarEstado(item.estado) === filtroEstado
+        ),
+        [solicitudes, filtroEstado]
+    )
+
+    const cerrarEstado = () => {
+        if (guardandoEstado) return
+        setAutorizando(null)
+        setRechazando(null)
+        setMotivoRechazo('')
+        setErrorEstado(null)
+    }
+
+    const guardarEstado = async (anticipo: AnticipoOperativo, estado: 'AUTORIZADA' | 'RECHAZADA', observacion?: string) => {
+        if (guardandoEstado || (estado === 'RECHAZADA' && !observacion?.trim())) return
+        setGuardandoEstado(true)
+        setErrorEstado(null)
+        try {
+            await anticiposOperativosApi.cambiarEstado(anticipo.id, { estado, ...(observacion ? { observacion: observacion.trim() } : {}) })
+            aviso.exito(estado === 'AUTORIZADA' ? `Egreso ${anticipo.numero_anticipo} autorizado` : `Egreso ${anticipo.numero_anticipo} rechazado`)
+            setAutorizando(null)
+            setRechazando(null)
+            setMotivoRechazo('')
+            void queryClient.invalidateQueries({ queryKey: ['anticipos-operativos'] })
+        } catch (err: unknown) {
+            const respuesta = (err as { response?: { data?: { message?: string } } }).response
+            setErrorEstado(respuesta?.data?.message || 'No se pudo cambiar el estado del egreso')
+        } finally {
+            setGuardandoEstado(false)
+        }
+    }
 
     const handleRefresh = () => {
         queryClient.invalidateQueries({ queryKey: ['anticipos-operativos', 'solicitudes'] })
@@ -723,7 +790,7 @@ export const EgresoPage = () => {
             accessorKey: 'numero_anticipo',
             header: ({ column }) => (
                 <Button variant="ghost" onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')} className="h-8 px-2">
-                    N° Anticipo <ArrowUpDown className="ml-2 h-4 w-4" />
+                    N° Egreso <ArrowUpDown className="ml-2 h-4 w-4" />
                 </Button>
             ),
             cell: ({ row }) => (
@@ -816,7 +883,7 @@ export const EgresoPage = () => {
             id: 'acciones',
             header: () => <div className="text-right pr-2">Acciones</div>,
             cell: ({ row }) => (
-                <div className="flex justify-end gap-1">
+                <div className="flex justify-end gap-1" onClick={(event) => event.stopPropagation()}>
                     <Button
                         variant="ghost"
                         size="sm"
@@ -826,7 +893,16 @@ export const EgresoPage = () => {
                     >
                         <Eye className="h-4 w-4" />
                     </Button>
-                    {puede(P.EDITAR_ANTICIPO) && (
+                    {normalizarEstado(row.original.estado) === 'PENDIENTE' && puede(P.AUTORIZAR_EGRESO) && (
+                        <>
+                            <Button variant="outline" size="sm" onClick={() => { setErrorEstado(null); setAutorizando(row.original) }}>Autorizar</Button>
+                            <Button variant="outline" size="sm" className="text-destructive hover:text-destructive" onClick={() => { setErrorEstado(null); setMotivoRechazo(''); setRechazando(row.original) }}>Rechazar</Button>
+                        </>
+                    )}
+                    {['AUTORIZADA', 'ESPERA EFECTIVO'].includes(normalizarEstado(row.original.estado)) && puede(P.DESEMBOLSAR_EGRESO) && (
+                        <Button variant="outline" size="sm" onClick={() => setDesembolsando(row.original)}>Desembolsar</Button>
+                    )}
+                    {puede(P.EDITAR_EGRESO) && (
                         <Button
                             variant="ghost"
                             size="sm"
@@ -843,7 +919,7 @@ export const EgresoPage = () => {
     ]
 
     const table = useReactTable({
-        data: solicitudes || [],
+        data: solicitudesFiltradas,
         columns,
         onSortingChange: setSorting,
         onGlobalFilterChange: setGlobalFilter,
@@ -888,7 +964,7 @@ export const EgresoPage = () => {
                             <Input
                                 placeholder="Buscar por número, solicitante, área..."
                                 value={globalFilter ?? ''}
-                                onChange={(e) => setGlobalFilter(e.target.value)}
+                                onChange={(e) => { setGlobalFilter(e.target.value); table.setPageIndex(0) }}
                                 className="pl-9"
                                 autoComplete="off"
                             />
@@ -900,10 +976,24 @@ export const EgresoPage = () => {
                                 </p>
                             )}
                             <BotonExcel nombre="egresos" />
+                            {puede(P.CREAR_EGRESO) && <BotonCrear titulo="Crear egreso" onClick={() => setCrearAbierto(true)} />}
                             <Button variant="outline" size="icon" onClick={handleRefresh} disabled={isLoading} title="Actualizar">
                                 <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
                             </Button>
                         </div>
+                    </div>
+
+                    <div role="group" aria-label="Filtrar egresos por estado" className="flex shrink-0 flex-wrap gap-2">
+                        {filtrosEstado.map(({ estado, etiqueta }) => {
+                            const cantidad = estado === 'TODOS' ? (solicitudes?.length ?? 0) : (solicitudes || []).filter((item) => normalizarEstado(item.estado) === estado).length
+                            return (
+                                <button key={estado} type="button" aria-pressed={filtroEstado === estado}
+                                    onClick={() => { setFiltroEstado(estado); table.setPageIndex(0) }}
+                                    className={`rounded-full px-3 py-1.5 text-xs font-semibold transition-colors ${filtroEstado === estado ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground hover:bg-muted/70 hover:text-foreground'}`}>
+                                    {etiqueta} <span className="ml-1 tabular-nums">{cantidad}</span>
+                                </button>
+                            )
+                        })}
                     </div>
 
                     <div className="min-h-0 flex-1 overflow-auto rounded-md border">
@@ -983,6 +1073,17 @@ export const EgresoPage = () => {
                 </motion.div>
             )}
 
+            {/* Modal de creación */}
+            {crearAbierto && (
+                <CrearEgresoModal
+                    onClose={() => setCrearAbierto(false)}
+                    onCreated={() => {
+                        setCrearAbierto(false)
+                        void queryClient.invalidateQueries({ queryKey: ['anticipos-operativos'] })
+                    }}
+                />
+            )}
+
             {/* Modal de vista */}
             {viewingAnticipo && (
                 <ViewModal anticipo={viewingAnticipo} onClose={() => setViewingAnticipo(null)} />
@@ -995,6 +1096,46 @@ export const EgresoPage = () => {
                     onClose={() => setEditingAnticipo(null)}
                     onSaved={() => { setEditingAnticipo(null); handleRefresh() }}
                 />
+            )}
+
+            {autorizando && (
+                <Modal isOpen onClose={cerrarEstado} title="Autorizar egreso" className="max-w-md">
+                    <div className="space-y-4">
+                        <p>¿Autorizar el egreso {autorizando.numero_anticipo} por {formatters.currency(autorizando.valor_solicitado)}? Pasará a tesorería.</p>
+                        {errorEstado && <p role="alert" className="text-sm text-destructive">{errorEstado}</p>}
+                        <div className="flex justify-end gap-2">
+                            <Button variant="outline" onClick={cerrarEstado} disabled={guardandoEstado}>Cancelar</Button>
+                            <Button onClick={() => void guardarEstado(autorizando, 'AUTORIZADA')} disabled={guardandoEstado}>
+                                {guardandoEstado && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}Autorizar
+                            </Button>
+                        </div>
+                    </div>
+                </Modal>
+            )}
+
+            {rechazando && (
+                <Modal isOpen onClose={cerrarEstado} title="Rechazar egreso" className="max-w-md">
+                    <form onSubmit={(event) => { event.preventDefault(); void guardarEstado(rechazando, 'RECHAZADA', motivoRechazo) }} className="space-y-4">
+                        <p className="text-sm">Egreso {rechazando.numero_anticipo} · {formatters.currency(rechazando.valor_solicitado)}</p>
+                        <div className="space-y-1.5">
+                            <label htmlFor="motivo-rechazo" className="text-sm font-medium">Motivo del rechazo</label>
+                            <textarea id="motivo-rechazo" required value={motivoRechazo} onChange={(event) => setMotivoRechazo(event.target.value)} rows={3}
+                                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" />
+                        </div>
+                        {errorEstado && <p role="alert" className="text-sm text-destructive">{errorEstado}</p>}
+                        <div className="flex justify-end gap-2">
+                            <Button type="button" variant="outline" onClick={cerrarEstado} disabled={guardandoEstado}>Cancelar</Button>
+                            <Button type="submit" variant="destructive" disabled={guardandoEstado || !motivoRechazo.trim()}>
+                                {guardandoEstado && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}Rechazar
+                            </Button>
+                        </div>
+                    </form>
+                </Modal>
+            )}
+
+            {desembolsando && (
+                <DesembolsoModal anticipo={desembolsando} onClose={() => setDesembolsando(null)}
+                    onSaved={() => { setDesembolsando(null); void queryClient.invalidateQueries({ queryKey: ['anticipos-operativos'] }) }} />
             )}
         </motion.div>
     )

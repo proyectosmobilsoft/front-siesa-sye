@@ -244,13 +244,13 @@ export const MaestroRolesPage = () => {
                 const role = row.original
                 const nombres = modulosDelRol(role)
                 const total = role.permisos?.length ?? 0
-                if (nombres.length === 0) {
-                    return <span className="text-sm text-muted-foreground">Sin permisos</span>
-                }
                 const visibles = nombres.slice(0, 2)
                 const resto = nombres.length - visibles.length
                 return (
                     <div className="flex flex-wrap items-center gap-1" title={`${nombres.join(', ')} — ${total} permisos`}>
+                        {role.web && <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${badgeClass('blue')}`}>Web</span>}
+                        {role.movil && <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${badgeClass('green')}`}>Móvil</span>}
+                        {nombres.length === 0 && <span className="text-sm text-muted-foreground">Sin permisos</span>}
                         {visibles.map((n) => (
                             <span key={n} className="rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
                                 {n}
@@ -318,7 +318,7 @@ export const MaestroRolesPage = () => {
         >
             <div className="flex shrink-0 items-center justify-between border-b pb-4">
                 <div className="flex items-center gap-3">
-                    <Button variant="outline" size="icon" onClick={() => navigate('/configuracion')}>
+                    <Button variant="outline" size="icon" onClick={() => navigate(-1)} title="Volver">
                         <ArrowLeft className="h-4 w-4" />
                     </Button>
                     <span className="inline-flex shrink-0 items-center rounded-full bg-muted px-3 py-1 text-xs font-medium text-muted-foreground">

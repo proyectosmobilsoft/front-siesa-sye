@@ -14,7 +14,7 @@
 export const PERMISOS = {
   // ─── Vistas / acceso a páginas ───
   DASHBOARD:              'VER_DASHBOARD',
-  EGRESO:                 'VER_ANTICIPO',                       // Página de anticipos / egresos
+  EGRESO:                 'VER_EGRESO',                         // Pantalla Egreso (web); la app móvil usa VER_ANTICIPO
   GESTION_VENTAS:         'VER_RECIBO',                         // Recibos de cartera
   VIATICOS:               'VER_VIATICO',
   LEGALIZACION_ANTICIPO:  'VER_LEGALIZACION_ANTICIPO',
@@ -46,12 +46,15 @@ export const PERMISOS = {
   PARAMETROS_RC:          'PARAMETRIZAR_RC',                    // Parámetros contables del Recibo de Caja
   TABLERO_COBROS:         'VER_TABLERO_COBROS',
   CONFIGURACION:          'VER_CONFIGURACION',
+  AYUDA:                  'VER_AYUDA',
   INTERFAZ_CONTABLE:      'VER_INTERFAZ_CONTABLE',
   PROPUESTA:              'VER_PROPUESTA',                      // Propuesta comercial (no la ven cajeras ni operativos)
 
   // ─── Acciones sobre anticipos ───
-  CREAR_ANTICIPO:         'CREAR_ANTICIPO',
-  EDITAR_ANTICIPO:        'EDITAR_ANTICIPO',
+  CREAR_EGRESO:           'CREAR_EGRESO',
+  EDITAR_EGRESO:          'EDITAR_EGRESO',
+  AUTORIZAR_EGRESO:       'AUTORIZAR_EGRESO',
+  DESEMBOLSAR_EGRESO:     'DESEMBOLSAR_EGRESO',
   ELIMINAR_ANTICIPO:      'ELIMINAR_ANTICIPO',
   APROBAR_ANTICIPO:       'APROBAR_ANTICIPO',
   DISTRIBUIR_ANTICIPO:    'DISTRIBUIR_ANTICIPO',
