@@ -47,14 +47,8 @@ export const FacturasPendientesTab = ({ conductores, todosLosConductores, onAsig
     const [seleccionadas, setSeleccionadas] = useState<Set<number>>(new Set())
     const [facturaDetalle, setFacturaDetalle] = useState<FacturaPendiente | null>(null)
 
-    // Con facturas elegidas se ofrecen los conductores del C.O. de esas facturas (aunque el encabezado esté en otro C.O.);
-    // sin selección se mantiene el filtro del C.O. del encabezado.
-    const cosSeleccionados = Array.from(new Set(
-        facturas.filter((f) => seleccionadas.has(f.rowid_sa)).map((f) => f.idco?.trim()).filter((co): co is string => !!co)
-    ))
-    const conductoresOpciones = cosSeleccionados.length && todosLosConductores
-        ? todosLosConductores.filter((c) => !c.centros_operacion?.length || cosSeleccionados.every((co) => c.centros_operacion?.some((x) => x.trim() === co)))
-        : conductores
+    // Se puede asignar una factura de cualquier C.O. a cualquier conductor; el RC queda en el C.O. del conductor.
+    const conductoresOpciones = todosLosConductores ?? conductores
 
     const [conductorId, setConductorId] = useState('')
     useEffect(() => {
