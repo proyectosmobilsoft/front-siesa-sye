@@ -1,5 +1,5 @@
 import { apiClient } from './client'
-import { AnticipoOperativo, AnticiposOperativosResponse, AnticipoOperativoCrearPayload, AnticipoOperativoUpdatePayload, CajaDesembolso, DesembolsoResult, DistribucionItem, DistribucionResponse, DocumentoEgreso, DispersionCatalogos, DispersionItemPayload, DispersionRealizada, EgresoDispersable, Soporte, SoportesResponse } from './types'
+import { AnticipoOperativo, AnticiposOperativosResponse, AnticipoOperativoCrearPayload, AnticipoOperativoUpdatePayload, CajaDesembolso, DesembolsoResult, DistribucionItem, DistribucionResponse, DocumentoEgreso, Legalizacion, LegalizacionGasto, LegalizacionResultado, DispersionCatalogos, DispersionItemPayload, DispersionRealizada, EgresoDispersable, Soporte, SoportesResponse } from './types'
 import { withRetry } from '@/utils/retry'
 
 export const anticiposOperativosApi = {
@@ -28,6 +28,25 @@ export const anticiposOperativosApi = {
   dispersar: async (id: number, payload: { tipo: 'TRANSPORTE'; fecha: string; hora: string; items: DispersionItemPayload[] }) => {
     const response = await apiClient.post<{ success: boolean; data: { total: number; disponible_restante: number } }>(
       `/anticipos-operativos/solicitudes/${id}/dispersar`, payload, { silenciarAviso: true }
+    )
+    return response.data.data
+  },
+
+  legalizaciones: async (estados?: string[]): Promise<Legalizacion[]> => {
+    const response = await apiClient.get<{ success: boolean; data: Legalizacion[] }>(
+      '/anticipos-operativos/legalizaciones', { params: estados?.length ? { estado: estados.join(',') } : undefined, silenciarAviso: true }
+    )
+    return response.data.data
+  },
+
+  legalizacionGastos: async (id: number): Promise<LegalizacionGasto[]> => {
+    const response = await apiClient.get<{ success: boolean; data: LegalizacionGasto[] }>(`/anticipos-operativos/legalizaciones/${id}/gastos`, { silenciarAviso: true })
+    return response.data.data
+  },
+
+  legalizacionAccion: async (id: number, accion: 'revisar' | 'aprobar' | 'rechazar' | 'enviar-contabilidad', body?: { motivo?: string }): Promise<LegalizacionResultado> => {
+    const response = await apiClient.post<{ success: boolean; data: LegalizacionResultado }>(
+      `/anticipos-operativos/legalizaciones/${id}/${accion}`, body ?? {}, { silenciarAviso: true, timeout: 120000 }
     )
     return response.data.data
   },

@@ -14,6 +14,7 @@ import {
     Receipt,
     FileText,
     Send,
+    ClipboardCheck,
     Hash,
     X,
 } from 'lucide-react'
@@ -49,6 +50,7 @@ import { CrearEgresoModal } from '@/components/egreso/CrearEgresoModal'
 import { DesembolsoModal } from '@/components/egreso/DesembolsoModal'
 import { aviso } from '@/store/avisosStore'
 import { DispersionTab } from '@/components/egreso/DispersionTab'
+import { LegalizacionesTab } from '@/components/egreso/LegalizacionesTab'
 
 // ─── Utilidades de UI ────────────────────────────────────────────────────────
 
@@ -735,7 +737,7 @@ export const EgresoPage = () => {
     const [filtroEstado, setFiltroEstado] = useState<FiltroEstado>(() =>
         puede(P.AUTORIZAR_EGRESO) ? 'PENDIENTE' : puede(P.DESEMBOLSAR_EGRESO) ? 'AUTORIZADA' : 'TODOS'
     )
-    const [vista, setVista] = useState<'egresos' | 'documentos' | 'dispersion'>('egresos')
+    const [vista, setVista] = useState<'egresos' | 'documentos' | 'dispersion' | 'legalizaciones'>('egresos')
     const [docBusqueda, setDocBusqueda] = useState('')
     const [docEstado, setDocEstado] = useState('')
     const [docCaja, setDocCaja] = useState('')
@@ -1024,6 +1026,7 @@ export const EgresoPage = () => {
                             ['egresos', 'Egresos', Receipt],
                             ['documentos', `Documentos (${totalDocumentosPce})`, FileText],
                             ...(puede(P.DISPERSAR_EGRESO) ? ([['dispersion', 'Dispersión', Send]] as const) : []),
+                            ...(puede(P.REVISAR_LEGALIZACION) || puede(P.APROBAR_LEGALIZACION) || puede(P.ENVIAR_CONTABILIDAD) ? ([['legalizaciones', 'Legalizaciones', ClipboardCheck]] as const) : []),
                         ] as const).map(([id, etiqueta, Icono]) => (
                             <button
                                 key={id}
@@ -1071,6 +1074,8 @@ export const EgresoPage = () => {
                         />
                     ) : vista === 'dispersion' ? (
                         <DispersionTab />
+                    ) : vista === 'legalizaciones' ? (
+                        <LegalizacionesTab />
                     ) : vista === 'documentos' ? (
                         <div className="space-y-4">
                             {/* Barra de filtros idéntica a Recibos registrados */}

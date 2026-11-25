@@ -594,3 +594,39 @@ export interface DispersionRealizada {
   toneladas: number | null
   created_at: string
 }
+
+export type EstadoLegalizacion = 'POR APROBAR' | 'REVISADO' | 'APROBADO' | 'ENVIADO_CONTABILIDAD' | 'RECHAZADO'
+
+export interface Legalizacion {
+  id: number
+  anticipo_id: number
+  usuario_id: number
+  valor: number
+  estado: string
+  placa: string | null
+  maquinaria_cod: number | null
+  created_at: string
+  conductor: string
+  numero_anticipo: string | null
+  cuenta_contable: string | null
+  n_gastos: number
+  total_gastos: number
+  plc_legalizacion: string | null
+  plc_traslado: string | null
+}
+
+export interface LegalizacionGasto {
+  id: number
+  concepto: string | null
+  valor: number
+  ruta_foto: string | null
+  placa: string | null
+  created_at: string
+}
+
+export interface LegalizacionResultado {
+  id: number
+  estado: string
+  envio?: { docto: string; total: number; gastos: number }
+  envio_error?: string
+}
