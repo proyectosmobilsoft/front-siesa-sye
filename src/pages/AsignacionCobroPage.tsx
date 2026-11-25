@@ -16,7 +16,7 @@ import { useAuthStore, coPuntual } from '@/store/authStore'
 import { usePermiso } from '@/hooks/usePermiso'
 import { FacturaPendiente, formatearFecha, formatearPeso, formatearFacturaPendiente, normalizarFactura } from '@/components/asignacionCobro/facturaPendiente'
 import { CondicionPagoChip } from '@/components/asignacionCobro/CondicionPagoChip'
-import { FacturasPendientesTab } from '@/components/asignacionCobro/FacturasPendientesTab'
+import { FacturasPendientesTab, type FacturaAsignadaDestino } from '@/components/asignacionCobro/FacturasPendientesTab'
 import { EntregadasSinRcTab } from '@/components/asignacionCobro/EntregadasSinRcTab'
 import { DetalleFacturasAsignadasModal } from '@/components/asignacionCobro/DetalleFacturasAsignadasModal'
 import { BotonExcel } from '@/components/ui/boton-excel'
@@ -36,7 +36,13 @@ export const AsignacionCobroPage = () => {
     // Tablero: conductores programados (asignados) y su avance
     const [tabActiva, setTabActiva] = useState<'cliente' | 'pendientes' | 'entregadas'>('cliente')
     const [tablero, setTablero] = useState<TableroConductorRow[]>([])
-    const [detalleConductor, setDetalleConductor] = useState<{ id: number; nombre: string } | null>(null)
+    const [detalleConductor, setDetalleConductor] = useState<{
+        id: number
+        nombre: string
+        desde?: string
+        hasta?: string
+        busquedaInicial?: string
+    } | null>(null)
     const [reconciliando, setReconciliando] = useState(false)
     const [mensajeReconciliar, setMensajeReconciliar] = useState<string | null>(null)
 
@@ -260,6 +266,23 @@ export const AsignacionCobroPage = () => {
                 No tiene permiso para asignar cobros.
             </div>
         )
+    }
+
+    const abrirFacturaYaAsignada = (destino: FacturaAsignadaDestino) => {
+        const fechaDia = destino.asignadaAt
+            ? new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Bogota' }).format(
+                  new Date(destino.asignadaAt.endsWith('Z') ? destino.asignadaAt : `${destino.asignadaAt}Z`)
+              )
+            : hoyISO()
+        setTableroDesde(fechaDia)
+        setTableroHasta(fechaDia)
+        setDetalleConductor({
+            id: destino.conductorId,
+            nombre: destino.conductorNombre,
+            desde: fechaDia,
+            hasta: fechaDia,
+            busquedaInicial: destino.facturaTexto,
+        })
     }
 
     const totalTableroPendientes = tableroVisible.reduce((a, r) => a + r.pendientes, 0)
@@ -497,7 +520,12 @@ export const AsignacionCobroPage = () => {
                 </div>
                 )}
                 {tabActiva === 'pendientes' && (
-                    <FacturasPendientesTab conductores={conductoresVisibles} todosLosConductores={conductores} onAsignado={cargarTablero} />
+                    <FacturasPendientesTab
+                        conductores={conductoresVisibles}
+                        todosLosConductores={conductores}
+                        onAsignado={cargarTablero}
+                        onVerAsignada={abrirFacturaYaAsignada}
+                    />
                 )}
                 {puedeVerTablero && tabActiva === 'entregadas' && (
                     <EntregadasSinRcTab />
@@ -655,8 +683,9 @@ export const AsignacionCobroPage = () => {
                 <DetalleFacturasAsignadasModal
                     conductorId={detalleConductor.id}
                     conductorNombre={detalleConductor.nombre}
-                    desde={tableroDesde || undefined}
-                    hasta={tableroHasta || undefined}
+                    desde={detalleConductor.desde ?? (tableroDesde || undefined)}
+                    hasta={detalleConductor.hasta ?? (tableroHasta || undefined)}
+                    busquedaInicial={detalleConductor.busquedaInicial}
                     onClose={() => setDetalleConductor(null)}
                 />
             )}

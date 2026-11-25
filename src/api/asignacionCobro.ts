@@ -160,8 +160,8 @@ export const asignacionCobroApi = {
     },
 
     /** Todas las facturas PENDIENTE de cualquier cliente/conductor, para no ofrecerlas de nuevo al armar un lote. */
-    facturasYaAsignadas: async (): Promise<Array<{ rowid_factura: number; conductor_id: number; conductor_nombre?: string }>> => {
-        const response = await apiClient.get<{ success: boolean; data: Array<{ rowid_factura: number; conductor_id: number; conductor_nombre?: string }> }>(
+    facturasYaAsignadas: async (): Promise<Array<{ rowid_factura: number; conductor_id: number; conductor_nombre?: string; asignada_at?: string }>> => {
+        const response = await apiClient.get<{ success: boolean; data: Array<{ rowid_factura: number; conductor_id: number; conductor_nombre?: string; asignada_at?: string }> }>(
             '/asignacion-cobro/facturas-asignadas'
         )
         return response.data.data

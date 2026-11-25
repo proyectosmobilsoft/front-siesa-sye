@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { ChevronDown, ChevronRight, Eye, Loader2, RefreshCw, Search, Send } from 'lucide-react'
+import { ArrowUpRight, ChevronDown, ChevronRight, Eye, Loader2, RefreshCw, Search, Send, UserCheck } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Select } from '@/components/ui/select'
@@ -8,6 +8,7 @@ import { apiClient } from '@/api/client'
 import { UsuarioMaster } from '@/api/seguridad'
 import { asignacionCobroApi } from '@/api/asignacionCobro'
 import { useAuthStore, coPuntual } from '@/store/authStore'
+import { formatters } from '@/utils/formatters'
 import {
     FacturaPendiente,
     coincideBusquedaFactura,
@@ -19,11 +20,26 @@ import {
 import { Cargando } from '@/components/ui/cargando'
 import { CondicionPagoChip } from './CondicionPagoChip'
 
+export interface FacturaAsignadaDestino {
+    conductorId: number
+    conductorNombre: string
+    asignadaAt?: string
+    facturaTexto: string
+}
+
 interface Props {
     conductores: UsuarioMaster[]
     /** Todos los conductores, sin filtrar por el C.O. del encabezado: se usan para ofrecer los del C.O. de las facturas elegidas */
     todosLosConductores?: UsuarioMaster[]
     onAsignado: () => void
+    onVerAsignada?: (destino: FacturaAsignadaDestino) => void
+}
+
+interface FacturaYaAsignadaMatch {
+    factura: FacturaPendiente
+    conductor_id: number
+    conductor_nombre: string
+    asignada_at?: string
 }
 
 interface GrupoCliente {
@@ -37,10 +53,11 @@ interface GrupoCliente {
 const moneda = (n: number) => n.toLocaleString('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 })
 const tiempo = (f: string | null) => (f ? Date.parse(f.replace(' ', 'T')) || 0 : 0)
 
-export const FacturasPendientesTab = ({ conductores, todosLosConductores, onAsignado }: Props) => {
+export const FacturasPendientesTab = ({ conductores, todosLosConductores, onAsignado, onVerAsignada }: Props) => {
     const centroOperacionActivo = useAuthStore((s) => coPuntual(s.centroOperacionActivo))
 
     const [facturas, setFacturas] = useState<FacturaPendiente[]>([])
+    const [facturasAsignadas, setFacturasAsignadas] = useState<FacturaYaAsignadaMatch[]>([])
     const [cargando, setCargando] = useState(false)
     const [busqueda, setBusqueda] = useState('')
     const [abiertos, setAbiertos] = useState<Set<number>>(new Set())
@@ -67,12 +84,27 @@ export const FacturasPendientesTab = ({ conductores, todosLosConductores, onAsig
                 apiClient.get<{ success: boolean; data: Record<string, unknown>[] }>('/factura/facturas', { params: { todas: 1 } }),
                 asignacionCobroApi.facturasYaAsignadas().catch(() => []),
             ])
-            const asignados = new Set(yaAsignadas.map((f) => f.rowid_factura))
-            setFacturas(
-                (res.data.data || [])
-                    .map(normalizarFactura)
-                    .filter((f): f is FacturaPendiente => f !== null && !asignados.has(f.rowid_sa))
-            )
+            const porRowid = new Map(yaAsignadas.map((f) => [f.rowid_factura, f]))
+            const todasNormalizadas = (res.data.data || [])
+                .map(normalizarFactura)
+                .filter((f): f is FacturaPendiente => f !== null)
+            const disponibles: FacturaPendiente[] = []
+            const asignadasLista: FacturaYaAsignadaMatch[] = []
+            for (const f of todasNormalizadas) {
+                const asig = porRowid.get(f.rowid_sa)
+                if (asig) {
+                    asignadasLista.push({
+                        factura: f,
+                        conductor_id: asig.conductor_id,
+                        conductor_nombre: asig.conductor_nombre || `Conductor #${asig.conductor_id}`,
+                        asignada_at: asig.asignada_at,
+                    })
+                } else {
+                    disponibles.push(f)
+                }
+            }
+            setFacturas(disponibles)
+            setFacturasAsignadas(asignadasLista)
             setSeleccionadas(new Set())
         } catch (err) {
             console.error('Error cargando facturas pendientes:', err)
@@ -107,6 +139,11 @@ export const FacturasPendientesTab = ({ conductores, todosLosConductores, onAsig
 
     const buscando = busqueda.trim().length > 0
     const estaAbierto = (id: number) => buscando || abiertos.has(id)
+
+    const coincidenciasAsignadas = useMemo(() => {
+        if (!buscando) return []
+        return facturasAsignadas.filter((item) => coincideBusquedaFactura(item.factura, busqueda))
+    }, [buscando, facturasAsignadas, busqueda])
 
     const toggleAbierto = (id: number) =>
         setAbiertos((prev) => {
@@ -215,10 +252,72 @@ export const FacturasPendientesTab = ({ conductores, todosLosConductores, onAsig
                             </span>
                         )}
                     </div>
+                    {!cargando && coincidenciasAsignadas.length > 0 && (
+                        <div className="border-b bg-amber-500/5 px-4 py-3">
+                            <div className="mb-2 flex items-center gap-2 text-xs font-semibold text-amber-800 dark:text-amber-300">
+                                <UserCheck className="h-4 w-4 shrink-0" />
+                                <span>
+                                    {coincidenciasAsignadas.length === 1
+                                        ? 'Esta factura ya está asignada a un conductor'
+                                        : `${coincidenciasAsignadas.length} facturas coincidentes ya están asignadas`}
+                                </span>
+                            </div>
+                            <div className="space-y-2">
+                                {coincidenciasAsignadas.map((item) => {
+                                    const numFactura = formatearFacturaPendiente(item.factura)
+                                    return (
+                                        <div
+                                            key={item.factura.rowid_sa}
+                                            className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-amber-500/25 bg-card px-3 py-2 text-xs"
+                                        >
+                                            <div className="min-w-0">
+                                                <div className="flex flex-wrap items-center gap-2">
+                                                    <span className="font-mono font-bold text-primary">{numFactura}</span>
+                                                    <span className="truncate font-semibold text-foreground">
+                                                        {item.factura.razon || `Tercero #${item.factura.idtercero}`}
+                                                    </span>
+                                                    <span className="font-mono font-semibold text-foreground">
+                                                        {moneda(item.factura.valor)}
+                                                    </span>
+                                                </div>
+                                                <div className="mt-0.5 text-muted-foreground">
+                                                    Asignada a <strong className="text-foreground">{item.conductor_nombre}</strong>
+                                                    {item.asignada_at && ` · ${formatters.dateTime(item.asignada_at)}`}
+                                                </div>
+                                            </div>
+                                            {onVerAsignada && (
+                                                <Button
+                                                    type="button"
+                                                    variant="soft"
+                                                    size="sm"
+                                                    className="h-8 gap-1.5 text-xs"
+                                                    onClick={() =>
+                                                        onVerAsignada({
+                                                            conductorId: item.conductor_id,
+                                                            conductorNombre: item.conductor_nombre,
+                                                            asignadaAt: item.asignada_at,
+                                                            facturaTexto: numFactura,
+                                                        })
+                                                    }
+                                                >
+                                                    Ver en conductor
+                                                    <ArrowUpRight className="h-3.5 w-3.5" />
+                                                </Button>
+                                            )}
+                                        </div>
+                                    )
+                                })}
+                            </div>
+                        </div>
+                    )}
                     {cargando ? (
                         <Cargando texto="Cargando facturas" />
                     ) : grupos.length === 0 ? (
-                        <div className="p-8 text-center text-sm text-muted-foreground">No hay facturas pendientes que coincidan.</div>
+                        <div className="p-8 text-center text-sm text-muted-foreground">
+                            {coincidenciasAsignadas.length > 0
+                                ? 'No hay facturas sin asignar que coincidan.'
+                                : 'No hay facturas pendientes que coincidan.'}
+                        </div>
                     ) : (
                         <div className="max-h-[560px] overflow-auto">
                             {grupos.map((g) => {

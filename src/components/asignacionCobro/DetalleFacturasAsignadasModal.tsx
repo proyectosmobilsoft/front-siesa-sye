@@ -64,12 +64,14 @@ export function DetalleFacturasAsignadasModal({
     conductorNombre,
     desde,
     hasta,
+    busquedaInicial,
     onClose,
 }: {
     conductorId: number
     conductorNombre?: string
     desde?: string
     hasta?: string
+    busquedaInicial?: string
     onClose: () => void
 }) {
     const { puede, P } = usePermiso()
@@ -79,7 +81,7 @@ export function DetalleFacturasAsignadasModal({
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
     const [quitandoId, setQuitandoId] = useState<number | null>(null)
-    const [busqueda, setBusqueda] = useState('')
+    const [busqueda, setBusqueda] = useState(busquedaInicial ?? '')
     const [filtro, setFiltro] = useState<FiltroVista>('todas')
 
     const cargar = useCallback(() => {
