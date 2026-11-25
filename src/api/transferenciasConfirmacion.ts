@@ -21,6 +21,10 @@ export interface ConfirmacionTransferencia {
   referencia: string | null
   observacion: string | null
   estado: EstadoTransferencia
+  /** SALDO: el conductor pide a la cajera el saldo a favor del cliente (sin foto ni cuenta) */
+  tipo?: 'TRANSFERENCIA' | 'SALDO'
+  /** Lo que el cliente dijo que tenía a favor (opcional); el valor real lo fija la cajera */
+  valor_declarado?: number | null
   created_by_usuario: string
   created_at: string
   revisado_by_usuario: string | null
@@ -45,6 +49,8 @@ export interface ConfirmacionTransferencia {
   /** Otras confirmaciones del mismo recaudo (mismo conductor, cliente y facturas, con menos de 3 h de diferencia) */
   otras_del_recaudo?: number
 }
+export interface SaldoClienteDocumento { rowid_sa: number; documento: string; anticipo: boolean; fecha: string; id_co: string; saldo: number }
+export interface SaldoCliente { rowid_tercero: number; total: number; documentos: SaldoClienteDocumento[] }
 export interface FacturaConfirmacion { rowid_sa: number; documento: string; saldo: number }
 export interface SoporteConfirmacion { id: number; url: string; nombre_original: string; mime: string; tamano: number; created_at: string }
 export interface AprobacionDelMismoRc { id: number; valor: number; id_cta_bancaria: string; cuenta_nombre?: string | null; fecha_transferencia: string; razon_social: string }
@@ -113,6 +119,7 @@ export const transferenciasConfirmacionApi = {
     const form = new FormData(); files.forEach(file => form.append('soportes', file))
     return (await apiClient.post(`${base}/${id}/soportes`, form, { ...multipart, silenciarAviso })).data
   },
+  saldoCliente: async (rowid: number) => (await apiClient.get<{ data: SaldoCliente }>(`${base}/saldo-cliente/${rowid}`)).data.data,
   aprobar: async (id: number, valor?: number, silenciarAviso = false) => (await apiClient.patch<{ data?: ConfirmacionTransferencia }>(`${base}/${id}/aprobar`, valor == null ? undefined : { valor }, { silenciarAviso })).data,
   reintentarRc: async (id: number, silenciarAviso = false) => (await apiClient.patch<{ data?: ConfirmacionTransferencia }>(`${base}/${id}/reintentar-rc`, undefined, { silenciarAviso })).data,
   rechazar: async (id: number, motivo: string, silenciarAviso = false) => (await apiClient.patch(`${base}/${id}/rechazar`, { motivo }, { silenciarAviso })).data,

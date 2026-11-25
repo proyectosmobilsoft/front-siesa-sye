@@ -29,7 +29,9 @@ const colores: Record<EstadoTransferencia, string> = {
 const etiquetas: Record<EstadoTransferencia, string> = { PENDIENTE: 'Pendiente', APROBADA: 'Aprobada', USADA: 'Usada', EN_USO: 'En uso', RECHAZADA: 'Rechazada', ANULADA: 'Anulada' }
 function Estado({ row }: { row: ConfirmacionTransferencia }) { return <span className={`inline-block rounded-full px-2 py-1 text-xs font-semibold ${colores[row.estado]}`}>{etiquetas[row.estado]}{row.rc_numero ? ` · RC ${row.rc_numero}` : ''}</span> }
 /** Banco o billetera de la cuenta destino; el código solo como apoyo. */
-const Cuenta = ({ row }: { row: ConfirmacionTransferencia }) => row.cuenta_nombre
+const Cuenta = ({ row }: { row: ConfirmacionTransferencia }) => row.tipo === 'SALDO'
+  ? <span className="font-semibold text-primary">Saldo a favor<span className="block text-xs font-normal text-muted-foreground">{row.valor_declarado ? `Cliente dice ${formatters.currency(Number(row.valor_declarado))}` : 'Sin valor indicado'}</span></span>
+  : row.cuenta_nombre
   ? <span>{row.cuenta_nombre}<span className="block text-xs text-muted-foreground">Cód. {row.id_cta_bancaria}</span></span>
   : <span>{row.id_cta_bancaria}</span>
 /** En qué RC se usó la aprobación (varias aprobaciones pueden terminar en un mismo RC). */
