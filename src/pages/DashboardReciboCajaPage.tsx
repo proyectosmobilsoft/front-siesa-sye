@@ -10,7 +10,8 @@ import { ComprasProveedores } from '@/components/tablero/compras/ComprasProveedo
 import { VentasProveedores } from '@/components/tablero/ventas/VentasProveedores'
 import { InventarioLineas } from '@/components/tablero/inventario/InventarioLineas'
 import { CarteraVencimientos } from '@/components/tablero/cartera/CarteraVencimientos'
-import type { DashboardCartera, DashboardCompras, DashboardInventario, DashboardVentas } from '@/components/tablero/ventas/tipos'
+import { AsesoresCobertura } from '@/components/tablero/ventas/AsesoresCobertura'
+import type { DashboardAsesores, DashboardCartera, DashboardCompras, DashboardInventario, DashboardVentas } from '@/components/tablero/ventas/tipos'
 import {
   Ban,
   CalendarClock,
@@ -212,11 +213,11 @@ export function DashboardReciboCajaPage() {
   // Ventas, compras e inventario solo con VER_DASHBOARD (INC-000005: la cajera no debe ver ventas).
   // Sin el permiso queda solo Cobranza (recaudo y cartera), que es lo que usa tesorería.
   const verVentas = useAuthStore((s) => s.hasPermiso(PERMISOS.DASHBOARD))
-  const vista = valorVista === 'recaudo' || valorVista === 'cartera' || (verVentas && (valorVista === 'presupuesto' || valorVista === 'proveedores' || valorVista === 'compras' || valorVista === 'inventario')) ? valorVista : null
+  const vista = valorVista === 'recaudo' || valorVista === 'cartera' || (verVentas && (valorVista === 'presupuesto' || valorVista === 'proveedores' || valorVista === 'compras' || valorVista === 'inventario' || valorVista === 'asesores')) ? valorVista : null
   const sub = parametros.get('sub') ?? 'resumen'
   const elegirSub = (valor: string) => setParametros(actuales => { const siguientes = new URLSearchParams(actuales); siguientes.set('sub', valor); return siguientes })
-  const elegirVista = (v: 'recaudo' | 'presupuesto' | 'proveedores' | 'compras' | 'inventario' | 'cartera' | null) => {
-    setParametros(actuales => { const siguientes = new URLSearchParams(actuales); if (v && v !== vista) siguientes.set('vista', v); else siguientes.delete('vista'); siguientes.delete('sub'); return siguientes })
+  const elegirVista = (v: 'recaudo' | 'presupuesto' | 'proveedores' | 'compras' | 'inventario' | 'cartera' | 'asesores' | null) => {
+    setParametros(actuales => { const siguientes = new URLSearchParams(actuales); if (v && v !== vista) siguientes.set('vista', v); else siguientes.delete('vista'); siguientes.delete('sub'); if (!v || v !== 'asesores') siguientes.delete('asesor'); return siguientes })
   }
   const centroOperacionActivo = useAuthStore((s) => s.centroOperacionActivo)
   const { data: limites } = useFechasLimite()
@@ -255,6 +256,12 @@ export function DashboardReciboCajaPage() {
     enabled: valido,
     staleTime: 5 * 60 * 1000,
   })
+  const consultaAsesores = useQuery({
+    queryKey: ['dashboard-asesores', rango.desde, rango.hasta],
+    queryFn: async () => (await apiClient.get<{ success: boolean; data: DashboardAsesores }>('/dashboard/asesores', { params: rango })).data.data,
+    enabled: valido && verVentas,
+    staleTime: 5 * 60 * 1000,
+  })
   const d = consulta.data
 
   return (
@@ -281,8 +288,8 @@ export function DashboardReciboCajaPage() {
         extra={<BotonPeriodo alAplicar={(r) => { setPreset(null); setRango(r) }} />}
       />
 
-      <Resumenes recaudo={d} ventas={consultaVentas.data} compras={consultaCompras.data} cartera={consultaCartera.data} cargaCartera={consultaCartera.isLoading || (consultaCartera.isFetching && !consultaCartera.data)} errorCartera={consultaCartera.isError} inventario={consultaInventario.data} cargaInventario={consultaInventario.isLoading || (consultaInventario.isFetching && !consultaInventario.data)} errorInventario={consultaInventario.isError} cargaCompras={consultaCompras.isLoading || (consultaCompras.isFetching && !consultaCompras.data)} errorCompras={consultaCompras.isError} cargaRecaudo={consulta.isLoading || (consulta.isFetching && !d)} errorRecaudo={consulta.isError} cargaVentas={consultaVentas.isLoading || (consultaVentas.isFetching && !consultaVentas.data)} errorVentas={consultaVentas.isError} vista={vista} alElegir={elegirVista} soloCobranza={!verVentas} />
-      <PanelExpandible vista={vista} titulo={vista === 'recaudo' || vista === 'cartera' ? 'Cobranza' : vista === 'presupuesto' ? 'Ventas vs presupuesto' : vista === 'compras' ? 'Compras por proveedor' : vista === 'inventario' ? 'Inventario por marca/proveedor' : 'Ventas por marca/proveedor'} alCerrar={() => elegirVista(null)}>
+      <Resumenes recaudo={d} ventas={consultaVentas.data} compras={consultaCompras.data} cartera={consultaCartera.data} cargaCartera={consultaCartera.isLoading || (consultaCartera.isFetching && !consultaCartera.data)} errorCartera={consultaCartera.isError} inventario={consultaInventario.data} cargaInventario={consultaInventario.isLoading || (consultaInventario.isFetching && !consultaInventario.data)} errorInventario={consultaInventario.isError} asesores={consultaAsesores.data} cargaAsesores={consultaAsesores.isLoading || (consultaAsesores.isFetching && !consultaAsesores.data)} errorAsesores={consultaAsesores.isError} cargaCompras={consultaCompras.isLoading || (consultaCompras.isFetching && !consultaCompras.data)} errorCompras={consultaCompras.isError} cargaRecaudo={consulta.isLoading || (consulta.isFetching && !d)} errorRecaudo={consulta.isError} cargaVentas={consultaVentas.isLoading || (consultaVentas.isFetching && !consultaVentas.data)} errorVentas={consultaVentas.isError} vista={vista} alElegir={elegirVista} soloCobranza={!verVentas} />
+      <PanelExpandible vista={vista} titulo={vista === 'recaudo' || vista === 'cartera' ? 'Cobranza' : vista === 'presupuesto' ? 'Ventas vs presupuesto' : vista === 'compras' ? 'Compras por proveedor' : vista === 'inventario' ? 'Inventario por marca/proveedor' : vista === 'asesores' ? 'Asesores y sus clientes' : 'Ventas por marca/proveedor'} alCerrar={() => elegirVista(null)}>
         {(vista === 'recaudo' || vista === 'cartera') && (
           <div className="mb-4 inline-flex rounded-xl bg-muted p-1" role="tablist" aria-label="Cobranza">
             {([['cartera', 'Lo que falta cobrar', 'Cartera'], ['recaudo', 'Lo que entró', 'Recaudo']] as const).map(([v, t, s]) => (
@@ -299,6 +306,7 @@ export function DashboardReciboCajaPage() {
         {vista === 'compras' && <CuerpoConsulta consulta={{ isLoading: consultaCompras.isLoading || (consultaCompras.isFetching && !consultaCompras.data), isError: consultaCompras.isError }} vacio={!valido} mensajeVacio="Elige un rango de fechas válido" altura="h-96">{consultaCompras.data && <ComprasProveedores d={consultaCompras.data} ventas={consultaVentas.data} sub={sub} alElegirSub={elegirSub} />}</CuerpoConsulta>}
         {vista === 'inventario' && <CuerpoConsulta consulta={{ isLoading: consultaInventario.isLoading || (consultaInventario.isFetching && !consultaInventario.data), isError: consultaInventario.isError }} vacio={!valido} mensajeVacio="Elige un rango de fechas válido" altura="h-96">{consultaInventario.data && <InventarioLineas d={consultaInventario.data} sub={sub} alElegirSub={elegirSub} />}</CuerpoConsulta>}
         {vista === 'cartera' && <CuerpoConsulta consulta={{ isLoading: consultaCartera.isLoading || (consultaCartera.isFetching && !consultaCartera.data), isError: consultaCartera.isError }} vacio={!valido} mensajeVacio="Elige un rango de fechas válido" altura="h-96">{consultaCartera.data && <CarteraVencimientos d={consultaCartera.data} sub={sub} alElegirSub={elegirSub} />}</CuerpoConsulta>}
+        {vista === 'asesores' && <CuerpoConsulta consulta={{ isLoading: consultaAsesores.isLoading || (consultaAsesores.isFetching && !consultaAsesores.data), isError: consultaAsesores.isError }} vacio={!valido} mensajeVacio="Elige un rango de fechas válido" altura="h-96">{consultaAsesores.data && <AsesoresCobertura d={consultaAsesores.data} sub={sub} alElegirSub={elegirSub} />}</CuerpoConsulta>}
       </PanelExpandible>
     </section>
     </DetalleProvider>

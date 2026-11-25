@@ -64,6 +64,17 @@ export function armarMenu(
     }
   })
   personalizadas.forEach((p) => {
+    const existente = huecos.find((h) => h.tipo === 'grupo' && h.nombre.trim().toLowerCase() === p.nombre.trim().toLowerCase())
+    if (existente) {
+      const rutasExistentes = new Set(existente.paginas.map((x) => x.href))
+      const baseOrden = existente.paginas.length * 10
+      p.items.forEach((s, i) => {
+        if (!rutasExistentes.has(s.href)) {
+          existente.paginas.push({ name: s.nombre, href: s.href, icon: s.icon, subtitle: s.subtitle, permiso: s.permiso, grupoBase: existente.nombre, ordenBase: baseOrden + i * 10, visible: true })
+        }
+      })
+      return
+    }
     huecos.push({ tipo: 'grupo', nombre: p.nombre, icon: p.icono, personalizado: true, paginas: p.items.map((s, i) => ({ name: s.nombre, href: s.href, icon: s.icon, subtitle: s.subtitle, permiso: s.permiso, grupoBase: p.nombre, ordenBase: i * 10, visible: true })) })
   })
 

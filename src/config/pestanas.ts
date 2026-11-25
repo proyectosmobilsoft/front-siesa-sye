@@ -8,7 +8,7 @@ import { getPageMeta, RUTAS_ANTERIORES } from '@/config/navigation'
 export const MAX_PESTANAS = 8
 export interface Pestana { key: string; url: string }
 
-/** El Dashboard está siempre primero, no se cierra y no cuenta para el máximo. */
+/** Dashboard se muestra de entrada, pero solo aparece como pestaña si el usuario lo abre. */
 export const INICIO: Pestana = { key: '/', url: '/' }
 
 // Rutas que solo redirigen a otra: no son una pestaña (si no, quedaría una pestaña fantasma).
@@ -28,7 +28,6 @@ export function etiquetaDe(key: string) {
 
 /** Abre (o actualiza la URL de) la pestaña. Devuelve null si ya hay MAX_PESTANAS y esta es nueva. */
 export function abrirPestana(tabs: Pestana[], key: string, url: string): Pestana[] | null {
-  if (key === INICIO.key) return tabs
   const indice = tabs.findIndex((t) => t.key === key)
   if (indice >= 0) return tabs.map((t, i) => (i === indice ? { key, url } : t))
   if (tabs.length >= MAX_PESTANAS) return null
@@ -38,7 +37,7 @@ export function abrirPestana(tabs: Pestana[], key: string, url: string): Pestana
 export const cerrarPestana = (tabs: Pestana[], key: string) => tabs.filter((t) => t.key !== key)
 
 // --- Persistencia por usuario: al recargar la página se recuperan las pestañas abiertas ---
-const claveAlmacen = (scope: string) => `sye_pestanas:v1:${encodeURIComponent(scope)}`
+const claveAlmacen = (scope: string) => `sye_pestanas:v2:${encodeURIComponent(scope)}`
 
 function urlSegura(valor: unknown): valor is string {
   if (typeof valor !== 'string' || !/^\/(?!\/)/.test(valor) || /[\\\r\n]/.test(valor)) return false
@@ -54,7 +53,7 @@ export function leerPestanas(scope: string): { tabs: Pestana[]; activa: string }
       for (const t of guardado.tabs) {
         if (!urlSegura(t?.url)) continue
         const key = claveDe(new URL(t.url, 'http://pestanas.local').pathname)
-        if (key !== INICIO.key && tieneRuta(key) && !tabs.some((x) => x.key === key) && tabs.length < MAX_PESTANAS) tabs.push({ key, url: t.url })
+        if (tieneRuta(key) && !tabs.some((x) => x.key === key) && tabs.length < MAX_PESTANAS) tabs.push({ key, url: t.url })
       }
     }
     const activa = urlSegura(guardado?.activa) && (guardado.activa === '/' || tabs.some((t) => t.url === guardado.activa)) ? guardado.activa : '/'
@@ -62,6 +61,13 @@ export function leerPestanas(scope: string): { tabs: Pestana[]; activa: string }
   } catch {
     return { tabs: [], activa: '/' }
   }
+}
+
+export function borrarPestanas(scope: string) {
+  try {
+    localStorage.removeItem(claveAlmacen(scope))
+    localStorage.removeItem(`sye_pestanas:v1:${encodeURIComponent(scope)}`)
+  } catch { /* almacenamiento no disponible */ }
 }
 
 export function guardarPestanas(scope: string, tabs: Pestana[], activa: string) {

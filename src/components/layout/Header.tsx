@@ -61,7 +61,7 @@ export const Header = () => {
                         'radial-gradient(circle at 100% 100%, transparent 24px, hsl(var(--card)) 25px)'
                 }}
             />
-            <div className="flex h-20 items-center justify-between px-4 lg:px-6">
+            <div className="flex h-16 items-center justify-between px-4 lg:px-6">
                 {/* Left — control retráctil del menú + título/subtítulo de página */}
                 <div className="flex items-center gap-3 min-w-0">
                     <Button
@@ -95,8 +95,6 @@ export const Header = () => {
                         </motion.div>
                 </div>
 
-                <PestanasHeader />
-
                 {/* Right — tema + usuario + logout */}
                 <div className="flex items-center gap-3 flex-shrink-0">
                     <ReportarProblema />
@@ -115,7 +113,7 @@ export const Header = () => {
                                 setCentroOperacionActivo(event.target.value)
                                 window.location.reload()
                             }}
-                            className="h-9 w-[104px] font-mono font-semibold"
+                            className="h-9 w-[124px] font-mono text-xs font-semibold"
                         >
                             {(sesion?.centros_operacion ?? []).map((codigo) => (
                                 <option key={codigo} value={codigo}>C.O. {codigo}</option>
@@ -138,6 +136,7 @@ export const Header = () => {
 
                 </div>
             </div>
+            <PestanasHeader />
         </header>
     )
 }

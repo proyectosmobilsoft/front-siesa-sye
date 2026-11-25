@@ -501,3 +501,58 @@ export interface SaldosCartera extends CuadreCartera {
   /** Ventas corporativas (vendedores 0001 y 9897), fuera de los totales. */
   otra_area: CuadreCartera & { nit: string }
 }
+
+export type EstadoClienteAsesor = 'asesor' | 'otro' | 'sin_compra'
+
+export interface AsesorCobertura {
+  rowid: number
+  nombre: string
+  codigos: string
+  asignados: number
+  con_compra: number
+  con_compra_asesor: number
+  con_compra_otro: number
+  sin_compra: number
+  cobertura: number
+  cobertura_asesor: number
+  venta_asignados: number
+  venta_asesor_asignados: number
+  venta_fuera: number
+  clientes_fuera: number
+}
+
+export interface ClienteAsesor {
+  asesor_rowid: number
+  cliente_rowid: number
+  nit: string
+  cliente: string
+  ciudad?: string | null
+  estado: EstadoClienteAsesor
+  venta_total: number
+  venta_asesor: number
+  facturas: number
+  ultima_compra_periodo: string | null
+  ultima_compra_historica: string | null
+  otro_vendedor: string | null
+}
+
+export interface DashboardAsesores {
+  desde: string
+  hasta: string
+  kpis: {
+    asesores: number
+    asignados: number
+    con_compra: number
+    con_compra_asesor: number
+    con_compra_otro: number
+    sin_compra: number
+    cobertura: number
+    cobertura_asesor: number
+    venta_asignados: number
+    venta_asesor_asignados: number
+    venta_asesor_fuera: number
+    clientes_sin_asesor: number
+  }
+  asesores: AsesorCobertura[]
+  clientes: ClienteAsesor[]
+}

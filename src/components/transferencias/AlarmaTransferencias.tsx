@@ -73,6 +73,7 @@ export function AlarmaTransferenciasProvider({ children }: { children: ReactNode
   const [revisionVistos, setRevisionVistos] = useState(0)
   const [permisoNotificaciones, setPermisoNotificaciones] = useState<NotificationPermission | 'unsupported'>(() => 'Notification' in window ? Notification.permission : 'unsupported')
   const audio = useRef<HTMLAudioElement | null>(null)
+  const sonarAhora = useRef<(() => void) | null>(null)
   const urlAudio = useRef('')
   const vistos = useRef(leerVistos(claveVistos))
   const claveVistosActual = useRef(claveVistos)
@@ -123,7 +124,33 @@ export function AlarmaTransferenciasProvider({ children }: { children: ReactNode
   }
 
   useEffect(() => { setActiva(localStorage.getItem(clave) !== 'false'); callar() }, [clave, centro]) // eslint-disable-line react-hooks/exhaustive-deps
-  useEffect(() => { const timer = window.setInterval(() => setAhora(Date.now()), 1_000); return () => window.clearInterval(timer) }, [])
+  useEffect(() => { if (consulta.data) setAhora(Date.now()) }, [consulta.data])
+  // Despertar solo cuando una solicitud vista vuelve a sonar o una nueva escala el volumen.
+  // Sin pendientes, la alarma no necesita un reloj que vuelva a renderizar el proveedor global.
+  useEffect(() => {
+    if (!autorizado || !consulta.data?.items.length) return
+    const momento = Date.now()
+    let proximo = Infinity
+    for (const item of consulta.data.items) {
+      const vistoId = vistos.current.get(`id:${item.id}`)
+      const vistoGrupo = item.grupo != null ? vistos.current.get(`grupo:${item.grupo}`) : undefined
+      const finRevision = Math.max(
+        vistoId != null && momento - vistoId < VISTA_MS ? vistoId + VISTA_MS : 0,
+        vistoGrupo != null && momento - vistoGrupo < VISTA_MS ? vistoGrupo + VISTA_MS : 0,
+      )
+      if (finRevision) {
+        proximo = Math.min(proximo, finRevision)
+      } else {
+        const creado = Date.parse(item.created_at)
+        if (Number.isFinite(creado) && creado + 2 * 60_000 > momento) {
+          proximo = Math.min(proximo, creado + 2 * 60_000)
+        }
+      }
+    }
+    if (!Number.isFinite(proximo)) return
+    const timer = window.setTimeout(() => setAhora(Date.now()), Math.max(1, proximo - momento + 1))
+    return () => window.clearTimeout(timer)
+  }, [autorizado, consulta.data, revisionVistos, ahora])
 
   useEffect(() => {
     if (!autorizado || usuarioId == null) return
@@ -148,7 +175,11 @@ export function AlarmaTransferenciasProvider({ children }: { children: ReactNode
   const desbloquear = () => {
     const el = elemento()
     el.muted = true
-    void el.play().then(() => { el.pause(); el.currentTime = 0; el.muted = false; setDesbloqueado(true); setSonidoBloqueado(false) }).catch(() => { el.muted = false })
+    void el.play().then(() => {
+      el.pause(); el.currentTime = 0; el.muted = false
+      setDesbloqueado(true); setSonidoBloqueado(false)
+      sonarAhora.current?.()
+    }).catch(() => { el.muted = false })
     if ('Notification' in window && Notification.permission === 'default') void Notification.requestPermission().then(setPermisoNotificaciones).catch(() => {})
   }
 
@@ -214,9 +245,23 @@ export function AlarmaTransferenciasProvider({ children }: { children: ReactNode
       el.currentTime = 0
       void el.play().then(() => setSonidoBloqueado(false)).catch(() => setSonidoBloqueado(true))
     }
+    sonarAhora.current = sonar
     sonar()
     const timer = window.setInterval(sonar, escalada ? 9_000 : 12_000)
-    return () => window.clearInterval(timer)
+    let ultimoRegreso = 0
+    const alRegresar = () => {
+      if (document.hidden || Date.now() - ultimoRegreso < 1_000) return
+      ultimoRegreso = Date.now()
+      sonar()
+    }
+    window.addEventListener('focus', alRegresar)
+    document.addEventListener('visibilitychange', alRegresar)
+    return () => {
+      window.clearInterval(timer)
+      window.removeEventListener('focus', alRegresar)
+      document.removeEventListener('visibilitychange', alRegresar)
+      if (sonarAhora.current === sonar) sonarAhora.current = null
+    }
   }, [sonando, escalada, idsSinVer])
 
   useEffect(() => {

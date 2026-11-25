@@ -1,9 +1,9 @@
 import { Malla, CuerpoConsulta } from '../comun'
 import { Areas } from '../graficas'
 import { TarjetaResumen } from '../Expandible'
-import { PALETA, compacto, dinero, etiquetaMes, porcentaje } from '../formato'
+import { PALETA, compacto, dinero, entero, etiquetaMes, porcentaje } from '../formato'
 import { AYUDAS } from './ayudas'
-import type { DashboardCartera, DashboardCompras, DashboardInventario, DashboardVentas } from './tipos'
+import type { DashboardAsesores, DashboardCartera, DashboardCompras, DashboardInventario, DashboardVentas } from './tipos'
 import { colorCumplimiento } from './colores'
 
 interface ResumenRC {
@@ -14,7 +14,7 @@ interface ResumenRC {
   }
   mensual: { mes: string; facturado: number; recaudo_cartera: number }[]
 }
-type Vista = 'recaudo' | 'presupuesto' | 'proveedores' | 'compras' | 'inventario' | 'cartera'
+type Vista = 'recaudo' | 'presupuesto' | 'proveedores' | 'compras' | 'inventario' | 'cartera' | 'asesores'
 export function Resumenes({
   recaudo,
   ventas,
@@ -25,6 +25,9 @@ export function Resumenes({
   inventario,
   cargaInventario,
   errorInventario,
+  asesores,
+  cargaAsesores,
+  errorAsesores,
   cargaCompras,
   errorCompras,
   cargaRecaudo,
@@ -44,6 +47,9 @@ export function Resumenes({
   inventario?: DashboardInventario
   cargaInventario: boolean
   errorInventario: boolean
+  asesores?: DashboardAsesores
+  cargaAsesores: boolean
+  errorAsesores: boolean
   cargaCompras: boolean
   errorCompras: boolean
   cargaRecaudo: boolean
@@ -62,7 +68,7 @@ export function Resumenes({
   const topCompras = compras?.proveedores.filter(p => p.proveedor !== 'OTROS PROVEEDORES').slice(0, 5) ?? []
   const topInventario = inventario?.lineas.slice(0, 5) ?? []
   return (
-    <Malla columnas={soloCobranza ? 2 : 5}>
+    <Malla columnas={soloCobranza ? 2 : 6}>
       <TarjetaResumen
         titulo="Cobranza"
         abierta={vista === 'recaudo' || vista === 'cartera'}
@@ -254,6 +260,46 @@ export function Resumenes({
               </div>
             ))}
           </div>
+        </CuerpoConsulta>
+      </TarjetaResumen>
+      <TarjetaResumen
+        titulo="Asesores"
+        abierta={vista === 'asesores'}
+        alAlternar={() => alElegir('asesores')}
+        ayuda={{
+          fuente: 'Vendedor asignado al cliente en SIESA (t201) y facturas del periodo (sin códigos genéricos 0001 ni 9897).',
+          formula: 'Clientes con compra ÷ clientes asignados',
+        }}
+      >
+        <CuerpoConsulta consulta={{ isLoading: cargaAsesores, isError: errorAsesores }} altura="h-40">
+          <div className="text-3xl font-bold tabular-nums">
+            {asesores ? porcentaje(asesores.kpis.cobertura, 0) : '—'}
+          </div>
+          <div className="mt-1 text-xs text-muted-foreground">
+            {asesores
+              ? `${entero(asesores.kpis.con_compra)} de ${entero(asesores.kpis.asignados)} clientes asignados compraron`
+              : ''}
+          </div>
+          <div className="mt-1 text-xs font-medium text-foreground">
+            {asesores ? `${entero(asesores.kpis.asesores)} asesores` : ''}
+          </div>
+          {asesores && asesores.kpis.asignados > 0 && (
+            <>
+              <div className="mt-3 flex h-2 overflow-hidden rounded-full bg-muted">
+                <div
+                  className="h-full bg-emerald-500"
+                  style={{ width: `${(asesores.kpis.con_compra_asesor / asesores.kpis.asignados) * 100}%` }}
+                />
+                <div
+                  className="h-full bg-amber-500"
+                  style={{ width: `${(asesores.kpis.con_compra_otro / asesores.kpis.asignados) * 100}%` }}
+                />
+              </div>
+              <div className="mt-2 text-[11px] text-muted-foreground">
+                {entero(asesores.kpis.con_compra_asesor)} a su asesor · {entero(asesores.kpis.con_compra_otro)} a otro · {entero(asesores.kpis.sin_compra)} sin compra
+              </div>
+            </>
+          )}
         </CuerpoConsulta>
       </TarjetaResumen>
       </>)}

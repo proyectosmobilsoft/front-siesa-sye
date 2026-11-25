@@ -624,9 +624,6 @@ export const UserFormModal = ({ isOpen, onClose, user }: UserFormModalProps) => 
             // omitirlo dejaría las asignaciones intactas.
             payload.maquinarias = rolTieneModuloConductor(rolSeleccionado) ? maqAsignadas : []
 
-            console.log('📤 JSON enviado a PATCH /auth-secundario/usuarios/' + user.id + ':')
-            console.log(JSON.stringify(payload, null, 2))
-
             // Si no hay cambios, cerrar sin llamar al API
             if (Object.keys(payload).length === 0) {
                 console.log('ℹ️ Sin cambios, cerrando modal')
@@ -671,9 +668,6 @@ export const UserFormModal = ({ isOpen, onClose, user }: UserFormModalProps) => 
                 siesa_nombre: siesaSelected?.f552_nombre ?? null,
                 maquinarias: rolTieneModuloConductor(rolSeleccionado) ? maqAsignadas : [],
             }
-
-            console.log('📤 JSON enviado a POST /auth-secundario/usuarios:')
-            console.log(JSON.stringify(payload, null, 2))
 
             try {
                 setGuardando(true)

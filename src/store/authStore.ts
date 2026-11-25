@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
+import { borrarPestanas } from '@/config/pestanas'
 
 export interface SesionUsuario {
   id: number
@@ -49,7 +50,11 @@ export const useAuthStore = create<AuthStoreState>()(
           : state.centroOperacionActivo,
       })),
 
-      clearSession: () => set({ sesion: null, permisos: [], centroOperacionActivo: null }),
+      clearSession: () => {
+        const usuarioId = get().sesion?.id
+        if (usuarioId != null) borrarPestanas(String(usuarioId))
+        set({ sesion: null, permisos: [], centroOperacionActivo: null })
+      },
 
       hasPermiso: (codigo: string) => {
         const { permisos } = get()

@@ -27,7 +27,6 @@ export const LoginPage = () => {
             const usuarioNormalizado = usuario.trim().toLowerCase()
             const loginData = { usuario: usuarioNormalizado, credencial: contraseña }
 
-            console.log('📤 Enviando datos de login:', loginData)
             const res = await apiClient.post('/auth/login', loginData, { silenciarAviso: true })
 
             if (!res.data?.token) {

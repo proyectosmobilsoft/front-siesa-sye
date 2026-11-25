@@ -35,7 +35,9 @@ export function PestanasPanels({ renderRutas }: { renderRutas: (location: Locati
   const key = claveDe(location.pathname)
   const url = location.pathname + location.search + location.hash
   const valida = tieneRuta(location.pathname)
-  const siguiente = valida ? abrirPestana(tabs, key, url) : tabs
+  const abrirDashboard = Boolean((location.state as { abrirDashboard?: boolean } | null)?.abrirDashboard)
+  const mostrarComoPestana = key !== INICIO.key || abrirDashboard || tabs.some((tab) => tab.key === INICIO.key)
+  const siguiente = valida && mostrarComoPestana ? abrirPestana(tabs, key, url) : tabs
   const bloqueada = siguiente === null
   const activa = bloqueada || !valida ? ultimaActiva : key
   if (valida && !bloqueada && !restaurarUrl) ubicaciones.current.set(key, location)
@@ -56,7 +58,7 @@ export function PestanasPanels({ renderRutas }: { renderRutas: (location: Locati
     setUltimaActiva(key)
     if (siguiente && JSON.stringify(siguiente) !== JSON.stringify(tabs)) setTabs(siguiente)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [bloqueada, key, url, restaurarUrl, valida])
+  }, [bloqueada, key, url, restaurarUrl, valida, abrirDashboard])
 
   useEffect(() => {
     if (!restaurarUrl && !bloqueada && valida) guardarPestanas(scope, tabs, url)
@@ -94,7 +96,7 @@ export function PestanasPanels({ renderRutas }: { renderRutas: (location: Locati
     if (main) main.scrollTop = scrolls.current.get(activa) ?? 0
   }, [activa])
 
-  const ordenadas = [INICIO, ...tabs]
+  const ordenadas = tabs.some((tab) => tab.key === INICIO.key) ? tabs : [INICIO, ...tabs]
   return (
     <div ref={raiz} className="h-full">
       {ordenadas.map((tab) => {

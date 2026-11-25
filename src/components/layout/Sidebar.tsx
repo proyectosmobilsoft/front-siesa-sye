@@ -152,6 +152,7 @@ export const Sidebar = () => {
                                 <Link
                                     key={item.name}
                                     to={item.href!}
+                                    state={item.href === '/' ? { abrirDashboard: true } : undefined}
                                     className={cn('sidebar-item', isActive && 'activo')}
                                     aria-label={item.name}
                                     onClick={cerrarAlNavegar}

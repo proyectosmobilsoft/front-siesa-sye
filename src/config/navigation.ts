@@ -36,7 +36,6 @@ import {
   LayoutList,
   CircleHelp,
   MessagesSquare,
-  Presentation,
   type LucideIcon,
 } from 'lucide-react'
 import { PERMISOS } from '@/config/permisos'
@@ -272,11 +271,9 @@ export const navigation: NavItem[] = [
     ],
   },
   {
-    name: 'Propuesta',
-    href: '/propuesta',
-    icon: Presentation,
-    subtitle: 'Propuesta de integración ERP Siesa Zero-Impact',
-    permiso: PERMISOS.PROPUESTA,
+    name: 'Logística',
+    icon: Truck,
+    subItems: LOGISTICA,
   },
   {
     // Enlace directo: tablero de dónde se hizo cada RC (GPS de la app)
@@ -404,7 +401,6 @@ export const navigation: NavItem[] = [
 export const paginasDelSistema = (): { grupo: string; paginas: { name: string; href: string; permiso?: string }[] }[] => [
   { grupo: 'General', paginas: navigation.filter((n) => n.href).map((n) => ({ name: n.name, href: n.href!, permiso: n.permiso })) },
   ...navigation.filter((n) => n.subItems).map((n) => ({ grupo: n.name, paginas: n.subItems!.map((s) => ({ name: s.name, href: s.href, permiso: s.permiso })) })),
-  { grupo: 'Logística', paginas: LOGISTICA.map((s) => ({ name: s.name, href: s.href, permiso: s.permiso })) },
 ]
 
 export interface PageMeta {

@@ -7,41 +7,40 @@ interface ModalProps {
     isOpen: boolean
     onClose: () => void
     title: React.ReactNode
+    subtitle?: React.ReactNode
     children: React.ReactNode
     className?: string
 }
 
-export const Modal = ({ isOpen, onClose, title, children, className }: ModalProps) => {
+export const Modal = ({ isOpen, onClose, title, subtitle, children, className }: ModalProps) => {
     if (!isOpen) return null
 
     return createPortal(
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center">
+        <div className="modal-overlay" role="dialog" aria-modal="true">
             {/* Backdrop */}
-            <div
-                className="absolute inset-0 bg-black/50"
-                onClick={onClose}
-            />
+            <div className="modal-backdrop" onClick={onClose} />
 
             {/* Modal */}
-            <div className={cn(
-                "relative bg-card rounded-lg shadow-xl max-w-4xl w-full max-h-[95vh] overflow-hidden m-4",
-                className
-            )}>
+            <div className={cn('modal-panel', className)}>
                 {/* Header */}
-                <div className="flex items-center justify-between p-4 border-b">
-                    <h2 className="text-xl font-semibold">{title}</h2>
+                <div className="modal-header">
+                    <div className="modal-title-group">
+                        <h2 className="modal-title">{title}</h2>
+                        {subtitle && <p className="modal-subtitle">{subtitle}</p>}
+                    </div>
                     <Button
                         variant="ghost"
                         size="icon"
                         onClick={onClose}
-                        className="h-8 w-8"
+                        className="modal-close"
+                        aria-label="Cerrar"
                     >
                         <X className="h-4 w-4" />
                     </Button>
                 </div>
 
                 {/* Content */}
-                <div className="p-4 overflow-y-auto max-h-[calc(95vh-80px)]">
+                <div className="modal-body custom-scrollbar">
                     {children}
                 </div>
             </div>
