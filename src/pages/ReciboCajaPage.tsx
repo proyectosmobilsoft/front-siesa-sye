@@ -48,6 +48,8 @@ interface ReciboCaja {
   Usuario_Creacion?: string | null
   /** APP = creado desde nuestra app (conductor); SIESA = tecleado en SIESA escritorio. */
   Origen?: 'APP' | 'SIESA'
+  /** Versión de la app con la que se creó: texto = versión, '' = APK vieja sin versión, null = sin dato. */
+  Version_App?: string | null
   Creado_Por?: string | null
   efectivo?: number
   consignacion?: number
@@ -305,14 +307,14 @@ export const ReciboCajaPage = () => {
         nombre: 'Recibos',
         columnas: [
           { titulo: 'Documento', clave: 'documento', ancho: 14 }, { titulo: 'Fecha', clave: 'fecha', ancho: 12 }, { titulo: 'Cliente', clave: 'cliente', ancho: 36 }, { titulo: 'NIT', clave: 'nit', ancho: 14 },
-          { titulo: 'Creado por', clave: 'creadoPor', ancho: 22 }, { titulo: 'Origen', clave: 'origen', ancho: 10 }, { titulo: 'C.O.', clave: 'co', ancho: 8 }, { titulo: 'Caja', clave: 'caja', ancho: 18 },
+          { titulo: 'Creado por', clave: 'creadoPor', ancho: 22 }, { titulo: 'Origen', clave: 'origen', ancho: 10 }, { titulo: 'Versión app', clave: 'versionApp', ancho: 14 }, { titulo: 'C.O.', clave: 'co', ancho: 8 }, { titulo: 'Caja', clave: 'caja', ancho: 18 },
           { titulo: 'Efectivo', clave: 'efectivo', dinero: true }, { titulo: 'Transferencia', clave: 'transferencia', dinero: true },
           { titulo: 'T. Débito', clave: 'debito', dinero: true }, { titulo: 'T. Crédito', clave: 'credito', dinero: true },
           { titulo: 'Desc. financiero', clave: 'descuento', dinero: true }, { titulo: 'Total a pagar', clave: 'totalAPagar', dinero: true }, { titulo: 'Estado', clave: 'estado', ancho: 12 },
         ],
         filas: filtrados.map((r) => ({
           documento: `${(r.Tipo_Docto || '').trim()} ${r.Número}`, fecha: formatters.dateOnly(r.Fecha), cliente: r.Razón_Social ?? '', nit: r.Id_tercero ?? '',
-          creadoPor: r.Creado_Por ?? r.Usuario_Creacion ?? '', origen: r.Origen === 'APP' ? 'App' : r.Origen === 'SIESA' ? 'SIESA' : '', co: r['C.O.'], caja: r.Caja ?? '',
+          creadoPor: r.Creado_Por ?? r.Usuario_Creacion ?? '', origen: r.Origen === 'APP' ? 'App' : r.Origen === 'SIESA' ? 'SIESA' : '', versionApp: r.Origen !== 'APP' ? '' : r.Version_App || (r.Version_App === '' ? 'Antigua' : 'Sin dato'), co: r['C.O.'], caja: r.Caja ?? '',
           efectivo: r.efectivo ?? 0, transferencia: r.consignacion ?? 0, debito: r.tarjeta_debito ?? 0, credito: r.tarjeta_credito ?? 0,
           descuento: r.descuento_pp ?? 0, totalAPagar: r.valor_facturas ?? 0, estado: r.Estado,
         })),
@@ -1103,7 +1105,7 @@ function formatearFechaHoraRc(rc: ReciboCajaUsuario | null): string {
   return m[4] && rc?.Fecha_Creacion ? `${fecha} ${m[4]}:${m[5]}` : fecha
 }
 
-const COLUMNAS_TEXTO = ['Documento', 'Fecha', 'Cliente', 'Creado por', 'C.O.']
+const COLUMNAS_TEXTO = ['Documento', 'Fecha', 'Cliente', 'Creado por', 'Versión app', 'C.O.']
 
 /** Suma de medios de pago; si el listado no los trae (respuesta vieja), cae al total del SP. */
 const totalPagadoRecibo = (r: ReciboCaja) => {
@@ -1161,7 +1163,7 @@ function History(props: {
   // Medios de pago y estado no van en la tabla: salen en el panel derecho
   // al pasar el mouse por un recibo (queda el último señalado).
   const [reciboSeñalado, setReciboSeñalado] = useState<ReciboCaja | null>(null)
-  const columnas = ['Documento', 'Fecha', 'Cliente', 'Creado por', 'C.O.', 'Desc. financiero', 'Total a pagar', 'PDF']
+  const columnas = ['Documento', 'Fecha', 'Cliente', 'Creado por', 'Versión app', 'C.O.', 'Desc. financiero', 'Total a pagar', 'PDF']
 
   return (
     <div className="space-y-4">
@@ -1291,6 +1293,12 @@ function History(props: {
                       <p className="text-[10px] text-muted-foreground">
                         {r.Origen === 'APP' ? 'Conductor · App' : `Usuario SIESA${r.Usuario_Creacion ? ` · ${r.Usuario_Creacion}` : ''}`}
                       </p>
+                    </td>
+                    <td className="whitespace-nowrap px-4 py-3 font-mono">
+                      {r.Origen !== 'APP' ? <span className="text-muted-foreground">—</span>
+                        : r.Version_App ? <span className="font-bold text-foreground">{r.Version_App}</span>
+                        : r.Version_App === '' ? <span className="font-bold text-red-600 dark:text-red-400" title="La app no mandó versión: APK antigua">Antigua</span>
+                        : <span className="text-muted-foreground" title="RC anterior al control de versiones">Sin dato</span>}
                     </td>
                     <td className="px-4 py-3">
                       <p className="font-mono font-bold text-foreground">{r['C.O.']}</p>
