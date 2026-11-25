@@ -1,9 +1,12 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Camera, RefreshCw, Search } from 'lucide-react'
+import { Camera, Hash, PackageCheck, RefreshCw, Search } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { FechaInput } from '@/components/ui/fecha-input'
 import { Modal } from '@/components/ui/modal'
 import { Cargando } from '@/components/ui/cargando'
+import { BotonExcel } from '@/components/ui/boton-excel'
+import { cn } from '@/lib/utils'
 import { asignacionCobroApi, EntregadaSinRc } from '@/api/asignacionCobro'
 
 const moneda = (n: number) => n.toLocaleString('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 })
@@ -49,18 +52,25 @@ export const EntregadasSinRcTab = () => {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [desde, hasta])
 
+    const conteoPorCobrar = useMemo(() => filas.filter((f) => f.pagada !== true).length, [filas])
+    const conteoPagadas = useMemo(() => filas.filter((f) => f.pagada === true).length, [filas])
+
     const visibles = useMemo(() => {
         const q = busqueda.trim().toLowerCase()
         return filas.filter((f) => {
             if (soloPorCobrar && f.pagada === true) return false
             if (!q) return true
-            return [nombreFactura(f), f.cliente_nombre, f.cliente_nit, f.conductor_nombre, f.receptor_nombre]
+            return [nombreFactura(f), f.cliente_nombre, f.cliente_nit, f.conductor_nombre, f.receptor_nombre, f.nota]
                 .filter(Boolean)
                 .some((v) => String(v).toLowerCase().includes(q))
         })
     }, [filas, busqueda, soloPorCobrar])
 
-    const totalPorCobrar = useMemo(() => visibles.reduce((s, f) => s + (f.saldo ?? f.valor), 0), [visibles])
+    const totalValor = useMemo(() => visibles.reduce((s, f) => s + f.valor, 0), [visibles])
+    const totalPorCobrar = useMemo(
+        () => visibles.reduce((s, f) => s + (f.pagada === true ? 0 : (f.saldo ?? f.valor)), 0),
+        [visibles]
+    )
 
     const verFotos = async (fila: EntregadaSinRc) => {
         setFotosDe(fila)
@@ -80,126 +90,230 @@ export const EntregadasSinRcTab = () => {
     }
 
     return (
-        <div className="nu-card">
-            <div className="flex flex-wrap items-end gap-3 border-b px-4 py-3">
-                <div className="mr-auto">
-                    <h2 className="text-base font-semibold">Entregadas sin recibo de caja</h2>
-                    <p className="text-xs text-muted-foreground">
-                        Facturas a crédito que el conductor ya entregó. Cartera las cobra después.
-                    </p>
+        <div className="space-y-4">
+            {/* Cabecera y barra de filtros estilo Recibos / Egreso */}
+            <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
+                <div className="flex shrink-0 items-center gap-2">
+                    <PackageCheck className="h-5 w-5 text-primary" />
+                    <h2 className="text-sm font-bold text-foreground">
+                        Entregadas sin recibo de caja ({visibles.length})
+                    </h2>
                 </div>
-                <label className="flex flex-col text-xs text-muted-foreground">
-                    Desde
-                    <Input type="date" value={desde} onChange={(e) => setDesde(e.target.value)} className="h-9" />
-                </label>
-                <label className="flex flex-col text-xs text-muted-foreground">
-                    Hasta
-                    <Input type="date" value={hasta} onChange={(e) => setHasta(e.target.value)} className="h-9" />
-                </label>
-                <div className="relative">
-                    <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-                    <Input
-                        value={busqueda}
-                        onChange={(e) => setBusqueda(e.target.value)}
-                        placeholder="Factura, cliente, conductor…"
-                        className="h-9 w-64 pl-8"
-                    />
+
+                <div className="flex flex-wrap items-center gap-2">
+                    <div className="flex items-center gap-1.5">
+                        <div className="w-36 shrink-0">
+                            <FechaInput value={desde} onChange={setDesde} max={hasta || undefined} className="text-xs" />
+                        </div>
+                        <span className="text-xs text-muted-foreground">a</span>
+                        <div className="w-36 shrink-0">
+                            <FechaInput value={hasta} onChange={setHasta} min={desde || undefined} className="text-xs" />
+                        </div>
+                    </div>
+
+                    <div className="relative">
+                        <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+                        <Input
+                            value={busqueda}
+                            onChange={(e) => setBusqueda(e.target.value)}
+                            placeholder="Factura, cliente, conductor..."
+                            className="nu-control nu-control-sm w-52 pl-10 text-xs"
+                            autoComplete="off"
+                        />
+                    </div>
+
+                    <div className="filter-pills" role="tablist" aria-label="Filtrar por estado de cobro">
+                        <button
+                            type="button"
+                            className={`filter-pill${soloPorCobrar ? ' is-active' : ''}`}
+                            onClick={() => setSoloPorCobrar(true)}
+                        >
+                            Por cobrar ({conteoPorCobrar})
+                        </button>
+                        <button
+                            type="button"
+                            className={`filter-pill${!soloPorCobrar ? ' is-active' : ''}`}
+                            onClick={() => setSoloPorCobrar(false)}
+                        >
+                            Todas ({filas.length})
+                        </button>
+                    </div>
+
+                    <BotonExcel nombre="entregadas_sin_rc" />
+                    <Button variant="soft" size="icon" title="Actualizar" onClick={cargar} disabled={cargando}>
+                        <RefreshCw className={cn('h-4 w-4', cargando && 'animate-spin')} />
+                    </Button>
                 </div>
-                <label className="flex items-center gap-2 text-sm">
-                    <input type="checkbox" className="h-4 w-4" checked={soloPorCobrar} onChange={(e) => setSoloPorCobrar(e.target.checked)} />
-                    Solo por cobrar
-                </label>
-                <Button variant="ghost" size="icon" className="nu-btn nu-btn-soft h-9 w-9" title="Actualizar" onClick={cargar}>
-                    <RefreshCw className="h-4 w-4" />
-                </Button>
             </div>
 
+            {/* Franja de totales */}
+            {!cargando && !error && filas.length > 0 && (
+                <div className="flex flex-wrap items-center gap-2 text-xs">
+                    <span className="rounded-full bg-[var(--nu-fill)] px-3 py-1 text-muted-foreground">
+                        Facturas: <strong className="font-mono text-foreground">{visibles.length}</strong>
+                    </span>
+                    <span className="rounded-full bg-primary/10 px-3 py-1 text-primary">
+                        Por cobrar: <strong className="font-mono">{moneda(totalPorCobrar)}</strong>
+                    </span>
+                    <span className="rounded-full bg-[var(--nu-fill)] px-3 py-1 text-muted-foreground">
+                        Valor facturado: <strong className="font-mono text-foreground">{moneda(totalValor)}</strong>
+                    </span>
+                    {conteoPagadas > 0 && (
+                        <span className="rounded-full bg-emerald-500/10 px-3 py-1 text-emerald-700 dark:text-emerald-400">
+                            Pagadas: <strong className="font-mono">{conteoPagadas}</strong>
+                        </span>
+                    )}
+                </div>
+            )}
+
+            <div className="nu-card overflow-hidden">
             {cargando ? (
                 <Cargando texto="Cargando entregas" />
             ) : error ? (
-                <p className="p-6 text-sm text-destructive">{error}</p>
+                <div className="p-4">
+                    <div className="modal-alert-error">{error}</div>
+                </div>
             ) : visibles.length === 0 ? (
-                <p className="p-6 text-sm text-muted-foreground">
-                    {filas.length ? 'Ninguna entrega con esos filtros.' : 'No hay facturas entregadas sin recibo en este periodo (por defecto, últimos 30 días).'}
-                </p>
+                <div className="py-14 text-center text-xs font-bold uppercase tracking-widest text-muted-foreground">
+                    {filas.length
+                        ? 'Ninguna entrega coincide con los filtros seleccionados'
+                        : 'No hay facturas entregadas sin recibo en este periodo (últimos 30 días)'}
+                </div>
             ) : (
-                <>
-                    <div className="overflow-x-auto">
-                        <table className="w-full text-sm">
-                            <thead>
-                                <tr className="border-b">
-                                    <th className="px-3 py-2 text-left nu-th">Factura</th>
-                                    <th className="px-3 py-2 text-left nu-th">Cliente</th>
-                                    <th className="px-3 py-2 text-left nu-th">Conductor</th>
-                                    <th className="px-3 py-2 text-left nu-th">Recibió</th>
-                                    <th className="px-3 py-2 text-left nu-th">Entregada</th>
-                                    <th className="px-3 py-2 text-right nu-th">Valor</th>
-                                    <th className="px-3 py-2 text-right nu-th">Saldo hoy</th>
-                                    <th className="w-12 px-3 py-2"></th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {visibles.map((f) => (
-                                    <tr key={f.id} className="border-b hover:bg-muted/30">
-                                        <td className="px-3 py-2 font-mono text-xs">{nombreFactura(f)}</td>
-                                        <td className="px-3 py-2">
-                                            <div>{f.cliente_nombre ?? `Cliente #${f.rowid_tercero}`}</div>
-                                            {f.cliente_nit && <div className="text-xs text-muted-foreground">{f.cliente_nit}</div>}
-                                        </td>
-                                        <td className="px-3 py-2">{f.conductor_nombre ?? '—'}</td>
-                                        <td className="px-3 py-2">
-                                            <div>{f.receptor_nombre ?? '—'}</div>
-                                            {f.nota && <div className="max-w-56 truncate text-xs text-muted-foreground" title={f.nota}>{f.nota}</div>}
-                                        </td>
-                                        <td className="px-3 py-2 text-xs">{fechaHora(f.entrega_at)}</td>
-                                        <td className="px-3 py-2 text-right">{moneda(f.valor)}</td>
-                                        <td className="px-3 py-2 text-right">
-                                            {f.pagada === true ? (
-                                                <span className="rounded bg-green-100 px-2 py-0.5 text-xs font-medium text-green-800">Pagada</span>
-                                            ) : f.saldo != null ? (
-                                                moneda(f.saldo)
-                                            ) : (
-                                                <span className="text-xs text-muted-foreground">sin dato</span>
+                <div className="overflow-x-auto">
+                    <table className="w-full text-xs">
+                        <thead>
+                            <tr className="border-b border-border">
+                                <th className="whitespace-nowrap bg-muted px-4 py-3 text-left text-[10px] nu-th shadow-[inset_0_-1px_0_hsl(var(--border))]">Factura</th>
+                                <th className="whitespace-nowrap bg-muted px-4 py-3 text-left text-[10px] nu-th shadow-[inset_0_-1px_0_hsl(var(--border))]">Cliente</th>
+                                <th className="whitespace-nowrap bg-muted px-4 py-3 text-left text-[10px] nu-th shadow-[inset_0_-1px_0_hsl(var(--border))]">Conductor</th>
+                                <th className="whitespace-nowrap bg-muted px-4 py-3 text-left text-[10px] nu-th shadow-[inset_0_-1px_0_hsl(var(--border))]">Recibió</th>
+                                <th className="whitespace-nowrap bg-muted px-4 py-3 text-left text-[10px] nu-th shadow-[inset_0_-1px_0_hsl(var(--border))]">Entregada</th>
+                                <th className="whitespace-nowrap bg-muted px-4 py-3 text-center text-[10px] nu-th shadow-[inset_0_-1px_0_hsl(var(--border))]">Estado</th>
+                                <th className="whitespace-nowrap bg-muted px-4 py-3 text-right text-[10px] nu-th shadow-[inset_0_-1px_0_hsl(var(--border))]">Valor</th>
+                                <th className="whitespace-nowrap bg-muted px-4 py-3 text-right text-[10px] nu-th shadow-[inset_0_-1px_0_hsl(var(--border))]">Saldo hoy</th>
+                                <th className="whitespace-nowrap bg-muted px-4 py-3 text-right text-[10px] nu-th shadow-[inset_0_-1px_0_hsl(var(--border))]">Evidencia</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {visibles.map((f) => {
+                                const pagada = f.pagada === true
+                                return (
+                                    <tr key={f.id} className="border-b border-border/40 transition-colors last:border-0 hover:bg-muted/30">
+                                        <td className="whitespace-nowrap px-4 py-3 font-mono font-bold text-primary">
+                                            <span className="flex items-center gap-1">
+                                                <Hash className="h-3 w-3" />
+                                                {nombreFactura(f)}
+                                            </span>
+                                            {f.id_co && (
+                                                <p className="font-mono text-[10px] font-normal text-muted-foreground">
+                                                    C.O. {f.id_co.trim()}
+                                                </p>
                                             )}
                                         </td>
-                                        <td className="px-3 py-2">
-                                            {f.fotos.length > 0 && (
+                                        <td className="max-w-[240px] px-4 py-3">
+                                            <p className="truncate font-semibold text-foreground">
+                                                {f.cliente_nombre ?? `Cliente #${f.rowid_tercero}`}
+                                            </p>
+                                            {f.cliente_nit && (
+                                                <p className="font-mono text-[10px] text-muted-foreground">{f.cliente_nit}</p>
+                                            )}
+                                        </td>
+                                        <td className="whitespace-nowrap px-4 py-3 font-medium text-foreground">
+                                            {f.conductor_nombre ?? '—'}
+                                        </td>
+                                        <td className="max-w-[200px] px-4 py-3">
+                                            <p className="truncate font-medium text-foreground">{f.receptor_nombre ?? '—'}</p>
+                                            {f.nota && (
+                                                <p className="truncate text-[10px] italic text-muted-foreground" title={f.nota}>
+                                                    {f.nota}
+                                                </p>
+                                            )}
+                                        </td>
+                                        <td className="whitespace-nowrap px-4 py-3 font-mono text-muted-foreground">
+                                            {fechaHora(f.entrega_at)}
+                                        </td>
+                                        <td className="whitespace-nowrap px-4 py-3 text-center">
+                                            {pagada ? (
+                                                <span className="detail-badge detail-badge--success">Pagada</span>
+                                            ) : (
+                                                <span className="detail-badge detail-badge--warning">Por cobrar</span>
+                                            )}
+                                        </td>
+                                        <td className="whitespace-nowrap px-4 py-3 text-right font-mono tabular-nums text-muted-foreground">
+                                            {moneda(f.valor)}
+                                        </td>
+                                        <td className="whitespace-nowrap px-4 py-3 text-right font-mono font-semibold tabular-nums">
+                                            {pagada ? (
+                                                <span className="text-muted-foreground">$ 0</span>
+                                            ) : f.saldo != null ? (
+                                                <span className="text-foreground">{moneda(f.saldo)}</span>
+                                            ) : (
+                                                <span className="font-sans text-[11px] font-normal text-muted-foreground">Sin dato</span>
+                                            )}
+                                        </td>
+                                        <td className="whitespace-nowrap px-4 py-3 text-right">
+                                            {f.fotos.length > 0 ? (
                                                 <Button
-                                                    variant="ghost"
-                                                    size="icon"
-                                                    className="nu-btn nu-btn-soft h-8 w-8"
-                                                    title={`Ver ${f.fotos.length} foto(s)`}
+                                                    variant="soft"
+                                                    size="sm"
+                                                    className="h-8 gap-1.5 px-2.5 text-xs"
+                                                    title={`Ver ${f.fotos.length} foto(s) de evidencia`}
                                                     onClick={() => verFotos(f)}
                                                 >
-                                                    <Camera className="h-4 w-4" />
+                                                    <Camera className="h-3.5 w-3.5 text-primary" />
+                                                    <span className="font-mono">{f.fotos.length}</span>
                                                 </Button>
+                                            ) : (
+                                                <span className="text-muted-foreground">—</span>
                                             )}
                                         </td>
                                     </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    </div>
-                    <div className="flex justify-between border-t px-4 py-3 text-sm">
-                        <span className="text-muted-foreground">{visibles.length} factura(s)</span>
-                        <span className="font-semibold">Por cobrar: {moneda(totalPorCobrar)}</span>
-                    </div>
-                </>
+                                )
+                            })}
+                        </tbody>
+                    </table>
+                </div>
             )}
+            </div>
 
             <Modal
                 isOpen={fotosDe !== null}
                 onClose={cerrarFotos}
-                title={fotosDe ? `Entrega de ${nombreFactura(fotosDe)} · recibió ${fotosDe.receptor_nombre ?? '—'}` : ''}
+                title={fotosDe ? `Evidencia — ${nombreFactura(fotosDe)}` : ''}
+                subtitle={
+                    fotosDe
+                        ? `${fotosDe.cliente_nombre ?? `Cliente #${fotosDe.rowid_tercero}`} · Recibió: ${fotosDe.receptor_nombre ?? '—'} · ${fechaHora(fotosDe.entrega_at)}`
+                        : undefined
+                }
+                className="modal-lg"
             >
-                <div className="max-h-[80vh] overflow-auto p-4">
+                <div className="modal-stack">
+                    {fotosDe?.nota && (
+                        <div className="modal-summary-footer">
+                            <span>
+                                Nota de entrega: <strong>{fotosDe.nota}</strong>
+                            </span>
+                        </div>
+                    )}
                     {cargandoFotos ? (
                         <Cargando texto="Cargando fotos" compacto />
                     ) : (
                         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                             {urls.map((u, i) => (
-                                <a key={u} href={u} target="_blank" rel="noreferrer">
-                                    <img src={u} alt={`Foto ${i + 1} de la entrega`} className="w-full rounded border object-contain" />
+                                <a
+                                    key={u}
+                                    href={u}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="group overflow-hidden rounded-xl border border-border bg-[var(--nu-fill)] transition-colors hover:border-primary/40"
+                                    title="Abrir imagen en tamaño completo"
+                                >
+                                    <img
+                                        src={u}
+                                        alt={`Foto ${i + 1} de la entrega`}
+                                        className="max-h-[420px] w-full object-contain"
+                                    />
                                 </a>
                             ))}
                         </div>

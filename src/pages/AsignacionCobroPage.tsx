@@ -1,11 +1,12 @@
-import { motion } from 'framer-motion'
 import { useState, useEffect, useRef, useMemo } from 'react'
-import { Search, Loader2, Send, RefreshCw, Users, ShieldCheck, Eye, ArrowUp, ArrowDown, ArrowUpDown } from 'lucide-react'
+import { Search, Loader2, Send, RefreshCw, Users, ShieldCheck, Eye, ArrowUp, ArrowDown, ArrowUpDown, User, FileText, PackageCheck } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { FechaInput } from '@/components/ui/fecha-input'
 import { Select } from '@/components/ui/select'
 import { Badge } from '@/components/ui/badge'
 import { Modal } from '@/components/ui/modal'
+import { cn } from '@/lib/utils'
 import { formatters } from '@/utils/formatters'
 import { apiClient } from '@/api/client'
 import { Client, ClientsResponse } from '@/api/types'
@@ -17,7 +18,6 @@ import { FacturaPendiente, formatearFecha, formatearPeso, formatearFacturaPendie
 import { CondicionPagoChip } from '@/components/asignacionCobro/CondicionPagoChip'
 import { FacturasPendientesTab } from '@/components/asignacionCobro/FacturasPendientesTab'
 import { EntregadasSinRcTab } from '@/components/asignacionCobro/EntregadasSinRcTab'
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import { DetalleFacturasAsignadasModal } from '@/components/asignacionCobro/DetalleFacturasAsignadasModal'
 import { BotonExcel } from '@/components/ui/boton-excel'
 
@@ -34,6 +34,7 @@ export const AsignacionCobroPage = () => {
     const centroOperacionActivo = useAuthStore((s) => coPuntual(s.centroOperacionActivo))
 
     // Tablero: conductores programados (asignados) y su avance
+    const [tabActiva, setTabActiva] = useState<'cliente' | 'pendientes' | 'entregadas'>('cliente')
     const [tablero, setTablero] = useState<TableroConductorRow[]>([])
     const [detalleConductor, setDetalleConductor] = useState<{ id: number; nombre: string } | null>(null)
     const [reconciliando, setReconciliando] = useState(false)
@@ -57,10 +58,12 @@ export const AsignacionCobroPage = () => {
         }
     }
     const [cargandoTablero, setCargandoTablero] = useState(false)
-    // Rango del tablero (vacío = últimos 30 días).
-    const [tableroDesde, setTableroDesde] = useState('')
-    const [tableroHasta, setTableroHasta] = useState('')
+    // Rango del tablero: por defecto solo lo asignado hoy; el rango Desde/Hasta de arriba filtra todo.
+    const hoyISO = () => new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 10)
+    const [tableroDesde, setTableroDesde] = useState(hoyISO)
+    const [tableroHasta, setTableroHasta] = useState(hoyISO)
     const hayRangoTablero = Boolean(tableroDesde || tableroHasta)
+    const esSoloHoy = tableroDesde === hoyISO() && tableroHasta === hoyISO()
 
     const cargarTablero = () => {
         if (!puedeVerTablero) return
@@ -259,20 +262,58 @@ export const AsignacionCobroPage = () => {
         )
     }
 
+    const totalTableroPendientes = tableroVisible.reduce((a, r) => a + r.pendientes, 0)
+    const totalTableroPorCobrar = tableroVisible.reduce((a, r) => a + (r.saldo_pendiente ?? r.valor_pendiente), 0)
+    const totalTableroCarga = tableroVisible.reduce((a, r) => a + (r.kg_pendiente ?? 0), 0)
+
     return (
-        <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5 }}
-            className="nu flex h-full min-h-0 flex-col gap-5 overflow-auto p-6"
-        >
-            <Tabs defaultValue="cliente" className="shrink-0">
-                <TabsList className="nu-seg">
-                    <TabsTrigger value="cliente" className="nu-seg-item">Por cliente</TabsTrigger>
-                    <TabsTrigger value="pendientes" className="nu-seg-item">Facturas pendientes</TabsTrigger>
-                    {puedeVerTablero && <TabsTrigger value="entregadas" className="nu-seg-item">Entregadas sin RC</TabsTrigger>}
-                </TabsList>
-                <TabsContent value="cliente" className="mt-4">
+        <div className="nu mx-auto max-w-[1400px] space-y-6 p-4 sm:p-6 lg:p-8 2xl:max-w-[1600px] xl:[zoom:1.12] 2xl:[zoom:1.15]">
+            {/* Contenedor principal idéntico a Recibo de Caja y Egreso */}
+            <div className="space-y-6 nu-card">
+                {/* Barra de pestañas estilo píldora */}
+                <div className="flex flex-wrap items-center gap-3 px-4 pt-4">
+                    <div className="flex flex-wrap gap-1 nu-seg">
+                        {([
+                            ['cliente', 'Por cliente', User],
+                            ['pendientes', 'Facturas pendientes', FileText],
+                            ...(puedeVerTablero ? ([['entregadas', 'Entregadas sin RC', PackageCheck]] as const) : []),
+                        ] as const).map(([id, etiqueta, Icono]) => (
+                            <button
+                                key={id}
+                                type="button"
+                                onClick={() => setTabActiva(id)}
+                                className={cn(
+                                    'flex items-center gap-2 rounded-full px-4 py-2 text-xs font-semibold transition-all',
+                                    tabActiva === id
+                                        ? 'bg-card text-foreground shadow-xs'
+                                        : 'text-muted-foreground hover:bg-card/50 hover:text-foreground'
+                                )}
+                            >
+                                <Icono className="h-3.5 w-3.5" /> {etiqueta}
+                            </button>
+                        ))}
+                    </div>
+
+                    {puedeVerTablero && (
+                        <div className="ml-auto flex flex-wrap items-center gap-2 text-xs">
+                            <div className="flex items-center gap-2 nu-card px-3.5 py-2">
+                                <span className="font-medium text-muted-foreground">Pendientes:</span>
+                                <span className="font-mono font-bold text-foreground">{totalTableroPendientes}</span>
+                            </div>
+                            <div className="flex items-center gap-2 nu-card px-3.5 py-2">
+                                <span className="font-medium text-muted-foreground">Por cobrar:</span>
+                                <span className="font-mono font-bold text-primary">{moneda(totalTableroPorCobrar)}</span>
+                            </div>
+                            <div className="flex items-center gap-2 nu-card px-3.5 py-2">
+                                <span className="font-medium text-muted-foreground">Carga:</span>
+                                <span className="font-mono font-bold text-foreground">{kilosTexto(totalTableroCarga)}</span>
+                            </div>
+                        </div>
+                    )}
+                </div>
+
+                <div className="space-y-4 p-4 sm:p-6 pt-0 sm:pt-0">
+                {tabActiva === 'cliente' && (
                 <div className="grid min-h-[420px] shrink-0 grid-cols-1 gap-4 lg:grid-cols-3">
                     {/* Columna búsqueda cliente */}
                     <div className="flex flex-col gap-3 nu-card p-5 lg:col-span-1">
@@ -454,16 +495,15 @@ export const AsignacionCobroPage = () => {
                         )}
                     </div>
                 </div>
-                </TabsContent>
-                <TabsContent value="pendientes" className="mt-4">
-                    <FacturasPendientesTab conductores={conductoresVisibles} todosLosConductores={conductores} onAsignado={cargarTablero} />
-                </TabsContent>
-                {puedeVerTablero && (
-                    <TabsContent value="entregadas" className="mt-4">
-                        <EntregadasSinRcTab />
-                    </TabsContent>
                 )}
-            </Tabs>
+                {tabActiva === 'pendientes' && (
+                    <FacturasPendientesTab conductores={conductoresVisibles} todosLosConductores={conductores} onAsignado={cargarTablero} />
+                )}
+                {puedeVerTablero && tabActiva === 'entregadas' && (
+                    <EntregadasSinRcTab />
+                )}
+                </div>
+            </div>
 
             {/* Tablero: conductores programados y su avance */}
             {puedeVerTablero && (
@@ -471,20 +511,20 @@ export const AsignacionCobroPage = () => {
                     <div className="flex items-center justify-between border-b px-4 py-3">
                         <div className="flex items-center gap-2">
                             <Users className="h-4 w-4 text-muted-foreground" />
-                            <span className="text-sm font-semibold">Conductores programados ({hayRangoTablero ? 'rango elegido' : 'últimos 30 días'})</span>
+                            <span className="text-sm font-semibold">Conductores programados ({esSoloHoy ? 'hoy' : hayRangoTablero ? 'rango elegido' : 'últimos 30 días'})</span>
                         </div>
                         <div className="flex flex-wrap items-center justify-end gap-2">
                             <label className="flex items-center gap-1 text-xs text-muted-foreground">
                                 Desde
-                                <Input type="date" value={tableroDesde} max={tableroHasta || undefined} onChange={(e) => setTableroDesde(e.target.value)} className="h-8 w-36 text-xs" />
+                                <FechaInput value={tableroDesde} max={tableroHasta || undefined} onChange={setTableroDesde} className="h-8 w-36 text-xs" />
                             </label>
                             <label className="flex items-center gap-1 text-xs text-muted-foreground">
                                 Hasta
-                                <Input type="date" value={tableroHasta} min={tableroDesde || undefined} onChange={(e) => setTableroHasta(e.target.value)} className="h-8 w-36 text-xs" />
+                                <FechaInput value={tableroHasta} min={tableroDesde || undefined} onChange={setTableroHasta} className="h-8 w-36 text-xs" />
                             </label>
-                            {hayRangoTablero && (
-                                <Button variant="ghost" size="sm" className="nu-btn nu-btn-soft" onClick={() => { setTableroDesde(''); setTableroHasta('') }}>
-                                    Últimos 30 días
+                            {!esSoloHoy && (
+                                <Button variant="ghost" size="sm" className="nu-btn nu-btn-soft" onClick={() => { setTableroDesde(hoyISO()); setTableroHasta(hoyISO()) }}>
+                                    Hoy
                                 </Button>
                             )}
                             <Button
@@ -523,10 +563,12 @@ export const AsignacionCobroPage = () => {
                                     { t: 'Pendientes', v: String(tableroVisible.reduce((a, r) => a + r.pendientes, 0)) },
                                     { t: 'Por cobrar', v: moneda(tableroVisible.reduce((a, r) => a + (r.saldo_pendiente ?? r.valor_pendiente), 0)) },
                                     { t: 'Carga en ruta', v: kilosTexto(tableroVisible.reduce((a, r) => a + (r.kg_pendiente ?? 0), 0)) },
-                                    { t: 'Vencidas', v: String(tableroVisible.reduce((a, r) => a + (r.vencidas ?? 0), 0)), alerta: tableroVisible.some((r) => (r.vencidas ?? 0) > 0) },
-                                    { t: hayRangoTablero ? 'Cobradas (rango)' : 'Cobradas (30 días)', v: `${tableroVisible.reduce((a, r) => a + r.cobradas, 0)} · ${moneda(tableroVisible.reduce((a, r) => a + r.valor_cobrado, 0))}` },
+                                    { t: 'Contraentrega', v: String(tableroVisible.reduce((a, r) => a + (r.contraentrega ?? Math.max(0, r.pendientes - (r.a_credito ?? 0))), 0)) },
+                                    { t: 'Entregadas sin RC', v: `${tableroVisible.reduce((a, r) => a + (r.entregadas ?? 0), 0)} · ${moneda(tableroVisible.reduce((a, r) => a + (r.valor_entregado ?? 0), 0))}` },
+                                    { t: 'A crédito', v: String(tableroVisible.reduce((a, r) => a + (r.a_credito ?? 0), 0)) },
+                                    { t: esSoloHoy ? 'Cobradas (hoy)' : hayRangoTablero ? 'Cobradas (rango)' : 'Cobradas (30 días)', v: `${tableroVisible.reduce((a, r) => a + r.cobradas, 0)} · ${moneda(tableroVisible.reduce((a, r) => a + r.valor_cobrado, 0))}` },
                                 ].map((x) => (
-                                    <span key={x.t} className={`rounded-full px-3 py-1 ${x.alerta ? 'bg-red-500/10 text-red-600 dark:text-red-400' : 'bg-muted text-muted-foreground'}`}>
+                                    <span key={x.t} className={`rounded-full px-3 py-1 bg-muted text-muted-foreground`}>
                                         {x.t}: <span className="font-semibold text-foreground">{x.v}</span>
                                     </span>
                                 ))}
@@ -538,20 +580,21 @@ export const AsignacionCobroPage = () => {
                                         <th className="h-10 px-3 text-left nu-th">C.O.</th>
                                         <th className="h-10 px-3 text-right nu-th">Pendientes</th>
                                         <th className="h-10 px-3 text-right nu-th">Clientes</th>
-                                        <th className="h-10 px-3 text-right nu-th">Por cobrar</th>
                                         <th className="h-10 px-3 text-right nu-th">Carga</th>
-                                        <th className="h-10 px-3 text-right nu-th">Vencidas</th>
-                                        <th className="h-10 px-3 text-right nu-th">Más antigua</th>
+                                        <th className="h-10 px-3 text-right nu-th" title="Pendientes con condición contraentrega: requieren RC al entregar">Contraentrega</th>
+                                        <th className="h-10 px-3 text-right nu-th" title="Pendientes que no son contraentrega: se cierran como entregadas, sin RC">A crédito</th>
+                                        <th className="h-10 px-3 text-right nu-th" title="Facturas a crédito entregadas sin recibo de caja: no suman a Cobradas">Entregadas sin RC</th>
                                         <th className="h-10 px-3 text-right nu-th">Cobradas</th>
-                                        <th className="h-10 px-3 text-right nu-th">Valor cobrado</th>
-                                        <th className="h-10 px-3 text-right nu-th">Canceladas</th>
                                         <th className="h-10 px-3 text-left nu-th">Cumplimiento</th>
+                                        <th className="h-10 px-3 text-right nu-th">Por cobrar</th>
+                                        <th className="h-10 px-3 text-right nu-th">Cobrado</th>
                                         <th className="h-10 px-4 text-right nu-th">Última asignación</th>
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {tableroVisible.map((row) => {
+                                    {tableroVisible.filter((r) => r.pendientes > 0 || (r.entregadas ?? 0) > 0).map((row) => {
                                         const cumplimiento = row.cumplimiento ?? null
+                                        const contraentrega = row.contraentrega ?? Math.max(0, row.pendientes - (row.a_credito ?? 0))
                                         return (
                                             <tr
                                                 key={row.conductor_id}
@@ -569,17 +612,15 @@ export const AsignacionCobroPage = () => {
                                                     <Badge variant={row.pendientes > 0 ? 'default' : 'secondary'}>{row.pendientes}</Badge>
                                                 </td>
                                                 <td className="px-3 py-2.5 text-right tabular-nums">{row.clientes_pendientes ?? 0}</td>
-                                                <td className="px-3 py-2.5 text-right font-semibold tabular-nums">{moneda(row.saldo_pendiente ?? row.valor_pendiente)}</td>
-                                                <td className="px-3 py-2.5 text-right tabular-nums">{kilosTexto(row.kg_pendiente ?? 0)}</td>
-                                                <td className={`px-3 py-2.5 text-right tabular-nums ${(row.vencidas ?? 0) > 0 ? 'font-semibold text-red-600 dark:text-red-400' : 'text-muted-foreground'}`}>
-                                                    {row.vencidas ?? 0}
-                                                </td>
-                                                <td className={`px-3 py-2.5 text-right tabular-nums ${(row.mas_antigua_dias ?? 0) > 3 ? 'font-semibold text-amber-600 dark:text-amber-400' : 'text-muted-foreground'}`}>
-                                                    {row.pendientes > 0 ? `${row.mas_antigua_dias ?? 0} día${row.mas_antigua_dias === 1 ? '' : 's'}` : '—'}
+                                                <td className="whitespace-nowrap px-3 py-2.5 text-right tabular-nums">{kilosTexto(row.kg_pendiente ?? 0)}</td>
+                                                <td className="px-3 py-2.5 text-right tabular-nums font-medium">{contraentrega}</td>
+                                                <td className="px-3 py-2.5 text-right tabular-nums text-muted-foreground">{row.a_credito ?? 0}</td>
+                                                <td className="px-3 py-2.5 text-right tabular-nums text-muted-foreground">
+                                                    {(row.entregadas ?? 0) > 0 ? (
+                                                        <span className="font-medium text-indigo-600 dark:text-indigo-400">{row.entregadas} · {moneda(row.valor_entregado ?? 0)}</span>
+                                                    ) : '—'}
                                                 </td>
                                                 <td className="px-3 py-2.5 text-right tabular-nums text-muted-foreground">{row.cobradas}</td>
-                                                <td className="px-3 py-2.5 text-right tabular-nums text-muted-foreground">{moneda(row.valor_cobrado)}</td>
-                                                <td className="px-3 py-2.5 text-right tabular-nums text-muted-foreground">{row.canceladas}</td>
                                                 <td className="px-3 py-2.5">
                                                     {cumplimiento == null ? (
                                                         <span className="text-xs text-muted-foreground">—</span>
@@ -591,10 +632,12 @@ export const AsignacionCobroPage = () => {
                                                                     style={{ width: `${Math.round(cumplimiento * 100)}%` }}
                                                                 />
                                                             </div>
-                                                            <span className="text-xs tabular-nums">{Math.round(cumplimiento * 100)} %</span>
+                                                            <span className="whitespace-nowrap text-xs tabular-nums">{Math.round(cumplimiento * 100)} %</span>
                                                         </div>
                                                     )}
                                                 </td>
+                                                <td className="px-3 py-2.5 text-right font-semibold tabular-nums">{moneda(row.saldo_pendiente ?? row.valor_pendiente)}</td>
+                                                <td className="px-3 py-2.5 text-right tabular-nums text-muted-foreground">{moneda(row.valor_cobrado)}</td>
                                                 <td className="whitespace-nowrap px-4 py-2.5 text-right text-xs text-muted-foreground">
                                                     {row.ultima_asignacion ? formatters.dateTime(row.ultima_asignacion) : '—'}
                                                 </td>
@@ -612,6 +655,8 @@ export const AsignacionCobroPage = () => {
                 <DetalleFacturasAsignadasModal
                     conductorId={detalleConductor.id}
                     conductorNombre={detalleConductor.nombre}
+                    desde={tableroDesde || undefined}
+                    hasta={tableroHasta || undefined}
                     onClose={() => setDetalleConductor(null)}
                 />
             )}
@@ -620,7 +665,7 @@ export const AsignacionCobroPage = () => {
                 isOpen={!!facturaDetalle}
                 onClose={() => setFacturaDetalle(null)}
                 title={facturaDetalle ? `Factura ${formatearFacturaPendiente(facturaDetalle)}` : ''}
-                className="nu max-w-lg !rounded-3xl"
+                className="modal-sm"
             >
                 {facturaDetalle && (
                     <dl className="grid grid-cols-[auto_1fr] gap-x-6 gap-y-2 text-sm">
@@ -641,6 +686,6 @@ export const AsignacionCobroPage = () => {
                     </dl>
                 )}
             </Modal>
-        </motion.div>
+        </div>
     )
 }

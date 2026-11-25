@@ -213,6 +213,17 @@ export interface AnticipoOperativo {
   observaciones_financieras: string
   responsable_aprobacion: string
   valor_solicitado: number
+  valor_aprobado?: number | null
+  desembolso_rowid_docto?: number | null
+  desembolso_docto?: string | null
+  desembolso_caja?: string | null
+  desembolso_fecha?: string | null
+  desembolso_co?: string | null
+  desembolso_usuario_nombre?: string | null
+  desembolso_docto_estado_codigo?: number | null
+  desembolso_docto_estado?: string | null
+  desembolso_docto_usuario_anulacion?: string | null
+  desembolso_docto_fecha_anulacion?: string | null
   estado: string
   created_at: string
   updated_at: string
@@ -221,6 +232,20 @@ export interface AnticipoOperativo {
 export interface AnticiposOperativosResponse {
   success: boolean
   data: AnticipoOperativo[]
+}
+
+export interface CajaDesembolso {
+  id_caja: '001' | '002'
+  id_co: string
+  nombre: string
+  saldo_efectivo: number
+}
+
+export interface DesembolsoResult {
+  docto: string
+  rowid_docto: number
+  valor: number
+  caja: string | CajaDesembolso
 }
 
 export interface AnticipoOperativoCrearPayload {
@@ -500,4 +525,72 @@ export interface ResumenConductoresDia {
 export interface ResumenConductoresDiaResponse {
   success: boolean
   data: ResumenConductoresDia
+}
+
+/** Documento contable del flujo de egresos: PCE (desembolso) o PLC (legalización de una dispersión). */
+export interface DocumentoEgreso {
+  id: number
+  tipo_docto: 'PCE' | 'PLC'
+  docto: string
+  co: string | null
+  valor: number | null
+  caja: string | null
+  created_at: string
+  notas: string | null
+  solicitud_id: number | null
+  numero_anticipo: string | null
+  motivo_general: string | null
+  dispersacion_id: number | null
+  placa: string | null
+  /** Solicitante (PCE) o conductor (PLC): a nombre de quién quedó el documento. */
+  a_nombre_de: string | null
+  a_nombre_de_rol: 'Solicitante' | 'Conductor'
+  generado_por: string | null
+}
+
+/** Catálogos del formulario de dispersión (vehículos y tramos vienen de Vehiman; conductores son usuarios de SYE). */
+export interface DispersionCatalogos {
+  vehiculos: { id: number; placa: string }[]
+  tramos: { id: number; nombre: string; tipo_id: number | null }[]
+  tipos: { id: number; nombre: string }[]
+  conductores: { id: number; nombre: string; maquinaria_cod: number | null; maquinaria_placa: string | null; tiene_tercero_siesa: boolean }[]
+}
+
+/** Egreso desembolsado que se puede dispersar, con lo ya repartido y lo que queda. */
+export interface EgresoDispersable {
+  id: number
+  numero_anticipo: string
+  motivo_general: string | null
+  desembolso_docto: string
+  solicitante: string | null
+  valor_total: number
+  dispersado: number
+  disponible: number
+}
+
+export interface DispersionItemPayload {
+  usuario_id: number
+  maquinaria_cod: number
+  placa: string
+  tramo_id: number
+  tipo_tramo_id?: number | null
+  fecha_salida: string
+  fecha_llegada?: string | null
+  toneladas?: number | null
+  valor: number
+}
+
+/** Una dispersión ya hecha de un egreso (control de quién recibió cuánto). */
+export interface DispersionRealizada {
+  id: number
+  usuario_id: number
+  conductor: string | null
+  placa: string | null
+  valor: number
+  estado: string | null
+  tramo_id: number | null
+  fecha_salida: string | null
+  fecha_llegada: string | null
+  toneladas: number | null
+  created_at: string
 }

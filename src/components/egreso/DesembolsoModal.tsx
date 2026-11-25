@@ -1,13 +1,13 @@
 import { useState, type FormEvent } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import { Loader2 } from 'lucide-react'
 import { anticiposOperativosApi } from '@/api/anticiposOperativos'
-import type { AnticipoOperativo } from '@/api/types'
+import type { AnticipoOperativo, CajaDesembolso } from '@/api/types'
 import { Button } from '@/components/ui/button'
 import { Modal } from '@/components/ui/modal'
+import { Select } from '@/components/ui/select'
 import { aviso } from '@/store/avisosStore'
 import { formatters } from '@/utils/formatters'
-
-type Opcion = 'propia' | 'prestada' | 'espera'
 
 interface DesembolsoModalProps {
   anticipo: AnticipoOperativo
@@ -15,31 +15,55 @@ interface DesembolsoModalProps {
   onSaved: () => void
 }
 
+const mensajeError = (err: unknown, fallback: string): string => {
+  const respuesta = (err as { response?: { data?: { message?: string } } }).response
+  return respuesta?.data?.message || fallback
+}
+
 export function DesembolsoModal({ anticipo, onClose, onSaved }: DesembolsoModalProps) {
-  const [opcion, setOpcion] = useState<Opcion>('propia')
-  const [caja, setCaja] = useState<'001' | '002'>('001')
+  const [idCaja, setIdCaja] = useState<CajaDesembolso['id_caja'] | ''>('')
   const [guardando, setGuardando] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const enEspera = anticipo.estado.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase() === 'ESPERA EFECTIVO'
+  const valor = anticipo.valor_aprobado ?? anticipo.valor_solicitado
+  const autorizada = anticipo.estado.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase() === 'AUTORIZADA'
+  const { data: cajas, isFetching, error: errorCajas, refetch } = useQuery({
+    queryKey: ['cajas-desembolso'],
+    queryFn: anticiposOperativosApi.cajasDesembolso,
+    staleTime: 0,
+    retry: false,
+  })
+  const ningunaAlcanza = !isFetching && !errorCajas && !!cajas && cajas.every((caja) => caja.saldo_efectivo < valor)
+  const cajaElegida = !isFetching && !errorCajas && cajas?.find((caja) => caja.id_caja === idCaja && caja.saldo_efectivo >= valor)
 
   const guardar = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
-    if (guardando) return
+    if (guardando || !cajaElegida) return
     setGuardando(true)
     setError(null)
-    const estado = opcion === 'espera' ? 'ESPERA EFECTIVO' : 'DESEMBOLSADO'
-    const observacion = opcion === 'espera'
-      ? 'Sin efectivo en caja: en espera de efectivo'
-      : opcion === 'prestada'
-        ? `Desembolso con efectivo prestado de la caja ${caja}`
-        : 'Desembolso con efectivo de caja propia'
     try {
-      await anticiposOperativosApi.cambiarEstado(anticipo.id, { estado, observacion })
-      aviso.exito(estado === 'DESEMBOLSADO' ? `Egreso ${anticipo.numero_anticipo} desembolsado` : `Egreso ${anticipo.numero_anticipo} en espera de efectivo`)
+      const resultado = await anticiposOperativosApi.desembolsar(anticipo.id, cajaElegida.id_caja)
+      aviso.exito(`Desembolsado: ${resultado.docto}`)
       onSaved()
     } catch (err: unknown) {
-      const respuesta = (err as { response?: { data?: { message?: string } } }).response
-      setError(respuesta?.data?.message || 'No se pudo cambiar el estado del egreso')
+      setError(mensajeError(err, 'No se pudo desembolsar el egreso'))
+    } finally {
+      setGuardando(false)
+    }
+  }
+
+  const dejarEnEspera = async () => {
+    if (guardando || !autorizada || !ningunaAlcanza) return
+    setGuardando(true)
+    setError(null)
+    try {
+      await anticiposOperativosApi.cambiarEstado(anticipo.id, {
+        estado: 'ESPERA EFECTIVO',
+        observacion: 'Sin efectivo en caja: en espera de efectivo',
+      })
+      aviso.exito(`Egreso ${anticipo.numero_anticipo} en espera de efectivo`)
+      onSaved()
+    } catch (err: unknown) {
+      setError(mensajeError(err, 'No se pudo dejar el egreso en espera'))
     } finally {
       setGuardando(false)
     }
@@ -50,40 +74,47 @@ export function DesembolsoModal({ anticipo, onClose, onSaved }: DesembolsoModalP
       <form onSubmit={guardar} className="space-y-5">
         <dl className="grid gap-3 rounded-lg bg-muted/40 p-4 text-sm sm:grid-cols-2">
           <div><dt className="text-muted-foreground">Número</dt><dd className="font-semibold">{anticipo.numero_anticipo}</dd></div>
-          <div><dt className="text-muted-foreground">Solicitante</dt><dd className="font-semibold">{anticipo.usuario_nombre}</dd></div>
-          <div className="sm:col-span-2"><dt className="text-muted-foreground">Valor a desembolsar</dt><dd className="text-lg font-semibold">{formatters.currency(anticipo.valor_solicitado)}</dd></div>
+          <div><dt className="text-muted-foreground">Solicitante (tercero del documento)</dt><dd className="font-semibold">{anticipo.usuario_nombre}</dd></div>
+          <div className="sm:col-span-2"><dt className="text-muted-foreground">Valor a desembolsar</dt><dd className="text-lg font-semibold">{formatters.currency(valor)}</dd></div>
         </dl>
-        <fieldset className="space-y-3">
-          <legend className="mb-3 text-sm font-semibold">¿Hay efectivo para desembolsar?</legend>
-          <label className="flex cursor-pointer items-center gap-2 text-sm">
-            <input type="radio" name="efectivo" checked={opcion === 'propia'} onChange={() => setOpcion('propia')} />
-            Sí, en mi caja
-          </label>
-          <div className="space-y-2">
-            <label className="flex cursor-pointer items-center gap-2 text-sm">
-              <input type="radio" name="efectivo" checked={opcion === 'prestada'} onChange={() => setOpcion('prestada')} />
-              No en mi caja: tomar de otra caja
-            </label>
-            {opcion === 'prestada' && (
-              <select aria-label="Caja de origen" value={caja} onChange={(event) => setCaja(event.target.value as '001' | '002')} className="ml-5 h-9 rounded-md border border-input bg-background px-3 text-sm">
-                <option value="001">Caja 001</option>
-                <option value="002">Caja 002</option>
-              </select>
-            )}
-          </div>
-          {!enEspera && (
-            <label className="flex cursor-pointer items-center gap-2 text-sm">
-              <input type="radio" name="efectivo" checked={opcion === 'espera'} onChange={() => setOpcion('espera')} />
-              No hay efectivo: dejar en espera
-            </label>
+
+        <div className="space-y-2">
+          <label htmlFor="caja-desembolso" className="text-sm font-medium">¿De qué caja se desembolsa?</label>
+          <Select
+            id="caja-desembolso"
+            value={idCaja}
+            onChange={(event) => { setIdCaja(event.target.value as CajaDesembolso['id_caja'] | ''); setError(null) }}
+            disabled={isFetching || !!errorCajas || guardando || !cajas?.length}
+          >
+            <option value="">{isFetching ? 'Cargando cajas…' : 'Selecciona una caja'}</option>
+            {cajas?.map((caja) => (
+              <option key={caja.id_caja} value={caja.id_caja} disabled={caja.saldo_efectivo < valor}>
+                {caja.nombre} — efectivo {formatters.currency(caja.saldo_efectivo)}{caja.saldo_efectivo < valor ? ' (efectivo insuficiente)' : ''}
+              </option>
+            ))}
+          </Select>
+          {errorCajas && (
+            <div className="space-y-2">
+              <p role="alert" className="text-sm text-destructive">{mensajeError(errorCajas, 'No se pudieron cargar las cajas')}</p>
+              <Button type="button" variant="outline" size="sm" onClick={() => { void refetch() }}>Reintentar</Button>
+            </div>
           )}
-        </fieldset>
+          {ningunaAlcanza && <p className="text-sm text-destructive">Ninguna caja tiene efectivo suficiente</p>}
+        </div>
+
+        <p className="text-sm text-muted-foreground">Se generará en SIESA un documento PCE: débito a Anticipos camiones a nombre del solicitante y crédito a la caja elegida.</p>
         {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
-        <div className="flex justify-end gap-2">
+        <div className="flex flex-wrap justify-end gap-2">
           <Button type="button" variant="outline" onClick={onClose} disabled={guardando}>Cancelar</Button>
-          <Button type="submit" disabled={guardando}>
+          {ningunaAlcanza && autorizada && (
+            <Button type="button" variant="outline" onClick={dejarEnEspera} disabled={guardando}>
+              {guardando && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Dejar en espera de efectivo
+            </Button>
+          )}
+          <Button type="submit" disabled={guardando || !cajaElegida}>
             {guardando && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            {opcion === 'espera' ? 'Dejar en espera' : 'Desembolsar'}
+            Desembolsar
           </Button>
         </div>
       </form>

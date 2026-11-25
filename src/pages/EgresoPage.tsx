@@ -12,6 +12,9 @@ import {
     Users,
     AlertCircle,
     Receipt,
+    FileText,
+    Send,
+    Hash,
     X,
 } from 'lucide-react'
 import {
@@ -28,7 +31,10 @@ import { useQuery } from '@tanstack/react-query'
 import { ErrorState } from '@/components/ui/error-state'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { Select } from '@/components/ui/select'
+import { FechaInput } from '@/components/ui/fecha-input'
 import { Modal } from '@/components/ui/modal'
+import { cn } from '@/lib/utils'
 import { Skeleton } from '@/lib/skeleton'
 import { useAnticiposOperativos } from '@/hooks/useAnticiposOperativos'
 import { anticiposOperativosApi } from '@/api/anticiposOperativos'
@@ -42,6 +48,7 @@ import { BotonCrear } from '@/components/ui/boton-crear'
 import { CrearEgresoModal } from '@/components/egreso/CrearEgresoModal'
 import { DesembolsoModal } from '@/components/egreso/DesembolsoModal'
 import { aviso } from '@/store/avisosStore'
+import { DispersionTab } from '@/components/egreso/DispersionTab'
 
 // ─── Utilidades de UI ────────────────────────────────────────────────────────
 
@@ -88,8 +95,10 @@ const getEstadoBadge = (estado: string) => {
         case 'RECHAZADA':
         case 'RECHAZADO':
         case 'CANCELADO':
+        case 'ANULADO':
             return 'bg-destructive/10 text-destructive'
         case 'EN REVISION':
+        case 'EN ELABORACION':
             return 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400'
         default:
             return 'bg-muted text-muted-foreground'
@@ -181,7 +190,7 @@ const SoportesSubAccordion = ({ soportes, colSpan }: SoportesSubAccordionProps) 
                                                 transition={{ duration: 0.18, delay: idx * 0.04, ease: [0.22, 1, 0.36, 1] }}
                                             >
                                                 <td className="py-2 px-4 text-muted-foreground">
-                                                    {formatters.date(s.created_at)}
+                                                    {formatters.dateTime(s.created_at)}
                                                 </td>
                                                 <td className="py-2 px-4">
                                                     <div className="flex items-center gap-2">
@@ -426,6 +435,13 @@ const DistribucionAccordion = ({ anticipo, totalColumnas }: DistribucionAccordio
                             </div>
                         </div>
 
+                        {anticipo.desembolso_docto && (
+                            <p className="mb-3 text-sm font-medium">
+                                PCE: {anticipo.desembolso_docto}
+                                {anticipo.desembolso_caja && ` · Caja ${anticipo.desembolso_caja}`}
+                            </p>
+                        )}
+
                         {isLoading ? (
                             <Cargando compacto texto="Cargando distribución" />
                         ) : error ? (
@@ -544,6 +560,12 @@ const ViewModal = ({ anticipo, onClose }: ViewModalProps) => {
                 <div className="grid grid-cols-2 gap-4">
                     <Campo label="Número de egreso" value={anticipo.numero_anticipo} />
                     <Campo label="Solicitante" value={anticipo.usuario_nombre} />
+                    {anticipo.desembolso_docto && (
+                        <div className="col-span-2 text-sm font-semibold">
+                            PCE: {anticipo.desembolso_docto}
+                            {anticipo.desembolso_caja && ` · Caja ${anticipo.desembolso_caja}`}
+                        </div>
+                    )}
                     <Campo label="Área / Departamento" value={anticipo.area_departamento} />
                     <Campo label="Responsable aprobación" value={anticipo.responsable_aprobacion} />
                     <Campo label="Forma de entrega" value={anticipo.forma_entrega} />
@@ -561,13 +583,12 @@ const ViewModal = ({ anticipo, onClose }: ViewModalProps) => {
                     </div>
                 </div>
 
-                <div className="grid grid-cols-3 gap-4">
-                    <Campo label="Fecha solicitud" value={formatters.date(anticipo.fecha_solicitud)} />
-                    <Campo label="Fecha inicio operación" value={formatters.dateOnly(anticipo.fecha_inicio_operacion)} />
-                    <Campo label="Fecha fin estimada" value={formatters.dateOnly(anticipo.fecha_fin_estimada)} />
+                <div className="grid grid-cols-2 gap-4">
+                    <Campo label="Fecha solicitud" value={formatters.dateTime(anticipo.fecha_solicitud)} />
                     <Campo label="Fecha requerida dinero" value={formatters.dateOnly(anticipo.fecha_requerida_dinero)} />
-                    <Campo label="Creado" value={formatters.date(anticipo.created_at)} />
-                    <Campo label="Actualizado" value={formatters.date(anticipo.updated_at)} />
+                    <Campo label="Creado" value={formatters.dateTime(anticipo.created_at)} />
+                    <Campo label="Actualizado" value={formatters.dateTime(anticipo.updated_at)} />
+                    {anticipo.desembolso_fecha && <Campo label="Desembolsado" value={formatters.dateTime(anticipo.desembolso_fecha)} />}
                 </div>
 
                 <div className="space-y-1">
@@ -714,6 +735,14 @@ export const EgresoPage = () => {
     const [filtroEstado, setFiltroEstado] = useState<FiltroEstado>(() =>
         puede(P.AUTORIZAR_EGRESO) ? 'PENDIENTE' : puede(P.DESEMBOLSAR_EGRESO) ? 'AUTORIZADA' : 'TODOS'
     )
+    const [vista, setVista] = useState<'egresos' | 'documentos' | 'dispersion'>('egresos')
+    const [docBusqueda, setDocBusqueda] = useState('')
+    const [docEstado, setDocEstado] = useState('')
+    const [docCaja, setDocCaja] = useState('')
+    const [docCo, setDocCo] = useState('')
+    const [docDesde, setDocDesde] = useState('')
+    const [docHasta, setDocHasta] = useState('')
+    const [docSenalado, setDocSenalado] = useState<AnticipoOperativo | null>(null)
     const [autorizando, setAutorizando] = useState<AnticipoOperativo | null>(null)
     const [rechazando, setRechazando] = useState<AnticipoOperativo | null>(null)
     const [desembolsando, setDesembolsando] = useState<AnticipoOperativo | null>(null)
@@ -727,6 +756,49 @@ export const EgresoPage = () => {
         ),
         [solicitudes, filtroEstado]
     )
+
+    const todosDocumentosPce = useMemo(
+        () => (solicitudes || []).filter((item) => item.desembolso_docto),
+        [solicitudes]
+    )
+
+    const estadoDocto = (item: AnticipoOperativo) => item.desembolso_docto_estado ?? item.estado
+
+    const opcionesEstadoDoc = useMemo(
+        () => [...new Set(todosDocumentosPce.map((d) => estadoDocto(d)?.trim()).filter((v): v is string => Boolean(v)))].sort(),
+        [todosDocumentosPce]
+    )
+
+    const opcionesCajaDoc = useMemo(
+        () => [...new Set(todosDocumentosPce.map((d) => d.desembolso_caja?.trim()).filter((v): v is string => Boolean(v)))].sort(),
+        [todosDocumentosPce]
+    )
+
+    const opcionesCoDoc = useMemo(
+        () => [...new Set(todosDocumentosPce.map((d) => (d.desembolso_co || d.centro_operacion_codigo)?.trim()).filter((v): v is string => Boolean(v)))].sort(),
+        [todosDocumentosPce]
+    )
+
+    // Documentos PCE generados en SIESA al desembolsar (más recientes primero)
+    const documentosPce = useMemo(() => {
+        const q = docBusqueda.trim().toLowerCase()
+        return todosDocumentosPce
+            .filter((item) => !docEstado || normalizarEstado(estadoDocto(item)) === normalizarEstado(docEstado))
+            .filter((item) => !docCaja || (item.desembolso_caja?.trim() ?? '') === docCaja)
+            .filter((item) => !docCo || ((item.desembolso_co || item.centro_operacion_codigo)?.trim() ?? '') === docCo)
+            .filter((item) => {
+                if (!docDesde && !docHasta) return true
+                const iso = String(item.desembolso_fecha ?? '').slice(0, 10)
+                if (!iso) return false
+                if (docDesde && iso < docDesde) return false
+                if (docHasta && iso > docHasta) return false
+                return true
+            })
+            .filter((item) => !q || [item.desembolso_docto, item.numero_anticipo, item.usuario_nombre, item.motivo_general, item.desembolso_caja, item.desembolso_usuario_nombre, estadoDocto(item)]
+                .some((v) => String(v ?? '').toLowerCase().includes(q)))
+            .sort((a, b) => String(b.desembolso_fecha ?? '').localeCompare(String(a.desembolso_fecha ?? '')))
+    }, [todosDocumentosPce, docBusqueda, docEstado, docCaja, docCo, docDesde, docHasta])
+    const totalDocumentosPce = todosDocumentosPce.length
 
     const cerrarEstado = () => {
         if (guardandoEstado) return
@@ -869,6 +941,13 @@ export const EgresoPage = () => {
             },
         },
         {
+            id: 'pce',
+            header: 'PCE',
+            cell: ({ row }) => row.original.desembolso_docto
+                ? <span className="whitespace-nowrap font-mono text-xs font-semibold">{row.original.desembolso_docto}</span>
+                : <span className="text-muted-foreground text-xs">—</span>,
+        },
+        {
             accessorKey: 'fecha_solicitud',
             header: ({ column }) => (
                 <Button variant="ghost" onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')} className="h-8 px-2">
@@ -876,7 +955,7 @@ export const EgresoPage = () => {
                 </Button>
             ),
             cell: ({ row }) => (
-                <span className="text-sm text-muted-foreground">{formatters.date(row.getValue('fecha_solicitud'))}</span>
+                <span className="text-sm text-muted-foreground">{formatters.dateTime(row.getValue('fecha_solicitud'))}</span>
             ),
         },
         {
@@ -901,6 +980,9 @@ export const EgresoPage = () => {
                     )}
                     {['AUTORIZADA', 'ESPERA EFECTIVO'].includes(normalizarEstado(row.original.estado)) && puede(P.DESEMBOLSAR_EGRESO) && (
                         <Button variant="outline" size="sm" onClick={() => setDesembolsando(row.original)}>Desembolsar</Button>
+                    )}
+                    {['AUTORIZADA', 'ESPERA EFECTIVO'].includes(normalizarEstado(row.original.estado)) && puede(P.RECHAZAR_EGRESO) && (
+                        <Button variant="outline" size="sm" className="text-destructive hover:text-destructive" onClick={() => { setErrorEstado(null); setMotivoRechazo(''); setRechazando(row.original) }}>Rechazar</Button>
                     )}
                     {puede(P.EDITAR_EGRESO) && (
                         <Button
@@ -932,146 +1014,444 @@ export const EgresoPage = () => {
     })
 
     return (
-        <motion.div
-            initial={{ opacity: 0, y: 16 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
-            className="flex h-full min-h-0 flex-col gap-4 p-6"
-        >
-            {/* Tabla */}
-            {isLoading ? (
-                <div className="flex min-h-0 flex-1 flex-col gap-4">
-                    <Skeleton className="h-10 w-full" />
-                    <Skeleton className="flex-1 w-full" />
-                </div>
-            ) : error ? (
-                <ErrorState
-                    title="Error al cargar las solicitudes"
-                    message="Verifica la conexión e intenta de nuevo"
-                    minHeight="h-48"
-                    onRetry={handleRefresh}
-                />
-            ) : (
-                <motion.div
-                    initial={{ opacity: 0, y: 12 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.35, delay: 0.08, ease: [0.22, 1, 0.36, 1] }}
-                    className="flex min-h-0 flex-1 flex-col gap-4"
-                >
-                    <div className="flex shrink-0 flex-col gap-3 border-b pb-4 sm:flex-row sm:items-center sm:justify-between">
-                        <div className="relative w-full sm:w-72">
-                            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                            <Input
-                                placeholder="Buscar por número, solicitante, área..."
-                                value={globalFilter ?? ''}
-                                onChange={(e) => { setGlobalFilter(e.target.value); table.setPageIndex(0) }}
-                                className="pl-9"
-                                autoComplete="off"
-                            />
-                        </div>
-                        <div className="flex shrink-0 items-center gap-3">
-                            {solicitudes && (
-                                <p className="text-sm text-muted-foreground">
-                                    {solicitudes.length} {solicitudes.length === 1 ? 'registro' : 'registros'}
-                                </p>
-                            )}
-                            <BotonExcel nombre="egresos" />
-                            {puede(P.CREAR_EGRESO) && <BotonCrear titulo="Crear egreso" onClick={() => setCrearAbierto(true)} />}
-                            <Button variant="outline" size="icon" onClick={handleRefresh} disabled={isLoading} title="Actualizar">
-                                <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
-                            </Button>
-                        </div>
-                    </div>
-
-                    <div role="group" aria-label="Filtrar egresos por estado" className="flex shrink-0 flex-wrap gap-2">
-                        {filtrosEstado.map(({ estado, etiqueta }) => {
-                            const cantidad = estado === 'TODOS' ? (solicitudes?.length ?? 0) : (solicitudes || []).filter((item) => normalizarEstado(item.estado) === estado).length
-                            return (
-                                <button key={estado} type="button" aria-pressed={filtroEstado === estado}
-                                    onClick={() => { setFiltroEstado(estado); table.setPageIndex(0) }}
-                                    className={`rounded-full px-3 py-1.5 text-xs font-semibold transition-colors ${filtroEstado === estado ? 'bg-primary text-primary-foreground' : 'bg-muted text-muted-foreground hover:bg-muted/70 hover:text-foreground'}`}>
-                                    {etiqueta} <span className="ml-1 tabular-nums">{cantidad}</span>
-                                </button>
-                            )
-                        })}
-                    </div>
-
-                    <div className="min-h-0 flex-1 overflow-auto rounded-md border">
-                        <table className="w-full text-sm">
-                            <thead className="sticky top-0 z-10 bg-card">
-                                {table.getHeaderGroups().map((headerGroup) => (
-                                    <tr key={headerGroup.id} className="border-b bg-muted/50">
-                                        {headerGroup.headers.map((header) => (
-                                            <th key={header.id} className="h-11 px-3 text-left align-middle font-medium text-muted-foreground">
-                                                {header.isPlaceholder
-                                                    ? null
-                                                    : flexRender(header.column.columnDef.header, header.getContext())}
-                                            </th>
-                                        ))}
-                                    </tr>
-                                ))}
-                            </thead>
-                            <tbody>
-                                {table.getRowModel().rows.length ? (
-                                    table.getRowModel().rows.map((row) => {
-                                        const isExpanded = expandedRowId === row.original.id
-                                        return (
-                                            <Fragment key={row.id}>
-                                                <motion.tr
-                                                    className={`border-b cursor-pointer hover:bg-muted/30 ${isExpanded ? 'bg-primary/5' : ''}`}
-                                                    style={{ transition: 'background-color 0.15s ease' }}
-                                                    onClick={() => toggleRow(row.original.id)}
-                                                    initial={{ opacity: 0, y: 6 }}
-                                                    animate={{ opacity: 1, y: 0 }}
-                                                    transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
-                                                >
-                                                    {row.getVisibleCells().map((cell) => (
-                                                        <td key={cell.id} className="py-3 px-3 align-middle">
-                                                            {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                                                        </td>
-                                                    ))}
-                                                </motion.tr>
-                                                <AnimatePresence>
-                                                    {isExpanded && (
-                                                        <DistribucionAccordion
-                                                            anticipo={row.original}
-                                                            totalColumnas={columns.length}
-                                                        />
-                                                    )}
-                                                </AnimatePresence>
-                                            </Fragment>
-                                        )
-                                    })
-                                ) : (
-                                    <tr>
-                                        <td colSpan={columns.length} className="h-24 text-center text-muted-foreground">
-                                            No se encontraron solicitudes.
-                                        </td>
-                                    </tr>
+        <div className="nu mx-auto max-w-[1400px] space-y-6 p-4 sm:p-6 lg:p-8 2xl:max-w-[1600px] xl:[zoom:1.12] 2xl:[zoom:1.15]">
+            {/* Contenedor principal idéntico a Recibo de Caja */}
+            <div className="space-y-6 nu-card">
+                {/* Barra de pestañas estilo píldora */}
+                <div className="flex flex-wrap items-center gap-3 px-4 pt-4">
+                    <div className="flex flex-wrap gap-1 nu-seg">
+                        {([
+                            ['egresos', 'Egresos', Receipt],
+                            ['documentos', `Documentos (${totalDocumentosPce})`, FileText],
+                            ...(puede(P.DISPERSAR_EGRESO) ? ([['dispersion', 'Dispersión', Send]] as const) : []),
+                        ] as const).map(([id, etiqueta, Icono]) => (
+                            <button
+                                key={id}
+                                type="button"
+                                onClick={() => setVista(id)}
+                                className={cn(
+                                    'flex items-center gap-2 rounded-full px-4 py-2 text-xs font-semibold transition-all',
+                                    vista === id
+                                        ? 'bg-card text-foreground shadow-xs'
+                                        : 'text-muted-foreground hover:bg-card/50 hover:text-foreground'
                                 )}
-                            </tbody>
-                        </table>
+                            >
+                                <Icono className="h-3.5 w-3.5" /> {etiqueta}
+                            </button>
+                        ))}
                     </div>
 
-                    {/* Paginación */}
-                    <div className="flex shrink-0 items-center justify-between space-x-2">
-                        <div className="flex-1 text-sm text-muted-foreground">
-                            {table.getFilteredRowModel().rows.length} de {table.getCoreRowModel().rows.length} registros
-                        </div>
-                        <div className="flex items-center gap-2">
-                            <Button variant="outline" size="sm" onClick={() => table.previousPage()} disabled={!table.getCanPreviousPage()}>
-                                Anterior
-                            </Button>
-                            <span className="text-sm text-muted-foreground">
-                                Página {table.getState().pagination.pageIndex + 1} de {table.getPageCount()}
-                            </span>
-                            <Button variant="outline" size="sm" onClick={() => table.nextPage()} disabled={!table.getCanNextPage()}>
-                                Siguiente
-                            </Button>
+                    <div className="ml-auto flex flex-wrap items-center gap-2 text-xs">
+                        {solicitudes && (
+                            <div className="flex items-center gap-2 nu-card px-3.5 py-2">
+                                <span className="font-medium text-muted-foreground">Solicitudes:</span>
+                                <span className="font-mono font-bold text-foreground">{solicitudes.length}</span>
+                            </div>
+                        )}
+                        <div className="flex items-center gap-2 nu-card px-3.5 py-2">
+                            <span className="font-medium text-muted-foreground">Documentos PCE:</span>
+                            <span className="font-mono font-bold text-primary">{totalDocumentosPce}</span>
                         </div>
                     </div>
-                </motion.div>
-            )}
+                </div>
+
+                {/* Contenido de la pestaña activa */}
+                <div className="space-y-4 p-4 sm:p-6 pt-0 sm:pt-0">
+                    {isLoading ? (
+                        <div className="flex flex-col gap-4">
+                            <Skeleton className="h-10 w-full" />
+                            <Skeleton className="h-64 w-full" />
+                        </div>
+                    ) : error ? (
+                        <ErrorState
+                            title="Error al cargar las solicitudes"
+                            message="Verifica la conexión e intenta de nuevo"
+                            minHeight="h-48"
+                            onRetry={handleRefresh}
+                        />
+                    ) : vista === 'dispersion' ? (
+                        <DispersionTab />
+                    ) : vista === 'documentos' ? (
+                        <div className="space-y-4">
+                            {/* Barra de filtros idéntica a Recibos registrados */}
+                            <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
+                                <div className="flex shrink-0 items-center gap-2">
+                                    <FileText className="h-5 w-5 text-primary" />
+                                    <h2 className="text-sm font-bold text-foreground">Documentos de egreso ({documentosPce.length})</h2>
+                                </div>
+
+                                <div className="flex flex-wrap items-center gap-2">
+                                    <Select
+                                        value={docEstado}
+                                        onChange={(e) => setDocEstado(e.target.value)}
+                                        className="nu-control nu-control-sm text-xs"
+                                        aria-label="Filtrar por estado"
+                                    >
+                                        <option value="">Todos los estados</option>
+                                        {opcionesEstadoDoc.map((est) => (
+                                            <option key={est} value={est}>{est}</option>
+                                        ))}
+                                    </Select>
+
+                                    <Select
+                                        value={docCo}
+                                        onChange={(e) => setDocCo(e.target.value)}
+                                        className="nu-control nu-control-sm text-xs"
+                                        aria-label="Filtrar por centro de operación"
+                                    >
+                                        <option value="">Todos los C.O.</option>
+                                        {opcionesCoDoc.map((co) => (
+                                            <option key={co} value={co}>C.O. {co}</option>
+                                        ))}
+                                    </Select>
+
+                                    <Select
+                                        value={docCaja}
+                                        onChange={(e) => setDocCaja(e.target.value)}
+                                        className="nu-control nu-control-sm text-xs"
+                                        aria-label="Filtrar por caja"
+                                    >
+                                        <option value="">Todas las cajas</option>
+                                        {opcionesCajaDoc.map((caja) => (
+                                            <option key={caja} value={caja}>{caja}</option>
+                                        ))}
+                                    </Select>
+
+                                    <div className="flex items-center gap-1.5">
+                                        <div className="w-36 shrink-0">
+                                            <FechaInput value={docDesde} onChange={setDocDesde} max={docHasta || undefined} className="text-xs" />
+                                        </div>
+                                        <span className="text-xs text-muted-foreground">a</span>
+                                        <div className="w-36 shrink-0">
+                                            <FechaInput value={docHasta} onChange={setDocHasta} min={docDesde || undefined} className="text-xs" />
+                                        </div>
+                                    </div>
+
+                                    <div className="relative">
+                                        <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+                                        <Input
+                                            className="nu-control nu-control-sm w-40 pl-10 text-xs"
+                                            value={docBusqueda}
+                                            onChange={(e) => setDocBusqueda(e.target.value)}
+                                            placeholder="Solicitante"
+                                            autoComplete="off"
+                                        />
+                                    </div>
+
+                                    <Button size="sm" className="nu-btn nu-btn-primary gap-1 text-xs" onClick={handleRefresh} disabled={isLoading}>
+                                        <Search className="h-3.5 w-3.5" /> Consultar
+                                    </Button>
+                                    <BotonExcel nombre="documentos_egreso" />
+                                </div>
+                            </div>
+
+                            {/* Tabla + panel lateral de detalle */}
+                            <div className="flex items-stretch gap-4">
+                                <div className="min-w-0 flex-1 nu-card overflow-hidden">
+                                    <div className="max-h-[calc(100vh-14rem)] overflow-auto">
+                                        <table className="w-full text-xs">
+                                            <thead className="sticky top-0 z-10">
+                                                <tr className="border-b border-border">
+                                                    {['Documento', 'Fecha', 'Solicitante', 'Desembolsó', 'C.O.', 'Estado', 'Valor'].map((h) => (
+                                                        <th
+                                                            key={h}
+                                                            className={cn(
+                                                                'whitespace-nowrap bg-muted px-4 py-3 text-[10px] nu-th shadow-[inset_0_-1px_0_hsl(var(--border))]',
+                                                                h === 'Valor' ? 'text-right' : h === 'Estado' ? 'text-center' : 'text-left'
+                                                            )}
+                                                        >
+                                                            {h}
+                                                        </th>
+                                                    ))}
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {documentosPce.length === 0 ? (
+                                                    <tr>
+                                                        <td colSpan={7} className="py-14 text-center text-xs font-bold uppercase tracking-widest text-muted-foreground">
+                                                            No hay documentos de egreso para los filtros seleccionados
+                                                        </td>
+                                                    </tr>
+                                                ) : (
+                                                    documentosPce.map((d) => {
+                                                        const co = d.desembolso_co || d.centro_operacion_codigo || '—'
+                                                        const valor = d.valor_aprobado ?? d.valor_solicitado
+                                                        return (
+                                                            <tr
+                                                                key={d.id}
+                                                                onClick={() => setViewingAnticipo(d)}
+                                                                onMouseEnter={() => setDocSenalado(d)}
+                                                                className={cn(
+                                                                    'cursor-pointer border-b border-border/40 transition-colors last:border-0 hover:bg-muted/30',
+                                                                    docSenalado?.id === d.id && 'bg-primary/5'
+                                                                )}
+                                                                title="Ver detalle del documento"
+                                                            >
+                                                                <td className="whitespace-nowrap px-4 py-3 font-mono font-bold text-primary">
+                                                                    <span className="flex items-center gap-1">
+                                                                        <Hash className="h-3 w-3" />
+                                                                        {d.desembolso_docto}
+                                                                    </span>
+                                                                    <p className="font-mono text-[10px] font-normal text-muted-foreground">{d.numero_anticipo}</p>
+                                                                </td>
+                                                                <td className="whitespace-nowrap px-4 py-3 font-mono text-muted-foreground">
+                                                                    {formatters.dateOnly(d.desembolso_fecha)}
+                                                                </td>
+                                                                <td className="max-w-[260px] px-4 py-3">
+                                                                    <p className="truncate font-medium text-foreground">{d.usuario_nombre}</p>
+                                                                    <p className="truncate text-[10px] text-muted-foreground">{d.motivo_general || d.area_departamento}</p>
+                                                                </td>
+                                                                <td className="max-w-[200px] px-4 py-3">
+                                                                    <p className="truncate font-medium text-foreground">{d.desembolso_usuario_nombre ?? '—'}</p>
+                                                                    <p className="text-[10px] text-muted-foreground">Tesorería</p>
+                                                                </td>
+                                                                <td className="px-4 py-3">
+                                                                    <p className="font-mono font-bold text-foreground">{co}</p>
+                                                                    <p className="whitespace-nowrap text-[10px] text-muted-foreground">{d.desembolso_caja ?? '—'}</p>
+                                                                </td>
+                                                                <td className="whitespace-nowrap px-4 py-3 text-center">
+                                                                    {estadoDocto(d) ? (
+                                                                        <span className={cn('inline-block rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase', getEstadoBadge(estadoDocto(d)))}>
+                                                                            {estadoDocto(d)}
+                                                                        </span>
+                                                                    ) : (
+                                                                        <span className="text-muted-foreground">—</span>
+                                                                    )}
+                                                                </td>
+                                                                <td className="whitespace-nowrap px-4 py-3 text-right font-mono font-semibold tabular-nums text-foreground">
+                                                                    {formatters.currency(valor)}
+                                                                </td>
+                                                            </tr>
+                                                        )
+                                                    })
+                                                )}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+
+                                {/* Panel lateral de detalle */}
+                                <aside className="hidden w-80 shrink-0 nu-card lg:block">
+                                    <div className="sticky top-4 p-5">
+                                        <AnimatePresence mode="wait">
+                                            {!docSenalado ? (
+                                                <motion.p
+                                                    key="vacio"
+                                                    initial={{ opacity: 0 }}
+                                                    animate={{ opacity: 1 }}
+                                                    exit={{ opacity: 0 }}
+                                                    className="py-16 text-center text-sm text-muted-foreground"
+                                                >
+                                                    Pasa el mouse sobre un documento para ver su detalle.
+                                                </motion.p>
+                                            ) : (
+                                                <motion.div
+                                                    key={docSenalado.id}
+                                                    initial={{ opacity: 0, y: 8 }}
+                                                    animate={{ opacity: 1, y: 0 }}
+                                                    exit={{ opacity: 0, y: -8 }}
+                                                    transition={{ duration: 0.18, ease: 'easeOut' }}
+                                                    className="space-y-5"
+                                                >
+                                                    <div className="flex items-start justify-between gap-2">
+                                                        <div>
+                                                            <p className="text-xs nu-th">Documento</p>
+                                                            <p className="font-mono text-lg font-bold text-primary">
+                                                                {docSenalado.desembolso_docto}
+                                                            </p>
+                                                        </div>
+                                                        <span className={cn('rounded-full px-2.5 py-1 text-[11px] font-bold uppercase', getEstadoBadge(estadoDocto(docSenalado)))}>
+                                                            {estadoDocto(docSenalado)}
+                                                        </span>
+                                                    </div>
+
+                                                    <div className="space-y-2.5 text-xs">
+                                                        <div className="flex justify-between gap-2">
+                                                            <span className="text-muted-foreground">Anticipo</span>
+                                                            <span className="font-mono font-semibold text-foreground">{docSenalado.numero_anticipo}</span>
+                                                        </div>
+                                                        <div className="flex justify-between gap-2">
+                                                            <span className="text-muted-foreground">Fecha</span>
+                                                            <span className="font-mono text-foreground">{formatters.dateTime(docSenalado.desembolso_fecha)}</span>
+                                                        </div>
+                                                        <div className="flex justify-between gap-2">
+                                                            <span className="text-muted-foreground">Solicitante</span>
+                                                            <span className="truncate font-medium text-foreground">{docSenalado.usuario_nombre}</span>
+                                                        </div>
+                                                        <div className="flex justify-between gap-2">
+                                                            <span className="text-muted-foreground">Área</span>
+                                                            <span className="truncate text-foreground">{docSenalado.area_departamento || '—'}</span>
+                                                        </div>
+                                                        <div className="flex justify-between gap-2">
+                                                            <span className="text-muted-foreground">Desembolsó</span>
+                                                            <span className="truncate font-medium text-foreground">{docSenalado.desembolso_usuario_nombre ?? '—'}</span>
+                                                        </div>
+                                                        <div className="flex justify-between gap-2">
+                                                            <span className="text-muted-foreground">Caja / C.O.</span>
+                                                            <span className="font-mono text-foreground">
+                                                                {docSenalado.desembolso_caja ?? '—'} · {docSenalado.desembolso_co || docSenalado.centro_operacion_codigo || '—'}
+                                                            </span>
+                                                        </div>
+                                                        {docSenalado.desembolso_docto_estado_codigo === 2 && (docSenalado.desembolso_docto_usuario_anulacion || docSenalado.desembolso_docto_fecha_anulacion) && (
+                                                            <div className="rounded-xl border border-destructive/20 bg-destructive/5 px-3 py-2 text-destructive">
+                                                                <p className="font-semibold">Cancelado en SIESA</p>
+                                                                {docSenalado.desembolso_docto_usuario_anulacion && (
+                                                                    <p className="mt-0.5 text-[11px]">Por: {docSenalado.desembolso_docto_usuario_anulacion}</p>
+                                                                )}
+                                                                {docSenalado.desembolso_docto_fecha_anulacion && (
+                                                                    <p className="font-mono text-[11px]">{formatters.dateTime(docSenalado.desembolso_docto_fecha_anulacion)}</p>
+                                                                )}
+                                                            </div>
+                                                        )}
+                                                        {docSenalado.motivo_general && (
+                                                            <div className="border-t border-border/60 pt-2.5">
+                                                                <p className="mb-1 text-muted-foreground">Motivo</p>
+                                                                <p className="text-foreground">{docSenalado.motivo_general}</p>
+                                                            </div>
+                                                        )}
+                                                    </div>
+
+                                                    <div className="grid grid-cols-[1fr_auto] items-center gap-2 border-t border-border pt-4 text-base font-bold">
+                                                        <span>Total desembolsado</span>
+                                                        <span className="font-mono tabular-nums text-primary">
+                                                            {formatters.currency(docSenalado.valor_aprobado ?? docSenalado.valor_solicitado)}
+                                                        </span>
+                                                    </div>
+                                                </motion.div>
+                                            )}
+                                        </AnimatePresence>
+                                    </div>
+                                </aside>
+                            </div>
+                        </div>
+                    ) : (
+                        <div className="space-y-4">
+                            {/* Barra de filtros de Egresos */}
+                            <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
+                                <div className="flex shrink-0 items-center gap-2">
+                                    <Receipt className="h-5 w-5 text-primary" />
+                                    <h2 className="text-sm font-bold text-foreground">Solicitudes de egreso ({solicitudesFiltradas.length})</h2>
+                                </div>
+                                <div className="flex flex-wrap items-center gap-2">
+                                    <div className="relative">
+                                        <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+                                        <Input
+                                            placeholder="Buscar por número, solicitante, área..."
+                                            value={globalFilter ?? ''}
+                                            onChange={(e) => { setGlobalFilter(e.target.value); table.setPageIndex(0) }}
+                                            className="nu-control nu-control-sm w-64 pl-10 text-xs"
+                                            autoComplete="off"
+                                        />
+                                    </div>
+                                    <BotonExcel nombre="egresos" />
+                                    {puede(P.CREAR_EGRESO) && <BotonCrear titulo="Crear egreso" onClick={() => setCrearAbierto(true)} />}
+                                    <Button variant="soft" size="icon" onClick={handleRefresh} disabled={isLoading} title="Actualizar">
+                                        <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
+                                    </Button>
+                                </div>
+                            </div>
+
+                            <div role="group" aria-label="Filtrar egresos por estado" className="flex flex-wrap gap-1.5">
+                                {filtrosEstado.map(({ estado, etiqueta }) => {
+                                    const cantidad = estado === 'TODOS' ? (solicitudes?.length ?? 0) : (solicitudes || []).filter((item) => normalizarEstado(item.estado) === estado).length
+                                    return (
+                                        <button
+                                            key={estado}
+                                            type="button"
+                                            aria-pressed={filtroEstado === estado}
+                                            onClick={() => { setFiltroEstado(estado); table.setPageIndex(0) }}
+                                            className={cn(
+                                                'rounded-full px-3 py-1.5 text-xs font-semibold transition-colors',
+                                                filtroEstado === estado
+                                                    ? 'bg-primary text-primary-foreground'
+                                                    : 'bg-[var(--nu-fill)] text-muted-foreground hover:bg-[var(--nu-fill-2)] hover:text-foreground'
+                                            )}
+                                        >
+                                            {etiqueta} <span className="ml-1 font-mono tabular-nums">{cantidad}</span>
+                                        </button>
+                                    )
+                                })}
+                            </div>
+
+                            <div className="nu-card overflow-hidden">
+                                <div className="max-h-[calc(100vh-16rem)] overflow-auto">
+                                    <table className="w-full text-xs">
+                                        <thead className="sticky top-0 z-10">
+                                            {table.getHeaderGroups().map((headerGroup) => (
+                                                <tr key={headerGroup.id} className="border-b border-border">
+                                                    {headerGroup.headers.map((header) => (
+                                                        <th key={header.id} className="whitespace-nowrap bg-muted px-3 py-3 text-left text-[10px] nu-th shadow-[inset_0_-1px_0_hsl(var(--border))]">
+                                                            {header.isPlaceholder
+                                                                ? null
+                                                                : flexRender(header.column.columnDef.header, header.getContext())}
+                                                        </th>
+                                                    ))}
+                                                </tr>
+                                            ))}
+                                        </thead>
+                                        <tbody>
+                                            {table.getRowModel().rows.length ? (
+                                                table.getRowModel().rows.map((row) => {
+                                                    const isExpanded = expandedRowId === row.original.id
+                                                    return (
+                                                        <Fragment key={row.id}>
+                                                            <motion.tr
+                                                                className={cn('cursor-pointer border-b border-border/40 transition-colors last:border-0 hover:bg-muted/30', isExpanded && 'bg-primary/5')}
+                                                                onClick={() => toggleRow(row.original.id)}
+                                                                initial={{ opacity: 0, y: 6 }}
+                                                                animate={{ opacity: 1, y: 0 }}
+                                                                transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
+                                                            >
+                                                                {row.getVisibleCells().map((cell) => (
+                                                                    <td key={cell.id} className="px-3 py-3 align-middle">
+                                                                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                                                                    </td>
+                                                                ))}
+                                                            </motion.tr>
+                                                            <AnimatePresence>
+                                                                {isExpanded && (
+                                                                    <DistribucionAccordion
+                                                                        anticipo={row.original}
+                                                                        totalColumnas={columns.length}
+                                                                    />
+                                                                )}
+                                                            </AnimatePresence>
+                                                        </Fragment>
+                                                    )
+                                                })
+                                            ) : (
+                                                <tr>
+                                                    <td colSpan={columns.length} className="py-14 text-center text-xs font-bold uppercase tracking-widest text-muted-foreground">
+                                                        No se encontraron solicitudes.
+                                                    </td>
+                                                </tr>
+                                            )}
+                                        </tbody>
+                                    </table>
+                                </div>
+
+                                {/* Paginación */}
+                                <div className="flex items-center justify-between border-t border-border/60 bg-card px-4 py-3">
+                                    <p className="text-xs font-medium text-muted-foreground">
+                                        {table.getFilteredRowModel().rows.length} de {table.getCoreRowModel().rows.length} registros
+                                    </p>
+                                    <div className="flex items-center gap-2">
+                                        <Button variant="soft" size="sm" onClick={() => table.previousPage()} disabled={!table.getCanPreviousPage()}>
+                                            Anterior
+                                        </Button>
+                                        <span className="text-xs text-muted-foreground">
+                                            Página {table.getState().pagination.pageIndex + 1} de {table.getPageCount()}
+                                        </span>
+                                        <Button variant="soft" size="sm" onClick={() => table.nextPage()} disabled={!table.getCanNextPage()}>
+                                            Siguiente
+                                        </Button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            </div>
 
             {/* Modal de creación */}
             {crearAbierto && (
@@ -1137,6 +1517,6 @@ export const EgresoPage = () => {
                 <DesembolsoModal anticipo={desembolsando} onClose={() => setDesembolsando(null)}
                     onSaved={() => { setDesembolsando(null); void queryClient.invalidateQueries({ queryKey: ['anticipos-operativos'] }) }} />
             )}
-        </motion.div>
+        </div>
     )
 }

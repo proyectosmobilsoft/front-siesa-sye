@@ -18,6 +18,9 @@ export interface FacturaAsignada {
     estado: EstadoFacturaAsignada
     rc_rowid: number | null
     fecha_cobro: string | null
+    entrega?: 'ASIGNADA' | 'NO_ENTREGADA' | 'ENTREGA_PARCIAL' | 'ENTREGADA'
+    entrega_nota?: string | null
+    entrega_at?: string | null
 }
 
 export interface AsignacionCobro {
@@ -25,6 +28,7 @@ export interface AsignacionCobro {
     id_co: string
     rowid_tercero: number
     cliente_nombre?: string
+    cliente_nit?: string
     conductor_id: number
     conductor_nombre?: string
     usuario_asigno: string
@@ -78,6 +82,10 @@ export interface TableroConductorRow {
     kg_pendiente?: number
     /** Pendientes ya vencidas en SIESA. */
     vencidas?: number
+    /** Pendientes cuya condición de pago en SIESA no es contraentrega (se cierran como entregadas, sin RC). */
+    a_credito?: number
+    /** Pendientes cuya condición de pago en SIESA es contraentrega (requieren RC al entregar). */
+    contraentrega?: number
     /** Días desde la asignación de la pendiente más vieja. */
     mas_antigua_dias?: number
     /** Saldo real en SIESA de las pendientes (puede ser menor si hubo abonos). */
@@ -113,10 +121,18 @@ export const asignacionCobroApi = {
         return response.data.data
     },
 
-    porConductor: async (conductorId: number, estado?: EstadoAsignacion): Promise<AsignacionCobro[]> => {
+    porConductor: async (
+        conductorId: number,
+        estado?: EstadoAsignacion,
+        rango?: { desde?: string; hasta?: string }
+    ): Promise<AsignacionCobro[]> => {
+        const params: Record<string, string> = {}
+        if (estado) params.estado = estado
+        if (rango?.desde) params.desde = rango.desde
+        if (rango?.hasta) params.hasta = rango.hasta
         const response = await apiClient.get<{ success: boolean; data: AsignacionCobro[] }>(
             `/asignacion-cobro/conductor/${conductorId}`,
-            { params: estado ? { estado } : undefined }
+            { params: Object.keys(params).length ? params : undefined }
         )
         return response.data.data
     },
